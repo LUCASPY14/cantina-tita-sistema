@@ -1,0 +1,48 @@
+{% extends 'gestion/base.html' %}
+{% load paraguay_filters %}
+
+{% block title %}Dashboard - Sistema de Gestión{% endblock %}
+
+{% block content %}
+<h2 style="color: #667eea; margin-bottom: 30px;">📊 Dashboard</h2>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 10px; color: white; text-align: center;">
+        <div style="font-size: 2.5em; margin-bottom: 10px;">📦</div>
+        <h3 style="font-size: 2em; margin-bottom: 5px;">{{ total_productos }}</h3>
+        <p>Productos Activos</p>
+    </div>
+    
+    <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 25px; border-radius: 10px; color: white; text-align: center;">
+        <div style="font-size: 2.5em; margin-bottom: 10px;">⚠️</div>
+        <h3 style="font-size: 2em; margin-bottom: 5px;">{{ productos_bajo_stock }}</h3>
+        <p>Stock Bajo</p>
+    </div>
+    
+    <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 25px; border-radius: 10px; color: white; text-align: center;">
+        <div style="font-size: 2.5em; margin-bottom: 10px;">👥</div>
+        <h3 style="font-size: 2em; margin-bottom: 5px;">{{ total_clientes }}</h3>
+        <p>Clientes Activos</p>
+    </div>
+    
+    <div style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); padding: 25px; border-radius: 10px; color: white; text-align: center;">
+        <div style="font-size: 2.5em; margin-bottom: 10px;">💰</div>
+        <h3 style="font-size: 2em; margin-bottom: 5px;">{{ cantidad_ventas_hoy }}</h3>
+        <p>Ventas Hoy</p>
+    </div>
+</div>
+
+<div style="background: #f8f9fa; padding: 30px; border-radius: 10px; border-left: 4px solid #667eea;">
+    <h3 style="color: #667eea; margin-bottom: 15px;">💵 Ventas del Día</h3>
+    <p style="font-size: 2em; color: #43e97b; font-weight: bold;">{{ total_ventas_hoy|guaranies }}</p>
+    <p style="color: #666;">Total de ventas completadas hoy</p>
+</div>
+
+{% if productos_bajo_stock > 0 %}
+<div style="margin-top: 20px; background: #fff3cd; padding: 20px; border-radius: 10px; border-left: 4px solid #ffc107;">
+    <h4 style="color: #856404; margin-bottom: 10px;">⚠️ Alerta de Stock</h4>
+    <p style="color: #856404;">Hay {{ productos_bajo_stock }} producto(s) con stock bajo que necesitan reposición.</p>
+    <a href="/admin/gestion/producto/?stock__lte=stock_minimo" style="color: #856404; font-weight: bold;">Ver productos →</a>
+</div>
+{% endif %}
+{% endblock %}
