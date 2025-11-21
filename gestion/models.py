@@ -345,16 +345,15 @@ class Empleado(models.Model):
 
 class DatosEmpresa(models.Model):
     '''Tabla datos_empresa - Información de la empresa'''
-    id_empresa = models.AutoField(db_column='ID_Empresa', primary_key=True)
+    id_empresa = models.IntegerField(db_column='ID_Empresa', primary_key=True)
+    ruc = models.CharField(db_column='RUC', max_length=20)
     razon_social = models.CharField(db_column='Razon_Social', max_length=255)
-    nombre_fantasia = models.CharField(db_column='Nombre_Fantasia', max_length=255, blank=True, null=True)
-    ruc = models.CharField(db_column='RUC', max_length=20, unique=True)
     direccion = models.CharField(db_column='Direccion', max_length=255, blank=True, null=True)
     ciudad = models.CharField(db_column='Ciudad', max_length=100, blank=True, null=True)
+    pais = models.CharField(db_column='Pais', max_length=100, blank=True, null=True)
     telefono = models.CharField(db_column='Telefono', max_length=20, blank=True, null=True)
-    email = models.EmailField(db_column='Email', blank=True, null=True)
-    logo = models.CharField(db_column='Logo', max_length=255, blank=True, null=True)
-    activo = models.BooleanField(db_column='Activo', default=True)
+    email = models.CharField(db_column='Email', max_length=100, blank=True, null=True)
+    activo = models.IntegerField(db_column='Activo', blank=True, null=True)
 
     class Meta:
         managed = False
@@ -398,7 +397,7 @@ class PreciosPorLista(models.Model):
 
 class CostosHistoricos(models.Model):
     '''Tabla costos_historicos - Historial de costos de productos'''
-    id_costo = models.BigAutoField(db_column='ID_Costo', primary_key=True)
+    id_costo_historico = models.BigAutoField(db_column='ID_Costo_Historico', primary_key=True)
     id_producto = models.ForeignKey(
         Producto,
         on_delete=models.CASCADE,
@@ -412,8 +411,8 @@ class CostosHistoricos(models.Model):
         blank=True,
         null=True
     )
-    costo_unitario = models.DecimalField(db_column='Costo_Unitario', max_digits=10, decimal_places=2)
-    fecha_costo = models.DateTimeField(db_column='Fecha_Costo')
+    costo_unitario_neto = models.DecimalField(db_column='Costo_Unitario_Neto', max_digits=10, decimal_places=2)
+    fecha_compra = models.DateTimeField(db_column='Fecha_Compra')
 
     class Meta:
         managed = False
@@ -467,17 +466,10 @@ class Compras(models.Model):
         db_column='ID_Proveedor',
         related_name='compras'
     )
-    id_empleado_autoriza = models.ForeignKey(
-        Empleado,
-        on_delete=models.PROTECT,
-        db_column='ID_Empleado_Autoriza'
-    )
-    nro_factura_proveedor = models.CharField(db_column='Nro_Factura_Proveedor', max_length=50, blank=True, null=True)
-    fecha_compra = models.DateTimeField(db_column='Fecha_Compra')
-    monto_total_neto = models.DecimalField(db_column='Monto_Total_Neto', max_digits=12, decimal_places=2)
-    monto_iva = models.DecimalField(db_column='Monto_IVA', max_digits=10, decimal_places=2, blank=True, null=True)
-    monto_total_con_iva = models.DecimalField(db_column='Monto_Total_Con_IVA', max_digits=12, decimal_places=2)
-    estado = models.CharField(db_column='Estado', max_length=10, blank=True, null=True)
+    fecha = models.DateTimeField(db_column='Fecha')
+    monto_total = models.DecimalField(db_column='Monto_Total', max_digits=12, decimal_places=2)
+    nro_factura = models.CharField(db_column='Nro_Factura', max_length=50, blank=True, null=True)
+    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
 
     class Meta:
         managed = False
@@ -521,7 +513,7 @@ class DetalleCompra(models.Model):
 
 class CtaCorrienteProv(models.Model):
     '''Tabla cta_corriente_prov - Cuenta corriente de proveedores'''
-    id_movimiento = models.BigAutoField(db_column='ID_Movimiento', primary_key=True)
+    id_movimientoprov = models.BigAutoField(db_column='ID_MovimientoProv', primary_key=True)
     id_proveedor = models.ForeignKey(
         Proveedor,
         on_delete=models.CASCADE,
@@ -535,11 +527,11 @@ class CtaCorrienteProv(models.Model):
         blank=True,
         null=True
     )
-    tipo_movimiento = models.CharField(db_column='Tipo_Movimiento', max_length=7)
+    tipo_movimiento = models.CharField(db_column='Tipo_Movimiento', max_length=5)
     monto = models.DecimalField(db_column='Monto', max_digits=12, decimal_places=2)
-    fecha_movimiento = models.DateTimeField(db_column='Fecha_Movimiento')
-    saldo_resultante = models.DecimalField(db_column='Saldo_Resultante', max_digits=12, decimal_places=2)
-    referencia = models.CharField(db_column='Referencia', max_length=255, blank=True, null=True)
+    fecha = models.DateTimeField(db_column='Fecha')
+    saldo_acumulado = models.DecimalField(db_column='Saldo_Acumulado', max_digits=12, decimal_places=2)
+    referencia_doc = models.CharField(db_column='Referencia_Doc', max_length=50, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -559,22 +551,24 @@ class CargasSaldo(models.Model):
         on_delete=models.PROTECT,
         db_column='Nro_Tarjeta'
     )
-    id_cliente_autorizo = models.ForeignKey(
+    id_cliente_origen = models.ForeignKey(
         Cliente,
         on_delete=models.PROTECT,
-        db_column='ID_Cliente_Autorizo'
-    )
-    id_venta = models.OneToOneField(
-        'Ventas',
-        on_delete=models.SET_NULL,
-        db_column='ID_Venta',
+        db_column='ID_Cliente_Origen',
+        related_name='cargas_origen',
         blank=True,
         null=True
     )
-    monto_cargado = models.BigIntegerField(db_column='Monto_Cargado')
+    id_nota_credito_origen = models.ForeignKey(
+        'NotasCredito',
+        on_delete=models.PROTECT,
+        db_column='ID_Nota_Credito_Origen',
+        blank=True,
+        null=True
+    )
     fecha_carga = models.DateTimeField(db_column='Fecha_Carga')
-    saldo_anterior = models.BigIntegerField(db_column='Saldo_Anterior')
-    saldo_nuevo = models.BigIntegerField(db_column='Saldo_Nuevo')
+    monto_cargado = models.DecimalField(db_column='Monto_Cargado', max_digits=10, decimal_places=2)
+    referencia = models.CharField(db_column='Referencia', max_length=100, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -703,11 +697,11 @@ class DatosFacturacionElect(models.Model):
         primary_key=True
     )
     cdc = models.CharField(db_column='CDC', max_length=44, unique=True)
-    qr_code = models.TextField(db_column='QR_Code', blank=True, null=True)
-    xml_firmado = models.TextField(db_column='XML_Firmado', blank=True, null=True)
-    estado_sifen = models.CharField(db_column='Estado_SIFEN', max_length=10, blank=True, null=True)
-    fecha_envio_sifen = models.DateTimeField(db_column='Fecha_Envio_SIFEN', blank=True, null=True)
-    fecha_respuesta_sifen = models.DateTimeField(db_column='Fecha_Respuesta_SIFEN', blank=True, null=True)
+    url_kude = models.CharField(db_column='URL_KuDE', max_length=255, blank=True, null=True)
+    xml_transmitido = models.TextField(db_column='XML_Transmitido', blank=True, null=True)
+    estado_sifen = models.CharField(db_column='Estado_SIFEN', max_length=9, blank=True, null=True)
+    fecha_envio = models.DateTimeField(db_column='Fecha_Envio', blank=True, null=True)
+    fecha_respuesta = models.DateTimeField(db_column='Fecha_Respuesta', blank=True, null=True)
 
     class Meta:
         managed = False
@@ -727,12 +721,7 @@ class DatosFacturacionFisica(models.Model):
         db_column='ID_Documento',
         primary_key=True
     )
-    nro_factura_completo = models.CharField(db_column='Nro_Factura_Completo', max_length=50, unique=True)
-    id_empleado_emitio = models.ForeignKey(
-        Empleado,
-        on_delete=models.PROTECT,
-        db_column='ID_Empleado_Emitio'
-    )
+    nro_preimpreso_interno = models.CharField(db_column='Nro_Preimpreso_Interno', max_length=20, unique=True)
 
     class Meta:
         managed = False
@@ -741,7 +730,7 @@ class DatosFacturacionFisica(models.Model):
         verbose_name_plural = 'Datos Facturación Física'
 
     def __str__(self):
-        return f'Factura Física {self.nro_factura_completo}'
+        return f'Factura Física {self.nro_preimpreso_interno}'
 
 
 # ==================== MOVIMIENTOS DE INVENTARIO ====================
@@ -806,15 +795,22 @@ class AjustesInventario(models.Model):
         ('Otro', 'Otro'),
     ]
 
+    ESTADO_CHOICES = [
+        ('Pendiente', 'Pendiente'),
+        ('Aprobado', 'Aprobado'),
+        ('Rechazado', 'Rechazado'),
+    ]
+
     id_ajuste = models.BigAutoField(db_column='ID_Ajuste', primary_key=True)
-    id_empleado_autoriza = models.ForeignKey(
+    id_empleado_responsable = models.ForeignKey(
         Empleado,
         on_delete=models.PROTECT,
-        db_column='ID_Empleado_Autoriza'
+        db_column='ID_Empleado_Responsable'
     )
-    fecha_ajuste = models.DateTimeField(db_column='Fecha_Ajuste')
+    fecha_hora = models.DateTimeField(db_column='Fecha_Hora')
     tipo_ajuste = models.CharField(db_column='Tipo_Ajuste', max_length=8, choices=TIPO_AJUSTE_CHOICES)
-    motivo = models.CharField(db_column='Motivo', max_length=255, blank=True, null=True)
+    motivo = models.CharField(db_column='Motivo', max_length=255)
+    estado = models.CharField(db_column='Estado', max_length=10, choices=ESTADO_CHOICES)
 
     class Meta:
         managed = False
@@ -828,6 +824,7 @@ class AjustesInventario(models.Model):
 
 class DetalleAjuste(models.Model):
     '''Tabla detalle_ajuste - Detalle de ajustes de inventario'''
+    id_detalle = models.BigAutoField(db_column='ID_Detalle', primary_key=True)
     id_ajuste = models.ForeignKey(
         AjustesInventario,
         on_delete=models.CASCADE,
@@ -839,7 +836,7 @@ class DetalleAjuste(models.Model):
         on_delete=models.PROTECT,
         db_column='ID_Producto'
     )
-    id_movimientostock = models.ForeignKey(
+    id_movimientostock = models.OneToOneField(
         MovimientosStock,
         on_delete=models.CASCADE,
         db_column='ID_MovimientoStock'
@@ -920,20 +917,10 @@ class TarifasComision(models.Model):
 
 class Cajas(models.Model):
     '''Tabla cajas - Cajas de punto de venta'''
-    ESTADO_CHOICES = [
-        ('Abierta', 'Abierta'),
-        ('Cerrada', 'Cerrada'),
-    ]
-
     id_caja = models.AutoField(db_column='ID_Caja', primary_key=True)
-    nombre_caja = models.CharField(db_column='Nombre_Caja', max_length=50, unique=True)
-    id_punto = models.ForeignKey(
-        PuntosExpedicion,
-        on_delete=models.PROTECT,
-        db_column='ID_Punto'
-    )
-    estado = models.CharField(db_column='Estado', max_length=7, choices=ESTADO_CHOICES, default='Cerrada')
-    activo = models.BooleanField(db_column='Activo', default=True)
+    nombre_caja = models.CharField(db_column='Nombre_Caja', max_length=50)
+    ubicacion = models.CharField(db_column='Ubicacion', max_length=100, blank=True, null=True)
+    activo = models.IntegerField(db_column='Activo', blank=True, null=True)
 
     class Meta:
         managed = False
@@ -942,7 +929,7 @@ class Cajas(models.Model):
         verbose_name_plural = 'Cajas'
 
     def __str__(self):
-        return f'{self.nombre_caja} ({self.estado})'
+        return f'{self.nombre_caja}'
 
 
 class CierresCaja(models.Model):
@@ -951,30 +938,19 @@ class CierresCaja(models.Model):
     id_caja = models.ForeignKey(
         Cajas,
         on_delete=models.PROTECT,
-        db_column='ID_Caja',
-        related_name='cierres'
+        db_column='ID_Caja'
     )
-    id_empleado_abre = models.ForeignKey(
+    id_empleado = models.ForeignKey(
         Empleado,
         on_delete=models.PROTECT,
-        db_column='ID_Empleado_Abre',
-        related_name='cierres_apertura'
+        db_column='ID_Empleado'
     )
-    id_empleado_cierra = models.ForeignKey(
-        Empleado,
-        on_delete=models.PROTECT,
-        db_column='ID_Empleado_Cierra',
-        related_name='cierres_cierre',
-        blank=True,
-        null=True
-    )
-    fecha_apertura = models.DateTimeField(db_column='Fecha_Apertura')
-    fecha_cierre = models.DateTimeField(db_column='Fecha_Cierre', blank=True, null=True)
-    monto_inicial = models.BigIntegerField(db_column='Monto_Inicial')
-    monto_final_sistema = models.BigIntegerField(db_column='Monto_Final_Sistema', blank=True, null=True)
-    monto_final_fisico = models.BigIntegerField(db_column='Monto_Final_Fisico', blank=True, null=True)
-    diferencia = models.BigIntegerField(db_column='Diferencia', blank=True, null=True)
-    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
+    fecha_hora_apertura = models.DateTimeField(db_column='Fecha_Hora_Apertura')
+    fecha_hora_cierre = models.DateTimeField(db_column='Fecha_Hora_Cierre', blank=True, null=True)
+    monto_inicial = models.DecimalField(db_column='Monto_Inicial', max_digits=10, decimal_places=2, blank=True, null=True)
+    monto_contado_fisico = models.DecimalField(db_column='Monto_Contado_Fisico', max_digits=10, decimal_places=2, blank=True, null=True)
+    diferencia_efectivo = models.DecimalField(db_column='Diferencia_Efectivo', max_digits=10, decimal_places=2, blank=True, null=True)
+    estado = models.CharField(db_column='Estado', max_length=7, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -1148,21 +1124,15 @@ class DetalleComisionVenta(models.Model):
 
 class ConciliacionPagos(models.Model):
     '''Tabla conciliacion_pagos - Conciliación de pagos con entidades'''
-    ESTADO_CHOICES = [
-        ('Pendiente', 'Pendiente'),
-        ('Conciliado', 'Conciliado'),
-        ('Rechazado', 'Rechazado'),
-    ]
-
     id_conciliacion = models.BigAutoField(db_column='ID_Conciliacion', primary_key=True)
-    id_pago_venta = models.ForeignKey(
+    id_pago_venta = models.OneToOneField(
         PagosVenta,
         on_delete=models.CASCADE,
         db_column='ID_Pago_Venta'
     )
-    fecha_conciliacion = models.DateTimeField(db_column='Fecha_Conciliacion')
-    monto_conciliado = models.BigIntegerField(db_column='Monto_Conciliado')
-    estado = models.CharField(db_column='Estado', max_length=11, choices=ESTADO_CHOICES, blank=True, null=True)
+    fecha_acreditacion = models.DateTimeField(db_column='Fecha_Acreditacion', blank=True, null=True)
+    monto_acreditado = models.DecimalField(db_column='Monto_Acreditado', max_digits=10, decimal_places=2, blank=True, null=True)
+    estado = models.CharField(db_column='Estado', max_length=10, blank=True, null=True)
     observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
 
     class Meta:
@@ -1191,11 +1161,11 @@ class CtaCorriente(models.Model):
         blank=True,
         null=True
     )
-    tipo_movimiento = models.CharField(db_column='Tipo_Movimiento', max_length=7)
+    fecha = models.DateTimeField(db_column='Fecha')
+    tipo_movimiento = models.CharField(db_column='Tipo_Movimiento', max_length=5)
     monto = models.BigIntegerField(db_column='Monto')
-    fecha_movimiento = models.DateTimeField(db_column='Fecha_Movimiento')
-    saldo_resultante = models.BigIntegerField(db_column='Saldo_Resultante')
-    referencia = models.CharField(db_column='Referencia', max_length=255, blank=True, null=True)
+    referencia_doc = models.CharField(db_column='Referencia_Doc', max_length=50, blank=True, null=True)
+    saldo_acumulado = models.BigIntegerField(db_column='Saldo_Acumulado')
 
     class Meta:
         managed = False
@@ -1407,11 +1377,11 @@ class PagosAlmuerzoMensual(models.Model):
 
 class AlertasSistema(models.Model):
     '''Tabla alertas_sistema - Alertas del sistema'''
-    TIPO_ALERTA_CHOICES = [
+    TIPO_CHOICES = [
         ('Stock Bajo', 'Stock Bajo'),
         ('Saldo Bajo', 'Saldo Bajo'),
         ('Timbrado Próximo a Vencer', 'Timbrado Próximo a Vencer'),
-        ('Otro', 'Otro'),
+        ('Sistema', 'Sistema'),
     ]
 
     ESTADO_CHOICES = [
@@ -1421,11 +1391,14 @@ class AlertasSistema(models.Model):
     ]
 
     id_alerta = models.BigAutoField(db_column='ID_Alerta', primary_key=True)
-    tipo_alerta = models.CharField(db_column='Tipo_Alerta', max_length=25, choices=TIPO_ALERTA_CHOICES)
-    descripcion = models.TextField(db_column='Descripcion')
-    fecha_generacion = models.DateTimeField(db_column='Fecha_Generacion')
+    tipo = models.CharField(db_column='Tipo', max_length=30, choices=TIPO_CHOICES)
+    mensaje = models.CharField(db_column='Mensaje', max_length=500)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion')
+    fecha_leida = models.DateTimeField(db_column='Fecha_Leida', blank=True, null=True)
     estado = models.CharField(db_column='Estado', max_length=9, choices=ESTADO_CHOICES, blank=True, null=True)
+    id_empleado_resuelve = models.BigIntegerField(db_column='ID_Empleado_Resuelve', blank=True, null=True)
     fecha_resolucion = models.DateTimeField(db_column='Fecha_Resolucion', blank=True, null=True)
+    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
 
     class Meta:
         managed = False
@@ -1434,7 +1407,7 @@ class AlertasSistema(models.Model):
         verbose_name_plural = 'Alertas del Sistema'
 
     def __str__(self):
-        return f'{self.tipo_alerta} - {self.estado}'
+        return f'{self.tipo} - {self.estado}'
 
 
 class SolicitudesNotificacion(models.Model):
@@ -1491,11 +1464,11 @@ class AuditoriaEmpleados(models.Model):
         db_column='ID_Empleado',
         related_name='auditorias'
     )
-    accion = models.CharField(db_column='Accion', max_length=255)
-    tabla_afectada = models.CharField(db_column='Tabla_Afectada', max_length=50, blank=True, null=True)
-    id_registro_afectado = models.BigIntegerField(db_column='ID_Registro_Afectado', blank=True, null=True)
-    fecha_hora = models.DateTimeField(db_column='Fecha_Hora')
-    detalles = models.TextField(db_column='Detalles', blank=True, null=True)
+    fecha_cambio = models.DateTimeField(db_column='Fecha_Cambio')
+    campo_modificado = models.CharField(db_column='Campo_Modificado', max_length=50)
+    valor_anterior = models.TextField(db_column='Valor_Anterior', blank=True, null=True)
+    valor_nuevo = models.TextField(db_column='Valor_Nuevo', blank=True, null=True)
+    ip_origen = models.CharField(db_column='IP_Origen', max_length=45, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -1504,7 +1477,7 @@ class AuditoriaEmpleados(models.Model):
         verbose_name_plural = 'Auditorías de Empleados'
 
     def __str__(self):
-        return f'{self.id_empleado.nombre_completo} - {self.accion} ({self.fecha_hora})'
+        return f'{self.id_empleado.nombre_completo} - {self.campo_modificado} ({self.fecha_cambio})'
 
 
 class AuditoriaUsuariosWeb(models.Model):
@@ -1516,10 +1489,11 @@ class AuditoriaUsuariosWeb(models.Model):
         db_column='ID_Cliente',
         related_name='auditorias_web'
     )
-    accion = models.CharField(db_column='Accion', max_length=255)
-    fecha_hora = models.DateTimeField(db_column='Fecha_Hora')
-    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
-    detalles = models.TextField(db_column='Detalles', blank=True, null=True)
+    fecha_cambio = models.DateTimeField(db_column='Fecha_Cambio')
+    campo_modificado = models.CharField(db_column='Campo_Modificado', max_length=50)
+    valor_anterior = models.TextField(db_column='Valor_Anterior', blank=True, null=True)
+    valor_nuevo = models.TextField(db_column='Valor_Nuevo', blank=True, null=True)
+    ip_origen = models.CharField(db_column='IP_Origen', max_length=45, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -1528,21 +1502,28 @@ class AuditoriaUsuariosWeb(models.Model):
         verbose_name_plural = 'Auditorías de Usuarios Web'
 
     def __str__(self):
-        return f'{self.id_cliente.nombre_completo} - {self.accion} ({self.fecha_hora})'
+        return f'{self.id_cliente.nombre_completo} - {self.campo_modificado} ({self.fecha_cambio})'
 
 
 class AuditoriaComisiones(models.Model):
     '''Tabla auditoria_comisiones - Auditoría de cálculos de comisiones'''
     id_auditoria = models.BigAutoField(db_column='ID_Auditoria', primary_key=True)
-    id_detalle_comision = models.ForeignKey(
-        DetalleComisionVenta,
+    id_tarifa = models.ForeignKey(
+        TarifasComision,
         on_delete=models.CASCADE,
-        db_column='ID_Detalle_Comision'
+        db_column='ID_Tarifa'
     )
-    monto_venta = models.BigIntegerField(db_column='Monto_Venta')
-    porcentaje_aplicado = models.DecimalField(db_column='Porcentaje_Aplicado', max_digits=5, decimal_places=4)
-    monto_comision = models.DecimalField(db_column='Monto_Comision', max_digits=10, decimal_places=2)
-    fecha_calculo = models.DateTimeField(db_column='Fecha_Calculo')
+    fecha_cambio = models.DateTimeField(db_column='Fecha_Cambio')
+    campo_modificado = models.CharField(db_column='Campo_Modificado', max_length=50)
+    valor_anterior = models.DecimalField(db_column='Valor_Anterior', max_digits=10, decimal_places=4, blank=True, null=True)
+    valor_nuevo = models.DecimalField(db_column='Valor_Nuevo', max_digits=10, decimal_places=4, blank=True, null=True)
+    id_empleado_modifico = models.ForeignKey(
+        Empleado,
+        on_delete=models.CASCADE,
+        db_column='ID_Empleado_Modifico',
+        blank=True,
+        null=True
+    )
 
     class Meta:
         managed = False
@@ -1555,14 +1536,20 @@ class AuditoriaComisiones(models.Model):
 
 
 # ==================== VISTAS DE LA BASE DE DATOS ====================
+# Las vistas MySQL están activas en la base de datos
 
 class VistaStockAlerta(models.Model):
     '''Vista v_stock_alerta - Productos con stock bajo'''
     id_producto = models.IntegerField(db_column='ID_Producto', primary_key=True)
-    codigo = models.CharField(db_column='Codigo', max_length=50)
-    descripcion = models.CharField(db_column='Descripcion', max_length=255)
+    producto = models.CharField(db_column='producto', max_length=255)
+    codigo = models.CharField(db_column='Codigo', max_length=50, blank=True, null=True)
+    categoria = models.CharField(db_column='categoria', max_length=100)
     stock_actual = models.DecimalField(db_column='Stock_Actual', max_digits=10, decimal_places=3)
     stock_minimo = models.DecimalField(db_column='Stock_Minimo', max_digits=10, decimal_places=3)
+    cantidad_faltante = models.DecimalField(db_column='cantidad_faltante', max_digits=10, decimal_places=3)
+    unidad_medida = models.CharField(db_column='unidad_medida', max_length=50)
+    nivel_alerta = models.CharField(db_column='nivel_alerta', max_length=8)
+    ultima_actualizacion = models.DateTimeField(db_column='ultima_actualizacion', blank=True, null=True)
 
     class Meta:
         managed = False
@@ -1571,14 +1558,20 @@ class VistaStockAlerta(models.Model):
         verbose_name_plural = 'Alertas de Stock'
 
     def __str__(self):
-        return f'{self.descripcion} (Stock: {self.stock_actual})'
+        return f'{self.producto} - {self.nivel_alerta} (Stock: {self.stock_actual})'
 
 
 class VistaSaldoClientes(models.Model):
     '''Vista v_saldo_clientes - Saldos de cuenta corriente'''
     id_cliente = models.IntegerField(db_column='ID_Cliente', primary_key=True)
-    nombre_completo = models.CharField(db_column='Nombre_Completo', max_length=201)
-    saldo = models.BigIntegerField(db_column='Saldo')
+    nombres = models.CharField(db_column='Nombres', max_length=100)
+    apellidos = models.CharField(db_column='Apellidos', max_length=100)
+    nombre_completo = models.CharField(db_column='nombre_completo', max_length=201)
+    ruc_ci = models.CharField(db_column='Ruc_CI', max_length=20)
+    tipo_cliente = models.CharField(db_column='tipo_cliente', max_length=50)
+    saldo_actual = models.DecimalField(db_column='saldo_actual', max_digits=30, decimal_places=2)
+    ultima_actualizacion = models.DateField(db_column='ultima_actualizacion', blank=True, null=True)
+    total_movimientos = models.BigIntegerField(db_column='total_movimientos')
 
     class Meta:
         managed = False
@@ -1587,7 +1580,7 @@ class VistaSaldoClientes(models.Model):
         verbose_name_plural = 'Saldos de Clientes'
 
     def __str__(self):
-        return f'{self.nombre_completo}: {self.saldo}'
+        return f'{self.nombre_completo}: Gs. {self.saldo_actual:,.0f}'
 
 
 # =============================================================================
