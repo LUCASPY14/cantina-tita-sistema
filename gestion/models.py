@@ -245,6 +245,7 @@ class Producto(models.Model):
     codigo = models.CharField(db_column='Codigo', max_length=50, unique=True, blank=True, null=True)
     descripcion = models.CharField(db_column='Descripcion', max_length=255)
     stock_minimo = models.DecimalField(db_column='Stock_Minimo', max_digits=10, decimal_places=3, blank=True, null=True)
+    permite_stock_negativo = models.BooleanField(db_column='Permite_Stock_Negativo', default=False, help_text='Permite que el producto tenga stock negativo (ej: almuerzos preparados bajo demanda)')
     activo = models.BooleanField(db_column='Activo', default=True)
     fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
 
@@ -772,7 +773,13 @@ class MovimientosStock(models.Model):
     fecha_hora = models.DateTimeField(db_column='Fecha_Hora')
     tipo_movimiento = models.CharField(db_column='Tipo_Movimiento', max_length=7, choices=TIPO_MOVIMIENTO_CHOICES)
     cantidad = models.DecimalField(db_column='Cantidad', max_digits=10, decimal_places=3)
-    stock_resultante = models.DecimalField(db_column='Stock_Resultante', max_digits=10, decimal_places=3)
+    stock_resultante = models.DecimalField(
+        db_column='Stock_Resultante', 
+        max_digits=10, 
+        decimal_places=3,
+        default=0,
+        help_text='Se calcula automáticamente por el trigger trg_stock_unico_after_movement'
+    )
     referencia_documento = models.CharField(db_column='Referencia_Documento', max_length=50, blank=True, null=True)
 
     class Meta:
@@ -1011,7 +1018,7 @@ class Ventas(models.Model):
     fecha = models.DateTimeField(db_column='Fecha')
     monto_total = models.BigIntegerField(db_column='Monto_Total')
     estado = models.CharField(db_column='Estado', max_length=10, choices=ESTADO_CHOICES, blank=True, null=True)
-    tipo_venta = models.CharField(db_column='Tipo_Venta', max_length=19, choices=TIPO_VENTA_CHOICES)
+    tipo_venta = models.CharField(db_column='Tipo_Venta', max_length=20, choices=TIPO_VENTA_CHOICES)
 
     class Meta:
         managed = False
@@ -1258,7 +1265,7 @@ class PlanesAlmuerzo(models.Model):
     nombre_plan = models.CharField(db_column='Nombre_Plan', max_length=100, unique=True)
     descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
     precio_mensual = models.DecimalField(db_column='Precio_Mensual', max_digits=10, decimal_places=2)
-    dias_semana_incluidos = models.CharField(db_column='Dias_Semana_Incluidos', max_length=52)
+    dias_semana_incluidos = models.CharField(db_column='Dias_Semana_Incluidos', max_length=60)
     fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', blank=True, null=True)
     activo = models.BooleanField(db_column='Activo', default=True)
 

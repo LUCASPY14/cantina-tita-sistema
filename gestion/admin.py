@@ -271,6 +271,20 @@ class MovimientosStockAdmin(admin.ModelAdmin):
     list_display = ['id_producto', 'tipo_movimiento', 'cantidad', 'stock_resultante', 'fecha_hora']
     list_filter = ['tipo_movimiento', 'fecha_hora']
     search_fields = ['id_producto__descripcion', 'referencia_documento']
+    readonly_fields = ['stock_resultante']
+    
+    fieldsets = (
+        ('Información del Movimiento', {
+            'fields': ('id_producto', 'tipo_movimiento', 'cantidad', 'fecha_hora')
+        }),
+        ('Referencias', {
+            'fields': ('id_empleado_autoriza', 'id_venta', 'id_compra', 'referencia_documento')
+        }),
+        ('Stock Resultante (Automático)', {
+            'fields': ('stock_resultante',),
+            'description': '⚙️ Este campo se calcula automáticamente por el sistema. NO debe ser editado manualmente.'
+        }),
+    )
 
 
 @admin.register(AjustesInventario)
