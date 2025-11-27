@@ -1705,3 +1705,186 @@ class VistaSaldoClientes(models.Model):
 #         '''Calcula el subtotal antes de guardar'''
 #         self.subtotal = self.cantidad * self.precio_unitario
 #         super().save(*args, **kwargs)
+
+
+# =============================================================================
+# NUEVOS MODELOS - 26 NOVIEMBRE 2025
+# =============================================================================
+
+class ConsumoTarjeta(models.Model):
+    '''Tabla consumos_tarjeta - Historial de consumos con tarjeta'''
+    id_consumo = models.BigAutoField(db_column='ID_Consumo', primary_key=True)
+    nro_tarjeta = models.ForeignKey(
+        Tarjeta,
+        on_delete=models.PROTECT,
+        db_column='Nro_Tarjeta',
+        related_name='consumos'
+    )
+    fecha_consumo = models.DateTimeField(db_column='Fecha_Consumo')
+    monto_consumido = models.DecimalField(db_column='Monto_Consumido', max_digits=10, decimal_places=2)
+    detalle = models.CharField(db_column='Detalle', max_length=200, blank=True, null=True)
+    saldo_anterior = models.DecimalField(db_column='Saldo_Anterior', max_digits=10, decimal_places=2)
+    saldo_posterior = models.DecimalField(db_column='Saldo_Posterior', max_digits=10, decimal_places=2)
+    id_empleado_registro = models.ForeignKey(
+        'Empleado',
+        on_delete=models.SET_NULL,
+        db_column='ID_Empleado_Registro',
+        blank=True,
+        null=True,
+        related_name='consumos_registrados'
+    )
+
+    class Meta:
+        managed = False
+        db_table = 'consumos_tarjeta'
+        verbose_name = 'Consumo con Tarjeta'
+        verbose_name_plural = 'Consumos con Tarjeta'
+        ordering = ['-fecha_consumo']
+
+    def __str__(self):
+        return f'Consumo {self.nro_tarjeta} - Gs. {self.monto_consumido:,.0f}'
+
+
+# =============================================================================
+# VISTAS SQL - 26 NOVIEMBRE 2025
+# =============================================================================
+
+class VistaVentasDiaDetallado(models.Model):
+    '''Vista v_ventas_dia_detallado - Ventas con detalles completos'''
+    id_venta = models.BigIntegerField(db_column='ID_Venta', primary_key=True)
+    fecha = models.DateTimeField(db_column='Fecha')
+    monto_total = models.BigIntegerField(db_column='Monto_Total')
+    nombres = models.CharField(db_column='Nombres', max_length=100)
+    apellidos = models.CharField(db_column='Apellidos', max_length=100)
+    cliente_completo = models.CharField(db_column='Cliente_Completo', max_length=201)
+    empleado = models.CharField(db_column='Empleado', max_length=100)
+    nro_timbrado = models.IntegerField(db_column='Nro_Timbrado')
+    nro_secuencial = models.IntegerField(db_column='Nro_Secuencial')
+    cantidad_items = models.BigIntegerField(db_column='Cantidad_Items')
+    productos = models.TextField(db_column='Productos')
+    total_pagado = models.DecimalField(db_column='Total_Pagado', max_digits=32, decimal_places=0)
+    saldo_pendiente = models.DecimalField(db_column='Saldo_Pendiente', max_digits=33, decimal_places=0)
+
+    class Meta:
+        managed = False
+        db_table = 'v_ventas_dia_detallado'
+        verbose_name = 'Vista: Ventas del Día Detallado'
+        verbose_name_plural = 'Vista: Ventas del Día Detallado'
+
+    def __str__(self):
+        return f'Venta {self.id_venta} - {self.cliente_completo}'
+
+
+class VistaConsumosEstudiante(models.Model):
+    '''Vista v_consumos_estudiante - Resumen de consumos por estudiante'''
+    id_hijo = models.IntegerField(db_column='ID_Hijo', primary_key=True)
+    estudiante = models.CharField(db_column='Estudiante', max_length=202)
+    responsable_nombre = models.CharField(db_column='Responsable_Nombre', max_length=100)
+    responsable_apellido = models.CharField(db_column='Responsable_Apellido', max_length=100)
+    nro_tarjeta = models.CharField(db_column='Nro_Tarjeta', max_length=20)
+    saldo_actual = models.BigIntegerField(db_column='Saldo_Actual')
+    total_consumos = models.BigIntegerField(db_column='Total_Consumos')
+    total_consumido = models.DecimalField(db_column='Total_Consumido', max_digits=32, decimal_places=2)
+    ultimo_consumo = models.DateTimeField(db_column='Ultimo_Consumo')
+    total_recargas = models.BigIntegerField(db_column='Total_Recargas')
+    total_recargado = models.DecimalField(db_column='Total_Recargado', max_digits=32, decimal_places=2)
+
+    class Meta:
+        managed = False
+        db_table = 'v_consumos_estudiante'
+        verbose_name = 'Vista: Consumos por Estudiante'
+        verbose_name_plural = 'Vista: Consumos por Estudiante'
+
+    def __str__(self):
+        return f'{self.estudiante} - Saldo: Gs. {self.saldo_actual:,.0f}'
+
+
+class VistaStockCriticoAlertas(models.Model):
+    '''Vista v_stock_critico_alertas - Productos con stock crítico'''
+    id_producto = models.IntegerField(db_column='ID_Producto', primary_key=True)
+    codigo = models.CharField(db_column='Codigo', max_length=50)
+    descripcion = models.CharField(db_column='Descripcion', max_length=255)
+    stock_minimo = models.DecimalField(db_column='Stock_Minimo', max_digits=10, decimal_places=3)
+    nombre_categoria = models.CharField(db_column='Nombre_Categoria', max_length=100)
+    nivel_alerta = models.CharField(db_column='Nivel_Alerta', max_length=50)
+
+    class Meta:
+        managed = False
+        db_table = 'v_stock_critico_alertas'
+        verbose_name = 'Vista: Stock Crítico'
+        verbose_name_plural = 'Vista: Stock Crítico'
+
+    def __str__(self):
+        return f'{self.codigo} - {self.nivel_alerta}'
+
+
+class VistaRecargasHistorial(models.Model):
+    '''Vista v_recargas_historial - Historial de recargas'''
+    id_carga = models.BigIntegerField(db_column='ID_Carga', primary_key=True)
+    fecha_carga = models.DateTimeField(db_column='Fecha_Carga')
+    monto_cargado = models.DecimalField(db_column='Monto_Cargado', max_digits=10, decimal_places=2)
+    nro_tarjeta = models.CharField(db_column='Nro_Tarjeta', max_length=20)
+    estudiante = models.CharField(db_column='Estudiante', max_length=202)
+    responsable = models.CharField(db_column='Responsable', max_length=201)
+    telefono = models.CharField(db_column='Telefono', max_length=20)
+    empleado_registro = models.CharField(db_column='Empleado_Registro', max_length=100)
+    saldo_actual_tarjeta = models.BigIntegerField(db_column='Saldo_Actual_Tarjeta')
+
+    class Meta:
+        managed = False
+        db_table = 'v_recargas_historial'
+        verbose_name = 'Vista: Historial de Recargas'
+        verbose_name_plural = 'Vista: Historial de Recargas'
+
+    def __str__(self):
+        return f'Recarga {self.id_carga} - {self.estudiante}'
+
+
+class VistaResumenCajaDiario(models.Model):
+    '''Vista v_resumen_caja_diario - Resumen financiero diario'''
+    fecha = models.DateField(db_column='Fecha', primary_key=True)
+    total_ventas = models.BigIntegerField(db_column='Total_Ventas')
+    monto_total_ventas = models.DecimalField(db_column='Monto_Total_Ventas', max_digits=32, decimal_places=0)
+    total_recargas = models.BigIntegerField(db_column='Total_Recargas')
+    monto_total_recargas = models.DecimalField(db_column='Monto_Total_Recargas', max_digits=32, decimal_places=2)
+    total_ingresos_dia = models.DecimalField(db_column='Total_Ingresos_Dia', max_digits=33, decimal_places=2)
+    total_transacciones_pago = models.BigIntegerField(db_column='Total_Transacciones_Pago')
+    total_efectivo = models.DecimalField(db_column='Total_Efectivo', max_digits=32, decimal_places=0)
+    total_tarjeta_debito = models.DecimalField(db_column='Total_Tarjeta_Debito', max_digits=32, decimal_places=0)
+    total_tarjeta_credito = models.DecimalField(db_column='Total_Tarjeta_Credito', max_digits=32, decimal_places=0)
+    total_transferencias = models.DecimalField(db_column='Total_Transferencias', max_digits=32, decimal_places=0)
+
+    class Meta:
+        managed = False
+        db_table = 'v_resumen_caja_diario'
+        verbose_name = 'Vista: Resumen de Caja Diario'
+        verbose_name_plural = 'Vista: Resumen de Caja Diario'
+
+    def __str__(self):
+        return f'Caja {self.fecha} - Gs. {self.total_ingresos_dia:,.0f}'
+
+
+class VistaNotasCreditoDetallado(models.Model):
+    '''Vista v_notas_credito_detallado - Notas de crédito con detalles'''
+    id_nota = models.BigIntegerField(db_column='ID_Nota', primary_key=True)
+    id_documento = models.BigIntegerField(db_column='ID_Documento')
+    fecha = models.DateTimeField(db_column='Fecha')
+    monto_total = models.DecimalField(db_column='Monto_Total', max_digits=12, decimal_places=2)
+    estado = models.CharField(db_column='Estado', max_length=20)
+    motivo_devolucion = models.CharField(db_column='Motivo_Devolucion', max_length=255)
+    venta_origen = models.BigIntegerField(db_column='Venta_Origen')
+    fecha_venta_origen = models.DateTimeField(db_column='Fecha_Venta_Origen')
+    cliente = models.CharField(db_column='Cliente', max_length=201)
+    ruc_ci = models.CharField(db_column='Ruc_CI', max_length=20)
+    telefono = models.CharField(db_column='Telefono', max_length=20)
+    nro_timbrado = models.IntegerField(db_column='Nro_Timbrado')
+    nro_secuencial = models.IntegerField(db_column='Nro_Secuencial')
+
+    class Meta:
+        managed = False
+        db_table = 'v_notas_credito_detallado'
+        verbose_name = 'Vista: Notas de Crédito Detallado'
+        verbose_name_plural = 'Vista: Notas de Crédito Detallado'
+
+    def __str__(self):
+        return f'NC {self.id_nota} - {self.cliente}'
