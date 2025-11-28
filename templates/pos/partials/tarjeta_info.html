@@ -1,0 +1,47 @@
+<!-- Información de la tarjeta escaneada -->
+{% if tarjeta %}
+<div class="bg-success text-white p-4 rounded-lg fade-in">
+    <div class="flex items-center gap-2 mb-2">
+        <span class="text-2xl">👤</span>
+        <div>
+            <p class="font-bold">{{ tarjeta.estudiante_nombre }}</p>
+            <p class="text-xs opacity-80">Tarjeta: {{ tarjeta.codigo_tarjeta }}</p>
+        </div>
+    </div>
+    <div class="flex justify-between items-center mt-3">
+        <span class="text-sm">Saldo disponible:</span>
+        <span class="text-2xl font-bold">
+            Gs. {{ tarjeta.saldo_actual|floatformat:0 }}
+        </span>
+    </div>
+    {% if tarjeta.saldo_actual < 5000 %}
+    <div class="alert alert-warning mt-2 text-xs">
+        ⚠️ Saldo bajo
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // Actualizar la tarjeta seleccionada en Alpine
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('pos', {
+            selectedCard: {
+                id: {{ tarjeta.nro_tarjeta }},
+                nombre: '{{ tarjeta.estudiante_nombre|escapejs }}',
+                saldo: {{ tarjeta.saldo_actual }}
+            }
+        });
+    });
+    
+    playSound('scan');
+</script>
+
+{% else %}
+<div class="alert alert-error">
+    <span>❌ Tarjeta no encontrada</span>
+</div>
+
+<script>
+    playSound('error');
+</script>
+{% endif %}

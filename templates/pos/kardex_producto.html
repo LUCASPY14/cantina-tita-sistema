@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kardex - {{ producto.descripcion }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold">📋 Kardex de Producto</h1>
+            <p class="text-base-content/70">Historial completo de movimientos</p>
+        </div>
+        
+        <div class="flex gap-2">
+            <a href="{% url 'pos:inventario_productos' %}" class="btn btn-ghost">
+                ← Volver
+            </a>
+            <button onclick="window.print()" class="btn btn-primary">
+                🖨️ Imprimir
+            </button>
+        </div>
+    </div>
+
+    <!-- Info del Producto -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <p class="text-sm text-base-content/70">Código</p>
+                    <p class="font-mono font-bold">{{ producto.codigo }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-base-content/70">Descripción</p>
+                    <p class="font-bold">{{ producto.descripcion }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-base-content/70">Categoría</p>
+                    <p>{{ producto.id_categoria.descripcion|default:"Sin categoría" }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-base-content/70">Stock Actual</p>
+                    <p class="text-2xl font-bold text-primary">
+                        {{ saldo_actual }} {{ producto.id_unidad.simbolo }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Fecha Desde</span>
+                    </label>
+                    <input type="date" 
+                           name="fecha_desde" 
+                           value="{{ fecha_desde }}"
+                           class="input input-bordered">
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Fecha Hasta</span>
+                    </label>
+                    <input type="date" 
+                           name="fecha_hasta" 
+                           value="{{ fecha_hasta }}"
+                           class="input input-bordered">
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">&nbsp;</span>
+                    </label>
+                    <div class="flex gap-2">
+                        <button type="submit" class="btn btn-primary flex-1">
+                            🔍 Filtrar
+                        </button>
+                        <a href="{% url 'pos:kardex_producto' producto.id_producto %}" class="btn btn-ghost">
+                            ✖️
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="stat bg-success text-success-content shadow-lg rounded-lg">
+            <div class="stat-title text-success-content/80">Total Entradas</div>
+            <div class="stat-value">{{ total_entradas }}</div>
+            <div class="stat-desc text-success-content/70">{{ producto.id_unidad.simbolo }}</div>
+        </div>
+
+        <div class="stat bg-error text-error-content shadow-lg rounded-lg">
+            <div class="stat-title text-error-content/80">Total Salidas</div>
+            <div class="stat-value">{{ total_salidas }}</div>
+            <div class="stat-desc text-error-content/70">{{ producto.id_unidad.simbolo }}</div>
+        </div>
+
+        <div class="stat bg-primary text-primary-content shadow-lg rounded-lg">
+            <div class="stat-title text-primary-content/80">Saldo Actual</div>
+            <div class="stat-value">{{ saldo_actual }}</div>
+            <div class="stat-desc text-primary-content/70">{{ producto.id_unidad.simbolo }}</div>
+        </div>
+    </div>
+
+    <!-- Tabla de Movimientos -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title mb-4">Historial de Movimientos</h2>
+            
+            <div class="overflow-x-auto">
+                <table class="table table-zebra table-sm">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Hora</th>
+                            <th>Tipo</th>
+                            <th>Descripción</th>
+                            <th>Entrada</th>
+                            <th>Salida</th>
+                            <th>Empleado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mov in movimientos %}
+                        <tr>
+                            <td>{{ mov.fecha|date:"d/m/Y" }}</td>
+                            <td>{{ mov.hora|default:"-" }}</td>
+                            <td>
+                                {% if mov.tipo == 'Entrada' %}
+                                <span class="badge badge-success">⬆️ Entrada</span>
+                                {% elif mov.tipo == 'Salida' %}
+                                <span class="badge badge-error">⬇️ Salida</span>
+                                {% else %}
+                                <span class="badge badge-warning">⚙️ Ajuste</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ mov.descripcion }}</td>
+                            <td>
+                                {% if mov.tipo == 'Entrada' %}
+                                <span class="text-success font-bold">
+                                    +{{ mov.cantidad }} {{ producto.id_unidad.simbolo }}
+                                </span>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if mov.tipo == 'Salida' %}
+                                <span class="text-error font-bold">
+                                    -{{ mov.cantidad }} {{ producto.id_unidad.simbolo }}
+                                </span>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>{{ mov.empleado|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-8">
+                                <div class="text-base-content/50">
+                                    <p class="text-4xl mb-2">📋</p>
+                                    <p>No hay movimientos registrados</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Info -->
+            {% if movimientos %}
+            <div class="mt-4 text-sm text-base-content/70">
+                Mostrando últimos <strong>{{ movimientos|length }}</strong> movimientos
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, form, .navbar {
+        display: none !important;
+    }
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ddd;
+    }
+    body {
+        background: white !important;
+    }
+}
+</style>
+{% endblock %}

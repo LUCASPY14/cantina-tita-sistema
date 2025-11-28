@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Inventario - Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, var(--fallback-p,oklch(var(--p))) 0%, var(--fallback-pc,oklch(var(--pc))) 100%);
+    }
+    .alert-badge {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: .5; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6" x-data="inventarioDashboardApp()">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold flex items-center gap-2">
+                📦 Dashboard de Inventario
+                {% if alertas_count > 0 %}
+                <span class="badge badge-error badge-lg alert-badge">{{ alertas_count }} alertas</span>
+                {% endif %}
+            </h1>
+            <p class="text-base-content/70">Monitoreo y gestión de inventario en tiempo real</p>
+        </div>
+        
+        <div class="flex gap-2">
+            <a href="{% url 'pos:inventario_productos' %}" class="btn btn-primary">
+                📋 Ver Productos
+            </a>
+            <a href="{% url 'pos:ajuste_inventario' %}" class="btn btn-accent">
+                ⚙️ Ajustar Stock
+            </a>
+        </div>
+    </div>
+
+    <!-- Estadísticas Principales -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="stat bg-primary text-primary-content shadow-lg rounded-lg">
+            <div class="stat-figure text-4xl opacity-50">📦</div>
+            <div class="stat-title text-primary-content/80">Total Productos</div>
+            <div class="stat-value">{{ stats.total_productos|default:0 }}</div>
+            <div class="stat-desc text-primary-content/70">Activos en sistema</div>
+        </div>
+
+        <div class="stat bg-success text-success-content shadow-lg rounded-lg">
+            <div class="stat-figure text-4xl opacity-50">✅</div>
+            <div class="stat-title text-success-content/80">Stock Normal</div>
+            <div class="stat-value">{{ stats.total_productos|default:0|add:productos_stock_bajo.count|add:productos_sin_stock.count }}</div>
+            <div class="stat-desc text-success-content/70">Sin alertas</div>
+        </div>
+
+        <div class="stat bg-warning text-warning-content shadow-lg rounded-lg">
+            <div class="stat-figure text-4xl opacity-50">⚠️</div>
+            <div class="stat-title text-warning-content/80">Stock Bajo</div>
+            <div class="stat-value">{{ productos_stock_bajo.count }}</div>
+            <div class="stat-desc text-warning-content/70">Menor al mínimo</div>
+        </div>
+
+        <div class="stat bg-error text-error-content shadow-lg rounded-lg">
+            <div class="stat-figure text-4xl opacity-50">❌</div>
+            <div class="stat-title text-error-content/80">Sin Stock</div>
+            <div class="stat-value">{{ productos_sin_stock.count }}</div>
+            <div class="stat-desc text-error-content/70">Stock agotado</div>
+        </div>
+    </div>
+
+    <!-- Alertas y Acciones Rápidas -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Productos con Stock Bajo -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <div class="flex justify-between items-center">
+                    <h2 class="card-title text-warning">⚠️ Stock Bajo</h2>
+                    <a href="{% url 'pos:alertas_inventario' %}" class="btn btn-sm btn-warning">
+                        Ver Todas
+                    </a>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra table-sm">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Producto</th>
+                                <th>Stock Actual</th>
+                                <th>Stock Mínimo</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for producto in productos_stock_bajo %}
+                            <tr>
+                                <td class="font-mono">{{ producto.codigo }}</td>
+                                <td>{{ producto.descripcion|truncatewords:5 }}</td>
+                                <td>
+                                    <span class="badge badge-warning">
+                                        {{ producto.stock.stock_actual }} {{ producto.id_unidad.simbolo }}
+                                    </span>
+                                </td>
+                                <td>{{ producto.stock_minimo }} {{ producto.id_unidad.simbolo }}</td>
+                                <td>
+                                    <a href="{% url 'pos:kardex_producto' producto.id_producto %}" 
+                                       class="btn btn-xs btn-ghost">
+                                        Ver Kardex
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-base-content/50">
+                                    ✅ No hay productos con stock bajo
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Productos Sin Stock -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <div class="flex justify-between items-center">
+                    <h2 class="card-title text-error">❌ Sin Stock</h2>
+                    <a href="{% url 'pos:alertas_inventario' %}" class="btn btn-sm btn-error">
+                        Ver Todas
+                    </a>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra table-sm">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Producto</th>
+                                <th>Categoría</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for producto in productos_sin_stock %}
+                            <tr>
+                                <td class="font-mono">{{ producto.codigo }}</td>
+                                <td>{{ producto.descripcion|truncatewords:5 }}</td>
+                                <td>
+                                    <span class="badge badge-outline">
+                                        {{ producto.id_categoria.descripcion|default:"Sin categoría" }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{% url 'pos:kardex_producto' producto.id_producto %}" 
+                                       class="btn btn-xs btn-ghost">
+                                        Ver Kardex
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-base-content/50">
+                                    ✅ Todos los productos tienen stock
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Productos Más Vendidos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Top 10 Más Vendidos -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title">🔥 Productos Más Vendidos (30 días)</h2>
+                
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Código</th>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for producto in productos_mas_vendidos %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td class="font-mono text-xs">{{ producto.id_producto__codigo }}</td>
+                                <td>{{ producto.id_producto__descripcion|truncatewords:4 }}</td>
+                                <td>
+                                    <span class="badge badge-success">
+                                        {{ producto.total_vendido }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-base-content/50">
+                                    No hay datos de ventas
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock por Categoría -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title">📊 Stock por Categoría</h2>
+                
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra">
+                        <thead>
+                            <tr>
+                                <th>Categoría</th>
+                                <th>Productos</th>
+                                <th>Stock Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for categoria in categorias_stock %}
+                            <tr>
+                                <td>
+                                    <span class="badge badge-primary">
+                                        {{ categoria.descripcion }}
+                                    </span>
+                                </td>
+                                <td>{{ categoria.total_productos }}</td>
+                                <td>
+                                    <span class="badge badge-success">
+                                        {{ categoria.stock_total|default:0|floatformat:0 }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-base-content/50">
+                                    No hay categorías con productos
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="card bg-base-100 shadow-xl mt-6">
+        <div class="card-body">
+            <h2 class="card-title">⚡ Acciones Rápidas</h2>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <a href="{% url 'pos:inventario_productos' %}" class="btn btn-outline btn-primary">
+                    📋 Listado Completo
+                </a>
+                <a href="{% url 'pos:ajuste_inventario' %}" class="btn btn-outline btn-accent">
+                    ⚙️ Ajustar Stock
+                </a>
+                <a href="{% url 'pos:alertas_inventario' %}" class="btn btn-outline btn-warning">
+                    🔔 Ver Alertas
+                </a>
+                <a href="{% url 'pos:inventario_productos' %}?estado_stock=bajo" class="btn btn-outline btn-error">
+                    📉 Stock Crítico
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function inventarioDashboardApp() {
+    return {
+        init() {
+            console.log('Dashboard de inventario cargado');
+        }
+    }
+}
+</script>
+{% endblock %}

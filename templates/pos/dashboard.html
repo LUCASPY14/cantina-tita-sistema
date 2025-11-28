@@ -1,0 +1,379 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | Cantina Tita{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+    
+    <!-- Encabezado -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-neutral">📊 Dashboard</h1>
+            <p class="text-gray-600">Resumen de ventas y estadísticas</p>
+        </div>
+        <div class="text-right">
+            <p class="text-sm text-gray-600">Último actualización:</p>
+            <p class="font-bold" x-data="clock()" x-text="new Date().toLocaleString('es-PY')"></p>
+        </div>
+    </div>
+    
+    <!-- Tarjetas de estadísticas principales -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Ventas del día -->
+        <div class="card bg-gradient-to-br from-primary to-orange-600 text-white shadow-xl">
+            <div class="card-body">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm opacity-80">Ventas Hoy</p>
+                        <h2 class="text-3xl font-bold">{{ stats.ventas_hoy }}</h2>
+                    </div>
+                    <div class="text-5xl opacity-80">💰</div>
+                </div>
+                <div class="divider my-2"></div>
+                <p class="text-sm">
+                    Gs. {{ stats.total_hoy|floatformat:0 }}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Total del mes -->
+        <div class="card bg-gradient-to-br from-secondary to-teal-600 text-white shadow-xl">
+            <div class="card-body">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm opacity-80">Total Mes</p>
+                        <h2 class="text-3xl font-bold">{{ stats.ventas_mes }}</h2>
+                    </div>
+                    <div class="text-5xl opacity-80">📈</div>
+                </div>
+                <div class="divider my-2"></div>
+                <p class="text-sm">
+                    Gs. {{ stats.total_mes|floatformat:0 }}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Productos vendidos -->
+        <div class="card bg-gradient-to-br from-success to-green-600 text-white shadow-xl">
+            <div class="card-body">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm opacity-80">Items Vendidos</p>
+                        <h2 class="text-3xl font-bold">{{ stats.items_vendidos }}</h2>
+                    </div>
+                    <div class="text-5xl opacity-80">📦</div>
+                </div>
+                <div class="divider my-2"></div>
+                <p class="text-sm">Hoy</p>
+            </div>
+        </div>
+        
+        <!-- Promedio por venta -->
+        <div class="card bg-gradient-to-br from-warning to-yellow-600 text-white shadow-xl">
+            <div class="card-body">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm opacity-80">Promedio/Venta</p>
+                        <h2 class="text-3xl font-bold">Gs. {{ stats.promedio|floatformat:0 }}</h2>
+                    </div>
+                    <div class="text-5xl opacity-80">🎯</div>
+                </div>
+                <div class="divider my-2"></div>
+                <p class="text-sm">Hoy</p>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- Gráficos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        <!-- Ventas por hora -->
+        <div class="card bg-white shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title text-lg">📊 Ventas por Hora (Hoy)</h3>
+                <canvas id="ventasPorHoraChart" height="250"></canvas>
+            </div>
+        </div>
+        
+        <!-- Productos más vendidos -->
+        <div class="card bg-white shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title text-lg">🏆 Top 10 Productos Vendidos</h3>
+                <canvas id="topProductosChart" height="250"></canvas>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- Segunda fila de gráficos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        <!-- Ventas últimos 7 días -->
+        <div class="card bg-white shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title text-lg">📅 Ventas Últimos 7 Días</h3>
+                <canvas id="ventasSemanalesChart" height="250"></canvas>
+            </div>
+        </div>
+        
+        <!-- Ventas por categoría -->
+        <div class="card bg-white shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title text-lg">🎨 Ventas por Categoría</h3>
+                <canvas id="ventasCategoriaChart" height="250"></canvas>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- Tablas de datos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        <!-- Últimas ventas -->
+        <div class="card bg-white shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title text-lg mb-4">🕐 Últimas Ventas</h3>
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra table-sm">
+                        <thead>
+                            <tr>
+                                <th>Hora</th>
+                                <th>Empleado</th>
+                                <th class="text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for venta in ultimas_ventas %}
+                            <tr>
+                                <td>{{ venta.fecha|date:"H:i" }}</td>
+                                <td>{{ venta.empleado_nombre|default:"N/A" }}</td>
+                                <td class="text-right font-bold">Gs. {{ venta.monto_total|floatformat:0 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-gray-400">Sin ventas</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alertas de stock -->
+        <div class="card bg-white shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title text-lg mb-4">⚠️ Alertas de Stock</h3>
+                <div class="space-y-2">
+                    {% for producto in stock_bajo %}
+                    <div class="alert alert-warning py-2">
+                        <div class="flex justify-between w-full">
+                            <span class="font-semibold text-sm">{{ producto.descripcion }}</span>
+                            <span class="badge badge-error">{{ producto.stock_actual }} unid.</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-gray-400 py-4">
+                        ✅ Todos los productos tienen stock suficiente
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- Botones de acción -->
+    <div class="flex gap-2 justify-center">
+        <a href="{% url 'pos:venta' %}" class="btn btn-primary btn-lg">
+            🏪 Ir a Punto de Venta
+        </a>
+        <a href="{% url 'pos:reportes' %}" class="btn btn-secondary btn-lg">
+            📊 Ver Reportes Completos
+        </a>
+        <button class="btn btn-outline btn-lg" onclick="window.location.reload()">
+            🔄 Actualizar
+        </button>
+    </div>
+    
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+    // Configuración global de Chart.js
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.color = '#34495E';
+    
+    // Datos desde Django
+    const ventasPorHora = {{ ventas_por_hora|safe }};
+    const topProductos = {{ top_productos|safe }};
+    const ventasSemanales = {{ ventas_semanales|safe }};
+    const ventasPorCategoria = {{ ventas_por_categoria|safe }};
+    
+    // Gráfico: Ventas por hora
+    const ctxHora = document.getElementById('ventasPorHoraChart').getContext('2d');
+    new Chart(ctxHora, {
+        type: 'line',
+        data: {
+            labels: ventasPorHora.labels,
+            datasets: [{
+                label: 'Ventas',
+                data: ventasPorHora.data,
+                borderColor: '#FF6B35',
+                backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                tension: 0.4,
+                fill: true,
+                pointRadius: 5,
+                pointHoverRadius: 7
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Ventas: ' + context.parsed.y;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+    
+    // Gráfico: Top productos
+    const ctxTop = document.getElementById('topProductosChart').getContext('2d');
+    new Chart(ctxTop, {
+        type: 'bar',
+        data: {
+            labels: topProductos.labels,
+            datasets: [{
+                label: 'Cantidad Vendida',
+                data: topProductos.data,
+                backgroundColor: [
+                    '#FF6B35', '#4ECDC4', '#2ECC71', '#F39C12', '#E74C3C',
+                    '#9B59B6', '#3498DB', '#1ABC9C', '#E67E22', '#95A5A6'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // Gráfico: Ventas semanales
+    const ctxSemanal = document.getElementById('ventasSemanalesChart').getContext('2d');
+    new Chart(ctxSemanal, {
+        type: 'bar',
+        data: {
+            labels: ventasSemanales.labels,
+            datasets: [{
+                label: 'Total Ventas (Gs.)',
+                data: ventasSemanales.data,
+                backgroundColor: '#4ECDC4',
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Gs. ' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'Gs. ' + (value / 1000).toFixed(0) + 'k';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Gráfico: Ventas por categoría (dona)
+    const ctxCategoria = document.getElementById('ventasCategoriaChart').getContext('2d');
+    new Chart(ctxCategoria, {
+        type: 'doughnut',
+        data: {
+            labels: ventasPorCategoria.labels,
+            datasets: [{
+                data: ventasPorCategoria.data,
+                backgroundColor: [
+                    '#FF6B35', '#4ECDC4', '#2ECC71', '#F39C12', '#E74C3C',
+                    '#9B59B6', '#3498DB', '#1ABC9C'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return label + ': ' + value + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Auto-refresh cada 5 minutos
+    setTimeout(() => {
+        window.location.reload();
+    }, 300000); // 5 minutos
+</script>
+{% endblock %}

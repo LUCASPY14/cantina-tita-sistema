@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Sistema de Cajas{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto" x-data="cajasApp()">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-neutral">💰 Sistema de Cajas</h1>
+            <p class="text-sm text-neutral/70 mt-1">Gestión de cajas registradoras</p>
+        </div>
+        
+        {% if not caja_abierta %}
+        <a href="{% url 'pos:apertura_caja' %}" class="btn btn-primary">
+            🔓 Abrir Caja
+        </a>
+        {% else %}
+        <div class="flex gap-2">
+            <a href="{% url 'pos:arqueo_caja' %}" class="btn btn-info">
+                💵 Arqueo de Caja
+            </a>
+            <a href="{% url 'pos:cierre_caja' %}" class="btn btn-warning">
+                🔒 Cerrar Caja
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Estado de la Caja Actual -->
+    {% if caja_abierta %}
+    <div class="alert alert-info mb-6 shadow-lg">
+        <div class="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current flex-shrink-0 w-8 h-8">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div class="flex-1">
+                <h3 class="font-bold text-lg">Caja Abierta: {{ caja_abierta.id_caja.descripcion }}</h3>
+                <div class="text-sm mt-1">
+                    <p>Cajero: <strong>{{ caja_abierta.id_empleado.descripcion }} {{ caja_abierta.id_empleado.apellido }}</strong></p>
+                    <p>Apertura: <strong>{{ caja_abierta.fecha_apertura|date:"d/m/Y H:i" }}</strong></p>
+                    <p>Monto Inicial: <strong>Gs. {{ caja_abierta.monto_inicial|floatformat:0|intcomma }}</strong></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Estadísticas del Día -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <!-- Cajas Activas -->
+        <div class="stat bg-base-100 shadow-lg rounded-lg">
+            <div class="stat-figure text-primary">
+                🏪
+            </div>
+            <div class="stat-title">Cajas Activas</div>
+            <div class="stat-value text-primary">{{ cajas.count }}</div>
+            <div class="stat-desc">Total en el sistema</div>
+        </div>
+
+        <!-- Ventas del Día -->
+        <div class="stat bg-base-100 shadow-lg rounded-lg">
+            <div class="stat-figure text-success">
+                💵
+            </div>
+            <div class="stat-title">Ventas del Día</div>
+            <div class="stat-value text-success text-2xl">Gs. {{ total_ventas_hoy|floatformat:0|intcomma }}</div>
+            <div class="stat-desc">Todas las cajas</div>
+        </div>
+
+        <!-- Turnos Abiertos -->
+        <div class="stat bg-base-100 shadow-lg rounded-lg">
+            <div class="stat-figure text-info">
+                🔓
+            </div>
+            <div class="stat-title">Turnos Abiertos</div>
+            <div class="stat-value text-info">
+                {{ cierres_hoy|length }}
+            </div>
+            <div class="stat-desc">Hoy</div>
+        </div>
+
+        <!-- Conciliación -->
+        <div class="stat bg-base-100 shadow-lg rounded-lg">
+            <div class="stat-figure text-warning">
+                📊
+            </div>
+            <div class="stat-title">Conciliación</div>
+            <div class="stat-value text-warning text-2xl">
+                <a href="{% url 'pos:conciliacion_pagos' %}" class="link">Ver</a>
+            </div>
+            <div class="stat-desc">Medios de pago</div>
+        </div>
+    </div>
+
+    <!-- Listado de Cajas -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+            <h2 class="card-title text-2xl mb-4">
+                🏪 Cajas Registradas
+            </h2>
+            
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr class="bg-neutral text-neutral-content">
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Ubicación</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for caja in cajas %}
+                        <tr>
+                            <td class="font-mono">#{{ caja.id_caja }}</td>
+                            <td class="font-bold">{{ caja.descripcion }}</td>
+                            <td>{{ caja.ubicacion }}</td>
+                            <td>
+                                {% if caja.activo %}
+                                <span class="badge badge-success">Activa</span>
+                                {% else %}
+                                <span class="badge badge-error">Inactiva</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-ghost" onclick="verHistorial({{ caja.id_caja }})">
+                                    📊 Historial
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-neutral/50">
+                                No hay cajas registradas
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cierres del Día -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title text-2xl mb-4">
+                📋 Turnos del Día
+            </h2>
+            
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr class="bg-neutral text-neutral-content">
+                            <th>Caja</th>
+                            <th>Cajero</th>
+                            <th>Apertura</th>
+                            <th>Cierre</th>
+                            <th>Inicial</th>
+                            <th>Final</th>
+                            <th>Diferencia</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cierre in cierres_hoy %}
+                        <tr>
+                            <td class="font-bold">{{ cierre.id_caja.descripcion }}</td>
+                            <td>{{ cierre.id_empleado.descripcion }}</td>
+                            <td>{{ cierre.fecha_apertura|date:"H:i" }}</td>
+                            <td>
+                                {% if cierre.fecha_cierre %}
+                                {{ cierre.fecha_cierre|date:"H:i" }}
+                                {% else %}
+                                <span class="badge badge-info">Abierta</span>
+                                {% endif %}
+                            </td>
+                            <td>Gs. {{ cierre.monto_inicial|floatformat:0|intcomma }}</td>
+                            <td>
+                                {% if cierre.monto_final %}
+                                Gs. {{ cierre.monto_final|floatformat:0|intcomma }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if cierre.diferencia %}
+                                    {% if cierre.diferencia > 0 %}
+                                    <span class="text-success font-bold">+Gs. {{ cierre.diferencia|floatformat:0|intcomma }}</span>
+                                    {% elif cierre.diferencia < 0 %}
+                                    <span class="text-error font-bold">Gs. {{ cierre.diferencia|floatformat:0|intcomma }}</span>
+                                    {% else %}
+                                    <span class="text-neutral/70">Exacto</span>
+                                    {% endif %}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if cierre.estado == 'Abierta' %}
+                                <span class="badge badge-info">Abierta</span>
+                                {% else %}
+                                <span class="badge badge-success">Cerrada</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-neutral/50">
+                                No hay turnos registrados hoy
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function cajasApp() {
+    return {
+        init() {
+            console.log('Dashboard de Cajas cargado');
+        }
+    }
+}
+
+function verHistorial(idCaja) {
+    alert('Funcionalidad de historial en desarrollo');
+    // Aquí se puede implementar un modal o redirect a historial
+}
+</script>
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}Historial de Ventas | Cantina Tita{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+    
+    <!-- Encabezado -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-neutral">📜 Historial de Ventas</h1>
+            <p class="text-gray-600">Últimas 100 ventas registradas</p>
+        </div>
+        <a href="{% url 'pos:dashboard' %}" class="btn btn-outline">
+            ← Volver al Dashboard
+        </a>
+    </div>
+    
+    <!-- Tabla de ventas -->
+    <div class="card bg-white shadow-xl">
+        <div class="card-body">
+            <h3 class="card-title text-lg mb-4">📊 Ventas Recientes</h3>
+            
+            {% if ventas %}
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr>
+                            <th>ID Venta</th>
+                            <th>Fecha</th>
+                            <th>Cajero</th>
+                            <th>Cliente</th>
+                            <th>Tipo Venta</th>
+                            <th>Monto Total</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for venta in ventas %}
+                        <tr>
+                            <td class="font-mono">{{ venta.id_venta }}</td>
+                            <td>{{ venta.fecha|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                {% if venta.id_empleado_cajero %}
+                                    {{ venta.id_empleado_cajero.nombre }} {{ venta.id_empleado_cajero.apellido }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if venta.id_cliente %}
+                                    {{ venta.id_cliente.nombres }} {{ venta.id_cliente.apellidos }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge badge-sm">{{ venta.tipo_venta }}</span>
+                            </td>
+                            <td class="font-bold">
+                                Gs. {{ venta.monto_total|floatformat:0|default:"0" }}
+                            </td>
+                            <td>
+                                {% if venta.estado == 'Completada' %}
+                                    <span class="badge badge-success">{{ venta.estado }}</span>
+                                {% elif venta.estado == 'Cancelada' %}
+                                    <span class="badge badge-error">{{ venta.estado }}</span>
+                                {% elif venta.estado == 'Pendiente' %}
+                                    <span class="badge badge-warning">{{ venta.estado }}</span>
+                                {% else %}
+                                    <span class="badge">{{ venta.estado }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="flex gap-2">
+                                    <button class="btn btn-xs btn-outline" 
+                                            onclick="verDetalle({{ venta.id_venta }})">
+                                        👁️ Ver
+                                    </button>
+                                    {% if venta.id_documento %}
+                                    <button class="btn btn-xs btn-primary" 
+                                            onclick="imprimirTicket({{ venta.id_documento.id_documento }})">
+                                        🖨️ Ticket
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span>No hay ventas registradas aún.</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+</div>
+
+<!-- Modal de detalle de venta -->
+<dialog id="modal_detalle_venta" class="modal">
+    <div class="modal-box max-w-4xl">
+        <h3 class="font-bold text-lg mb-4">Detalle de Venta</h3>
+        <div id="contenido_detalle">
+            <!-- Aquí se cargará el detalle vía AJAX -->
+        </div>
+        <div class="modal-action">
+            <form method="dialog">
+                <button class="btn">Cerrar</button>
+            </form>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<script>
+function verDetalle(idVenta) {
+    // Implementar carga de detalle vía AJAX
+    const modal = document.getElementById('modal_detalle_venta');
+    const contenido = document.getElementById('contenido_detalle');
+    
+    // Por ahora mostrar mensaje simple
+    contenido.innerHTML = `
+        <div class="alert alert-info">
+            <span>Venta #${idVenta} - Funcionalidad de detalle pendiente de implementar</span>
+        </div>
+    `;
+    
+    modal.showModal();
+}
+
+function imprimirTicket(idDocumento) {
+    // Abrir ventana de impresión de ticket
+    window.open(`/pos/ticket/${idDocumento}/`, '_blank', 'width=350,height=600');
+}
+</script>
+
+{% endblock %}

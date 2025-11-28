@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard de Almuerzos{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6" x-data="almuerzosDashboard()">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">
+            <i class="fas fa-utensils text-orange-500 mr-2"></i>
+            Sistema de Almuerzos
+        </h1>
+        <div class="flex gap-2">
+            <a href="{% url 'pos:planes_almuerzo' %}" class="btn btn-primary">
+                <i class="fas fa-clipboard-list mr-2"></i>Planes
+            </a>
+            <a href="{% url 'pos:suscripciones_almuerzo' %}" class="btn btn-info">
+                <i class="fas fa-user-check mr-2"></i>Suscripciones
+            </a>
+            <a href="{% url 'pos:registro_consumo_almuerzo' %}" class="btn btn-success">
+                <i class="fas fa-check-circle mr-2"></i>Registro Diario
+            </a>
+        </div>
+    </div>
+
+    <!-- Estadísticas del día actual -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="stats shadow">
+            <div class="stat">
+                <div class="stat-figure text-primary">
+                    <i class="fas fa-calendar-day text-3xl"></i>
+                </div>
+                <div class="stat-title">Almuerzos Hoy</div>
+                <div class="stat-value text-primary">{{ stats.consumos_hoy }}</div>
+                <div class="stat-desc">{{ stats.fecha_hoy }}</div>
+            </div>
+        </div>
+
+        <div class="stats shadow">
+            <div class="stat">
+                <div class="stat-figure text-secondary">
+                    <i class="fas fa-users text-3xl"></i>
+                </div>
+                <div class="stat-title">Suscripciones Activas</div>
+                <div class="stat-value text-secondary">{{ stats.suscripciones_activas }}</div>
+                <div class="stat-desc">En total</div>
+            </div>
+        </div>
+
+        <div class="stats shadow">
+            <div class="stat">
+                <div class="stat-figure text-success">
+                    <i class="fas fa-dollar-sign text-3xl"></i>
+                </div>
+                <div class="stat-title">Ingresos del Mes</div>
+                <div class="stat-value text-success">${{ stats.ingresos_mes|floatformat:0 }}</div>
+                <div class="stat-desc">{{ stats.mes_actual }}</div>
+            </div>
+        </div>
+
+        <div class="stats shadow">
+            <div class="stat">
+                <div class="stat-figure text-warning">
+                    <i class="fas fa-percentage text-3xl"></i>
+                </div>
+                <div class="stat-title">Asistencia Semanal</div>
+                <div class="stat-value text-warning">{{ stats.asistencia_semanal|floatformat:1 }}%</div>
+                <div class="stat-desc">Últimos 7 días</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs de contenido -->
+    <div role="tablist" class="tabs tabs-lifted mb-4">
+        <input type="radio" name="dashboard_tabs" role="tab" class="tab" aria-label="Planes Activos" checked />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+            <h2 class="text-xl font-bold mb-4">Planes de Almuerzo Activos</h2>
+            <div class="overflow-x-auto">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr>
+                            <th>Plan</th>
+                            <th>Tipo</th>
+                            <th>Precio</th>
+                            <th>Suscriptores</th>
+                            <th>Días Incluidos</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for plan in planes_activos %}
+                        <tr>
+                            <td>
+                                <div class="font-bold">{{ plan.nombre_plan }}</div>
+                            </td>
+                            <td>
+                                <span class="badge badge-primary">{{ plan.tipo_plan }}</span>
+                            </td>
+                            <td class="font-semibold">${{ plan.precio|floatformat:0 }}</td>
+                            <td>
+                                <div class="badge badge-info">{{ plan.num_suscriptores }}</div>
+                            </td>
+                            <td>{{ plan.dias_incluidos }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-gray-500">No hay planes activos</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <input type="radio" name="dashboard_tabs" role="tab" class="tab" aria-label="Próximos Vencimientos" />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+            <h2 class="text-xl font-bold mb-4">Suscripciones Próximas a Vencer</h2>
+            <div class="overflow-x-auto">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr>
+                            <th>Estudiante</th>
+                            <th>Plan</th>
+                            <th>Fecha Fin</th>
+                            <th>Días Restantes</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sus in suscripciones_proximas %}
+                        <tr>
+                            <td>
+                                <div class="font-bold">{{ sus.id_hijo.nombres }} {{ sus.id_hijo.apellidos }}</div>
+                                <div class="text-sm opacity-50">{{ sus.id_hijo.grado }}</div>
+                            </td>
+                            <td>{{ sus.id_plan_almuerzo.nombre_plan }}</td>
+                            <td>{{ sus.fecha_fin|date:"d/m/Y" }}</td>
+                            <td>
+                                <span class="badge badge-warning">{{ sus.dias_restantes }} días</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-success">{{ sus.estado }}</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-gray-500">No hay suscripciones próximas a vencer</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <input type="radio" name="dashboard_tabs" role="tab" class="tab" aria-label="Consumo Semanal" />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+            <h2 class="text-xl font-bold mb-4">Consumo de los Últimos 7 Días</h2>
+            <div class="overflow-x-auto">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Total Consumos</th>
+                            <th>Tasa de Asistencia</th>
+                            <th>Ingreso del Día</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dia in consumo_semanal %}
+                        <tr>
+                            <td>{{ dia.fecha|date:"l, d/m/Y" }}</td>
+                            <td>
+                                <div class="badge badge-primary">{{ dia.total }}</div>
+                            </td>
+                            <td>
+                                <progress class="progress progress-success w-32" value="{{ dia.porcentaje }}" max="100"></progress>
+                                <span class="ml-2">{{ dia.porcentaje|floatformat:1 }}%</span>
+                            </td>
+                            <td class="font-semibold">${{ dia.ingreso|floatformat:0 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-gray-500">No hay datos de consumo</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accesos Rápidos -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="card bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title">
+                    <i class="fas fa-clipboard-list mr-2"></i>
+                    Gestión de Planes
+                </h3>
+                <p>Crea y administra los diferentes planes de almuerzo disponibles</p>
+                <div class="card-actions justify-end">
+                    <a href="{% url 'pos:planes_almuerzo' %}" class="btn btn-sm btn-ghost bg-white/20 hover:bg-white/30">
+                        Administrar <i class="fas fa-arrow-right ml-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card bg-gradient-to-br from-green-500 to-green-600 text-white shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title">
+                    <i class="fas fa-user-plus mr-2"></i>
+                    Nueva Suscripción
+                </h3>
+                <p>Registra una nueva suscripción de almuerzo para un estudiante</p>
+                <div class="card-actions justify-end">
+                    <a href="{% url 'pos:suscripciones_almuerzo' %}" class="btn btn-sm btn-ghost bg-white/20 hover:bg-white/30">
+                        Crear <i class="fas fa-arrow-right ml-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-bar mr-2"></i>
+                    Reportes y Análisis
+                </h3>
+                <p>Consulta estadísticas detalladas y genera reportes</p>
+                <div class="card-actions justify-end">
+                    <a href="{% url 'pos:reportes_almuerzos' %}" class="btn btn-sm btn-ghost bg-white/20 hover:bg-white/30">
+                        Ver informes <i class="fas fa-arrow-right ml-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function almuerzosDashboard() {
+    return {
+        init() {
+            console.log('Dashboard de Almuerzos iniciado');
+        }
+    }
+}
+</script>
+{% endblock %}

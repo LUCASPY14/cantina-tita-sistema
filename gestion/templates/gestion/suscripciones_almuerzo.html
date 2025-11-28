@@ -1,0 +1,472 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Suscripciones de Almuerzo{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6" x-data="suscripcionesAlmuerzo()">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">
+                <i class="fas fa-user-check text-green-500 mr-2"></i>
+                Suscripciones de Almuerzo
+            </h1>
+            <p class="text-gray-600 mt-2">Administra las suscripciones activas y registra nuevas</p>
+        </div>
+        <button @click="abrirModalCrear()" class="btn btn-primary">
+            <i class="fas fa-plus mr-2"></i>Nueva Suscripción
+        </button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card bg-base-100 shadow-md mb-6">
+        <div class="card-body">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Buscar Estudiante</span>
+                    </label>
+                    <input type="text" x-model="filtros.estudiante" 
+                           placeholder="Nombre o código..." 
+                           class="input input-bordered" />
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Plan</span>
+                    </label>
+                    <select x-model="filtros.plan" class="select select-bordered">
+                        <option value="">Todos</option>
+                        {% for plan in planes %}
+                        <option value="{{ plan.id_plan_almuerzo }}">{{ plan.nombre_plan }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Estado</span>
+                    </label>
+                    <select x-model="filtros.estado" class="select select-bordered">
+                        <option value="">Todos</option>
+                        <option value="Activa">Activas</option>
+                        <option value="Vencida">Vencidas</option>
+                        <option value="Cancelada">Canceladas</option>
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Grado</span>
+                    </label>
+                    <select x-model="filtros.grado" class="select select-bordered">
+                        <option value="">Todos</option>
+                        {% for grado in grados %}
+                        <option value="{{ grado }}">{{ grado }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label invisible">Acción</label>
+                    <button @click="aplicarFiltros()" class="btn btn-secondary w-full">
+                        <i class="fas fa-filter mr-2"></i>Filtrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas rápidas -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="stat bg-base-100 shadow">
+            <div class="stat-title">Total Activas</div>
+            <div class="stat-value text-success">{{ estadisticas.activas }}</div>
+        </div>
+        <div class="stat bg-base-100 shadow">
+            <div class="stat-title">Por Vencer (7 días)</div>
+            <div class="stat-value text-warning">{{ estadisticas.por_vencer }}</div>
+        </div>
+        <div class="stat bg-base-100 shadow">
+            <div class="stat-title">Vencidas</div>
+            <div class="stat-value text-error">{{ estadisticas.vencidas }}</div>
+        </div>
+        <div class="stat bg-base-100 shadow">
+            <div class="stat-title">Ingreso Mensual</div>
+            <div class="stat-value text-primary">${{ estadisticas.ingreso|floatformat:0 }}</div>
+        </div>
+    </div>
+
+    <!-- Lista de Suscripciones -->
+    <div class="card bg-base-100 shadow-md">
+        <div class="card-body">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr>
+                            <th>Estudiante</th>
+                            <th>Grado</th>
+                            <th>Plan</th>
+                            <th>Fecha Inicio</th>
+                            <th>Fecha Fin</th>
+                            <th>Monto</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sus in suscripciones %}
+                        <tr>
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <div class="avatar placeholder">
+                                        <div class="bg-neutral text-neutral-content rounded-full w-10">
+                                            <span class="text-xs">{{ sus.id_hijo.nombres|slice:":2"|upper }}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold">{{ sus.id_hijo.nombres }} {{ sus.id_hijo.apellidos }}</div>
+                                        <div class="text-sm opacity-50">{{ sus.id_hijo.codigo_hijo }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge badge-ghost">{{ sus.id_hijo.grado }}</span>
+                            </td>
+                            <td>
+                                <div class="font-semibold">{{ sus.id_plan_almuerzo.nombre_plan }}</div>
+                                <div class="text-sm opacity-70">${{ sus.id_plan_almuerzo.precio_mensual|floatformat:0 }}/mes</div>
+                            </td>
+                            <td>{{ sus.fecha_inicio|date:"d/m/Y" }}</td>
+                            <td>
+                                {{ sus.fecha_fin|date:"d/m/Y" }}
+                                {% if sus.dias_restantes <= 7 and sus.estado == 'Activa' %}
+                                <div class="badge badge-warning badge-sm">{{ sus.dias_restantes }}d</div>
+                                {% endif %}
+                            </td>
+                            <td class="font-bold">${{ sus.id_plan_almuerzo.precio_mensual|floatformat:0 }}</td>
+                            <td>
+                                {% if sus.estado == 'Activa' %}
+                                <span class="badge badge-success gap-2">
+                                    <i class="fas fa-check-circle"></i> Activa
+                                </span>
+                                {% elif sus.estado == 'Vencida' %}
+                                <span class="badge badge-error gap-2">
+                                    <i class="fas fa-times-circle"></i> Vencida
+                                </span>
+                                {% else %}
+                                <span class="badge badge-ghost gap-2">
+                                    <i class="fas fa-ban"></i> Cancelada
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="dropdown dropdown-end">
+                                    <label tabindex="0" class="btn btn-sm btn-ghost">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </label>
+                                    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                                        <li><a @click="verDetalles({{ sus.id_suscripcion_almuerzo }})">
+                                            <i class="fas fa-eye"></i> Ver Detalles
+                                        </a></li>
+                                        {% if sus.estado == 'Activa' %}
+                                        <li><a @click="renovarSuscripcion({{ sus.id_suscripcion_almuerzo }})">
+                                            <i class="fas fa-sync"></i> Renovar
+                                        </a></li>
+                                        <li><a @click="cancelarSuscripcion({{ sus.id_suscripcion_almuerzo }})">
+                                            <i class="fas fa-ban text-error"></i> Cancelar
+                                        </a></li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-gray-500 py-8">
+                                <i class="fas fa-inbox text-4xl mb-2 block"></i>
+                                No hay suscripciones registradas
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Crear Suscripción -->
+    <dialog id="modalSuscripcion" class="modal" x-show="modalAbierto" x-cloak>
+        <div class="modal-box max-w-3xl">
+            <h3 class="font-bold text-lg mb-4">Nueva Suscripción de Almuerzo</h3>
+            
+            <form @submit.prevent="guardarSuscripcion()">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Búsqueda de Estudiante -->
+                    <div class="form-control md:col-span-2">
+                        <label class="label">
+                            <span class="label-text">Buscar Estudiante *</span>
+                        </label>
+                        <input type="text" 
+                               x-model="busquedaEstudiante"
+                               @input="buscarEstudiantes()"
+                               placeholder="Nombre o código del estudiante..." 
+                               class="input input-bordered" />
+                        
+                        <!-- Resultados de búsqueda -->
+                        <div x-show="resultadosEstudiantes.length > 0" 
+                             class="mt-2 max-h-48 overflow-y-auto border rounded-lg">
+                            <template x-for="estudiante in resultadosEstudiantes" :key="estudiante.id">
+                                <div @click="seleccionarEstudiante(estudiante)"
+                                     class="p-3 hover:bg-base-200 cursor-pointer flex justify-between items-center">
+                                    <div>
+                                        <div class="font-semibold" x-text="estudiante.nombres + ' ' + estudiante.apellidos"></div>
+                                        <div class="text-sm text-gray-600" x-text="estudiante.grado + ' - ' + estudiante.codigo"></div>
+                                    </div>
+                                    <i class="fas fa-plus text-primary"></i>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Estudiante seleccionado -->
+                        <div x-show="formSuscripcion.id_hijo" class="alert alert-info mt-2">
+                            <i class="fas fa-user"></i>
+                            <span x-text="estudianteSeleccionado"></span>
+                            <button type="button" @click="limpiarEstudiante()" class="btn btn-sm btn-ghost">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Selección de Plan -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Plan de Almuerzo *</span>
+                        </label>
+                        <select x-model="formSuscripcion.id_plan_almuerzo" 
+                                @change="calcularMonto()"
+                                class="select select-bordered" required>
+                            <option value="">Seleccione un plan...</option>
+                            {% for plan in planes %}
+                            <option value="{{ plan.id_plan_almuerzo }}" 
+                                    data-precio="{{ plan.precio }}"
+                                    data-tipo="{{ plan.tipo_plan }}">
+                                {{ plan.nombre_plan }} - ${{ plan.precio|floatformat:0 }} ({{ plan.tipo_plan }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Fecha de Inicio -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Fecha de Inicio *</span>
+                        </label>
+                        <input type="date" 
+                               x-model="formSuscripcion.fecha_inicio"
+                               @change="calcularMonto()"
+                               class="input input-bordered" required />
+                    </div>
+
+                    <!-- Monto Total (calculado) -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Monto Total</span>
+                        </label>
+                        <input type="text" 
+                               :value="'$' + formSuscripcion.monto_total"
+                               class="input input-bordered bg-base-200" 
+                               readonly />
+                    </div>
+
+                    <!-- Fecha Fin (calculada automáticamente) -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Fecha de Fin (calculada)</span>
+                        </label>
+                        <input type="text" 
+                               x-model="fechaFinCalculada"
+                               class="input input-bordered bg-base-200" 
+                               readonly />
+                    </div>
+                </div>
+
+                <!-- Información adicional -->
+                <div class="alert alert-warning mt-4">
+                    <i class="fas fa-info-circle"></i>
+                    <div class="text-sm">
+                        <p>La fecha de fin se calcula automáticamente según el tipo de plan:</p>
+                        <ul class="list-disc ml-6 mt-2">
+                            <li><strong>Diario:</strong> Mismo día de inicio</li>
+                            <li><strong>Semanal:</strong> 7 días desde el inicio</li>
+                            <li><strong>Mensual:</strong> 30 días desde el inicio</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="modal-action">
+                    <button type="button" @click="cerrarModal()" class="btn btn-ghost">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" :disabled="guardando || !formSuscripcion.id_hijo">
+                        <span x-show="!guardando">
+                            <i class="fas fa-save mr-2"></i>Crear Suscripción
+                        </span>
+                        <span x-show="guardando" class="loading loading-spinner"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button @click="cerrarModal()">close</button>
+        </form>
+    </dialog>
+</div>
+
+<script>
+function suscripcionesAlmuerzo() {
+    return {
+        modalAbierto: false,
+        guardando: false,
+        busquedaEstudiante: '',
+        resultadosEstudiantes: [],
+        estudianteSeleccionado: '',
+        fechaFinCalculada: '',
+        filtros: {
+            estudiante: '',
+            plan: '',
+            estado: '',
+            grado: ''
+        },
+        formSuscripcion: {
+            id_hijo: null,
+            id_plan_almuerzo: '',
+            fecha_inicio: new Date().toISOString().split('T')[0],
+            monto_total: 0
+        },
+
+        abrirModalCrear() {
+            this.formSuscripcion = {
+                id_hijo: null,
+                id_plan_almuerzo: '',
+                fecha_inicio: new Date().toISOString().split('T')[0],
+                monto_total: 0
+            };
+            this.busquedaEstudiante = '';
+            this.resultadosEstudiantes = [];
+            this.modalAbierto = true;
+            document.getElementById('modalSuscripcion').showModal();
+        },
+
+        cerrarModal() {
+            this.modalAbierto = false;
+            document.getElementById('modalSuscripcion').close();
+        },
+
+        async buscarEstudiantes() {
+            if (this.busquedaEstudiante.length < 2) {
+                this.resultadosEstudiantes = [];
+                return;
+            }
+            // Aquí harías un fetch para buscar estudiantes
+            // Simulación:
+            this.resultadosEstudiantes = [];
+        },
+
+        seleccionarEstudiante(estudiante) {
+            this.formSuscripcion.id_hijo = estudiante.id;
+            this.estudianteSeleccionado = `${estudiante.nombres} ${estudiante.apellidos} - ${estudiante.grado}`;
+            this.resultadosEstudiantes = [];
+            this.busquedaEstudiante = '';
+        },
+
+        limpiarEstudiante() {
+            this.formSuscripcion.id_hijo = null;
+            this.estudianteSeleccionado = '';
+        },
+
+        calcularMonto() {
+            const planSelect = document.querySelector('select[x-model="formSuscripcion.id_plan_almuerzo"]');
+            if (!planSelect || !planSelect.value) return;
+
+            const selectedOption = planSelect.options[planSelect.selectedIndex];
+            const precio = parseFloat(selectedOption.dataset.precio);
+            const tipo = selectedOption.dataset.tipo;
+
+            this.formSuscripcion.monto_total = precio.toFixed(2);
+
+            // Calcular fecha fin
+            if (this.formSuscripcion.fecha_inicio) {
+                const fechaInicio = new Date(this.formSuscripcion.fecha_inicio);
+                let fechaFin = new Date(fechaInicio);
+
+                if (tipo === 'Diario') {
+                    // Mismo día
+                } else if (tipo === 'Semanal') {
+                    fechaFin.setDate(fechaFin.getDate() + 7);
+                } else if (tipo === 'Mensual') {
+                    fechaFin.setDate(fechaFin.getDate() + 30);
+                }
+
+                this.fechaFinCalculada = fechaFin.toISOString().split('T')[0];
+            }
+        },
+
+        async guardarSuscripcion() {
+            if (!this.formSuscripcion.id_hijo) {
+                alert('Debe seleccionar un estudiante');
+                return;
+            }
+
+            this.guardando = true;
+
+            try {
+                const response = await fetch('{% url "crear_suscripcion_almuerzo" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify(this.formSuscripcion)
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Suscripción creada exitosamente');
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo crear la suscripción'));
+                }
+            } catch (error) {
+                alert('Error de conexión');
+                console.error(error);
+            } finally {
+                this.guardando = false;
+            }
+        },
+
+        async cancelarSuscripcion(suscripcionId) {
+            if (!confirm('¿Está seguro de cancelar esta suscripción?')) return;
+            
+            // Implementar cancelación
+            alert('Función de cancelación en desarrollo');
+        },
+
+        renovarSuscripcion(suscripcionId) {
+            // Implementar renovación
+            alert('Función de renovación en desarrollo');
+        },
+
+        verDetalles(suscripcionId) {
+            // Implementar vista de detalles
+            alert('Vista de detalles en desarrollo');
+        },
+
+        aplicarFiltros() {
+            const params = new URLSearchParams();
+            Object.keys(this.filtros).forEach(key => {
+                if (this.filtros[key]) params.append(key, this.filtros[key]);
+            });
+            
+            window.location.href = '{% url "suscripciones_almuerzo" %}?' + params.toString();
+        }
+    }
+}
+</script>
+{% endblock %}

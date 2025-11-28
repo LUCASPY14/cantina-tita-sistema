@@ -1,0 +1,3713 @@
+"""
+Views para el sistema POS (Punto de Venta)
+"""
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.db.models import Q, F, Sum, Count
+from django.utils import timezone
+from decimal import Decimal
+import json
+
+from gestion.models import (
+    Producto, Tarjeta, Ventas, DetalleVenta, 
+    ConsumoTarjeta, Empleado, StockUnico, Cliente, Hijo,
+    CargasSaldo, Proveedor, Categoria, Cajas, CierresCaja,
+    MediosPago, TiposPago, PagosVenta, ConciliacionPagos,
+    Compras, DetalleCompra, CtaCorrienteProv, MovimientosStock,
+    TarifasComision, DetalleComisionVenta
+)
+
+
+@login_required
+def venta_view(request):
+    """Vista principal del POS"""
+    # Obtener productos activos con stock
+    productos = Producto.objects.filter(
+        activo=True
+    ).select_related('id_categoria').annotate(
+        stock_actual=F('stock__stock_actual')
+    ).order_by('descripcion')[:50]
+    
+    context = {
+        'productos': productos,
+    }
+    return render(request, 'pos/venta.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def buscar_productos(request):
+    """Búsqueda de productos en tiempo real con HTMX"""
+    query = request.POST.get('q', '').strip()
+    
+    if query:
+        productos = Producto.objects.filter(
+            Q(descripcion__icontains=query) | Q(codigo__icontains=query),
+            activo=True
+        ).select_related('id_categoria').annotate(
+            stock_actual=F('stock__stock_actual')
+        ).order_by('descripcion')[:30]
+    else:
+        productos = Producto.objects.filter(
+            activo=True
+        ).select_related('id_categoria').annotate(
+            stock_actual=F('stock__stock_actual')
+        ).order_by('descripcion')[:50]
+    
+    # Agregar precio actual desde la tabla de precios
+    for producto in productos:
+        # Por ahora usar precio base, luego integrar con lista de precios
+        producto.precio_actual = 2000  # Precio ejemplo
+    
+    return render(request, 'pos/partials/productos_grid.html', {
+        'productos': productos
+    })
+
+
+@login_required
+@require_http_methods(["GET"])
+def productos_por_categoria(request):
+    """Filtrar productos por categoría"""
+    categoria = request.GET.get('categoria', 'todos')
+    
+    if categoria == 'todos':
+        productos = Producto.objects.filter(activo=True)
+    else:
+        productos = Producto.objects.filter(
+            activo=True,
+            id_categoria__nombre__icontains=categoria
+        )
+    
+    productos = productos.select_related('id_categoria').annotate(
+        stock_actual=F('stock__stock_actual')
+    ).order_by('descripcion')[:50]
+    
+    # Agregar precio actual
+    for producto in productos:
+        producto.precio_actual = 2000  # Precio ejemplo
+    
+    return render(request, 'pos/partials/productos_grid.html', {
+        'productos': productos
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def buscar_tarjeta(request):
+    """Buscar tarjeta de estudiante"""
+    nro_tarjeta = request.POST.get('nro_tarjeta', '').strip()
+    
+    if not nro_tarjeta:
+        return render(request, 'pos/partials/tarjeta_info.html', {
+            'tarjeta': None
+        })
+    
+    try:
+        tarjeta = Tarjeta.objects.select_related(
+            'id_hijo',
+            'id_hijo__id_cliente_responsable'
+        ).get(nro_tarjeta=nro_tarjeta, estado='ACTIVA')
+        
+        # Agregar información del estudiante
+        if tarjeta.id_hijo:
+            tarjeta.estudiante_nombre = f"{tarjeta.id_hijo.nombre} {tarjeta.id_hijo.apellido}"
+        else:
+            tarjeta.estudiante_nombre = "Estudiante"
+        
+        tarjeta.codigo_tarjeta = nro_tarjeta
+        
+        return render(request, 'pos/partials/tarjeta_info.html', {
+            'tarjeta': tarjeta
+        })
+        
+    except Tarjeta.DoesNotExist:
+        return render(request, 'pos/partials/tarjeta_info.html', {
+            'tarjeta': None
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
+def procesar_venta(request):
+    """Procesar una venta desde el POS"""
+    try:
+        data = json.loads(request.body)
+        items = data.get('items', [])
+        tarjeta_data = data.get('tarjeta')
+        total = Decimal(str(data.get('total', 0)))
+        
+        if not items:
+            return JsonResponse({
+                'success': False,
+                'error': 'El carrito está vacío'
+            })
+        
+        # Obtener empleado actual (si existe en el modelo)
+        try:
+            empleado = Empleado.objects.get(usuario=request.user.username)
+        except Empleado.DoesNotExist:
+            empleado = None
+        
+        # Obtener tarjeta si se especificó
+        tarjeta = None
+        if tarjeta_data and tarjeta_data.get('id'):
+            try:
+                tarjeta = Tarjeta.objects.get(nro_tarjeta=tarjeta_data['id'])
+                
+                # Validar saldo
+                if tarjeta.saldo_actual < total:
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Saldo insuficiente. Disponible: Gs. {tarjeta.saldo_actual:,.0f}'
+                    })
+                    
+            except Tarjeta.DoesNotExist:
+                pass
+        
+        # Crear la venta
+        venta = Ventas.objects.create(
+            id_empleado=empleado,
+            monto_total=int(total),
+            estado='COMPLETADA',
+            fecha=timezone.now()
+        )
+        
+        # Crear detalles de venta y actualizar stock
+        for item in items:
+            try:
+                producto = Producto.objects.get(id_producto=item['id'])
+                cantidad = Decimal(str(item['quantity']))
+                precio = Decimal(str(item['price']))
+                
+                # Crear detalle
+                DetalleVenta.objects.create(
+                    id_venta=venta,
+                    id_producto=producto,
+                    cantidad=cantidad,
+                    precio_unitario_total=int(precio),
+                    subtotal_total=int(precio * cantidad),
+                    monto_iva=0
+                )
+                
+                # Actualizar stock
+                try:
+                    stock = StockUnico.objects.get(id_producto=producto)
+                    stock.stock_actual = F('stock_actual') - cantidad
+                    stock.save()
+                except StockUnico.DoesNotExist:
+                    pass
+                    
+            except Producto.DoesNotExist:
+                continue
+        
+        # Si hay tarjeta, registrar consumo y descontar saldo
+        if tarjeta:
+            ConsumoTarjeta.objects.create(
+                nro_tarjeta=tarjeta,
+                fecha_consumo=timezone.now(),
+                monto_consumido=total,
+                detalle=f'Venta #{venta.id_venta}',
+                saldo_anterior=tarjeta.saldo_actual,
+                saldo_posterior=tarjeta.saldo_actual - total
+            )
+            
+            tarjeta.saldo_actual = F('saldo_actual') - total
+            tarjeta.save()
+        
+        return JsonResponse({
+            'success': True,
+            'venta_id': venta.id_venta,
+            'total': float(total),
+            'message': '¡Venta procesada exitosamente!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def dashboard_view(request):
+    """Vista del dashboard con estadísticas y gráficos"""
+    from datetime import datetime, timedelta
+    from decimal import Decimal
+    import json
+    
+    today = datetime.now().date()
+    week_ago = today - timedelta(days=7)
+    month_start = today.replace(day=1)
+    
+    # === Estadísticas principales ===
+    
+    # Ventas de hoy
+    ventas_hoy = Ventas.objects.filter(fecha__date=today)
+    stats_hoy = ventas_hoy.aggregate(
+        total=Sum('monto_total'),
+        cantidad=Count('id_venta')
+    )
+    
+    # Ventas del mes
+    ventas_mes = Ventas.objects.filter(fecha__date__gte=month_start)
+    stats_mes = ventas_mes.aggregate(
+        total=Sum('monto_total'),
+        cantidad=Count('id_venta')
+    )
+    
+    # Items vendidos hoy
+    items_vendidos = DetalleVenta.objects.filter(
+        id_venta__fecha__date=today
+    ).aggregate(total=Sum('cantidad'))['total'] or 0
+    
+    # Promedio por venta hoy
+    total_hoy = stats_hoy['total'] or Decimal('0')
+    cantidad_hoy = stats_hoy['cantidad'] or 1
+    promedio = total_hoy / cantidad_hoy if cantidad_hoy > 0 else Decimal('0')
+    
+    stats = {
+        'ventas_hoy': stats_hoy['cantidad'] or 0,
+        'total_hoy': total_hoy,
+        'ventas_mes': stats_mes['cantidad'] or 0,
+        'total_mes': stats_mes['total'] or Decimal('0'),
+        'items_vendidos': items_vendidos,
+        'promedio': promedio
+    }
+    
+    # === Ventas por hora (hoy) ===
+    from django.db.models.functions import ExtractHour
+    
+    ventas_por_hora_raw = ventas_hoy.annotate(
+        hora=ExtractHour('fecha')
+    ).values('hora').annotate(
+        total=Count('id_venta')
+    ).order_by('hora')
+    
+    # Crear array de 24 horas con valores 0
+    ventas_hora_dict = {i: 0 for i in range(24)}
+    for item in ventas_por_hora_raw:
+        hora = int(item['hora'])
+        ventas_hora_dict[hora] = item['total']
+    
+    ventas_por_hora = {
+        'labels': [f"{h:02d}:00" for h in range(24)],
+        'data': [ventas_hora_dict[h] for h in range(24)]
+    }
+    
+    # === Top 10 productos vendidos (hoy) ===
+    top_productos_raw = DetalleVenta.objects.filter(
+        id_venta__fecha__date=today
+    ).values(
+        'id_producto__descripcion'
+    ).annotate(
+        total=Sum('cantidad')
+    ).order_by('-total')[:10]
+    
+    top_productos = {
+        'labels': [item['id_producto__descripcion'][:20] for item in top_productos_raw],
+        'data': [item['total'] for item in top_productos_raw]
+    }
+    
+    # === Ventas últimos 7 días ===
+    from django.db.models.functions import TruncDate
+    
+    ventas_semanales_raw = Ventas.objects.filter(
+        fecha__date__gte=week_ago
+    ).annotate(
+        dia=TruncDate('fecha')
+    ).values('dia').annotate(
+        total=Sum('monto_total'),
+        cantidad=Count('id_venta')
+    ).order_by('dia')
+    
+    # Crear dict con todos los días
+    ventas_semana_dict = {}
+    for i in range(7):
+        dia = (week_ago + timedelta(days=i)).isoformat()
+        ventas_semana_dict[dia] = 0
+    
+    for item in ventas_semanales_raw:
+        dia_str = str(item['dia'])
+        ventas_semana_dict[dia_str] = float(item['total'] or 0)
+    
+    ventas_semanales = {
+        'labels': [
+            (week_ago + timedelta(days=i)).strftime('%d/%m')
+            for i in range(7)
+        ],
+        'data': [
+            ventas_semana_dict[(week_ago + timedelta(days=i)).isoformat()]
+            for i in range(7)
+        ]
+    }
+    
+    # === Ventas por categoría (hoy) ===
+    ventas_categoria_raw = DetalleVenta.objects.filter(
+        id_venta__fecha__date=today
+    ).values(
+        'id_producto__id_categoria__nombre'
+    ).annotate(
+        total=Sum('cantidad')
+    ).order_by('-total')
+    
+    ventas_por_categoria = {
+        'labels': [item['id_producto__id_categoria__nombre'] or 'Sin categoría' 
+                   for item in ventas_categoria_raw],
+        'data': [item['total'] for item in ventas_categoria_raw]
+    }
+    
+    # === Últimas 10 ventas ===
+    ultimas_ventas = Ventas.objects.select_related(
+        'id_empleado_cajero'
+    ).filter(
+        fecha__date=today
+    ).annotate(
+        empleado_nombre=F('id_empleado_cajero__nombre')
+    ).order_by('-fecha')[:10]
+    
+    # === Stock bajo ===
+    stock_bajo = Producto.objects.select_related('stock').filter(
+        stock__stock_actual__lt=F('stock_minimo'),
+        activo=True
+    ).annotate(
+        stock_actual=F('stock__stock_actual')
+    ).order_by('stock__stock_actual')[:10]
+    
+    context = {
+        'stats': stats,
+        'ventas_por_hora': json.dumps(ventas_por_hora),
+        'top_productos': json.dumps(top_productos),
+        'ventas_semanales': json.dumps(ventas_semanales),
+        'ventas_por_categoria': json.dumps(ventas_por_categoria),
+        'ultimas_ventas': ultimas_ventas,
+        'stock_bajo': stock_bajo,
+    }
+    
+    return render(request, 'pos/dashboard.html', context)
+
+
+@login_required
+def historial_view(request):
+    """Historial de ventas"""
+    ventas = Ventas.objects.select_related(
+        'id_empleado_cajero'
+    ).order_by('-fecha')[:100]
+    
+    context = {
+        'ventas': ventas,
+    }
+    return render(request, 'pos/historial.html', context)
+
+
+@login_required
+def reportes_view(request):
+    """Reportes y estadísticas"""
+    from datetime import datetime, timedelta
+    from decimal import Decimal
+    
+    # Obtener parámetros
+    fecha_desde = request.GET.get('fecha_desde')
+    fecha_hasta = request.GET.get('fecha_hasta')
+    tipo_reporte = request.GET.get('tipo_reporte', 'ventas')
+    
+    # Fechas por defecto: mes actual
+    if not fecha_desde or not fecha_hasta:
+        hoy = datetime.now().date()
+        fecha_desde = hoy.replace(day=1).isoformat()
+        fecha_hasta = hoy.isoformat()
+    
+    # Convertir a objetos date
+    try:
+        fecha_desde_obj = datetime.strptime(fecha_desde, '%Y-%m-%d').date()
+        fecha_hasta_obj = datetime.strptime(fecha_hasta, '%Y-%m-%d').date()
+    except ValueError:
+        fecha_desde_obj = datetime.now().date().replace(day=1)
+        fecha_hasta_obj = datetime.now().date()
+        fecha_desde = fecha_desde_obj.isoformat()
+        fecha_hasta = fecha_hasta_obj.isoformat()
+    
+    # Generar datos según tipo de reporte
+    datos = []
+    columnas = []
+    titulo_tabla = ""
+    stats = {}
+    
+    if tipo_reporte == 'ventas':
+        titulo_tabla = "Ventas por Período"
+        columnas = ['Fecha', 'ID Venta', 'Empleado', 'Items', 'Total (Gs.)']
+        
+        ventas = Ventas.objects.filter(
+            fecha__date__gte=fecha_desde_obj,
+            fecha__date__lte=fecha_hasta_obj
+        ).select_related('id_empleado_cajero').order_by('-fecha')
+        
+        for venta in ventas:
+            items_count = DetalleVenta.objects.filter(id_venta=venta).count()
+            datos.append([
+                venta.fecha.strftime('%d/%m/%Y %H:%M'),
+                venta.id_venta,
+                f"{venta.id_empleado_cajero.nombre} {venta.id_empleado_cajero.apellido}" if venta.id_empleado_cajero else 'N/A',
+                items_count,
+                f"{int(venta.monto_total):,}".replace(',', '.')
+            ])
+        
+        # Estadísticas
+        total_ventas = ventas.aggregate(
+            total=Sum('monto_total'),
+            cantidad=Count('id_venta')
+        )
+        stats = {
+            'total': total_ventas['cantidad'] or 0,
+            'monto_total': total_ventas['total'] or Decimal('0'),
+            'promedio': (total_ventas['total'] / total_ventas['cantidad']) if total_ventas['cantidad'] > 0 else Decimal('0')
+        }
+    
+    elif tipo_reporte == 'productos':
+        titulo_tabla = "Productos Más Vendidos"
+        columnas = ['Producto', 'Código', 'Cantidad Vendida', 'Total Vendido (Gs.)', 'Ventas']
+        
+        productos = DetalleVenta.objects.filter(
+            id_venta__fecha__date__gte=fecha_desde_obj,
+            id_venta__fecha__date__lte=fecha_hasta_obj
+        ).values(
+            'id_producto__descripcion',
+            'id_producto__codigo'
+        ).annotate(
+            cantidad_total=Sum('cantidad'),
+            monto_total=Sum('subtotal_total'),
+            num_ventas=Count('id_venta', distinct=True)
+        ).order_by('-cantidad_total')[:50]
+        
+        for p in productos:
+            datos.append([
+                p['id_producto__descripcion'],
+                p['id_producto__codigo'],
+                p['cantidad_total'],
+                f"{int(p['monto_total']):,}".replace(',', '.'),
+                p['num_ventas']
+            ])
+        
+        # Estadísticas
+        totales = productos.aggregate(
+            cantidad=Sum('cantidad_total'),
+            monto=Sum('monto_total')
+        )
+        stats = {
+            'total': len(productos),
+            'monto_total': totales['monto'] or Decimal('0'),
+            'promedio': (totales['monto'] / len(productos)) if len(productos) > 0 else Decimal('0')
+        }
+    
+    elif tipo_reporte == 'empleados':
+        titulo_tabla = "Desempeño de Empleados"
+        columnas = ['Empleado', 'Rol', 'Ventas', 'Total Vendido (Gs.)', 'Promedio (Gs.)']
+        
+        empleados = Ventas.objects.filter(
+            fecha__date__gte=fecha_desde_obj,
+            fecha__date__lte=fecha_hasta_obj
+        ).values(
+            'id_empleado_cajero__nombre',
+            'id_empleado_cajero__apellido',
+            'id_empleado_cajero__id_rol__nombre_rol'
+        ).annotate(
+            num_ventas=Count('id_venta'),
+            monto_total=Sum('monto_total')
+        ).order_by('-monto_total')
+        
+        for emp in empleados:
+            promedio_emp = (emp['monto_total'] / emp['num_ventas']) if emp['num_ventas'] > 0 else 0
+            datos.append([
+                f"{emp['id_empleado_cajero__nombre']} {emp['id_empleado_cajero__apellido']}",
+                emp['id_empleado_cajero__id_rol__nombre_rol'] or 'N/A',
+                emp['num_ventas'],
+                f"{int(emp['monto_total']):,}".replace(',', '.'),
+                f"{int(promedio_emp):,}".replace(',', '.')
+            ])
+        
+        # Estadísticas
+        totales = empleados.aggregate(
+            ventas=Sum('num_ventas'),
+            monto=Sum('monto_total')
+        )
+        stats = {
+            'total': len(empleados),
+            'monto_total': totales['monto'] or Decimal('0'),
+            'promedio': (totales['monto'] / totales['ventas']) if totales['ventas'] > 0 else Decimal('0')
+        }
+    
+    elif tipo_reporte == 'stock':
+        titulo_tabla = "Reporte de Stock Actual"
+        columnas = ['Producto', 'Código', 'Stock Actual', 'Stock Mínimo', 'Estado']
+        
+        productos_stock = Producto.objects.filter(
+            activo=True
+        ).select_related('stock').order_by('descripcion')
+        
+        for p in productos_stock:
+            try:
+                stock_actual = p.stock.stock_actual
+                stock_minimo = p.stock_minimo or 0
+                
+                if stock_actual == 0:
+                    estado = '❌ Agotado'
+                elif p.stock_minimo and stock_actual < p.stock_minimo:
+                    estado = '⚠️ Bajo'
+                else:
+                    estado = '✅ OK'
+                
+                datos.append([
+                    p.descripcion,
+                    p.codigo,
+                    stock_actual,
+                    stock_minimo,
+                    estado
+                ])
+            except:
+                pass
+        
+        stats = {'total': len(datos)}
+    
+    elif tipo_reporte == 'tarjetas':
+        titulo_tabla = "Consumos por Tarjeta"
+        columnas = ['Tarjeta', 'Estudiante', 'Consumos', 'Total Consumido (Gs.)', 'Saldo Actual (Gs.)']
+        
+        tarjetas = ConsumoTarjeta.objects.filter(
+            fecha_consumo__date__gte=fecha_desde_obj,
+            fecha_consumo__date__lte=fecha_hasta_obj
+        ).values(
+            'nro_tarjeta__nro_tarjeta',
+            'nro_tarjeta__id_hijo__nombre',
+            'nro_tarjeta__id_hijo__apellido',
+            'nro_tarjeta__saldo_actual'
+        ).annotate(
+            num_consumos=Count('id_consumo_tarjeta'),
+            total_consumido=Sum('monto_consumido')
+        ).order_by('-total_consumido')[:50]
+        
+        for t in tarjetas:
+            datos.append([
+                t['nro_tarjeta__nro_tarjeta'],
+                f"{t['nro_tarjeta__id_hijo__nombre']} {t['nro_tarjeta__id_hijo__apellido']}",
+                t['num_consumos'],
+                f"{int(t['total_consumido']):,}".replace(',', '.'),
+                f"{int(t['nro_tarjeta__saldo_actual']):,}".replace(',', '.')
+            ])
+        
+        # Estadísticas
+        totales = tarjetas.aggregate(
+            consumos=Sum('num_consumos'),
+            monto=Sum('total_consumido')
+        )
+        stats = {
+            'total': len(tarjetas),
+            'monto_total': totales['monto'] or Decimal('0'),
+            'promedio': (totales['monto'] / totales['consumos']) if totales['consumos'] > 0 else Decimal('0')
+        }
+    
+    context = {
+        'fecha_desde': fecha_desde,
+        'fecha_hasta': fecha_hasta,
+        'tipo_reporte': tipo_reporte,
+        'datos': datos,
+        'columnas': columnas,
+        'titulo_tabla': titulo_tabla,
+        'stats': stats,
+    }
+    
+    return render(request, 'pos/reportes.html', context)
+
+
+@login_required
+def exportar_reporte(request):
+    """Exportar reporte a Excel o PDF"""
+    from datetime import datetime
+    from django.http import HttpResponse
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill
+    from reportlab.lib.pagesizes import letter, A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    import io
+    
+    # Obtener parámetros
+    formato = request.GET.get('formato', 'excel')
+    fecha_desde = request.GET.get('fecha_desde')
+    fecha_hasta = request.GET.get('fecha_hasta')
+    tipo_reporte = request.GET.get('tipo_reporte', 'ventas')
+    
+    # Convertir fechas
+    try:
+        fecha_desde_obj = datetime.strptime(fecha_desde, '%Y-%m-%d').date()
+        fecha_hasta_obj = datetime.strptime(fecha_hasta, '%Y-%m-%d').date()
+    except:
+        fecha_desde_obj = datetime.now().date().replace(day=1)
+        fecha_hasta_obj = datetime.now().date()
+    
+    # Obtener datos (reutilizar lógica de reportes_view)
+    datos, columnas, titulo = obtener_datos_reporte(tipo_reporte, fecha_desde_obj, fecha_hasta_obj)
+    
+    # Asegurar que el título no esté vacío
+    if not titulo or titulo.strip() == '':
+        titulo = f'Reporte de {tipo_reporte.title()}'
+    
+    if formato == 'excel':
+        return exportar_excel(datos, columnas, titulo, fecha_desde_obj, fecha_hasta_obj)
+    elif formato == 'pdf':
+        return exportar_pdf(datos, columnas, titulo, fecha_desde_obj, fecha_hasta_obj)
+    else:
+        return HttpResponse('Formato no soportado', status=400)
+
+
+def obtener_datos_reporte(tipo_reporte, fecha_desde, fecha_hasta):
+    """Función auxiliar para obtener datos del reporte"""
+    from decimal import Decimal
+    
+    datos = []
+    columnas = []
+    titulo = ""
+    
+    if tipo_reporte == 'ventas':
+        titulo = "Reporte de Ventas"
+        columnas = ['Fecha', 'ID Venta', 'Empleado', 'Items', 'Total (Gs.)']
+        
+        ventas = Ventas.objects.filter(
+            fecha__date__gte=fecha_desde,
+            fecha__date__lte=fecha_hasta
+        ).select_related('id_empleado').order_by('-fecha')
+        
+        for venta in ventas:
+            items_count = DetalleVenta.objects.filter(id_venta=venta).count()
+            datos.append([
+                venta.fecha.strftime('%d/%m/%Y %H:%M'),
+                str(venta.id_venta),
+                f"{venta.id_empleado.nombre} {venta.id_empleado.apellido}" if venta.id_empleado else 'N/A',
+                str(items_count),
+                f"{int(venta.monto_total):,}".replace(',', '.')
+            ])
+    
+    elif tipo_reporte == 'productos':
+        titulo = "Productos Más Vendidos"
+        columnas = ['Producto', 'Código', 'Cantidad', 'Total (Gs.)', 'Ventas']
+        
+        productos = DetalleVenta.objects.filter(
+            id_venta__fecha__date__gte=fecha_desde,
+            id_venta__fecha__date__lte=fecha_hasta
+        ).values(
+            'id_producto__descripcion',
+            'id_producto__codigo'
+        ).annotate(
+            cantidad_total=Sum('cantidad'),
+            monto_total=Sum('subtotal_total'),
+            num_ventas=Count('id_venta', distinct=True)
+        ).order_by('-cantidad_total')[:50]
+        
+        for p in productos:
+            datos.append([
+                p['id_producto__descripcion'],
+                p['id_producto__codigo'],
+                str(p['cantidad_total']),
+                f"{int(p['monto_total']):,}".replace(',', '.'),
+                str(p['num_ventas'])
+            ])
+    
+    elif tipo_reporte == 'empleados':
+        titulo = "Desempeño de Empleados"
+        columnas = ['Empleado', 'Rol', 'Ventas', 'Total (Gs.)', 'Promedio (Gs.)']
+        
+        empleados = Ventas.objects.filter(
+            fecha__date__gte=fecha_desde,
+            fecha__date__lte=fecha_hasta
+        ).values(
+            'id_empleado__nombre',
+            'id_empleado__apellido',
+            'id_empleado__id_rol__nombre_rol'
+        ).annotate(
+            num_ventas=Count('id_venta'),
+            monto_total=Sum('monto_total'),
+            promedio=Sum('monto_total') / Count('id_venta')
+        ).order_by('-monto_total')
+        
+        for emp in empleados:
+            datos.append([
+                f"{emp['id_empleado__nombre']} {emp['id_empleado__apellido']}",
+                emp['id_empleado__id_rol__nombre_rol'] or 'N/A',
+                str(emp['num_ventas']),
+                f"{int(emp['monto_total']):,}".replace(',', '.'),
+                f"{int(emp['promedio']):,}".replace(',', '.')
+            ])
+    
+    elif tipo_reporte == 'stock':
+        titulo = "Reporte de Stock"
+        columnas = ['Producto', 'Código', 'Stock Actual', 'Stock Mínimo', 'Estado']
+        
+        productos = Producto.objects.filter(estado='activo').select_related('stock')
+        
+        for p in productos:
+            try:
+                stock_actual = p.stock.stock_actual
+                stock_minimo = p.stock_minimo or 0
+                
+                if stock_actual == 0:
+                    estado = 'Agotado'
+                elif p.stock_minimo and stock_actual < p.stock_minimo:
+                    estado = 'Bajo'
+                else:
+                    estado = 'OK'
+                
+                datos.append([
+                    p.descripcion,
+                    p.codigo,
+                    str(stock_actual),
+                    str(stock_minimo),
+                    estado
+                ])
+            except:
+                pass
+    
+    elif tipo_reporte == 'tarjetas':
+        titulo = "Consumos por Tarjeta"
+        columnas = ['Tarjeta', 'Estudiante', 'Consumos', 'Total (Gs.)', 'Saldo (Gs.)']
+        
+        tarjetas = ConsumoTarjeta.objects.filter(
+            fecha_consumo__date__gte=fecha_desde,
+            fecha_consumo__date__lte=fecha_hasta
+        ).values(
+            'nro_tarjeta__nro_tarjeta',
+            'nombre',
+            'apellido',
+            'nro_tarjeta__saldo_actual'
+        ).annotate(
+            num_consumos=Count('id_consumo_tarjeta'),
+            total_consumido=Sum('monto_consumido')
+        ).order_by('-total_consumido')[:50]
+        
+        for t in tarjetas:
+            datos.append([
+                t['nro_tarjeta__nro_tarjeta'],
+                f"{t['nombre']} {t['apellido']}",
+                str(t['num_consumos']),
+                f"{int(t['total_consumido']):,}".replace(',', '.'),
+                f"{int(t['nro_tarjeta__saldo_actual']):,}".replace(',', '.')
+            ])
+    
+    return datos, columnas, titulo
+
+
+def exportar_excel(datos, columnas, titulo, fecha_desde, fecha_hasta):
+    """Exportar reporte a Excel"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill
+    from django.http import HttpResponse
+    
+    # Crear workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = titulo[:31]  # Max 31 caracteres
+    
+    # Título principal
+    ws.merge_cells('A1:E1')
+    title_cell = ws['A1']
+    title_cell.value = f"{titulo}\n{fecha_desde.strftime('%d/%m/%Y')} - {fecha_hasta.strftime('%d/%m/%Y')}"
+    title_cell.font = Font(size=16, bold=True, color='FFFFFF')
+    title_cell.alignment = Alignment(horizontal='center', vertical='center')
+    title_cell.fill = PatternFill(start_color='FF6B35', end_color='FF6B35', fill_type='solid')
+    ws.row_dimensions[1].height = 40
+    
+    # Encabezados
+    header_fill = PatternFill(start_color='4ECDC4', end_color='4ECDC4', fill_type='solid')
+    header_font = Font(bold=True, color='FFFFFF')
+    
+    for col_num, column_title in enumerate(columnas, 1):
+        cell = ws.cell(row=3, column=col_num)
+        cell.value = column_title
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    # Datos
+    for row_num, row_data in enumerate(datos, 4):
+        for col_num, cell_value in enumerate(row_data, 1):
+            cell = ws.cell(row=row_num, column=col_num)
+            cell.value = cell_value
+            cell.alignment = Alignment(horizontal='left', vertical='center')
+    
+    # Ajustar anchos de columna
+    for column in ws.columns:
+        max_length = 0
+        column_letter = column[0].column_letter
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column_letter].width = adjusted_width
+    
+    # Preparar respuesta HTTP
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    filename = f"{titulo}_{fecha_desde.strftime('%Y%m%d')}_{fecha_hasta.strftime('%Y%m%d')}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    wb.save(response)
+    return response
+
+
+def exportar_pdf(datos, columnas, titulo, fecha_desde, fecha_hasta):
+    """Exportar reporte a PDF"""
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib import colors
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    from django.http import HttpResponse
+    import io
+    
+    # Crear buffer
+    buffer = io.BytesIO()
+    
+    # Crear documento (landscape para tablas anchas)
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4))
+    elements = []
+    
+    # Estilos
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        textColor=colors.HexColor('#FF6B35'),
+        alignment=TA_CENTER,
+        spaceAfter=30
+    )
+    
+    # Título
+    title_text = f"{titulo}<br/>{fecha_desde.strftime('%d/%m/%Y')} - {fecha_hasta.strftime('%d/%m/%Y')}"
+    elements.append(Paragraph(title_text, title_style))
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # Preparar datos para tabla
+    table_data = [columnas] + datos
+    
+    # Crear tabla
+    table = Table(table_data)
+    table.setStyle(TableStyle([
+        # Encabezado
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4ECDC4')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        
+        # Datos
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+        ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('TOPPADDING', (0, 1), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+        
+        # Bordes
+        ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+        ('LINEBELOW', (0, 0), (-1, 0), 2, colors.HexColor('#FF6B35')),
+        
+        # Filas alternadas
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8F9FA')])
+    ]))
+    
+    elements.append(table)
+    
+    # Construir PDF
+    doc.build(elements)
+    
+    # Preparar respuesta HTTP
+    buffer.seek(0)
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+    filename = f"{titulo}_{fecha_desde.strftime('%Y%m%d')}_{fecha_hasta.strftime('%Y%m%d')}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+
+
+@login_required
+def ticket_view(request, venta_id):
+    """Vista para imprimir ticket de venta"""
+    try:
+        venta = Ventas.objects.select_related('id_empleado_cajero').get(id_venta=venta_id)
+        detalles = DetalleVenta.objects.filter(id_venta=venta).select_related('id_producto')
+        
+        # Verificar si fue pago con tarjeta
+        tarjeta = None
+        saldo_anterior = None
+        saldo_actual = None
+        
+        # Intentar obtener información de la tarjeta si es venta con hijo
+        if venta.id_hijo:
+            try:
+                tarjeta = venta.id_hijo.tarjeta
+                saldo_actual = tarjeta.saldo_actual
+                # Estimar saldo anterior (aproximado)
+                saldo_anterior = saldo_actual + venta.monto_total
+            except:
+                pass
+        
+        context = {
+            'venta': venta,
+            'detalles': detalles,
+            'tarjeta': tarjeta,
+            'saldo_anterior': saldo_anterior,
+            'saldo_actual': saldo_actual,
+        }
+        
+        return render(request, 'pos/ticket.html', context)
+        
+    except Ventas.DoesNotExist:
+        return JsonResponse({'error': 'Venta no encontrada'}, status=404)
+
+
+@login_required
+def recargas_view(request):
+    """Vista principal del módulo de recargas"""
+    from datetime import datetime
+    
+    hoy = datetime.now().date()
+    
+    # Estadísticas del día
+    recargas_hoy = CargasSaldo.objects.filter(fecha_carga__date=hoy)
+    stats_hoy = recargas_hoy.aggregate(
+        total=Sum('monto_cargado'),
+        cantidad=Count('id_carga')
+    )
+    
+    total_hoy = stats_hoy['total'] or Decimal('0')
+    cantidad_hoy = stats_hoy['cantidad'] or 1
+    promedio_hoy = total_hoy / cantidad_hoy if cantidad_hoy > 0 else Decimal('0')
+    
+    stats = {
+        'recargas_hoy': stats_hoy['cantidad'] or 0,
+        'total_hoy': total_hoy,
+        'promedio_hoy': promedio_hoy
+    }
+    
+    # Últimas 10 recargas del día
+    ultimas_recargas = CargasSaldo.objects.filter(
+        fecha_carga__date=hoy
+    ).select_related('nro_tarjeta', 'nro_tarjeta__id_hijo').order_by('-fecha_carga')[:10]
+    
+    context = {
+        'stats': stats,
+        'ultimas_recargas': ultimas_recargas,
+    }
+    
+    return render(request, 'pos/recargas.html', context)
+
+
+@login_required
+def procesar_recarga(request):
+    """Procesar recarga de tarjeta"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        import json
+        data = json.loads(request.body)
+        
+        nro_tarjeta = data.get('nro_tarjeta')
+        monto = Decimal(str(data.get('monto', 0)))
+        forma_pago = data.get('forma_pago', 'efectivo')
+        observaciones = data.get('observaciones', '')
+        
+        # Validaciones
+        if not nro_tarjeta or monto < 1000:
+            return JsonResponse({'error': 'Datos inválidos'}, status=400)
+        
+        # Buscar tarjeta
+        try:
+            tarjeta = Tarjeta.objects.get(nro_tarjeta=nro_tarjeta)
+        except Tarjeta.DoesNotExist:
+            return JsonResponse({'error': 'Tarjeta no encontrada'}, status=404)
+        
+        # Verificar estado
+        if tarjeta.estado == 'bloqueada':
+            return JsonResponse({'error': 'Tarjeta bloqueada'}, status=400)
+        
+        # Obtener datos del hijo
+        hijo = tarjeta.id_hijo
+        
+        # Calcular comisión si aplica
+        comision = Decimal('0')
+        if forma_pago in ['tarjeta_credito', 'tarjeta_debito', 'giros_tigo']:
+            # Buscar medio de pago
+            try:
+                nombre_medio = {
+                    'tarjeta_credito': 'Tarjeta de Crédito',
+                    'tarjeta_debito': 'Tarjeta de Débito',
+                    'giros_tigo': 'Giros Tigo'
+                }.get(forma_pago, '')
+                
+                medio_pago = MediosPago.objects.filter(descripcion=nombre_medio).first()
+                
+                if medio_pago:
+                    # Buscar tarifa de comisión
+                    tarifa = TarifasComision.objects.filter(
+                        id_medio_pago=medio_pago,
+                        activo=True
+                    ).first()
+                    
+                    if tarifa:
+                        # Calcular: monto_fijo + (monto * porcentaje / 100)
+                        comision = tarifa.monto_fijo + (monto * tarifa.porcentaje / Decimal('100'))
+                        comision = comision.quantize(Decimal('0.01'))
+            except Exception as e:
+                print(f"Error calculando comisión: {e}")
+                # Continuar sin comisión si hay error
+        
+        # Guardar saldo anterior
+        saldo_anterior = tarjeta.saldo_actual
+        saldo_posterior = saldo_anterior + monto
+        
+        # Registrar recarga
+        recarga = CargasSaldo.objects.create(
+            nro_tarjeta=tarjeta,
+            fecha=timezone.now(),
+            monto=monto,
+            forma_pago=forma_pago,
+            saldo_anterior=saldo_anterior,
+            saldo_posterior=saldo_posterior,
+            nombre=hijo.nombre,
+            apellido=hijo.apellido,
+            id_empleado=request.user if hasattr(request.user, 'id_empleado') else None,
+            observaciones=observaciones[:200] if observaciones else None
+        )
+        
+        # Actualizar saldo de tarjeta
+        tarjeta.saldo_actual = F('saldo_actual') + monto
+        tarjeta.save()
+        
+        # Refrescar tarjeta para obtener nuevo saldo
+        tarjeta.refresh_from_db()
+        
+        # Si hay comisión, registrarla (esto sería en DetalleComisionVenta pero para recargas)
+        # Por ahora solo la calculamos y mostramos
+        
+        response_data = {
+            'success': True,
+            'message': 'Recarga procesada exitosamente',
+            'recarga_id': recarga.id_carga_saldo,
+            'nuevo_saldo': float(tarjeta.saldo_actual),
+            'monto': float(monto)
+        }
+        
+        if comision > 0:
+            response_data['comision'] = float(comision)
+            response_data['message'] += f' (Comisión POS: Gs. {int(comision):,})'
+        
+        return JsonResponse(response_data)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def historial_recargas_view(request):
+    """Vista del historial de recargas"""
+    from datetime import datetime, timedelta
+    from django.core.paginator import Paginator
+    
+    # Obtener filtros
+    fecha_desde = request.GET.get('fecha_desde')
+    fecha_hasta = request.GET.get('fecha_hasta')
+    buscar = request.GET.get('buscar', '')
+    
+    # Fechas por defecto: últimos 30 días
+    if not fecha_desde or not fecha_hasta:
+        hoy = datetime.now().date()
+        fecha_desde = (hoy - timedelta(days=30)).isoformat()
+        fecha_hasta = hoy.isoformat()
+    
+    # Convertir a objetos date
+    try:
+        fecha_desde_obj = datetime.strptime(fecha_desde, '%Y-%m-%d').date()
+        fecha_hasta_obj = datetime.strptime(fecha_hasta, '%Y-%m-%d').date()
+    except ValueError:
+        fecha_desde_obj = (datetime.now() - timedelta(days=30)).date()
+        fecha_hasta_obj = datetime.now().date()
+        fecha_desde = fecha_desde_obj.isoformat()
+        fecha_hasta = fecha_hasta_obj.isoformat()
+    
+    # Consulta base
+    recargas_query = CargasSaldo.objects.filter(
+        fecha_carga__date__gte=fecha_desde_obj,
+        fecha_carga__date__lte=fecha_hasta_obj
+    ).select_related('nro_tarjeta', 'nro_tarjeta__id_hijo')
+    
+    # Filtro de búsqueda
+    if buscar:
+        recargas_query = recargas_query.filter(
+            Q(nro_tarjeta__nro_tarjeta__icontains=buscar) |
+            Q(nro_tarjeta__id_hijo__nombre__icontains=buscar) |
+            Q(nro_tarjeta__id_hijo__apellido__icontains=buscar)
+        )
+    
+    # Ordenar por fecha descendente
+    recargas_query = recargas_query.order_by('-fecha_carga')
+    
+    # Estadísticas del período
+    stats_periodo = recargas_query.aggregate(
+        total_recargas=Count('id_carga'),
+        monto_total=Sum('monto_cargado'),
+        tarjetas_unicas=Count('nro_tarjeta', distinct=True)
+    )
+    
+    promedio = (stats_periodo['monto_total'] / stats_periodo['total_recargas']) if stats_periodo['total_recargas'] > 0 else Decimal('0')
+    
+    stats = {
+        'total_recargas': stats_periodo['total_recargas'] or 0,
+        'monto_total': stats_periodo['monto_total'] or Decimal('0'),
+        'promedio': promedio,
+        'tarjetas_unicas': stats_periodo['tarjetas_unicas'] or 0
+    }
+    
+    # Paginación
+    paginator = Paginator(recargas_query, 50)
+    page_number = request.GET.get('page', 1)
+    recargas = paginator.get_page(page_number)
+    
+    # Query string para paginación
+    query_params = request.GET.copy()
+    if 'page' in query_params:
+        query_params.pop('page')
+    query_string = '&' + query_params.urlencode() if query_params else ''
+    
+    context = {
+        'recargas': recargas,
+        'stats': stats,
+        'fecha_desde': fecha_desde,
+        'fecha_hasta': fecha_hasta,
+        'buscar': buscar,
+        'query_string': query_string,
+    }
+    
+    return render(request, 'pos/historial_recargas.html', context)
+
+
+@login_required
+def comprobante_recarga_view(request, recarga_id):
+    """Vista para imprimir comprobante de recarga"""
+    try:
+        recarga = CargasSaldo.objects.select_related(
+            'nro_tarjeta',
+            'nro_tarjeta__id_hijo',
+            'nro_tarjeta__id_hijo__id_cliente_responsable'
+        ).get(id_carga=recarga_id)
+        
+        context = {
+            'recarga': recarga,
+        }
+        
+        return render(request, 'pos/comprobante_recarga.html', context)
+        
+    except CargasSaldo.DoesNotExist:
+        return JsonResponse({'error': 'Recarga no encontrada'}, status=404)
+
+
+# ==================== CUENTA CORRIENTE ====================
+
+@login_required
+def cuenta_corriente_view(request):
+    """Vista principal de cuenta corriente"""
+    # Obtener filtros
+    buscar = request.GET.get('buscar', '').strip()
+    estado_filter = request.GET.get('estado', '')
+    con_credito = request.GET.get('con_credito', '')
+    
+    # Query base - contar hijos por cliente
+    from django.db.models import Count
+    clientes = Cliente.objects.annotate(
+        num_hijos=Count('hijos')
+    ).select_related('id_lista_por_defecto', 'id_tipo_cliente')
+    
+    # Aplicar filtros
+    if buscar:
+        clientes = clientes.filter(
+            Q(nombres__icontains=buscar) | 
+            Q(apellidos__icontains=buscar) |
+            Q(ruc_ci__icontains=buscar)
+        )
+    
+    if estado_filter:
+        clientes = clientes.filter(activo=(estado_filter == 'activo'))
+    
+    if con_credito == 'si':
+        clientes = clientes.filter(limite_credito__gt=0)
+    elif con_credito == 'no':
+        clientes = clientes.filter(Q(limite_credito__isnull=True) | Q(limite_credito=0))
+    
+    # Estadísticas generales
+    from django.db.models import Count as CountFunc
+    stats = Cliente.objects.aggregate(
+        total_clientes=CountFunc('id_cliente'),
+        limite_total=Sum('limite_credito')
+    )
+    
+    clientes_con_credito = Cliente.objects.filter(limite_credito__gt=0).count()
+    
+    context = {
+        'clientes': clientes.order_by('-fecha_registro')[:100],
+        'stats': stats,
+        'clientes_con_credito': clientes_con_credito,
+        'buscar': buscar,
+        'estado': estado_filter,
+        'con_credito': con_credito,
+    }
+    
+    return render(request, 'pos/cuenta_corriente.html', context)
+
+
+@login_required
+def cc_detalle_view(request, cliente_id):
+    """Vista de detalle de cuenta corriente de un cliente"""
+    try:
+        cliente = Cliente.objects.select_related(
+            'id_lista_por_defecto', 'id_tipo_cliente'
+        ).get(id_cliente=cliente_id)
+        
+        # Obtener hijos del cliente
+        hijos = Hijo.objects.filter(id_cliente_responsable=cliente).select_related('tarjeta')
+        
+        # Obtener ventas relacionadas con las tarjetas de los hijos
+        ventas = Ventas.objects.filter(
+            id_hijo__id_cliente_responsable=cliente
+        ).select_related('id_hijo', 'id_empleado_cajero').order_by('-fecha')[:50]
+        
+        # Obtener recargas del cliente
+        recargas = CargasSaldo.objects.filter(
+            nro_tarjeta__id_hijo__id_cliente_responsable=cliente
+        ).select_related('nro_tarjeta').order_by('-fecha_carga')[:50]
+        
+        # Calcular totales
+        total_ventas = ventas.aggregate(total=Sum('monto_total'))['total'] or 0
+        total_recargas = recargas.aggregate(total=Sum('monto_cargado'))['total'] or 0
+        
+        context = {
+            'cliente': cliente,
+            'hijos': hijos,
+            'ventas': ventas,
+            'recargas': recargas,
+            'total_ventas': total_ventas,
+            'total_recargas': total_recargas,
+        }
+        
+        return render(request, 'pos/cc_detalle.html', context)
+        
+    except Cliente.DoesNotExist:
+        return JsonResponse({'error': 'Cliente no encontrado'}, status=404)
+
+
+@login_required
+@require_http_methods(["POST"])
+def cc_registrar_pago(request):
+    """Registrar una recarga como 'pago' del responsable"""
+    try:
+        data = json.loads(request.body)
+        cliente_id = data.get('cliente_id')
+        tarjeta_id = data.get('tarjeta_id')  # Tarjeta del hijo donde se aplicará
+        monto = Decimal(data.get('monto', 0))
+        forma_pago = data.get('forma_pago', 'efectivo')
+        observaciones = data.get('observaciones', 'Pago del responsable')
+        
+        # Validaciones
+        if monto <= 0:
+            return JsonResponse({
+                'success': False,
+                'error': 'El monto debe ser mayor a 0'
+            }, status=400)
+        
+        # Obtener cliente y tarjeta
+        cliente = Cliente.objects.get(id_cliente=cliente_id)
+        tarjeta = Tarjeta.objects.get(nro_tarjeta=tarjeta_id)
+        
+        # Verificar que la tarjeta pertenece a un hijo del cliente
+        if not Hijo.objects.filter(id_cliente_responsable=cliente, nro_tarjeta=tarjeta).exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'La tarjeta no pertenece a este cliente'
+            }, status=400)
+        
+        # Obtener empleado actual
+        empleado = Empleado.objects.filter(activo=True).first()
+        
+        # Crear recarga
+        saldo_anterior = tarjeta.saldo_actual
+        saldo_posterior = saldo_anterior + monto
+        
+        recarga = CargasSaldo.objects.create(
+            nro_tarjeta=tarjeta,
+            fecha=timezone.now(),
+            monto=monto,
+            forma_pago=forma_pago,
+            saldo_anterior=saldo_anterior,
+            saldo_posterior=saldo_posterior,
+            observaciones=observaciones,
+            id_empleado=empleado
+        )
+        
+        # Actualizar saldo de tarjeta
+        tarjeta.saldo_actual = F('saldo_actual') + monto
+        tarjeta.save()
+        tarjeta.refresh_from_db()
+        
+        return JsonResponse({
+            'success': True,
+            'recarga_id': recarga.id_carga_saldo,
+            'monto': float(monto),
+            'nuevo_saldo': float(tarjeta.saldo_actual),
+            'mensaje': f'Pago registrado. Nuevo saldo: Gs. {tarjeta.saldo_actual:,.0f}'
+        })
+        
+    except (Cliente.DoesNotExist, Tarjeta.DoesNotExist):
+        return JsonResponse({
+            'success': False,
+            'error': 'Cliente o tarjeta no encontrados'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def cc_estado_cuenta(request, cliente_id):
+    """Vista de estado de cuenta imprimible"""
+    try:
+        cliente = Cliente.objects.get(id_cliente=cliente_id)
+        
+        # Obtener fechas del filtro
+        fecha_desde = request.GET.get('fecha_desde')
+        fecha_hasta = request.GET.get('fecha_hasta')
+        
+        # Obtener movimientos (ventas y pagos)
+        ventas = Ventas.objects.filter(
+            id_hijo__id_cliente_responsable=cliente
+        ).select_related('id_hijo', 'id_empleado_cajero').order_by('-fecha')
+        
+        recargas = CargasSaldo.objects.filter(
+            nro_tarjeta__id_hijo__id_cliente_responsable=cliente
+        ).select_related('nro_tarjeta').order_by('-fecha_carga')
+        
+        # Aplicar filtros de fecha si existen
+        if fecha_desde:
+            ventas = ventas.filter(fecha__gte=fecha_desde)
+            recargas = recargas.filter(fecha__gte=fecha_desde)
+        
+        if fecha_hasta:
+            ventas = ventas.filter(fecha__lte=fecha_hasta)
+            recargas = recargas.filter(fecha__lte=fecha_hasta)
+        
+        # Combinar y ordenar movimientos
+        movimientos = []
+        
+        for venta in ventas:
+            movimientos.append({
+                'fecha': venta.fecha,
+                'hora': venta.hora,
+                'tipo': 'Venta',
+                'descripcion': f'Venta #{venta.id_venta}',
+                'cargo': venta.total,
+                'abono': 0,
+                'empleado': venta.id_empleado.nombre if venta.id_empleado else 'N/A'
+            })
+        
+        for recarga in recargas:
+            movimientos.append({
+                'fecha': recarga.fecha,
+                'tipo': 'Pago/Recarga',
+                'descripcion': f'Recarga tarjeta {recarga.nro_tarjeta.nro_tarjeta}',
+                'cargo': 0,
+                'abono': recarga.monto,
+                'empleado': recarga.id_empleado.nombre if recarga.id_empleado else 'N/A'
+            })
+        
+        # Ordenar por fecha
+        movimientos.sort(key=lambda x: x['fecha'], reverse=True)
+        
+        # Calcular totales
+        total_cargos = sum(m['cargo'] for m in movimientos)
+        total_abonos = sum(m['abono'] for m in movimientos)
+        
+        context = {
+            'cliente': cliente,
+            'movimientos': movimientos,
+            'total_cargos': total_cargos,
+            'total_abonos': total_abonos,
+            'saldo': total_cargos - total_abonos,
+            'fecha_desde': fecha_desde,
+            'fecha_hasta': fecha_hasta,
+        }
+        
+        return render(request, 'pos/cc_estado_cuenta.html', context)
+        
+    except Cliente.DoesNotExist:
+        return JsonResponse({'error': 'Cliente no encontrado'}, status=404)
+
+
+# ==================== PROVEEDORES ====================
+
+@login_required
+def proveedores_view(request):
+    """Vista principal de gestión de proveedores"""
+    # Obtener filtros
+    buscar = request.GET.get('buscar', '').strip()
+    estado_filter = request.GET.get('estado', '')
+    
+    # Query base
+    proveedores = Proveedor.objects.all()
+    
+    # Aplicar filtros
+    if buscar:
+        proveedores = proveedores.filter(
+            Q(razon_social__icontains=buscar) |
+            Q(ruc__icontains=buscar)
+        )
+    
+    if estado_filter:
+        proveedores = proveedores.filter(activo=(estado_filter == 'activo'))
+    
+    # Estadísticas
+    from django.db.models import Count as CountFunc
+    stats = {
+        'total_proveedores': proveedores.count(),
+        'proveedores_activos': proveedores.filter(activo=True).count(),
+    }
+    
+    context = {
+        'proveedores': proveedores.order_by('-fecha_registro'),
+        'stats': stats,
+        'buscar': buscar,
+        'estado': estado_filter,
+    }
+    
+    return render(request, 'pos/proveedores.html', context)
+
+
+@login_required
+def proveedor_detalle_view(request, proveedor_id):
+    """Vista de detalle de un proveedor"""
+    try:
+        proveedor = Proveedor.objects.get(id_proveedor=proveedor_id)
+        
+        context = {
+            'proveedor': proveedor,
+        }
+        
+        return render(request, 'pos/proveedor_detalle.html', context)
+        
+    except Proveedor.DoesNotExist:
+        return JsonResponse({'error': 'Proveedor no encontrado'}, status=404)
+
+
+@login_required
+@require_http_methods(["POST"])
+def proveedor_crear(request):
+    """Crear nuevo proveedor"""
+    try:
+        data = json.loads(request.body)
+        
+        # Validar datos requeridos
+        required_fields = ['ruc', 'razon_social']
+        for field in required_fields:
+            if not data.get(field):
+                return JsonResponse({
+                    'success': False,
+                    'error': f'El campo {field} es requerido'
+                }, status=400)
+        
+        # Verificar que el RUC no exista
+        if Proveedor.objects.filter(ruc=data['ruc']).exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'Ya existe un proveedor con ese RUC'
+            }, status=400)
+        
+        # Crear proveedor
+        proveedor = Proveedor.objects.create(
+            ruc=data['ruc'],
+            razon_social=data['razon_social'],
+            telefono=data.get('telefono', ''),
+            email=data.get('email', ''),
+            direccion=data.get('direccion', ''),
+            ciudad=data.get('ciudad', ''),
+            activo=data.get('activo', True)
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'proveedor_id': proveedor.id_proveedor,
+            'mensaje': f'Proveedor {proveedor.razon_social} creado exitosamente'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def proveedor_editar(request, proveedor_id):
+    """Editar proveedor existente"""
+    try:
+        proveedor = Proveedor.objects.get(id_proveedor=proveedor_id)
+        data = json.loads(request.body)
+        
+        # Actualizar campos
+        if 'razon_social' in data:
+            proveedor.razon_social = data['razon_social']
+        if 'telefono' in data:
+            proveedor.telefono = data['telefono']
+        if 'email' in data:
+            proveedor.email = data['email']
+        if 'direccion' in data:
+            proveedor.direccion = data['direccion']
+        if 'ciudad' in data:
+            proveedor.ciudad = data['ciudad']
+        if 'activo' in data:
+            proveedor.activo = data['activo']
+        
+        proveedor.save()
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'Proveedor actualizado exitosamente'
+        })
+        
+    except Proveedor.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Proveedor no encontrado'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def proveedor_eliminar(request, proveedor_id):
+    """Desactivar proveedor (soft delete)"""
+    try:
+        proveedor = Proveedor.objects.get(id_proveedor=proveedor_id)
+        proveedor.activo = False
+        proveedor.save()
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Proveedor {proveedor.razon_social} desactivado'
+        })
+        
+    except Proveedor.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Proveedor no encontrado'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# ==================== INVENTARIO AVANZADO ====================
+
+@login_required
+def inventario_dashboard(request):
+    """Dashboard principal de inventario con alertas y estadísticas"""
+    # Productos con stock bajo (menor al mínimo)
+    productos_stock_bajo = Producto.objects.filter(
+        activo=True,
+        stock_minimo__isnull=False
+    ).annotate(
+        stock_actual_val=F('stock__stock_actual')
+    ).filter(
+        stock_actual_val__lt=F('stock_minimo')
+    ).select_related('id_categoria', 'stock')[:20]
+    
+    # Productos sin stock
+    productos_sin_stock = Producto.objects.filter(
+        activo=True,
+        stock__stock_actual__lte=0
+    ).select_related('id_categoria', 'stock')[:20]
+    
+    # Estadísticas generales
+    from django.db.models import Count as CountFunc, Avg
+    stats = Producto.objects.filter(activo=True).aggregate(
+        total_productos=CountFunc('id_producto'),
+        stock_promedio=Avg('stock__stock_actual')
+    )
+    
+    # Productos más vendidos (últimos 30 días)
+    from datetime import timedelta
+    fecha_limite = timezone.now() - timedelta(days=30)
+    
+    productos_mas_vendidos = DetalleVenta.objects.filter(
+        id_venta__fecha__gte=fecha_limite
+    ).values(
+        'id_producto__descripcion',
+        'id_producto__codigo'
+    ).annotate(
+        total_vendido=Sum('cantidad')
+    ).order_by('-total_vendido')[:10]
+    
+    # Categorías con más productos
+    categorias_stock = Categoria.objects.annotate(
+        total_productos=CountFunc('productos', filter=Q(productos__activo=True)),
+        stock_total=Sum('productos__stock__stock_actual')
+    ).filter(total_productos__gt=0).order_by('-stock_total')[:10]
+    
+    context = {
+        'productos_stock_bajo': productos_stock_bajo,
+        'productos_sin_stock': productos_sin_stock,
+        'stats': stats,
+        'productos_mas_vendidos': productos_mas_vendidos,
+        'categorias_stock': categorias_stock,
+        'alertas_count': productos_stock_bajo.count() + productos_sin_stock.count(),
+    }
+    
+    return render(request, 'pos/inventario_dashboard.html', context)
+
+
+@login_required
+def inventario_productos(request):
+    """Vista de listado de productos con stock"""
+    # Obtener filtros
+    buscar = request.GET.get('buscar', '').strip()
+    categoria_id = request.GET.get('categoria', '')
+    estado_stock = request.GET.get('estado_stock', '')
+    
+    # Query base
+    productos = Producto.objects.filter(activo=True).select_related(
+        'id_categoria', 'id_unidad', 'stock'
+    ).annotate(
+        stock_actual_val=F('stock__stock_actual')
+    )
+    
+    # Aplicar filtros
+    if buscar:
+        productos = productos.filter(
+            Q(descripcion__icontains=buscar) |
+            Q(codigo__icontains=buscar)
+        )
+    
+    if categoria_id:
+        productos = productos.filter(id_categoria_id=categoria_id)
+    
+    if estado_stock == 'bajo':
+        productos = productos.filter(
+            stock_minimo__isnull=False,
+            stock_actual_val__lt=F('stock_minimo')
+        )
+    elif estado_stock == 'sin_stock':
+        productos = productos.filter(stock_actual_val__lte=0)
+    elif estado_stock == 'normal':
+        productos = productos.filter(
+            Q(stock_minimo__isnull=True) |
+            Q(stock_actual_val__gte=F('stock_minimo'))
+        ).exclude(stock_actual_val__lte=0)
+    
+    # Categorías para filtro
+    categorias = Categoria.objects.all()
+    
+    context = {
+        'productos': productos.order_by('descripcion'),
+        'categorias': categorias,
+        'buscar': buscar,
+        'categoria_id': categoria_id,
+        'estado_stock': estado_stock,
+    }
+    
+    return render(request, 'pos/inventario_productos.html', context)
+
+
+@login_required
+def kardex_producto(request, producto_id):
+    """Kardex completo de un producto (historial de movimientos)"""
+    try:
+        producto = Producto.objects.select_related(
+            'id_categoria', 'id_unidad', 'stock'
+        ).get(id_producto=producto_id)
+        
+        # Obtener fechas del filtro
+        fecha_desde = request.GET.get('fecha_desde')
+        fecha_hasta = request.GET.get('fecha_hasta')
+        
+        # Movimientos de salida (ventas)
+        ventas = DetalleVenta.objects.filter(
+            id_producto=producto
+        ).select_related('id_venta', 'id_venta__id_empleado')
+        
+        if fecha_desde:
+            ventas = ventas.filter(id_venta__fecha__gte=fecha_desde)
+        if fecha_hasta:
+            ventas = ventas.filter(id_venta__fecha__lte=fecha_hasta)
+        
+        ventas = ventas.order_by('-id_venta__fecha', '-id_venta__hora')[:100]
+        
+        # Construir kardex
+        movimientos = []
+        for venta_detalle in ventas:
+            movimientos.append({
+                'fecha': venta_detalle.id_venta.fecha,
+                'hora': venta_detalle.id_venta.hora,
+                'tipo': 'Salida',
+                'descripcion': f'Venta #{venta_detalle.id_venta.id_venta}',
+                'cantidad': venta_detalle.cantidad,
+                'tipo_movimiento': 'venta',
+                'empleado': venta_detalle.id_venta.id_empleado.nombre if venta_detalle.id_venta.id_empleado else 'N/A'
+            })
+        
+        # Ordenar por fecha descendente
+        movimientos.sort(key=lambda x: (x['fecha'], x.get('hora', '')), reverse=True)
+        
+        # Calcular totales
+        total_entradas = 0
+        total_salidas = sum(m['cantidad'] for m in movimientos if m['tipo'] == 'Salida')
+        
+        context = {
+            'producto': producto,
+            'movimientos': movimientos,
+            'total_entradas': total_entradas,
+            'total_salidas': total_salidas,
+            'saldo_actual': producto.stock.stock_actual if hasattr(producto, 'stock') else 0,
+            'fecha_desde': fecha_desde,
+            'fecha_hasta': fecha_hasta,
+        }
+        
+        return render(request, 'pos/kardex_producto.html', context)
+        
+    except Producto.DoesNotExist:
+        return JsonResponse({'error': 'Producto no encontrado'}, status=404)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def ajuste_inventario_view(request):
+    """Vista para realizar ajustes de inventario"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            producto_id = data.get('producto_id')
+            tipo_ajuste = data.get('tipo_ajuste')  # 'suma' o 'resta'
+            cantidad = Decimal(data.get('cantidad', 0))
+            motivo = data.get('motivo', '')
+            
+            # Validaciones
+            if cantidad <= 0:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'La cantidad debe ser mayor a 0'
+                }, status=400)
+            
+            # Obtener producto y stock
+            producto = Producto.objects.get(id_producto=producto_id)
+            stock = StockUnico.objects.get(id_producto=producto)
+            
+            stock_anterior = stock.stock_actual
+            
+            # Aplicar ajuste
+            if tipo_ajuste == 'suma':
+                stock.stock_actual = F('stock_actual') + cantidad
+                descripcion_movimiento = f'Ajuste de inventario: +{cantidad} {producto.id_unidad.simbolo}'
+            elif tipo_ajuste == 'resta':
+                stock.stock_actual = F('stock_actual') - cantidad
+                descripcion_movimiento = f'Ajuste de inventario: -{cantidad} {producto.id_unidad.simbolo}'
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Tipo de ajuste inválido'
+                }, status=400)
+            
+            stock.save()
+            stock.refresh_from_db()
+            
+            # Aquí podrías registrar el ajuste en una tabla de auditoría
+            # AjusteInventario.objects.create(...)
+            
+            return JsonResponse({
+                'success': True,
+                'stock_anterior': float(stock_anterior),
+                'cantidad_ajuste': float(cantidad),
+                'stock_nuevo': float(stock.stock_actual),
+                'mensaje': f'Ajuste realizado. Nuevo stock: {stock.stock_actual} {producto.id_unidad.simbolo}'
+            })
+            
+        except Producto.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Producto no encontrado'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+    
+    # GET - Mostrar formulario
+    productos = Producto.objects.filter(activo=True).select_related(
+        'id_categoria', 'id_unidad', 'stock'
+    ).order_by('descripcion')
+    
+    context = {
+        'productos': productos,
+    }
+    
+    return render(request, 'pos/ajuste_inventario.html', context)
+
+
+@login_required
+def alertas_inventario(request):
+    """Vista de alertas de inventario"""
+    # Productos con stock bajo
+    productos_stock_bajo = Producto.objects.filter(
+        activo=True,
+        stock_minimo__isnull=False
+    ).annotate(
+        stock_actual_val=F('stock__stock_actual')
+    ).filter(
+        stock_actual_val__lt=F('stock_minimo')
+    ).select_related('id_categoria', 'stock', 'id_unidad')
+    
+    # Productos sin stock
+    productos_sin_stock = Producto.objects.filter(
+        activo=True,
+        stock__stock_actual__lte=0
+    ).select_related('id_categoria', 'stock', 'id_unidad')
+    
+    # Productos críticos (menos del 50% del stock mínimo)
+    productos_criticos = Producto.objects.filter(
+        activo=True,
+        stock_minimo__isnull=False
+    ).annotate(
+        stock_actual_val=F('stock__stock_actual')
+    ).filter(
+        stock_actual_val__lt=F('stock_minimo') * 0.5
+    ).select_related('id_categoria', 'stock', 'id_unidad')
+    
+    context = {
+        'productos_stock_bajo': productos_stock_bajo,
+        'productos_sin_stock': productos_sin_stock,
+        'productos_criticos': productos_criticos,
+        'total_alertas': (
+            productos_stock_bajo.count() + 
+            productos_sin_stock.count() + 
+            productos_criticos.count()
+        ),
+    }
+    
+    return render(request, 'pos/alertas_inventario.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def actualizar_stock_masivo(request):
+    """Actualización masiva de stock (para inventario físico)"""
+    try:
+        data = json.loads(request.body)
+        ajustes = data.get('ajustes', [])  # Lista de {producto_id, nuevo_stock}
+        
+        if not ajustes:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se proporcionaron ajustes'
+            }, status=400)
+        
+        actualizados = 0
+        errores = []
+        
+        for ajuste in ajustes:
+            try:
+                producto_id = ajuste.get('producto_id')
+                nuevo_stock = Decimal(ajuste.get('nuevo_stock', 0))
+                
+                stock = StockUnico.objects.get(id_producto_id=producto_id)
+                stock.stock_actual = nuevo_stock
+                stock.save()
+                actualizados += 1
+                
+            except Exception as e:
+                errores.append(f'Producto {producto_id}: {str(e)}')
+        
+        return JsonResponse({
+            'success': True,
+            'actualizados': actualizados,
+            'errores': errores,
+            'mensaje': f'{actualizados} productos actualizados'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# ==================== SISTEMA DE ALERTAS ====================
+
+@login_required
+def alertas_sistema_view(request):
+    """Dashboard de alertas del sistema"""
+    from datetime import timedelta
+    
+    # 1. ALERTAS DE SALDO BAJO EN TARJETAS (≤ 10,000 Gs)
+    SALDO_MINIMO = 10000
+    tarjetas_saldo_bajo = Tarjeta.objects.filter(
+        estado='Activa',
+        saldo_actual__lte=SALDO_MINIMO
+    ).select_related('id_hijo', 'id_hijo__id_cliente_responsable').order_by('saldo_actual')
+    
+    # 2. ALERTAS DE STOCK BAJO
+    productos_stock_bajo = Producto.objects.filter(
+        activo=True,
+        stock_minimo__isnull=False
+    ).annotate(
+        stock_actual_val=F('stock__stock_actual')
+    ).filter(
+        stock_actual_val__lt=F('stock_minimo')
+    ).select_related('id_categoria', 'stock')[:20]
+    
+    # 3. ALERTAS DE PRODUCTOS SIN STOCK
+    productos_sin_stock = Producto.objects.filter(
+        activo=True,
+        stock__stock_actual__lte=0
+    ).select_related('id_categoria', 'stock')[:20]
+    
+    # 4. ALERTAS DE TARJETAS POR VENCER (próximos 30 días)
+    fecha_limite = timezone.now().date() + timedelta(days=30)
+    tarjetas_por_vencer = Tarjeta.objects.filter(
+        estado='Activa',
+        fecha_vencimiento__lte=fecha_limite,
+        fecha_vencimiento__gte=timezone.now().date()
+    ).select_related('id_hijo', 'id_hijo__id_cliente_responsable').order_by('fecha_vencimiento')
+    
+    # 5. ALERTAS DE TARJETAS BLOQUEADAS
+    tarjetas_bloqueadas = Tarjeta.objects.filter(
+        estado='Bloqueada'
+    ).select_related('id_hijo', 'id_hijo__id_cliente_responsable').order_by('-fecha_creacion')[:20]
+    
+    # Estadísticas de alertas
+    total_alertas = (
+        tarjetas_saldo_bajo.count() +
+        productos_stock_bajo.count() +
+        productos_sin_stock.count() +
+        tarjetas_por_vencer.count() +
+        tarjetas_bloqueadas.count()
+    )
+    
+    context = {
+        'tarjetas_saldo_bajo': tarjetas_saldo_bajo,
+        'saldo_minimo': SALDO_MINIMO,
+        'productos_stock_bajo': productos_stock_bajo,
+        'productos_sin_stock': productos_sin_stock,
+        'tarjetas_por_vencer': tarjetas_por_vencer,
+        'tarjetas_bloqueadas': tarjetas_bloqueadas,
+        'total_alertas': total_alertas,
+        'alertas_criticas': tarjetas_saldo_bajo.filter(saldo_actual__lte=5000).count(),
+    }
+    
+    return render(request, 'pos/alertas_sistema.html', context)
+
+
+@login_required
+def alertas_tarjetas_saldo_view(request):
+    """Vista específica para alertas de saldo bajo en tarjetas"""
+    # Obtener parámetros de filtro
+    saldo_max = request.GET.get('saldo_max', 10000)
+    buscar = request.GET.get('buscar', '').strip()
+    
+    try:
+        saldo_max = int(saldo_max)
+    except ValueError:
+        saldo_max = 10000
+    
+    # Query base
+    tarjetas = Tarjeta.objects.filter(
+        estado='Activa',
+        saldo_actual__lte=saldo_max
+    ).select_related(
+        'id_hijo',
+        'id_hijo__id_cliente_responsable'
+    )
+    
+    # Aplicar búsqueda
+    if buscar:
+        tarjetas = tarjetas.filter(
+            Q(nro_tarjeta__icontains=buscar) |
+            Q(id_hijo__nombre__icontains=buscar) |
+            Q(id_hijo__apellido__icontains=buscar) |
+            Q(id_hijo__id_cliente_responsable__nombres__icontains=buscar) |
+            Q(id_hijo__id_cliente_responsable__apellidos__icontains=buscar)
+        )
+    
+    tarjetas = tarjetas.order_by('saldo_actual')
+    
+    # Estadísticas
+    total_tarjetas = tarjetas.count()
+    criticas = tarjetas.filter(saldo_actual__lte=5000).count()
+    sin_saldo = tarjetas.filter(saldo_actual__lte=0).count()
+    
+    context = {
+        'tarjetas': tarjetas,
+        'saldo_max': saldo_max,
+        'buscar': buscar,
+        'total_tarjetas': total_tarjetas,
+        'criticas': criticas,
+        'sin_saldo': sin_saldo,
+    }
+    
+    return render(request, 'pos/alertas_tarjetas_saldo.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def marcar_alerta_vista(request):
+    """Marcar una alerta como vista (para futuro con tabla de alertas)"""
+    try:
+        data = json.loads(request.body)
+        alerta_id = data.get('alerta_id')
+        tipo = data.get('tipo')  # 'tarjeta', 'producto', etc.
+        
+        # Por ahora solo retornamos success
+        # En el futuro se puede crear tabla de alertas_historial
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'Alerta marcada como vista'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def enviar_notificacion_saldo(request, tarjeta_id):
+    """Enviar notificación de saldo bajo al responsable"""
+    try:
+        tarjeta = Tarjeta.objects.select_related(
+            'id_hijo',
+            'id_hijo__id_cliente_responsable'
+        ).get(nro_tarjeta=tarjeta_id)
+        
+        responsable = tarjeta.id_hijo.id_cliente_responsable
+        hijo = tarjeta.id_hijo
+        
+        # Aquí se puede implementar el envío real (email, SMS, WhatsApp)
+        # Por ahora simulamos el envío
+        
+        mensaje = f"""
+        Estimado/a {responsable.nombres} {responsable.apellidos},
+        
+        Le informamos que la tarjeta del estudiante {hijo.nombre} {hijo.apellido}
+        tiene un saldo bajo:
+        
+        Tarjeta: {tarjeta.nro_tarjeta}
+        Saldo actual: Gs. {tarjeta.saldo_actual:,}
+        
+        Le recomendamos realizar una recarga para evitar inconvenientes.
+        
+        Gracias,
+        Cantina Tita
+        """
+        
+        # Simular envío exitoso
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Notificación enviada a {responsable.email or responsable.telefono}',
+            'preview': mensaje.strip()
+        })
+        
+    except Tarjeta.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Tarjeta no encontrada'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# ==================== SISTEMA DE CAJAS ====================
+
+@login_required
+def cajas_dashboard_view(request):
+    """Dashboard principal de cajas"""
+    # Obtener todas las cajas
+    cajas = Cajas.objects.filter(activo=True)
+    
+    # Obtener caja abierta del usuario actual
+    caja_abierta = None
+    try:
+        empleado = Empleado.objects.get(usuario=request.user.username)
+        caja_abierta = CierresCaja.objects.filter(
+            id_empleado=empleado,
+            estado='Abierta'
+        ).select_related('id_caja').first()
+    except Empleado.DoesNotExist:
+        pass
+    
+    # Estadísticas del día
+    hoy = timezone.now().date()
+    cierres_hoy = CierresCaja.objects.filter(
+        fecha_hora_apertura__date=hoy
+    ).select_related('id_caja', 'id_empleado')
+    
+    total_ventas_hoy = Ventas.objects.filter(
+        fecha__date=hoy,
+        estado='Completada'
+    ).aggregate(total=Sum('monto_total'))['total'] or 0
+    
+    context = {
+        'cajas': cajas,
+        'caja_abierta': caja_abierta,
+        'cierres_hoy': cierres_hoy,
+        'total_ventas_hoy': total_ventas_hoy,
+    }
+    return render(request, 'pos/cajas_dashboard.html', context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def apertura_caja_view(request):
+    """Apertura de caja"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            id_caja = data.get('id_caja')
+            monto_inicial = Decimal(data.get('monto_inicial', '0'))
+            
+            # Validar empleado
+            try:
+                empleado = Empleado.objects.get(usuario=request.user.username)
+            except Empleado.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Usuario no asociado a un empleado'
+                }, status=400)
+            
+            # Verificar que no tenga caja abierta
+            caja_existente = CierresCaja.objects.filter(
+                id_empleado=empleado,
+                estado='Abierta'
+            ).first()
+            
+            if caja_existente:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Ya tiene la caja {caja_existente.id_caja.nombre_caja} abierta'
+                }, status=400)
+            
+            # Validar caja
+            caja = Cajas.objects.get(id_caja=id_caja, activo=True)
+            
+            # Crear apertura
+            cierre = CierresCaja.objects.create(
+                id_caja=caja,
+                id_empleado=empleado,
+                fecha_apertura=timezone.now(),
+                monto_inicial=monto_inicial,
+                estado='Abierta'
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': f'Caja {caja.nombre_caja} abierta correctamente',
+                'id_cierre': cierre.id_cierre_caja
+            })
+            
+        except Cajas.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Caja no encontrada'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+    
+    # GET
+    cajas_disponibles = Cajas.objects.filter(activo=True)
+    return render(request, 'pos/apertura_caja.html', {
+        'cajas': cajas_disponibles
+    })
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def cierre_caja_view(request):
+    """Cierre de caja"""
+    try:
+        empleado = Empleado.objects.get(usuario=request.user.username)
+        caja_abierta = CierresCaja.objects.filter(
+            id_empleado=empleado,
+            estado='Abierta'
+        ).select_related('id_caja').first()
+        
+        if not caja_abierta:
+            return render(request, 'pos/cierre_caja.html', {
+                'error': 'No tiene ninguna caja abierta'
+            })
+        
+        if request.method == 'POST':
+            try:
+                data = json.loads(request.body)
+                monto_final = Decimal(data.get('monto_final', '0'))
+                observaciones = data.get('observaciones', '')
+                
+                # Calcular ventas del turno
+                ventas_turno = Ventas.objects.filter(
+                    fecha_venta__gte=caja_abierta.fecha_apertura,
+                    estado='Completada'
+                ).aggregate(total=Sum('monto_total'))['total'] or 0
+                
+                # Calcular diferencia
+                monto_esperado = caja_abierta.monto_inicial + ventas_turno
+                diferencia = monto_final - monto_esperado
+                
+                # Actualizar cierre
+                caja_abierta.fecha_cierre = timezone.now()
+                caja_abierta.monto_final = monto_final
+                caja_abierta.diferencia = diferencia
+                caja_abierta.observaciones = observaciones
+                caja_abierta.estado = 'Cerrada'
+                caja_abierta.save()
+                
+                return JsonResponse({
+                    'success': True,
+                    'mensaje': 'Caja cerrada correctamente',
+                    'diferencia': float(diferencia),
+                    'monto_esperado': float(monto_esperado)
+                })
+                
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': str(e)
+                }, status=500)
+        
+        # GET - Calcular totales para mostrar
+        ventas_turno = Ventas.objects.filter(
+            fecha_venta__gte=caja_abierta.fecha_apertura,
+            estado='Completada'
+        )
+        
+        total_ventas = ventas_turno.aggregate(total=Sum('monto_total'))['total'] or 0
+        cantidad_ventas = ventas_turno.count()
+        monto_esperado = caja_abierta.monto_inicial + total_ventas
+        
+        context = {
+            'caja_abierta': caja_abierta,
+            'total_ventas': total_ventas,
+            'cantidad_ventas': cantidad_ventas,
+            'monto_esperado': monto_esperado,
+        }
+        
+        return render(request, 'pos/cierre_caja.html', context)
+        
+    except Empleado.DoesNotExist:
+        return render(request, 'pos/cierre_caja.html', {
+            'error': 'Usuario no asociado a un empleado'
+        })
+
+
+@login_required
+def arqueo_caja_view(request):
+    """Arqueo de caja - conteo de efectivo"""
+    try:
+        empleado = Empleado.objects.get(usuario=request.user.username)
+        caja_abierta = CierresCaja.objects.filter(
+            id_empleado=empleado,
+            estado='Abierta'
+        ).select_related('id_caja').first()
+        
+        if not caja_abierta:
+            return render(request, 'pos/arqueo_caja.html', {
+                'error': 'No tiene ninguna caja abierta'
+            })
+        
+        # Denominaciones de billetes y monedas (Paraguay)
+        denominaciones = [
+            {'valor': 100000, 'tipo': 'billete', 'nombre': '100.000 Gs'},
+            {'valor': 50000, 'tipo': 'billete', 'nombre': '50.000 Gs'},
+            {'valor': 20000, 'tipo': 'billete', 'nombre': '20.000 Gs'},
+            {'valor': 10000, 'tipo': 'billete', 'nombre': '10.000 Gs'},
+            {'valor': 5000, 'tipo': 'billete', 'nombre': '5.000 Gs'},
+            {'valor': 2000, 'tipo': 'billete', 'nombre': '2.000 Gs'},
+            {'valor': 1000, 'tipo': 'moneda', 'nombre': '1.000 Gs'},
+            {'valor': 500, 'tipo': 'moneda', 'nombre': '500 Gs'},
+            {'valor': 100, 'tipo': 'moneda', 'nombre': '100 Gs'},
+            {'valor': 50, 'tipo': 'moneda', 'nombre': '50 Gs'},
+        ]
+        
+        context = {
+            'caja_abierta': caja_abierta,
+            'denominaciones': denominaciones,
+        }
+        
+        return render(request, 'pos/arqueo_caja.html', context)
+        
+    except Empleado.DoesNotExist:
+        return render(request, 'pos/arqueo_caja.html', {
+            'error': 'Usuario no asociado a un empleado'
+        })
+
+
+@login_required
+def conciliacion_pagos_view(request):
+    """Conciliación de pagos por medio de pago"""
+    fecha = request.GET.get('fecha', timezone.now().date())
+    
+    # Obtener medios de pago
+    medios_pago = MediosPago.objects.filter(activo=True)
+    
+    # Calcular totales por medio de pago
+    resumen = []
+    for medio in medios_pago:
+        pagos = PagosVenta.objects.filter(
+            id_venta__fecha__date=fecha,
+            id_medio_pago=medio,
+            id_venta__estado='Completada'
+        )
+        
+        total = pagos.aggregate(total=Sum('monto_aplicado'))['total'] or 0
+        cantidad = pagos.count()
+        
+        resumen.append({
+            'medio': medio,
+            'total': total,
+            'cantidad': cantidad
+        })
+    
+    # Total general
+    total_general = sum(item['total'] for item in resumen)
+    
+    context = {
+        'fecha': fecha,
+        'resumen': resumen,
+        'total_general': total_general,
+    }
+    
+    return render(request, 'pos/conciliacion_pagos.html', context)
+
+
+# ==================== SISTEMA DE COMPRAS ====================
+
+@login_required
+def compras_dashboard_view(request):
+    """Dashboard de compras"""
+    # Últimas compras
+    compras_recientes = Compras.objects.select_related(
+        'id_proveedor'
+    ).order_by('-fecha')[:20]
+    
+    # Estadísticas
+    hoy = timezone.now().date()
+    mes_actual = hoy.replace(day=1)
+    
+    compras_mes = Compras.objects.filter(fecha__gte=mes_actual)
+    total_mes = compras_mes.aggregate(total=Sum('monto_total'))['total'] or 0
+    cantidad_mes = compras_mes.count()
+    
+    # Compras pendientes de pago (usar CtaCorrienteProv para determinar pendientes)
+    compras_pendientes = 0  # Deshabilitado por ahora, requiere lógica de cuenta corriente
+    
+    # Deuda total con proveedores
+    deuda_total = CtaCorrienteProv.objects.filter(
+        saldo_acumulado__gt=0
+    ).aggregate(total=Sum('saldo_acumulado'))['total'] or 0
+    
+    context = {
+        'compras_recientes': compras_recientes,
+        'total_mes': total_mes,
+        'cantidad_mes': cantidad_mes,
+        'compras_pendientes': compras_pendientes,
+        'deuda_total': deuda_total,
+    }
+    
+    return render(request, 'pos/compras_dashboard.html', context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def nueva_compra_view(request):
+    """Registrar nueva compra"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Validar empleado
+            try:
+                empleado = Empleado.objects.get(usuario=request.user.username)
+            except Empleado.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Usuario no asociado a un empleado'
+                }, status=400)
+            
+            # Validar proveedor
+            proveedor = Proveedor.objects.get(id_proveedor=data['id_proveedor'])
+            
+            # Crear compra
+            compra = Compras.objects.create(
+                id_proveedor=proveedor,
+                fecha=timezone.now(),
+                nro_factura=data.get('nro_factura', ''),
+                monto_total=Decimal(data['total']),
+                observaciones=data.get('observaciones', '')
+            )
+            
+            # Crear detalle de compra
+            total_calculado = Decimal('0')
+            for item in data['items']:
+                producto = Producto.objects.get(id_producto=item['id_producto'])
+                cantidad = Decimal(item['cantidad'])
+                precio_compra = Decimal(item['precio_compra'])
+                subtotal_item = cantidad * precio_compra
+                
+                DetalleCompra.objects.create(
+                    id_compra=compra,
+                    id_producto=producto,
+                    cantidad=cantidad,
+                    precio_compra=precio_compra,
+                    subtotal=subtotal_item
+                )
+                
+                total_calculado += subtotal_item
+            
+            # Crear/actualizar cuenta corriente proveedor
+            cta_corriente, created = CtaCorrienteProv.objects.get_or_create(
+                id_proveedor=proveedor,
+                defaults={'saldo': Decimal('0')}
+            )
+            cta_corriente.saldo += compra.total
+            cta_corriente.ultima_compra = timezone.now()
+            cta_corriente.save()
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': 'Compra registrada correctamente',
+                'id_compra': compra.id_compra
+            })
+            
+        except Proveedor.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Proveedor no encontrado'
+            }, status=404)
+        except Producto.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Producto no encontrado'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+    
+    # GET
+    proveedores = Proveedor.objects.filter(activo=True).order_by('razon_social')
+    productos = Producto.objects.filter(activo=True).order_by('descripcion')
+    
+    context = {
+        'proveedores': proveedores,
+        'productos': productos,
+    }
+    
+    return render(request, 'pos/nueva_compra.html', context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def recepcion_mercaderia_view(request, id_compra):
+    """Recepción de mercadería - ingresa stock"""
+    try:
+        compra = Compras.objects.select_related('id_proveedor').get(id_compra=id_compra)
+        
+        if request.method == 'POST':
+            try:
+                data = json.loads(request.body)
+                
+                # Validar que la compra esté pendiente
+                if compra.estado != 'Pendiente':
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'La compra ya fue recibida'
+                    }, status=400)
+                
+                # Validar empleado
+                try:
+                    empleado = Empleado.objects.get(usuario=request.user.username)
+                except Empleado.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Usuario no asociado a un empleado'
+                    }, status=400)
+                
+                # Procesar cada item recibido
+                for item_data in data['items']:
+                    detalle = DetalleCompra.objects.get(
+                        id_detalle_compra=item_data['id_detalle']
+                    )
+                    
+                    cantidad_recibida = Decimal(item_data['cantidad_recibida'])
+                    
+                    # Actualizar stock
+                    stock, created = StockUnico.objects.get_or_create(
+                        id_producto=detalle.id_producto,
+                        defaults={'stock_actual': Decimal('0'), 'stock_minimo': Decimal('10')}
+                    )
+                    
+                    stock_anterior = stock.stock_actual
+                    stock.stock_actual += cantidad_recibida
+                    stock.ultima_actualizacion = timezone.now()
+                    stock.save()
+                    
+                    # Registrar movimiento
+                    MovimientosStock.objects.create(
+                        id_producto=detalle.id_producto,
+                        tipo_movimiento='Entrada',
+                        cantidad=cantidad_recibida,
+                        stock_anterior=stock_anterior,
+                        stock_nuevo=stock.stock_actual,
+                        motivo=f'Compra #{compra.id_compra} - Factura {compra.nro_factura}',
+                        id_empleado=empleado,
+                        fecha_movimiento=timezone.now()
+                    )
+                
+                # Actualizar estado de compra
+                compra.estado = 'Recibida'
+                compra.fecha_recepcion = timezone.now()
+                compra.save()
+                
+                return JsonResponse({
+                    'success': True,
+                    'mensaje': 'Mercadería recibida e ingresada a stock'
+                })
+                
+            except DetalleCompra.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Detalle de compra no encontrado'
+                }, status=404)
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': str(e)
+                }, status=500)
+        
+        # GET - Obtener detalles de la compra
+        detalles = DetalleCompra.objects.filter(
+            id_compra=compra
+        ).select_related('id_producto')
+        
+        context = {
+            'compra': compra,
+            'detalles': detalles,
+        }
+        
+        return render(request, 'pos/recepcion_mercaderia.html', context)
+        
+    except Compras.DoesNotExist:
+        return render(request, 'pos/recepcion_mercaderia.html', {
+            'error': 'Compra no encontrada'
+        })
+
+
+@login_required
+def deuda_proveedores_view(request):
+    """Reporte de deuda con proveedores"""
+    # Obtener cuentas corrientes con saldo pendiente
+    deudas = CtaCorrienteProv.objects.filter(
+        saldo__gt=0
+    ).select_related('id_proveedor').order_by('-saldo')
+    
+    # Total de deuda
+    total_deuda = deudas.aggregate(total=Sum('saldo'))['total'] or 0
+    
+    context = {
+        'deudas': deudas,
+        'total_deuda': total_deuda,
+    }
+    
+    return render(request, 'pos/deuda_proveedores.html', context)
+
+
+# ==================== SISTEMA DE COMISIONES ====================
+
+@login_required
+def comisiones_dashboard_view(request):
+    """Dashboard de comisiones"""
+    # Obtener tarifas activas
+    tarifas = TarifasComision.objects.filter(activo=True).select_related('id_medio_pago')
+    
+    # Estadísticas del mes
+    hoy = timezone.now().date()
+    mes_actual = hoy.replace(day=1)
+    
+    # Comisiones del mes - corregido: usar id_pago_venta en lugar de id_venta
+    comisiones_mes = DetalleComisionVenta.objects.filter(
+        id_pago_venta__fecha_pago__gte=mes_actual
+    ).aggregate(
+        total_comision=Sum('monto_comision_calculada'),
+        cantidad=Count('id_detalle_comision')
+    )
+    
+    # Comisiones por medio de pago
+    comisiones_por_medio = []
+    medios_comision = MediosPago.objects.filter(
+        genera_comision=True,
+        activo=True
+    )
+    
+    for medio in medios_comision:
+        # Obtener comisiones a través de la relación correcta
+        comisiones = DetalleComisionVenta.objects.filter(
+            id_pago_venta__fecha_pago__gte=mes_actual,
+            id_pago_venta__id_medio_pago=medio
+        ).aggregate(
+            total_comision=Sum('monto_comision_calculada'),
+            cantidad=Count('id_detalle_comision')
+        )
+        
+        if comisiones['total_comision'] and comisiones['total_comision'] > 0:
+            comisiones_por_medio.append({
+                'medio': medio,
+                'total_comision': comisiones['total_comision'] or 0,
+                'cantidad': comisiones['cantidad'] or 0
+            })
+    
+    context = {
+        'tarifas': tarifas,
+        'total_comision_mes': comisiones_mes['total_comision'] or 0,
+        'total_transacciones_mes': comisiones_mes['cantidad'] or 0,
+        'comisiones_por_medio': comisiones_por_medio,
+    }
+    
+    return render(request, 'pos/comisiones_dashboard.html', context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def configurar_tarifas_view(request):
+    """
+    Configuración avanzada de tarifas de comisión
+    Permite crear, editar y gestionar tarifas con validaciones
+    """
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Validar datos
+            if not data.get('id_medio_pago'):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Debe seleccionar un medio de pago'
+                }, status=400)
+            
+            # Obtener medio de pago
+            medio_pago = MediosPago.objects.get(id_medio_pago=data['id_medio_pago'])
+            
+            # Validar que el medio genere comisión
+            if not medio_pago.genera_comision:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'{medio_pago.descripcion} no genera comisión'
+                }, status=400)
+            
+            # Convertir porcentaje a decimal (de % a fracción)
+            porcentaje_input = Decimal(str(data.get('porcentaje', '0')))
+            porcentaje_decimal = porcentaje_input / 100  # 2.5% → 0.025
+            
+            # Validar rango de porcentaje
+            if porcentaje_decimal < 0 or porcentaje_decimal > 1:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'El porcentaje debe estar entre 0% y 100%'
+                }, status=400)
+            
+            monto_fijo = Decimal(str(data.get('monto_fijo', '0')))
+            
+            # Validar que al menos uno tenga valor
+            if porcentaje_decimal == 0 and monto_fijo == 0:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Debe especificar un porcentaje y/o monto fijo'
+                }, status=400)
+            
+            # Desactivar tarifas anteriores del mismo medio
+            TarifasComision.objects.filter(
+                id_medio_pago=medio_pago,
+                activo=True
+            ).update(
+                activo=False,
+                fecha_fin_vigencia=timezone.now()
+            )
+            
+            # Crear nueva tarifa
+            tarifa = TarifasComision.objects.create(
+                id_medio_pago=medio_pago,
+                porcentaje_comision=porcentaje_decimal,
+                monto_fijo_comision=monto_fijo if monto_fijo > 0 else None,
+                fecha_inicio_vigencia=timezone.now(),
+                fecha_fin_vigencia=None,
+                activo=True
+            )
+            
+            # Ejemplo de cálculo
+            monto_ejemplo = 100000
+            comision_ejemplo = float(monto_fijo) + (float(monto_ejemplo) * float(porcentaje_decimal))
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': f'Tarifa configurada exitosamente para {medio_pago.descripcion}',
+                'tarifa': {
+                    'id': tarifa.id_tarifa,
+                    'medio': medio_pago.descripcion,
+                    'porcentaje': f'{float(porcentaje_input):.2f}%',
+                    'monto_fijo': f'Gs {float(monto_fijo):,.0f}' if monto_fijo > 0 else 'No',
+                    'ejemplo': f'Gs {comision_ejemplo:,.0f}'
+                }
+            })
+            
+        except MediosPago.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Medio de pago no encontrado'
+            }, status=404)
+        except ValueError as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Valor numérico inválido: {str(e)}'
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Error al guardar: {str(e)}'
+            }, status=500)
+    
+    # GET - Mostrar formulario
+    # Obtener medios de pago que generan comisión
+    medios_comision = MediosPago.objects.filter(
+        genera_comision=True,
+        activo=True
+    ).order_by('descripcion')
+    
+    # Obtener tarifas activas
+    tarifas_existentes = TarifasComision.objects.filter(
+        activo=True
+    ).select_related('id_medio_pago').order_by('id_medio_pago__descripcion')
+    
+    # Formatear para el template
+    tarifas_formateadas = []
+    for tarifa in tarifas_existentes:
+        porcentaje_display = float(tarifa.porcentaje_comision) * 100
+        monto_fijo_display = float(tarifa.monto_fijo_comision) if tarifa.monto_fijo_comision else 0
+        
+        # Ejemplo de cálculo
+        monto_ejemplo = 100000
+        comision_ejemplo = monto_fijo_display + (monto_ejemplo * float(tarifa.porcentaje_comision))
+        
+        tarifas_formateadas.append({
+            'id': tarifa.id_tarifa,
+            'medio': tarifa.id_medio_pago.descripcion,
+            'porcentaje': porcentaje_display,
+            'monto_fijo': monto_fijo_display,
+            'ejemplo_100k': comision_ejemplo,
+            'fecha_inicio': tarifa.fecha_inicio_vigencia,
+        })
+    
+    # Estadísticas de comisiones
+    hoy = timezone.now().date()
+    mes_actual = hoy.replace(day=1)
+    
+    stats_mes = DetalleComisionVenta.objects.filter(
+        id_pago_venta__fecha_pago__gte=mes_actual
+    ).aggregate(
+        total_comisiones=Sum('monto_comision_calculada'),
+        total_transacciones=Count('id_detalle_comision')
+    )
+    
+    context = {
+        'medios_comision': medios_comision,
+        'tarifas_existentes': tarifas_formateadas,
+        'stats_mes': stats_mes,
+        'mes_actual': mes_actual,
+    }
+    
+    return render(request, 'pos/configurar_tarifas.html', context)
+
+
+@login_required
+def reporte_comisiones_view(request):
+    """Reporte de comisiones por período"""
+    # Obtener fechas del filtro
+    fecha_desde = request.GET.get('fecha_desde', timezone.now().date().replace(day=1))
+    fecha_hasta = request.GET.get('fecha_hasta', timezone.now().date())
+    
+    # Comisiones del período
+    comisiones = DetalleComisionVenta.objects.filter(
+        id_pago_venta__fecha_pago__date__gte=fecha_desde,
+        id_pago_venta__fecha_pago__date__lte=fecha_hasta
+    ).select_related('id_pago_venta', 'id_tarifa').order_by('-id_pago_venta__fecha_pago')
+    
+    # Resumen
+    resumen = comisiones.aggregate(
+        total_comision=Sum('monto_comision_calculada'),
+        cantidad=Count('id_detalle_comision')
+    )
+    
+    # Por medio de pago (usando la tarifa)
+    por_medio = []
+    # Agrupar por medio de pago a través de la tarifa
+    por_medio_data = comisiones.values(
+        'id_tarifa__id_medio_pago__descripcion'
+    ).annotate(
+        total_comision=Sum('monto_comision_calculada'),
+        cantidad=Count('id_detalle_comision')
+    ).order_by('-total_comision')
+    
+    for item in por_medio_data:
+        if item['total_comision']:
+            por_medio.append({
+                'medio': item['id_tarifa__id_medio_pago__descripcion'],
+                'total_comision': item['total_comision'],
+                'cantidad': item['cantidad']
+            })
+    
+    context = {
+        'fecha_desde': fecha_desde,
+        'fecha_hasta': fecha_hasta,
+        'comisiones': comisiones[:100],  # Limitar a 100 registros
+        'total_comision': resumen['total_comision'] or 0,
+        'cantidad_total': resumen['cantidad'] or 0,
+        'por_medio': por_medio,
+    }
+    
+    return render(request, 'pos/reporte_comisiones.html', context)
+
+
+@require_http_methods(["POST"])
+@login_required
+def calcular_comision_recarga(monto, id_medio_pago):
+    """
+    Función auxiliar para calcular comisión en recargas
+    Esta función debe ser llamada desde la vista de recargas
+    """
+    try:
+        medio_pago = MediosPago.objects.get(id_medio_pago=id_medio_pago)
+        
+        # Solo aplicar comisión a estos medios
+        if medio_pago.descripcion not in ['Tarjeta de Crédito', 'Tarjeta de Débito', 'Giros Tigo']:
+            return Decimal('0')
+        
+        # Obtener tarifa
+        tarifa = TarifasComision.objects.filter(
+            id_medio_pago=medio_pago,
+            activo=True
+        ).first()
+        
+        if not tarifa:
+            return Decimal('0')
+        
+        # Calcular comisión: monto_fijo + (monto * porcentaje / 100)
+        comision = tarifa.monto_fijo + (Decimal(monto) * tarifa.porcentaje / Decimal('100'))
+        
+        return comision.quantize(Decimal('0.01'))
+        
+    except MediosPago.DoesNotExist:
+        return Decimal('0')
+    except Exception:
+        return Decimal('0')
+
+
+# ==================== SISTEMA DE ALMUERZOS ====================
+
+@login_required
+def almuerzos_dashboard_view(request):
+    """Dashboard principal del sistema de almuerzos"""
+    from gestion.models import PlanesAlmuerzo, SuscripcionesAlmuerzo, RegistroConsumoAlmuerzo, PagosAlmuerzoMensual
+    from django.db.models import Count, Sum, Q
+    
+    hoy = timezone.now().date()
+    
+    # Estadísticas del día actual
+    consumos_hoy = RegistroConsumoAlmuerzo.objects.filter(fecha_consumo=hoy).count()
+    
+    suscripciones_activas = SuscripcionesAlmuerzo.objects.filter(
+        Q(estado='Activa') & 
+        (Q(fecha_fin__gte=hoy) | Q(fecha_fin__isnull=True))
+    ).count()
+    
+    # Ingresos del mes
+    mes_actual = hoy.month
+    anio_actual = hoy.year
+    inicio_mes = hoy.replace(day=1)
+    
+    ingresos_mes = PagosAlmuerzoMensual.objects.filter(
+        fecha_pago__year=anio_actual,
+        fecha_pago__month=mes_actual,
+        estado='Pagado'
+    ).aggregate(total=Sum('monto_pagado'))['total'] or 0
+    
+    # Asistencia semanal (últimos 7 días)
+    hace_7_dias = hoy - timezone.timedelta(days=7)
+    consumos_semana = RegistroConsumoAlmuerzo.objects.filter(
+        fecha_consumo__gte=hace_7_dias
+    ).count()
+    
+    if suscripciones_activas > 0:
+        asistencia_semanal = (consumos_semana / (suscripciones_activas * 7)) * 100
+    else:
+        asistencia_semanal = 0
+    
+    # Planes activos con número de suscriptores
+    planes_activos = PlanesAlmuerzo.objects.filter(activo=True).annotate(
+        num_suscriptores=Count('suscripcionesalmuerzo', filter=Q(suscripcionesalmuerzo__estado='Activa'))
+    )
+    
+    # Suscripciones próximas a vencer (7 días)
+    fecha_limite = hoy + timezone.timedelta(days=7)
+    suscripciones_proximas = SuscripcionesAlmuerzo.objects.filter(
+        estado='Activa',
+        fecha_fin__lte=fecha_limite,
+        fecha_fin__gte=hoy
+    ).select_related('id_hijo', 'id_plan_almuerzo')[:10]
+    
+    # Agregar días restantes
+    for sus in suscripciones_proximas:
+        sus.dias_restantes = (sus.fecha_fin - hoy).days
+    
+    # Consumo de últimos 7 días
+    consumo_semanal = []
+    for i in range(7):
+        dia = hoy - timezone.timedelta(days=6-i)
+        total = RegistroConsumoAlmuerzo.objects.filter(fecha_consumo=dia).count()
+        
+        if suscripciones_activas > 0:
+            porcentaje = (total / suscripciones_activas) * 100
+        else:
+            porcentaje = 0
+            
+        consumo_semanal.append({
+            'fecha': dia,
+            'total': total,
+            'porcentaje': round(porcentaje, 1),
+            'ingreso': 0  # Calcular basado en precio promedio si se necesita
+        })
+    
+    context = {
+        'stats': {
+            'consumos_hoy': consumos_hoy,
+            'suscripciones_activas': suscripciones_activas,
+            'ingresos_mes': ingresos_mes,
+            'asistencia_semanal': round(asistencia_semanal, 1),
+            'fecha_hoy': hoy.strftime('%d/%m/%Y'),
+            'mes_actual': hoy.strftime('%B %Y')
+        },
+        'planes_activos': planes_activos,
+        'suscripciones_proximas': suscripciones_proximas,
+        'consumo_semanal': consumo_semanal,
+    }
+    
+    return render(request, 'gestion/almuerzos_dashboard.html', context)
+
+
+@login_required
+def planes_almuerzo_view(request):
+    """Gestión de planes de almuerzo"""
+    from gestion.models import PlanesAlmuerzo
+    from django.db.models import Count, Q
+    
+    planes = PlanesAlmuerzo.objects.annotate(
+        num_suscriptores=Count('suscripcionesalmuerzo', filter=Q(suscripcionesalmuerzo__estado='Activa'))
+    ).order_by('-activo', 'nombre_plan')
+    
+    context = {
+        'planes': planes,
+    }
+    
+    return render(request, 'gestion/planes_almuerzo.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def crear_plan_almuerzo(request):
+    """Crear nuevo plan de almuerzo"""
+    from gestion.models import PlanesAlmuerzo
+    
+    try:
+        data = json.loads(request.body)
+        
+        plan = PlanesAlmuerzo.objects.create(
+            nombre_plan=data['nombre_plan'],
+            descripcion=data.get('descripcion', ''),
+            precio_mensual=Decimal(data['precio']),
+            dias_semana_incluidos=data.get('dias_incluidos', 'Lunes a Viernes'),
+            activo=data.get('activo', True),
+            fecha_creacion=timezone.now()
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'Plan creado correctamente',
+            'id_plan': plan.id_plan_almuerzo
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def editar_plan_almuerzo(request, plan_id):
+    """Editar plan de almuerzo existente"""
+    from gestion.models import PlanesAlmuerzo
+    
+    try:
+        plan = PlanesAlmuerzo.objects.get(id_plan_almuerzo=plan_id)
+        data = json.loads(request.body)
+        
+        if 'nombre_plan' in data:
+            plan.nombre_plan = data['nombre_plan']
+        if 'descripcion' in data:
+            plan.descripcion = data['descripcion']
+        if 'precio' in data:
+            plan.precio_mensual = Decimal(data['precio'])
+        if 'dias_incluidos' in data:
+            plan.dias_semana_incluidos = data['dias_incluidos']
+        if 'activo' in data:
+            plan.activo = data['activo']
+        
+        plan.save()
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'Plan actualizado correctamente'
+        })
+        
+    except PlanesAlmuerzo.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Plan no encontrado'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def suscripciones_almuerzo_view(request):
+    """Gestión de suscripciones de almuerzos"""
+    from gestion.models import SuscripcionesAlmuerzo, PlanesAlmuerzo, Hijo
+    from django.db.models import Q
+    
+    hoy = timezone.now().date()
+    
+    # Filtros
+    estado_filtro = request.GET.get('estado', '')
+    busqueda = request.GET.get('estudiante', '')
+    grado_filtro = request.GET.get('grado', '')
+    plan_filtro = request.GET.get('plan', '')
+    
+    suscripciones = SuscripcionesAlmuerzo.objects.select_related(
+        'id_hijo', 'id_plan_almuerzo', 'id_hijo__id_cliente_responsable'
+    )
+    
+    if estado_filtro:
+        suscripciones = suscripciones.filter(estado=estado_filtro)
+    
+    if busqueda:
+        suscripciones = suscripciones.filter(
+            Q(id_hijo__nombre__icontains=busqueda) |
+            Q(id_hijo__apellido__icontains=busqueda)
+        )
+    
+    if grado_filtro:
+        suscripciones = suscripciones.filter(id_hijo__grado=grado_filtro)
+    
+    if plan_filtro:
+        suscripciones = suscripciones.filter(id_plan_almuerzo_id=plan_filtro)
+    
+    suscripciones = suscripciones.order_by('-fecha_inicio')[:100]
+    
+    # Agregar días restantes
+    for sus in suscripciones:
+        if sus.fecha_fin:
+            sus.dias_restantes = (sus.fecha_fin - hoy).days
+        else:
+            sus.dias_restantes = 999
+    
+    # Estadísticas
+    activas = SuscripcionesAlmuerzo.objects.filter(
+        estado='Activa',
+        fecha_fin__gte=hoy
+    ).count()
+    
+    por_vencer = SuscripcionesAlmuerzo.objects.filter(
+        estado='Activa',
+        fecha_fin__lte=hoy + timezone.timedelta(days=7),
+        fecha_fin__gte=hoy
+    ).count()
+    
+    vencidas = SuscripcionesAlmuerzo.objects.filter(
+        fecha_fin__lt=hoy
+    ).count()
+    
+    # Datos para formulario
+    planes_activos = PlanesAlmuerzo.objects.filter(activo=True)
+    grados = Hijo.objects.values_list('grado', flat=True).distinct().order_by('grado')
+    
+    context = {
+        'suscripciones': suscripciones,
+        'planes': planes_activos,
+        'grados': grados,
+        'estadisticas': {
+            'activas': activas,
+            'por_vencer': por_vencer,
+            'vencidas': vencidas,
+            'ingreso': 0  # Calcular si es necesario
+        },
+    }
+    
+    return render(request, 'gestion/suscripciones_almuerzo.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def crear_suscripcion_almuerzo(request):
+    """Crear nueva suscripción a plan de almuerzo"""
+    from gestion.models import SuscripcionesAlmuerzo, PlanesAlmuerzo, Hijo
+    
+    try:
+        data = json.loads(request.body)
+        
+        hijo = Hijo.objects.get(id_hijo=data['id_hijo'])
+        plan = PlanesAlmuerzo.objects.get(id_plan_almuerzo=data['id_plan_almuerzo'])
+        
+        # Calcular fecha fin (30 días por defecto para plan mensual)
+        if 'fecha_inicio' in data:
+            from datetime import datetime
+            fecha_inicio = datetime.strptime(data['fecha_inicio'], '%Y-%m-%d').date()
+        else:
+            fecha_inicio = timezone.now().date()
+        
+        fecha_fin = fecha_inicio + timezone.timedelta(days=30)
+        
+        # Verificar si ya tiene suscripción activa
+        suscripcion_existente = SuscripcionesAlmuerzo.objects.filter(
+            id_hijo=hijo,
+            estado='Activa',
+            fecha_fin__gte=fecha_inicio
+        ).first()
+        
+        if suscripcion_existente:
+            return JsonResponse({
+                'success': False,
+                'error': 'El estudiante ya tiene una suscripción activa'
+            }, status=400)
+        
+        # Crear suscripción
+        suscripcion = SuscripcionesAlmuerzo.objects.create(
+            id_hijo=hijo,
+            id_plan_almuerzo=plan,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            estado='Activa'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Suscripción creada para {hijo.nombres} {hijo.apellidos}',
+            'id_suscripcion': suscripcion.id_suscripcion
+        })
+        
+    except Hijo.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Estudiante no encontrado'
+        }, status=404)
+    except PlanesAlmuerzo.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Plan no encontrado'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def registro_consumo_almuerzo_view(request):
+    """Registro diario de consumo de almuerzos"""
+    from gestion.models import RegistroConsumoAlmuerzo, SuscripcionesAlmuerzo
+    from django.db.models import Q
+    
+    hoy = timezone.now().date()
+    
+    # Consumos del día
+    consumos_hoy = RegistroConsumoAlmuerzo.objects.filter(
+        fecha_consumo=hoy
+    ).select_related(
+        'id_hijo',
+        'id_suscripcion__id_plan_almuerzo'
+    ).order_by('id_hijo__apellidos')
+    
+    # Suscripciones activas disponibles para registrar
+    suscripciones_activas = SuscripcionesAlmuerzo.objects.filter(
+        Q(estado='Activa') &
+        (Q(fecha_fin__gte=hoy) | Q(fecha_fin__isnull=True))
+    ).select_related('id_hijo', 'id_plan_almuerzo').order_by('id_hijo__apellidos')
+    
+    # Excluir los que ya consumieron hoy
+    ids_consumidos = consumos_hoy.values_list('id_hijo_id', flat=True)
+    suscripciones_disponibles = suscripciones_activas.exclude(
+        id_hijo_id__in=ids_consumidos
+    )
+    
+    context = {
+        'consumos_hoy': consumos_hoy,
+        'suscripciones_disponibles': suscripciones_disponibles,
+        'total_consumos': consumos_hoy.count(),
+        'total_disponibles': suscripciones_disponibles.count(),
+    }
+    
+    return render(request, 'gestion/registro_consumo_almuerzo.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def registrar_consumo_almuerzo(request):
+    """Registrar consumo de almuerzo"""
+    from gestion.models import RegistroConsumoAlmuerzo, SuscripcionesAlmuerzo
+    
+    try:
+        data = json.loads(request.body)
+        
+        # Soportar registro músltiple
+        if 'registros' in data:
+            registros = data['registros']
+        else:
+            # Registro simple
+            registros = [{
+                'id_suscripcion': data['id_suscripcion']
+            }]
+        
+        registrados = 0
+        hoy = timezone.now().date()
+        hora_actual = timezone.now().time()
+        
+        for reg_data in registros:
+            suscripcion = SuscripcionesAlmuerzo.objects.select_related(
+                'id_hijo', 'id_plan_almuerzo'
+            ).get(id_suscripcion=reg_data['id_suscripcion'])
+            
+            # Validar que la suscripción esté activa
+            if suscripcion.estado != 'Activa':
+                continue
+            
+            # Validar que no esté vencida
+            if suscripcion.fecha_fin and suscripcion.fecha_fin < hoy:
+                continue
+            
+            # Verificar si ya consumió hoy
+            consumo_existente = RegistroConsumoAlmuerzo.objects.filter(
+                id_hijo=suscripcion.id_hijo,
+                fecha_consumo=hoy
+            ).first()
+            
+            if consumo_existente:
+                continue
+            
+            # Registrar consumo
+            RegistroConsumoAlmuerzo.objects.create(
+                id_hijo=suscripcion.id_hijo,
+                id_suscripcion=suscripcion,
+                fecha_consumo=hoy,
+                hora_registro=hora_actual
+            )
+            
+            registrados += 1
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'{registrados} consumo(s) registrado(s)',
+            'registrados': registrados
+        })
+        
+    except SuscripcionesAlmuerzo.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Suscripción no encontrada'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def menu_diario_view(request):
+    """Gestión de menús diarios"""
+    from gestion.models import SuscripcionesAlmuerzo, RegistroConsumoAlmuerzo
+    from django.db.models import Q
+    
+    # Obtener fecha del request o usar hoy
+    fecha_str = request.GET.get('fecha', '')
+    if fecha_str:
+        from datetime import datetime
+        fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+    else:
+        fecha = timezone.now().date()
+    
+    # Suscripciones activas para la fecha
+    suscripciones_activas = SuscripcionesAlmuerzo.objects.filter(
+        Q(estado='Activa') &
+        (Q(fecha_fin__gte=fecha) | Q(fecha_fin__isnull=True)),
+        fecha_inicio__lte=fecha
+    ).count()
+    
+    # Consumo esperado (estimado 85%)
+    consumo_esperado = 85
+    
+    context = {
+        'fecha': fecha,
+        'suscripciones_activas': suscripciones_activas,
+        'consumo_esperado': consumo_esperado,
+        'menu': {
+            'entrada': 'Ensalada mixta',
+            'principal': 'Pollo a la plancha con vegetales',
+            'acompanamiento': 'Arroz integral',
+            'bebida': 'Jugo natural de naranja',
+            'postre': 'Fruta de estación',
+            'notas': ''
+        }
+    }
+    
+    return render(request, 'gestion/menu_diario.html', context)
+
+
+@login_required
+def facturacion_mensual_almuerzos_view(request):
+    """Facturación mensual de almuerzos"""
+    from gestion.models import PagosAlmuerzoMensual, SuscripcionesAlmuerzo, RegistroConsumoAlmuerzo
+    from django.db.models import Sum, Count
+    
+    # Obtener mes y año del filtro
+    mes = int(request.GET.get('mes', timezone.now().month))
+    anio = int(request.GET.get('anio', timezone.now().year))
+    
+    # Crear fecha para filtrar
+    from datetime import datetime
+    fecha_inicio = datetime(anio, mes, 1).date()
+    if mes == 12:
+        fecha_fin = datetime(anio + 1, 1, 1).date()
+    else:
+        fecha_fin = datetime(anio, mes + 1, 1).date()
+    
+    # Pagos del mes
+    pagos_mes = PagosAlmuerzoMensual.objects.filter(
+        mes_pagado__gte=fecha_inicio,
+        mes_pagado__lt=fecha_fin
+    ).select_related(
+        'id_suscripcion__id_hijo',
+        'id_suscripcion__id_plan_almuerzo'
+    ).order_by('-fecha_pago')
+    
+    # Estadísticas
+    total_facturado = pagos_mes.aggregate(total=Sum('monto_pagado'))['total'] or 0
+    total_suscripciones = pagos_mes.count()
+    
+    # Verificar si ya se facturó este mes
+    ya_facturado = pagos_mes.exists()
+    
+    # Resumen por plan
+    from collections import defaultdict
+    resumen_por_plan = defaultdict(lambda: {'cantidad': 0, 'total': 0, 'total_consumos': 0})
+    
+    for pago in pagos_mes:
+        plan_nombre = pago.id_suscripcion.id_plan_almuerzo.nombre_plan
+        resumen_por_plan[plan_nombre]['cantidad'] += 1
+        resumen_por_plan[plan_nombre]['total'] += pago.monto_pagado
+    
+    resumen_por_plan_list = [
+        {'plan': k, **v} for k, v in resumen_por_plan.items()
+    ]
+    
+    # Histórico (últimos 6 meses)
+    historico = []
+    for i in range(6):
+        mes_hist = mes - i
+        anio_hist = anio
+        if mes_hist <= 0:
+            mes_hist += 12
+            anio_hist -= 1
+        
+        fecha_hist_inicio = datetime(anio_hist, mes_hist, 1).date()
+        if mes_hist == 12:
+            fecha_hist_fin = datetime(anio_hist + 1, 1, 1).date()
+        else:
+            fecha_hist_fin = datetime(anio_hist, mes_hist + 1, 1).date()
+        
+        pagos_hist = PagosAlmuerzoMensual.objects.filter(
+            mes_pagado__gte=fecha_hist_inicio,
+            mes_pagado__lt=fecha_hist_fin
+        )
+        
+        total = pagos_hist.aggregate(total=Sum('monto_pagado'))['total'] or 0
+        pagado = pagos_hist.filter(estado='Pagado').aggregate(total=Sum('monto_pagado'))['total'] or 0
+        
+        if total > 0:
+            tasa = (pagado / total) * 100
+        else:
+            tasa = 0
+        
+        historico.append({
+            'mes': mes_hist,
+            'anio': anio_hist,
+            'suscripciones': pagos_hist.count(),
+            'total_facturado': total,
+            'total_pagado': pagado,
+            'pendiente': total - pagado,
+            'tasa_cobro': round(tasa, 1)
+        })
+    
+    context = {
+        'pagos_mes': pagos_mes,
+        'estadisticas': {
+            'total_facturado': total_facturado,
+            'total_suscripciones': total_suscripciones,
+        },
+        'ya_facturado': ya_facturado,
+        'resumen_por_plan': resumen_por_plan_list,
+        'historico': historico,
+    }
+    
+    return render(request, 'gestion/facturacion_mensual_almuerzos.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def generar_facturacion_mensual(request):
+    """Generar facturación mensual automática para todas las suscripciones activas"""
+    from gestion.models import PagosAlmuerzoMensual, SuscripcionesAlmuerzo, RegistroConsumoAlmuerzo, CtaCorriente
+    
+    try:
+        data = json.loads(request.body)
+        mes = int(data.get('mes', timezone.now().month))
+        anio = int(data.get('anio', timezone.now().year))
+        
+        # Crear fecha del mes
+        from datetime import datetime
+        fecha_mes = datetime(anio, mes, 1).date()
+        fecha_inicio = fecha_mes
+        if mes == 12:
+            fecha_fin = datetime(anio + 1, 1, 1).date()
+        else:
+            fecha_fin = datetime(anio, mes + 1, 1).date()
+        
+        # Verificar si ya existe facturación para este mes
+        facturacion_existente = PagosAlmuerzoMensual.objects.filter(
+            mes_pagado__gte=fecha_inicio,
+            mes_pagado__lt=fecha_fin
+        ).exists()
+        
+        if facturacion_existente:
+            return JsonResponse({
+                'success': False,
+                'error': f'Ya existe facturación para {mes}/{anio}'
+            }, status=400)
+        
+        # Obtener suscripciones activas del mes
+        suscripciones = SuscripcionesAlmuerzo.objects.filter(
+            estado='Activa',
+            fecha_inicio__lte=fecha_fin,
+            fecha_fin__gte=fecha_inicio
+        ).select_related('id_hijo', 'id_plan_almuerzo', 'id_hijo__id_cliente')
+        
+        facturas_creadas = 0
+        total_facturado = 0
+        
+        for suscripcion in suscripciones:
+            # Contar días consumidos en el mes
+            consumos = RegistroConsumoAlmuerzo.objects.filter(
+                id_hijo=suscripcion.id_hijo,
+                fecha_consumo__gte=fecha_inicio,
+                fecha_consumo__lt=fecha_fin
+            ).count()
+            
+            if consumos > 0:
+                # Calcular monto (precio mensual completo)
+                monto = suscripcion.id_plan_almuerzo.precio_mensual
+                
+                # Crear pago
+                pago = PagosAlmuerzoMensual.objects.create(
+                    id_suscripcion=suscripcion,
+                    fecha_pago=timezone.now(),
+                    monto_pagado=monto,
+                    mes_pagado=fecha_mes,
+                    estado='Pendiente'
+                )
+                
+                # Agregar a cuenta corriente del responsable
+                responsable = suscripcion.id_hijo.id_cliente
+                if responsable:
+                    # Obtener saldo actual
+                    ultima_cta = CtaCorriente.objects.filter(
+                        id_cliente=responsable
+                    ).order_by('-id_movimiento').first()
+                    
+                    saldo_anterior = ultima_cta.saldo_nuevo if ultima_cta else Decimal('0')
+                    
+                    CtaCorriente.objects.create(
+                        id_cliente=responsable,
+                        tipo_movimiento='Cargo',
+                        concepto=f'Almuerzo {mes}/{anio} - {suscripcion.id_hijo.nombres}',
+                        monto=monto,
+                        saldo_anterior=saldo_anterior,
+                        saldo_nuevo=saldo_anterior + monto
+                    )
+                
+                facturas_creadas += 1
+                total_facturado += monto
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Se generaron {facturas_creadas} facturas',
+            'procesadas': facturas_creadas,
+            'total_facturado': float(total_facturado)
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def reportes_almuerzos_view(request):
+    """Reportes del sistema de almuerzos"""
+    from gestion.models import (
+        PlanesAlmuerzo, SuscripcionesAlmuerzo, 
+        RegistroConsumoAlmuerzo, PagosAlmuerzoMensual
+    )
+    from django.db.models import Sum, Count, Avg
+    
+    # Período del reporte
+    fecha_desde = request.GET.get('fecha_desde', timezone.now().date().replace(day=1))
+    fecha_hasta = request.GET.get('fecha_hasta', timezone.now().date())
+    
+    # Consumos por día
+    consumos_por_dia = RegistroConsumoAlmuerzo.objects.filter(
+        fecha_consumo__gte=fecha_desde,
+        fecha_consumo__lte=fecha_hasta
+    ).values('fecha_consumo').annotate(
+        total=Count('id_registro_consumo')
+    ).order_by('fecha_consumo')
+    
+    # Suscripciones por plan
+    suscripciones_por_plan = SuscripcionesAlmuerzo.objects.filter(
+        fecha_inicio__gte=fecha_desde,
+        fecha_inicio__lte=fecha_hasta
+    ).values(
+        'id_plan_almuerzo__nombre_plan',
+        'id_plan_almuerzo__precio_mensual'
+    ).annotate(
+        cantidad=Count('id_suscripcion')
+    ).order_by('-cantidad')
+    
+    # Calcular ingresos proyectados por plan
+    ingresos_por_plan = []
+    for item in suscripciones_por_plan:
+        ingresos_por_plan.append({
+            'id_plan_almuerzo__nombre_plan': item['id_plan_almuerzo__nombre_plan'],
+            'cantidad': item['cantidad'],
+            'total_ingresos': item['cantidad'] * item['id_plan_almuerzo__precio_mensual']
+        })
+    
+    # Pagos realizados
+    pagos_periodo = PagosAlmuerzoMensual.objects.filter(
+        fecha_pago__date__gte=fecha_desde,
+        fecha_pago__date__lte=fecha_hasta
+    )
+    
+    total_pagado = pagos_periodo.aggregate(total=Sum('monto_pagado'))['total'] or 0
+    
+    # Tasa de asistencia
+    suscripciones_activas = SuscripcionesAlmuerzo.objects.filter(
+        estado='Activa',
+        fecha_fin__gte=fecha_desde
+    ).count()
+    
+    dias_periodo = (fecha_hasta - fecha_desde).days + 1
+    consumos_esperados = suscripciones_activas * dias_periodo
+    consumos_reales = RegistroConsumoAlmuerzo.objects.filter(
+        fecha_consumo__gte=fecha_desde,
+        fecha_consumo__lte=fecha_hasta
+    ).count()
+    
+    tasa_asistencia = (consumos_reales / consumos_esperados * 100) if consumos_esperados > 0 else 0
+    
+    # Top 10 consumidores
+    top_consumidores = RegistroConsumoAlmuerzo.objects.filter(
+        fecha_consumo__gte=fecha_desde,
+        fecha_consumo__lte=fecha_hasta
+    ).values(
+        'id_hijo__nombre',
+        'id_hijo__apellido'
+    ).annotate(
+        total_consumos=Count('id_registro_consumo')
+    ).order_by('-total_consumos')[:10]
+    
+    context = {
+        'fecha_desde': fecha_desde,
+        'fecha_hasta': fecha_hasta,
+        'consumos_por_dia': consumos_por_dia,
+        'ingresos_por_plan': ingresos_por_plan,
+        'tasa_asistencia': round(tasa_asistencia, 2),
+        'consumos_reales': consumos_reales,
+        'consumos_esperados': consumos_esperados,
+        'total_pagado': total_pagado,
+        'top_consumidores': top_consumidores,
+    }
+    
+    return render(request, 'gestion/reportes_almuerzos.html', context)

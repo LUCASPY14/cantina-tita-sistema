@@ -1,0 +1,375 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Alertas del Sistema{% endblock %}
+
+{% block extra_css %}
+<style>
+    .alert-badge {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: .5; }
+    }
+    .critico {
+        animation: parpadeo 1s infinite;
+    }
+    @keyframes parpadeo {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6" x-data="alertasSistemaApp()">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold flex items-center gap-2">
+                🔔 Alertas del Sistema
+                {% if total_alertas > 0 %}
+                <span class="badge badge-error badge-lg alert-badge">{{ total_alertas }}</span>
+                {% endif %}
+            </h1>
+            <p class="text-base-content/70">Monitoreo de alertas en tiempo real</p>
+        </div>
+        
+        <div class="flex gap-2">
+            <button onclick="location.reload()" class="btn btn-ghost">
+                🔄 Actualizar
+            </button>
+            <a href="{% url 'pos:dashboard' %}" class="btn btn-primary">
+                📊 Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Resumen de Alertas -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        <div class="stat bg-error text-error-content shadow-lg rounded-lg">
+            <div class="stat-figure text-3xl opacity-50">💳</div>
+            <div class="stat-title text-error-content/80">Saldo Bajo</div>
+            <div class="stat-value">{{ tarjetas_saldo_bajo.count }}</div>
+            <div class="stat-desc text-error-content/70">Tarjetas ≤ {{ saldo_minimo|floatformat:0 }} Gs</div>
+        </div>
+
+        <div class="stat bg-warning text-warning-content shadow-lg rounded-lg">
+            <div class="stat-figure text-3xl opacity-50">📦</div>
+            <div class="stat-title text-warning-content/80">Stock Bajo</div>
+            <div class="stat-value">{{ productos_stock_bajo.count }}</div>
+            <div class="stat-desc text-warning-content/70">Productos</div>
+        </div>
+
+        <div class="stat bg-error text-error-content shadow-lg rounded-lg">
+            <div class="stat-figure text-3xl opacity-50">❌</div>
+            <div class="stat-title text-error-content/80">Sin Stock</div>
+            <div class="stat-value">{{ productos_sin_stock.count }}</div>
+            <div class="stat-desc text-error-content/70">Productos</div>
+        </div>
+
+        <div class="stat bg-info text-info-content shadow-lg rounded-lg">
+            <div class="stat-figure text-3xl opacity-50">📅</div>
+            <div class="stat-title text-info-content/80">Por Vencer</div>
+            <div class="stat-value">{{ tarjetas_por_vencer.count }}</div>
+            <div class="stat-desc text-info-content/70">Tarjetas (30 días)</div>
+        </div>
+
+        <div class="stat bg-neutral text-neutral-content shadow-lg rounded-lg">
+            <div class="stat-figure text-3xl opacity-50">🚫</div>
+            <div class="stat-title text-neutral-content/80">Bloqueadas</div>
+            <div class="stat-value">{{ tarjetas_bloqueadas.count }}</div>
+            <div class="stat-desc text-neutral-content/70">Tarjetas</div>
+        </div>
+    </div>
+
+    <!-- Tabs de Alertas -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <div role="tablist" class="tabs tabs-lifted tabs-lg">
+                <!-- Tab 1: Tarjetas con Saldo Bajo -->
+                <input type="radio" name="alertas_tabs" role="tab" class="tab" aria-label="💳 Saldo Bajo" checked />
+                <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold">Tarjetas con Saldo Bajo (≤ {{ saldo_minimo|floatformat:0 }} Gs)</h2>
+                        <a href="{% url 'pos:alertas_tarjetas_saldo' %}" class="btn btn-sm btn-primary">
+                            Ver Todas
+                        </a>
+                    </div>
+
+                    {% if tarjetas_saldo_bajo %}
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra">
+                            <thead>
+                                <tr>
+                                    <th>Urgencia</th>
+                                    <th>Tarjeta</th>
+                                    <th>Estudiante</th>
+                                    <th>Responsable</th>
+                                    <th>Saldo</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tarjeta in tarjetas_saldo_bajo %}
+                                <tr {% if tarjeta.saldo_actual <= 5000 %}class="critico"{% endif %}>
+                                    <td>
+                                        {% if tarjeta.saldo_actual <= 0 %}
+                                        <span class="badge badge-error gap-2">
+                                            🚨 SIN SALDO
+                                        </span>
+                                        {% elif tarjeta.saldo_actual <= 5000 %}
+                                        <span class="badge badge-error gap-2">
+                                            ⚠️ CRÍTICO
+                                        </span>
+                                        {% else %}
+                                        <span class="badge badge-warning">
+                                            ⚡ Bajo
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="font-mono">{{ tarjeta.nro_tarjeta }}</td>
+                                    <td>
+                                        <div class="font-semibold">
+                                            {{ tarjeta.id_hijo.descripcions }} {{ tarjeta.id_hijo.apellidos }}
+                                        </div>
+                                        <div class="text-sm opacity-70">
+                                            {{ tarjeta.id_hijo.grado }} {{ tarjeta.id_hijo.division }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>{{ tarjeta.id_hijo.id_responsable.descripcions }}</div>
+                                        <div class="text-sm opacity-70">
+                                            {% if tarjeta.id_hijo.id_responsable.telefono %}
+                                            📱 {{ tarjeta.id_hijo.id_responsable.telefono }}
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="text-lg font-bold" 
+                                              :class="{'text-error': {{ tarjeta.saldo_actual }} <= 5000}">
+                                            Gs. {{ tarjeta.saldo_actual|floatformat:0 }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="flex gap-1">
+                                            <a href="{% url 'pos:recargas' %}?tarjeta={{ tarjeta.nro_tarjeta }}" 
+                                               class="btn btn-xs btn-success">
+                                                💰 Recargar
+                                            </a>
+                                            <button @click="notificarResponsable('{{ tarjeta.nro_tarjeta }}')"
+                                                    class="btn btn-xs btn-info">
+                                                📧 Notificar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <p class="text-4xl mb-2">✅</p>
+                        <p class="text-base-content/70">No hay tarjetas con saldo bajo</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Tab 2: Stock Bajo -->
+                <input type="radio" name="alertas_tabs" role="tab" class="tab" aria-label="📦 Stock" />
+                <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold">Productos con Stock Bajo</h2>
+                        <a href="{% url 'pos:inventario_productos' %}?estado_stock=bajo" class="btn btn-sm btn-warning">
+                            Ver Todos
+                        </a>
+                    </div>
+
+                    {% if productos_stock_bajo %}
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Producto</th>
+                                    <th>Stock Actual</th>
+                                    <th>Stock Mínimo</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for producto in productos_stock_bajo %}
+                                <tr>
+                                    <td class="font-mono text-xs">{{ producto.codigo }}</td>
+                                    <td>{{ producto.descripcion }}</td>
+                                    <td>
+                                        <span class="badge badge-warning">
+                                            {{ producto.stock.stock_actual }} {{ producto.id_unidad.simbolo }}
+                                        </span>
+                                    </td>
+                                    <td>{{ producto.stock_minimo }} {{ producto.id_unidad.simbolo }}</td>
+                                    <td>
+                                        <a href="{% url 'pos:kardex_producto' producto.id_producto %}" 
+                                           class="btn btn-xs btn-ghost">
+                                            📋 Kardex
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <p class="text-4xl mb-2">✅</p>
+                        <p class="text-base-content/70">Todos los productos tienen stock normal</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Tab 3: Tarjetas Por Vencer -->
+                <input type="radio" name="alertas_tabs" role="tab" class="tab" aria-label="📅 Vencimiento" />
+                <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+                    <h2 class="text-xl font-bold mb-4">Tarjetas Próximas a Vencer (30 días)</h2>
+
+                    {% if tarjetas_por_vencer %}
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra">
+                            <thead>
+                                <tr>
+                                    <th>Tarjeta</th>
+                                    <th>Estudiante</th>
+                                    <th>Vencimiento</th>
+                                    <th>Días Restantes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tarjeta in tarjetas_por_vencer %}
+                                <tr>
+                                    <td class="font-mono">{{ tarjeta.nro_tarjeta }}</td>
+                                    <td>{{ tarjeta.id_hijo.descripcions }} {{ tarjeta.id_hijo.apellidos }}</td>
+                                    <td>{{ tarjeta.fecha_vencimiento|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <span class="badge badge-info">
+                                            {{ tarjeta.fecha_vencimiento|timeuntil }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <p class="text-4xl mb-2">✅</p>
+                        <p class="text-base-content/70">No hay tarjetas próximas a vencer</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Tab 4: Tarjetas Bloqueadas -->
+                <input type="radio" name="alertas_tabs" role="tab" class="tab" aria-label="🚫 Bloqueadas" />
+                <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+                    <h2 class="text-xl font-bold mb-4">Tarjetas Bloqueadas</h2>
+
+                    {% if tarjetas_bloqueadas %}
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra">
+                            <thead>
+                                <tr>
+                                    <th>Tarjeta</th>
+                                    <th>Estudiante</th>
+                                    <th>Responsable</th>
+                                    <th>Saldo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tarjeta in tarjetas_bloqueadas %}
+                                <tr>
+                                    <td class="font-mono">{{ tarjeta.nro_tarjeta }}</td>
+                                    <td>{{ tarjeta.id_hijo.descripcions }} {{ tarjeta.id_hijo.apellidos }}</td>
+                                    <td>{{ tarjeta.id_hijo.id_responsable.descripcions }}</td>
+                                    <td>Gs. {{ tarjeta.saldo_actual|floatformat:0 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <p class="text-4xl mb-2">✅</p>
+                        <p class="text-base-content/70">No hay tarjetas bloqueadas</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notificación -->
+    <div x-show="notificacion.mostrar" 
+         x-transition
+         class="toast toast-top toast-end z-50">
+        <div class="alert"
+             :class="{
+                'alert-success': notificacion.tipo === 'success',
+                'alert-error': notificacion.tipo === 'error',
+                'alert-info': notificacion.tipo === 'info'
+             }">
+            <span x-text="notificacion.mensaje"></span>
+        </div>
+    </div>
+</div>
+
+<script>
+function alertasSistemaApp() {
+    return {
+        notificacion: {
+            mostrar: false,
+            tipo: '',
+            mensaje: ''
+        },
+        
+        async notificarResponsable(tarjetaId) {
+            if (!confirm('¿Enviar notificación de saldo bajo al responsable?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/pos/alertas/notificar-saldo/${tarjetaId}/`, {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.showNotification('success', data.mensaje);
+                } else {
+                    this.showNotification('error', data.error || 'Error al enviar notificación');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                this.showNotification('error', 'Error de conexión');
+            }
+        },
+        
+        showNotification(tipo, mensaje) {
+            this.notificacion = {
+                mostrar: true,
+                tipo: tipo,
+                mensaje: mensaje
+            };
+            
+            setTimeout(() => {
+                this.notificacion.mostrar = false;
+            }, 5000);
+        }
+    }
+}
+</script>
+{% endblock %}

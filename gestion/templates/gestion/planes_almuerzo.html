@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Planes de Almuerzo{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6" x-data="planesAlmuerzo()">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">
+                <i class="fas fa-clipboard-list text-blue-500 mr-2"></i>
+                Planes de Almuerzo
+            </h1>
+            <p class="text-gray-600 mt-2">Administra los planes disponibles para el servicio de almuerzos</p>
+        </div>
+        <button @click="abrirModalCrear()" class="btn btn-primary">
+            <i class="fas fa-plus mr-2"></i>Nuevo Plan
+        </button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card bg-base-100 shadow-md mb-6">
+        <div class="card-body">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Buscar</span>
+                    </label>
+                    <input type="text" x-model="filtros.buscar" placeholder="Nombre del plan..." class="input input-bordered" />
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Estado</span>
+                    </label>
+                    <select x-model="filtros.activo" class="select select-bordered">
+                        <option value="">Todos</option>
+                        <option value="true">Activos</option>
+                        <option value="false">Inactivos</option>
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label invisible">Acción</label>
+                    <button @click="aplicarFiltros()" class="btn btn-secondary w-full">
+                        <i class="fas fa-filter mr-2"></i>Filtrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Planes -->
+    <div class="card bg-base-100 shadow-md">
+        <div class="card-body">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr>
+                            <th>Plan</th>
+                            <th>Precio Mensual</th>
+                            <th>Días Incluidos</th>
+                            <th>Suscriptores</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for plan in planes %}
+                        <tr>
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <div class="avatar placeholder">
+                                        <div class="bg-primary text-white rounded-full w-12">
+                                            <span><i class="fas fa-utensils"></i></span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold">{{ plan.nombre_plan }}</div>
+                                        <div class="text-sm opacity-50">{{ plan.descripcion|truncatewords:8 }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="font-bold text-lg">${{ plan.precio_mensual|floatformat:0 }}</td>
+                            <td>{{ plan.dias_semana_incluidos }}</td>
+                            <td>
+                                <div class="badge badge-success">{{ plan.num_suscriptores }}</div>
+                            </td>
+                            <td>
+                                {% if plan.activo %}
+                                <span class="badge badge-success gap-2">
+                                    <i class="fas fa-check-circle"></i> Activo
+                                </span>
+                                {% else %}
+                                <span class="badge badge-error gap-2">
+                                    <i class="fas fa-times-circle"></i> Inactivo
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="flex gap-2">
+                                    <button @click="abrirModalEditar({{ plan.id_plan_almuerzo }})" 
+                                            class="btn btn-sm btn-info">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button @click="toggleEstado({{ plan.id_plan_almuerzo }}, {{ plan.activo|yesno:'true,false' }})"
+                                            class="btn btn-sm {% if plan.activo %}btn-warning{% else %}btn-success{% endif %}">
+                                        <i class="fas fa-{% if plan.activo %}ban{% else %}check{% endif %}"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-gray-500 py-8">
+                                <i class="fas fa-inbox text-4xl mb-2 block"></i>
+                                No hay planes registrados
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Crear/Editar Plan -->
+    <dialog id="modalPlan" class="modal" x-show="modalAbierto" x-cloak>
+        <div class="modal-box max-w-2xl">
+            <h3 class="font-bold text-lg mb-4">
+                <span x-show="!editando">Crear Nuevo Plan</span>
+                <span x-show="editando">Editar Plan</span>
+            </h3>
+            
+            <form @submit.prevent="guardarPlan()">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-control md:col-span-2">
+                        <label class="label">
+                            <span class="label-text">Nombre del Plan *</span>
+                        </label>
+                        <input type="text" x-model="formPlan.nombre_plan" 
+                               placeholder="Ej: Plan Mensual Completo" 
+                               class="input input-bordered" required />
+                    </div>
+
+                    <div class="form-control md:col-span-2">
+                        <label class="label">
+                            <span class="label-text">Descripción</span>
+                        </label>
+                        <textarea x-model="formPlan.descripcion" 
+                                  placeholder="Descripción del plan..." 
+                                  class="textarea textarea-bordered" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Precio Mensual *</span>
+                        </label>
+                        <input type="number" x-model="formPlan.precio" 
+                               placeholder="0.00" step="0.01" min="0"
+                               class="input input-bordered" required />
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Días Incluidos *</span>
+                        </label>
+                        <input type="text" x-model="formPlan.dias_incluidos" 
+                               placeholder="Lunes a Viernes" 
+                               class="input input-bordered" required />
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label cursor-pointer">
+                            <span class="label-text">Plan Activo</span>
+                            <input type="checkbox" x-model="formPlan.activo" class="toggle toggle-success" />
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-action">
+                    <button type="button" @click="cerrarModal()" class="btn btn-ghost">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" :disabled="guardando">
+                        <span x-show="!guardando">
+                            <i class="fas fa-save mr-2"></i>Guardar
+                        </span>
+                        <span x-show="guardando" class="loading loading-spinner"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button @click="cerrarModal()">close</button>
+        </form>
+    </dialog>
+</div>
+
+<script>
+function planesAlmuerzo() {
+    return {
+        modalAbierto: false,
+        editando: false,
+        guardando: false,
+        filtros: {
+            buscar: '',
+            activo: ''
+        },
+        formPlan: {
+            id_plan_almuerzo: null,
+            nombre_plan: '',
+            descripcion: '',
+            precio: '',
+            dias_incluidos: 'Lunes a Viernes',
+            activo: true
+        },
+
+        abrirModalCrear() {
+            this.editando = false;
+            this.formPlan = {
+                id_plan_almuerzo: null,
+                nombre_plan: '',
+                descripcion: '',
+                precio: '',
+                dias_incluidos: 'Lunes a Viernes',
+                activo: true
+            };
+            this.modalAbierto = true;
+            document.getElementById('modalPlan').showModal();
+        },
+
+        abrirModalEditar(planId) {
+            // Aquí harías un fetch para obtener los datos del plan
+            this.editando = true;
+            this.formPlan.id_plan_almuerzo = planId;
+            this.modalAbierto = true;
+            document.getElementById('modalPlan').showModal();
+        },
+
+        cerrarModal() {
+            this.modalAbierto = false;
+            document.getElementById('modalPlan').close();
+        },
+
+        async guardarPlan() {
+            this.guardando = true;
+            const url = this.editando 
+                ? `/pos/almuerzos/planes/editar/${this.formPlan.id_plan_almuerzo}/`
+                : '{% url "pos:crear_plan_almuerzo" %}';
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify(this.formPlan)
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(this.editando ? 'Plan actualizado exitosamente' : 'Plan creado exitosamente');
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo guardar el plan'));
+                }
+            } catch (error) {
+                alert('Error de conexión');
+                console.error(error);
+            } finally {
+                this.guardando = false;
+            }
+        },
+
+        async toggleEstado(planId, estadoActual) {
+            if (!confirm(`¿Desea ${estadoActual ? 'desactivar' : 'activar'} este plan?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/pos/almuerzos/planes/editar/${planId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({ activo: !estadoActual })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo cambiar el estado'));
+                }
+            } catch (error) {
+                alert('Error de conexión');
+                console.error(error);
+            }
+        },
+
+        aplicarFiltros() {
+            const params = new URLSearchParams();
+            if (this.filtros.buscar) params.append('buscar', this.filtros.buscar);
+            if (this.filtros.activo) params.append('activo', this.filtros.activo);
+            
+            window.location.href = '{% url "planes_almuerzo" %}?' + params.toString();
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+
+{% block title %}POS - Punto de Venta | Cantina Tita{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    
+    <!-- Columna izquierda: Productos (2/3) -->
+    <div class="lg:col-span-2">
+        
+        <!-- Búsqueda de productos -->
+        <div class="card bg-white shadow-xl mb-4">
+            <div class="card-body p-4">
+                <div class="flex gap-2">
+                    <input 
+                        type="text" 
+                        id="search-input"
+                        placeholder="🔍 Buscar producto o escanear código... (F2)" 
+                        class="input input-bordered input-lg w-full text-lg"
+                        hx-post="{% url 'pos:buscar_productos' %}"
+                        hx-trigger="keyup changed delay:300ms"
+                        hx-target="#productos-grid"
+                        hx-indicator="#search-loading"
+                        name="q"
+                        autocomplete="off"
+                        autofocus
+                    >
+                    <button class="btn btn-secondary btn-lg">
+                        <span id="search-loading" class="loading loading-spinner htmx-indicator"></span>
+                        <span>🔍</span>
+                    </button>
+                </div>
+                
+                <!-- Filtros rápidos -->
+                <div class="flex gap-2 mt-3 flex-wrap">
+                    <button 
+                        class="btn btn-sm btn-outline"
+                        hx-get="{% url 'pos:productos_categoria' %}?categoria=todos"
+                        hx-target="#productos-grid"
+                    >
+                        Todos
+                    </button>
+                    <button 
+                        class="btn btn-sm btn-outline"
+                        hx-get="{% url 'pos:productos_categoria' %}?categoria=bebidas"
+                        hx-target="#productos-grid"
+                    >
+                        🥤 Bebidas
+                    </button>
+                    <button 
+                        class="btn btn-sm btn-outline"
+                        hx-get="{% url 'pos:productos_categoria' %}?categoria=snacks"
+                        hx-target="#productos-grid"
+                    >
+                        🍿 Snacks
+                    </button>
+                    <button 
+                        class="btn btn-sm btn-outline"
+                        hx-get="{% url 'pos:productos_categoria' %}?categoria=almuerzos"
+                        hx-target="#productos-grid"
+                    >
+                        🍱 Almuerzos
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Grid de productos -->
+        <div id="productos-grid" class="product-grid">
+            {% include 'pos/partials/productos_grid.html' %}
+        </div>
+        
+    </div>
+    
+    <!-- Columna derecha: Carrito y cobro (1/3) -->
+    <div class="lg:col-span-1">
+        <div class="cart-sidebar">
+            
+            <!-- Tarjeta del estudiante -->
+            <div class="card bg-white shadow-xl mb-4">
+                <div class="card-body p-4">
+                    <h3 class="font-bold text-lg mb-3">💳 Tarjeta</h3>
+                    
+                    <input 
+                        type="text" 
+                        placeholder="Escanear o escribir N° tarjeta..."
+                        class="input input-bordered w-full mb-2"
+                        x-model="cardNumber"
+                        @keyup.enter="scanCard()"
+                        hx-post="{% url 'pos:buscar_tarjeta' %}"
+                        hx-trigger="keyup[key=='Enter']"
+                        hx-target="#tarjeta-info"
+                        name="nro_tarjeta"
+                    >
+                    
+                    <div id="tarjeta-info">
+                        <div class="alert alert-info" x-show="!selectedCard">
+                            <span>👆 Escanee la tarjeta del estudiante</span>
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-sm btn-outline w-full mt-2" @click="selectGenericCard()">
+                        Cliente Genérico (F1)
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Carrito de compras -->
+            <div class="card bg-white shadow-xl mb-4">
+                <div class="card-body p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-bold text-lg">🛒 Carrito</h3>
+                        <button 
+                            class="btn btn-xs btn-ghost text-danger"
+                            @click="clearCart()"
+                            x-show="cart.length > 0"
+                        >
+                            Limpiar
+                        </button>
+                    </div>
+                    
+                    <!-- Items del carrito -->
+                    <div class="space-y-2 mb-4 max-h-96 overflow-y-auto">
+                        <template x-for="(item, index) in cart" :key="index">
+                            <div class="flex items-center gap-2 p-2 bg-base-200 rounded-lg fade-in">
+                                <div class="flex-1">
+                                    <p class="font-semibold text-sm" x-text="item.name"></p>
+                                    <p class="text-xs text-gray-600">
+                                        Gs. <span x-text="item.price.toLocaleString()"></span>
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <button 
+                                        class="btn btn-xs btn-circle" 
+                                        @click="decreaseQuantity(index)"
+                                    >
+                                        -
+                                    </button>
+                                    <span class="w-8 text-center font-bold" x-text="item.quantity"></span>
+                                    <button 
+                                        class="btn btn-xs btn-circle" 
+                                        @click="increaseQuantity(index)"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                                <button 
+                                    class="btn btn-xs btn-circle btn-error"
+                                    @click="removeFromCart(index)"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        </template>
+                        
+                        <!-- Carrito vacío -->
+                        <div class="text-center py-8 text-gray-400" x-show="cart.length === 0">
+                            <p class="text-4xl mb-2">🛒</p>
+                            <p>El carrito está vacío</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Total -->
+                    <div class="border-t pt-3">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-lg font-bold">TOTAL:</span>
+                            <span class="text-2xl font-bold text-primary">
+                                Gs. <span x-text="total.toLocaleString()"></span>
+                            </span>
+                        </div>
+                        
+                        <!-- Botón de cobro -->
+                        <button 
+                            class="btn btn-primary btn-lg w-full btn-touch"
+                            @click="processSale()"
+                            :disabled="cart.length === 0"
+                            x-show="cart.length > 0"
+                        >
+                            💰 COBRAR (F4)
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Accesos rápidos -->
+            <div class="card bg-white shadow-xl">
+                <div class="card-body p-4">
+                    <h3 class="font-bold text-sm mb-2">⚡ Atajos</h3>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="bg-base-200 p-2 rounded">
+                            <kbd class="kbd kbd-xs">F1</kbd> Genérico
+                        </div>
+                        <div class="bg-base-200 p-2 rounded">
+                            <kbd class="kbd kbd-xs">F2</kbd> Buscar
+                        </div>
+                        <div class="bg-base-200 p-2 rounded">
+                            <kbd class="kbd kbd-xs">F4</kbd> Cobrar
+                        </div>
+                        <div class="bg-base-200 p-2 rounded">
+                            <kbd class="kbd kbd-xs">ESC</kbd> Cancelar
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
+</div>
+
+<!-- Modal de confirmación de venta -->
+<dialog id="modal-confirmar-venta" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg text-success">✅ ¡Venta Exitosa!</h3>
+        <p class="py-4">La venta se registró correctamente.</p>
+        <div class="modal-action">
+            <button class="btn" onclick="document.getElementById('modal-confirmar-venta').close()">
+                Cerrar
+            </button>
+            <button class="btn btn-primary" onclick="window.print()">
+                🖨️ Imprimir Ticket
+            </button>
+        </div>
+    </div>
+</dialog>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Función para procesar la venta
+    function processSale() {
+        const app = Alpine.store || window;
+        
+        if (!this.cart || this.cart.length === 0) {
+            this.showNotification('El carrito está vacío', 'warning');
+            return;
+        }
+        
+        // Preparar datos de la venta
+        const ventaData = {
+            items: this.cart,
+            tarjeta: this.selectedCard,
+            total: this.total
+        };
+        
+        // Enviar al backend
+        fetch('{% url "pos:procesar_venta" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(ventaData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                playSound('success');
+                this.showNotification('¡Venta exitosa!', 'success');
+                
+                // Guardar ID de venta para el ticket
+                const ventaId = data.venta_id;
+                
+                this.clearCart();
+                
+                // Abrir ticket en nueva ventana
+                if (ventaId) {
+                    const ticketWindow = window.open(
+                        `/pos/ticket/${ventaId}/`,
+                        'ticket',
+                        'width=400,height=600,scrollbars=yes'
+                    );
+                    
+                    // Auto-imprimir después de 1 segundo (opcional)
+                    // setTimeout(() => {
+                    //     if (ticketWindow) ticketWindow.print();
+                    // }, 1000);
+                }
+                
+                // Resetear tarjeta
+                this.selectedCard = null;
+                document.getElementById('nro_tarjeta').value = '';
+                document.getElementById('tarjeta-info').innerHTML = '';
+                
+            } else {
+                playSound('error');
+                this.showNotification(data.error || 'Error al procesar venta', 'error');
+            }
+        })
+        .catch(error => {
+            playSound('error');
+            this.showNotification('Error de conexión', 'error');
+            console.error('Error:', error);
+        });
+        });
+    }
+    
+    // Función para escanear tarjeta
+    function scanCard() {
+        playSound('scan');
+    }
+    
+    // Función para cliente genérico
+    function selectGenericCard() {
+        this.selectedCard = {
+            id: null,
+            nombre: 'Cliente Genérico',
+            saldo: 999999999
+        };
+        playSound('beep');
+        this.showNotification('Cliente genérico seleccionado', 'info');
+    }
+    
+    // Obtener cookie CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}
