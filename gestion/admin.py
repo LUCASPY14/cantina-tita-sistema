@@ -428,8 +428,179 @@ class MediosPagoAdmin(admin.ModelAdmin):
 
 @admin.register(TarifasComision)
 class TarifasComisionAdmin(admin.ModelAdmin):
-    list_display = ['id_medio_pago', 'porcentaje_comision', 'monto_fijo_comision', 'fecha_inicio_vigencia', 'activo']
-    list_filter = ['activo', 'fecha_inicio_vigencia']
+    """
+    Administración avanzada de Tarifas de Comisión
+    """
+    list_display = [
+        'id_tarifa',
+        'medio_pago_display', 
+        'porcentaje_display',
+        'monto_fijo_display',
+        'fecha_inicio_vigencia',
+        'fecha_fin_vigencia',
+        'estado_vigencia',
+        'activo'
+    ]
+    list_filter = [
+        'activo',
+        'id_medio_pago',
+        'fecha_inicio_vigencia',
+        ('fecha_fin_vigencia', admin.EmptyFieldListFilter),
+    ]
+    search_fields = ['id_medio_pago__descripcion']
+    ordering = ['-fecha_inicio_vigencia', 'id_medio_pago']
+    date_hierarchy = 'fecha_inicio_vigencia'
+    
+    fieldsets = (
+        ('Información General', {
+            'fields': ('id_medio_pago', 'activo')
+        }),
+        ('Comisión', {
+            'fields': ('porcentaje_comision', 'monto_fijo_comision'),
+            'description': 'Configure el porcentaje y/o monto fijo de comisión. '
+                          'Ejemplo: 1.8% se ingresa como 0.0180'
+        }),
+        ('Vigencia', {
+            'fields': ('fecha_inicio_vigencia', 'fecha_fin_vigencia'),
+            'description': 'Defina el período de vigencia de esta tarifa. '
+                          'Deje "Fecha fin" vacío para vigencia indefinida.'
+        }),
+    )
+    
+    readonly_fields = ['id_tarifa']
+    
+    # Acciones personalizadas
+    actions = ['activar_tarifas', 'desactivar_tarifas', 'finalizar_vigencia']
+    
+    def medio_pago_display(self, obj):
+        """Muestra el medio de pago con color"""
+        color = '#28a745' if obj.id_medio_pago.genera_comision else '#6c757d'
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color,
+            obj.id_medio_pago.descripcion
+        )
+    medio_pago_display.short_description = 'Medio de Pago'
+    medio_pago_display.admin_order_field = 'id_medio_pago__descripcion'
+    
+    def porcentaje_display(self, obj):
+        """Muestra el porcentaje formateado"""
+        porcentaje = float(obj.porcentaje_comision) * 100
+        return format_html(
+            '<span style="font-weight: bold; color: #007bff;">{:.2f}%</span>',
+            porcentaje
+        )
+    porcentaje_display.short_description = 'Porcentaje'
+    porcentaje_display.admin_order_field = 'porcentaje_comision'
+    
+    def monto_fijo_display(self, obj):
+        """Muestra el monto fijo formateado"""
+        if obj.monto_fijo_comision:
+            return format_html(
+                '<span style="color: #dc3545;">Gs {:,.0f}</span>',
+                obj.monto_fijo_comision
+            )
+        return format_html('<span style="color: #999;">-</span>')
+    monto_fijo_display.short_description = 'Monto Fijo'
+    monto_fijo_display.admin_order_field = 'monto_fijo_comision'
+    
+    def estado_vigencia(self, obj):
+        """Muestra el estado de vigencia"""
+        from django.utils import timezone
+        now = timezone.now()
+        
+        if not obj.activo:
+            return format_html(
+                '<span style="background-color: #6c757d; color: white; '
+                'padding: 3px 8px; border-radius: 3px; font-size: 11px;">INACTIVA</span>'
+            )
+        
+        if obj.fecha_inicio_vigencia > now:
+            return format_html(
+                '<span style="background-color: #ffc107; color: black; '
+                'padding: 3px 8px; border-radius: 3px; font-size: 11px;">FUTURA</span>'
+            )
+        
+        if obj.fecha_fin_vigencia and obj.fecha_fin_vigencia < now:
+            return format_html(
+                '<span style="background-color: #dc3545; color: white; '
+                'padding: 3px 8px; border-radius: 3px; font-size: 11px;">VENCIDA</span>'
+            )
+        
+        return format_html(
+            '<span style="background-color: #28a745; color: white; '
+            'padding: 3px 8px; border-radius: 3px; font-size: 11px;">VIGENTE</span>'
+        )
+    estado_vigencia.short_description = 'Estado'
+    
+    # Acciones
+    @admin.action(description='✅ Activar tarifas seleccionadas')
+    def activar_tarifas(self, request, queryset):
+        count = queryset.update(activo=True)
+        self.message_user(request, f'{count} tarifa(s) activada(s) exitosamente.', level='success')
+    
+    @admin.action(description='❌ Desactivar tarifas seleccionadas')
+    def desactivar_tarifas(self, request, queryset):
+        count = queryset.update(activo=False)
+        self.message_user(request, f'{count} tarifa(s) desactivada(s) exitosamente.', level='success')
+    
+    @admin.action(description='⏹️ Finalizar vigencia (establecer fecha fin hoy)')
+    def finalizar_vigencia(self, request, queryset):
+        from django.utils import timezone
+        count = queryset.update(fecha_fin_vigencia=timezone.now(), activo=False)
+        self.message_user(
+            request,
+            f'{count} tarifa(s) finalizadas exitosamente. Fecha fin establecida al día de hoy.',
+            level='success'
+        )
+    
+    def get_queryset(self, request):
+        """Optimiza las consultas"""
+        qs = super().get_queryset(request)
+        return qs.select_related('id_medio_pago')
+    
+    def save_model(self, request, obj, form, change):
+        """Validaciones adicionales al guardar"""
+        from django.utils import timezone
+        from django.contrib import messages
+        
+        # Validar que el porcentaje esté en rango válido (0% a 100%)
+        if obj.porcentaje_comision < 0 or obj.porcentaje_comision > 1:
+            messages.error(
+                request,
+                f'Error: El porcentaje debe estar entre 0 y 1 (0% a 100%). '
+                f'Valor ingresado: {obj.porcentaje_comision}'
+            )
+            return
+        
+        # Validar que fecha inicio sea menor que fecha fin
+        if obj.fecha_fin_vigencia and obj.fecha_inicio_vigencia >= obj.fecha_fin_vigencia:
+            messages.error(
+                request,
+                'Error: La fecha de inicio debe ser anterior a la fecha de fin.'
+            )
+            return
+        
+        # Advertir sobre superposición de tarifas
+        tarifas_activas = TarifasComision.objects.filter(
+            id_medio_pago=obj.id_medio_pago,
+            activo=True
+        ).exclude(id_tarifa=obj.id_tarifa)
+        
+        if tarifas_activas.exists():
+            messages.warning(
+                request,
+                f'Atención: Ya existe(n) {tarifas_activas.count()} tarifa(s) activa(s) '
+                f'para {obj.id_medio_pago.descripcion}. '
+                f'Verifique que no haya superposición de fechas.'
+            )
+        
+        super().save_model(request, obj, form, change)
+        
+        if change:
+            messages.success(request, f'Tarifa actualizada exitosamente.')
+        else:
+            messages.success(request, f'Tarifa creada exitosamente.')
 
 
 @admin.register(Cajas)
