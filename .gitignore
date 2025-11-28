@@ -38,6 +38,8 @@ Thumbs.db
 *.sql
 *.dump
 count_models.py
+temp_output.txt
+*.tmp
 
 # Archivos de migraciones (descomenta si no quieres versionar)
 # */migrations/*.py
