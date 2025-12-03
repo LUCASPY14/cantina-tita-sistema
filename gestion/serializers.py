@@ -58,7 +58,7 @@ class ProductoListSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Producto
-        fields = ['id_producto', 'codigo', 'descripcion', 'categoria_nombre',
+        fields = ['id_producto', 'codigo_barra', 'descripcion', 'categoria_nombre',
                   'stock_minimo', 'stock_actual', 'precio_actual', 'activo']
     
     def get_stock_actual(self, obj):
@@ -139,14 +139,14 @@ class ClienteSerializer(serializers.ModelSerializer):
 class HijoSerializer(serializers.ModelSerializer):
     """Serializer para hijos/estudiantes"""
     responsable_nombre = serializers.CharField(
-        source='id_cliente_responsable.nombres', 
+        source='id_cliente_responsable.nombre', 
         read_only=True
     )
     tiene_tarjeta = serializers.SerializerMethodField()
     
     class Meta:
         model = Hijo
-        fields = ['id_hijo', 'nombres', 'apellidos', 'fecha_nacimiento',
+        fields = ['id_hijo', 'nombre', 'apellido', 'fecha_nacimiento',
                   'id_cliente_responsable', 'responsable_nombre', 
                   'tiene_tarjeta', 'activo']
         read_only_fields = ['id_hijo']
@@ -231,14 +231,14 @@ class ConsumoTarjetaSerializer(serializers.ModelSerializer):
 
 class DetalleVentaSerializer(serializers.ModelSerializer):
     """Serializer para detalle de venta"""
-    producto_codigo = serializers.CharField(source='id_producto.codigo', read_only=True)
+    producto_codigo = serializers.CharField(source='id_producto.codigo_barra', read_only=True)
     producto_descripcion = serializers.CharField(source='id_producto.descripcion', read_only=True)
     
     class Meta:
         model = DetalleVenta
         fields = ['id_detalle', 'id_producto', 'producto_codigo', 
-                  'producto_descripcion', 'cantidad', 'precio_unitario_total',
-                  'subtotal_total', 'monto_iva']
+                  'producto_descripcion', 'cantidad', 'precio_unitario',
+                  'subtotal_total']
 
 
 class VentaListSerializer(serializers.ModelSerializer):
@@ -311,7 +311,7 @@ class EmpleadoSerializer(serializers.ModelSerializer):
 
 class StockSerializer(serializers.ModelSerializer):
     """Serializer para stock de productos"""
-    producto_codigo = serializers.CharField(source='id_producto.codigo', read_only=True)
+    producto_codigo = serializers.CharField(source='id_producto.codigo_barra', read_only=True)
     producto_descripcion = serializers.CharField(source='id_producto.descripcion', read_only=True)
     stock_minimo = serializers.DecimalField(
         source='id_producto.stock_minimo',

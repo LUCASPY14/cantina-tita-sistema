@@ -28,6 +28,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
 
+# Django Debug Toolbar
+INTERNAL_IPS = [
+    '127.0.0.1',
+    'localhost',
+]
+
 
 # Application definition
 
@@ -45,6 +51,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     'django_filters',
     'corsheaders',
+    'debug_toolbar',
     # Local apps
     'gestion',
 ]
@@ -58,6 +65,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
 ROOT_URLCONF = 'cantina_project.urls'

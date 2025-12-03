@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include, re_path
+from django.conf import settings
 from gestion.cantina_admin import cantina_admin_site
 from gestion.auth_views import CustomLoginView, CustomLogoutView, dashboard_redirect
 from rest_framework import permissions
@@ -82,3 +83,9 @@ urlpatterns = [
     # URLs de reportes y vistas
     path('reportes/', include('gestion.urls')),
 ]
+
+# Django Debug Toolbar (solo en modo DEBUG)
+if settings.DEBUG:
+    urlpatterns += [
+        path('__debug__/', include('debug_toolbar.urls')),
+    ]
