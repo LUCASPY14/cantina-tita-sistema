@@ -414,7 +414,7 @@
 function cuentaCorrienteUnificada() {
     return {
         vista: 'timeline',
-        saldo_actual: {{ saldo_actual|default:0 }},
+        saldo_actual: parseFloat('{{ saldo_actual|default:0 }}'),
         
         init() {
             this.inicializarGrafico();
@@ -424,7 +424,7 @@ function cuentaCorrienteUnificada() {
             const ctx = document.getElementById('chartSaldo');
             if (!ctx) return;
             
-            const movimientos = {{ movimientos_json|safe }};
+            const movimientos = JSON.parse('{{ movimientos_json|safe|escapejs }}');
             
             new Chart(ctx, {
                 type: 'line',
@@ -474,10 +474,10 @@ function cuentaCorrienteUnificada() {
         },
         
         exportarExcel() {
-            const cliente_id = {{ cliente.id_cliente }};
-            const fecha_desde = '{{ fecha_desde }}';
-            const fecha_hasta = '{{ fecha_hasta }}';
-            window.location.href = `/pos/cuenta-corriente/${cliente_id}/excel/?fecha_desde=${fecha_desde}&fecha_hasta=${fecha_hasta}`;
+            const clienteId = parseInt('{{ cliente.id_cliente }}');
+            const fechaDesde = '{{ fecha_desde }}';
+            const fechaHasta = '{{ fecha_hasta }}';
+            window.location.href = `/pos/cuenta-corriente/${clienteId}/excel/?fecha_desde=${fechaDesde}&fecha_hasta=${fechaHasta}`;
         }
     }
 }
