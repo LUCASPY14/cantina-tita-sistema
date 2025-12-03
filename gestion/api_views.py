@@ -42,7 +42,7 @@ class CategoriaViewSet(viewsets.ModelViewSet):
     partial_update: Actualizar categoría parcialmente
     destroy: Eliminar categoría (soft delete)
     """
-    queryset = Categoria.objects.all()
+    queryset = Categoria.objects.select_related('id_categoria_padre').all()
     serializer_class = CategoriaSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -58,7 +58,7 @@ class CategoriaViewSet(viewsets.ModelViewSet):
         productos = Producto.objects.filter(
             id_categoria=categoria,
             activo=True
-        )
+        ).select_related('id_categoria')
         serializer = ProductoListSerializer(productos, many=True)
         return Response(serializer.data)
     
@@ -160,7 +160,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
     """
     ViewSet para clientes
     """
-    queryset = Cliente.objects.all()
+    queryset = Cliente.objects.prefetch_related('hijo_set').all()
     serializer_class = ClienteSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -173,7 +173,9 @@ class ClienteViewSet(viewsets.ModelViewSet):
     def hijos(self, request, pk=None):
         """Obtener hijos del cliente"""
         cliente = self.get_object()
-        hijos = Hijo.objects.filter(id_cliente_responsable=cliente)
+        hijos = Hijo.objects.filter(
+            id_cliente_responsable=cliente
+        ).select_related('id_cliente_responsable')
         serializer = HijoSerializer(hijos, many=True)
         return Response(serializer.data)
     
@@ -186,6 +188,8 @@ class ClienteViewSet(viewsets.ModelViewSet):
         ventas_pendientes = Ventas.objects.filter(
             id_cliente=cliente,
             estado_pago__in=['PENDIENTE', 'PARCIAL']
+        ).select_related(
+            'id_cliente', 'id_empleado_cajero', 'id_tipo_pago'
         ).order_by('-fecha')[:50]
         
         # Calcular saldo total pendiente
@@ -204,7 +208,11 @@ class ClienteViewSet(viewsets.ModelViewSet):
     def ventas(self, request, pk=None):
         """Obtener historial de ventas del cliente"""
         cliente = self.get_object()
-        ventas = Ventas.objects.filter(id_cliente=cliente).order_by('-fecha')[:50]
+        ventas = Ventas.objects.filter(
+            id_cliente=cliente
+        ).select_related(
+            'id_cliente', 'id_empleado_cajero', 'id_tipo_pago'
+        ).prefetch_related('detalleventa_set').order_by('-fecha')[:50]
         serializer = VentaListSerializer(ventas, many=True)
         return Response(serializer.data)
 
@@ -227,7 +235,7 @@ class TarjetaViewSet(viewsets.ModelViewSet):
         tarjeta = self.get_object()
         consumos = ConsumoTarjeta.objects.filter(
             nro_tarjeta=tarjeta
-        ).order_by('-fecha_consumo')[:100]
+        ).select_related('nro_tarjeta__id_hijo').order_by('-fecha_consumo')[:100]
         
         serializer = ConsumoTarjetaSerializer(consumos, many=True)
         return Response(serializer.data)
@@ -238,7 +246,7 @@ class TarjetaViewSet(viewsets.ModelViewSet):
         tarjeta = self.get_object()
         recargas = CargasSaldo.objects.filter(
             nro_tarjeta=tarjeta
-        ).order_by('-fecha_carga')[:50]
+        ).select_related('nro_tarjeta__id_hijo', 'id_empleado_cajero').order_by('-fecha_carga')[:50]
         
         serializer = CargasSaldoSerializer(recargas, many=True)
         return Response(serializer.data)
@@ -476,7 +484,7 @@ class ProveedorViewSet(viewsets.ModelViewSet):
     """
     ViewSet para proveedores
     """
-    queryset = Proveedor.objects.all()
+    queryset = Proveedor.objects.prefetch_related('compras_set').all()
     serializer_class = ProveedorSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
