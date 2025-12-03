@@ -10,6 +10,8 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Sum, Count, Avg
 from datetime import datetime, timedelta
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from .models import (
     Ventas, DetalleVenta, Producto, Categoria, Cliente, Hijo,
@@ -33,14 +35,12 @@ from .serializers import (
 
 class CategoriaViewSet(viewsets.ModelViewSet):
     """
-    ViewSet para categorías de productos
+    ViewSet para categorías de productos.
     
-    list: Listar todas las categorías
-    retrieve: Obtener detalle de una categoría
-    create: Crear nueva categoría
-    update: Actualizar categoría completa
-    partial_update: Actualizar categoría parcialmente
-    destroy: Eliminar categoría (soft delete)
+    Permite gestionar las categorías de productos del sistema:
+    - Listar todas las categorías con filtros y búsqueda
+    - Crear, actualizar y eliminar categorías
+    - Obtener productos por categoría
     """
     queryset = Categoria.objects.select_related('id_categoria_padre').all()
     serializer_class = CategoriaSerializer
@@ -51,6 +51,13 @@ class CategoriaViewSet(viewsets.ModelViewSet):
     ordering_fields = ['nombre', 'id_categoria']
     ordering = ['nombre']
     
+    @swagger_auto_schema(
+        operation_description="Obtiene todos los productos activos de una categoría específica",
+        responses={
+            200: ProductoListSerializer(many=True),
+            404: "Categoría no encontrada"
+        }
+    )
     @action(detail=True, methods=['get'])
     def productos(self, request, pk=None):
         """Obtener todos los productos de una categoría"""
@@ -62,6 +69,10 @@ class CategoriaViewSet(viewsets.ModelViewSet):
         serializer = ProductoListSerializer(productos, many=True)
         return Response(serializer.data)
     
+    @swagger_auto_schema(
+        operation_description="Obtiene las subcategorías hijas de una categoría",
+        responses={200: CategoriaSerializer(many=True)}
+    )
     @action(detail=True, methods=['get'])
     def subcategorias(self, request, pk=None):
         """Obtener subcategorías de una categoría"""
@@ -73,13 +84,13 @@ class CategoriaViewSet(viewsets.ModelViewSet):
 
 class ProductoViewSet(viewsets.ModelViewSet):
     """
-    ViewSet para productos
+    ViewSet para productos del inventario.
     
-    list: Listar productos (usa serializer ligero)
-    retrieve: Obtener detalle completo de un producto
-    create: Crear nuevo producto
-    update: Actualizar producto
-    destroy: Eliminar producto (soft delete)
+    Permite gestionar el catálogo de productos:
+    - Listar productos con filtros por categoría y estado
+    - Búsqueda por código o descripción
+    - Ver stock actual y movimientos
+    - Crear, actualizar y eliminar productos
     """
     queryset = Producto.objects.select_related('id_categoria').all()
     permission_classes = [IsAuthenticated]
@@ -158,7 +169,13 @@ class ProductoViewSet(viewsets.ModelViewSet):
 
 class ClienteViewSet(viewsets.ModelViewSet):
     """
-    ViewSet para clientes
+    ViewSet para clientes del sistema.
+    
+    Permite gestionar clientes y sus operaciones:
+    - Listar clientes con búsqueda por nombre, CI/RUC, teléfono
+    - Ver hijos asociados a cada cliente
+    - Consultar cuenta corriente y ventas pendientes
+    - Ver historial de ventas y estadísticas
     """
     queryset = Cliente.objects.prefetch_related('hijo_set').all()
     serializer_class = ClienteSerializer
@@ -169,6 +186,10 @@ class ClienteViewSet(viewsets.ModelViewSet):
     ordering_fields = ['nombres', 'apellidos']
     ordering = ['apellidos', 'nombres']
     
+    @swagger_auto_schema(
+        operation_description="Obtiene la lista de hijos asociados a un cliente",
+        responses={200: HijoSerializer(many=True)}
+    )
     @action(detail=True, methods=['get'])
     def hijos(self, request, pk=None):
         """Obtener hijos del cliente"""
@@ -179,6 +200,20 @@ class ClienteViewSet(viewsets.ModelViewSet):
         serializer = HijoSerializer(hijos, many=True)
         return Response(serializer.data)
     
+    @swagger_auto_schema(
+        operation_description="Obtiene el estado de cuenta corriente del cliente con saldo pendiente",
+        responses={
+            200: openapi.Response(
+                description="Estado de cuenta",
+                examples={
+                    'application/json': {
+                        'saldo_actual': 150000.00,
+                        'ventas_pendientes': []
+                    }
+                }
+            )
+        }
+    )
     @action(detail=True, methods=['get'])
     def cuenta_corriente(self, request, pk=None):
         """Obtener estado de cuenta corriente (saldo pendiente en ventas)"""
@@ -204,6 +239,10 @@ class ClienteViewSet(viewsets.ModelViewSet):
             'ventas_pendientes': serializer.data
         })
     
+    @swagger_auto_schema(
+        operation_description="Obtiene el historial de ventas del cliente (hasta 50 últimas)",
+        responses={200: VentaListSerializer(many=True)}
+    )
     @action(detail=True, methods=['get'])
     def ventas(self, request, pk=None):
         """Obtener historial de ventas del cliente"""
@@ -219,7 +258,14 @@ class ClienteViewSet(viewsets.ModelViewSet):
 
 class TarjetaViewSet(viewsets.ModelViewSet):
     """
-    ViewSet para tarjetas de estudiantes
+    ViewSet para tarjetas estudiantiles.
+    
+    Gestiona las tarjetas de los estudiantes:
+    - Listar tarjetas con filtros por estado
+    - Búsqueda por número de tarjeta o nombre del hijo
+    - Ver saldo actual de la tarjeta
+    - Consultar historial de consumos y recargas
+    - Realizar recargas de saldo
     """
     queryset = Tarjeta.objects.select_related('id_hijo__id_cliente_responsable').all()
     serializer_class = TarjetaSerializer
@@ -229,6 +275,10 @@ class TarjetaViewSet(viewsets.ModelViewSet):
     search_fields = ['nro_tarjeta', 'id_hijo__nombre', 'id_hijo__apellido']
     lookup_field = 'nro_tarjeta'
     
+    @swagger_auto_schema(
+        operation_description="Obtiene el historial de consumos de la tarjeta (hasta 100 últimos)",
+        responses={200: ConsumoTarjetaSerializer(many=True)}
+    )
     @action(detail=True, methods=['get'])
     def consumos(self, request, nro_tarjeta=None):
         """Obtener historial de consumos de la tarjeta"""
@@ -240,6 +290,10 @@ class TarjetaViewSet(viewsets.ModelViewSet):
         serializer = ConsumoTarjetaSerializer(consumos, many=True)
         return Response(serializer.data)
     
+    @swagger_auto_schema(
+        operation_description="Obtiene el historial de recargas de saldo de la tarjeta (hasta 50 últimas)",
+        responses={200: CargasSaldoSerializer(many=True)}
+    )
     @action(detail=True, methods=['get'])
     def recargas(self, request, nro_tarjeta=None):
         """Obtener historial de recargas de la tarjeta"""
@@ -251,6 +305,21 @@ class TarjetaViewSet(viewsets.ModelViewSet):
         serializer = CargasSaldoSerializer(recargas, many=True)
         return Response(serializer.data)
     
+    @swagger_auto_schema(
+        operation_description="Realiza una recarga de saldo en la tarjeta",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['monto', 'id_cliente_origen'],
+            properties={
+                'monto': openapi.Schema(type=openapi.TYPE_NUMBER, description='Monto a recargar'),
+                'id_cliente_origen': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del cliente que realiza la recarga'),
+            }
+        ),
+        responses={
+            201: CargasSaldoSerializer(),
+            400: "Datos inválidos"
+        }
+    )
     @action(detail=True, methods=['post'])
     def recargar(self, request, nro_tarjeta=None):
         """Recargar saldo en una tarjeta"""
@@ -305,7 +374,13 @@ class TarjetaViewSet(viewsets.ModelViewSet):
 
 class VentaViewSet(viewsets.ModelViewSet):
     """
-    ViewSet para ventas
+    ViewSet para ventas del sistema.
+    
+    Gestiona las operaciones de venta:
+    - Listar ventas con filtros por estado, tipo, y método de pago
+    - Ver detalles completos de cada venta
+    - Consultar ventas del día actual
+    - Obtener estadísticas de ventas por período
     """
     queryset = Ventas.objects.select_related('id_cliente', 'id_empleado_cajero').all()
     permission_classes = [IsAuthenticated]
@@ -320,6 +395,22 @@ class VentaViewSet(viewsets.ModelViewSet):
             return VentaDetailSerializer
         return VentaListSerializer
     
+    @swagger_auto_schema(
+        operation_description="Obtiene todas las ventas realizadas en el día actual con totales",
+        responses={
+            200: openapi.Response(
+                description="Ventas del día",
+                examples={
+                    'application/json': {
+                        'fecha': '2025-12-03',
+                        'cantidad_ventas': 45,
+                        'total_ventas': 1250000.00,
+                        'ventas': []
+                    }
+                }
+            )
+        }
+    )
     @action(detail=False, methods=['get'])
     def ventas_dia(self, request):
         """Obtener ventas del día actual"""
@@ -340,6 +431,38 @@ class VentaViewSet(viewsets.ModelViewSet):
             'ventas': serializer.data
         })
     
+    @swagger_auto_schema(
+        operation_description="Obtiene estadísticas de ventas por período",
+        manual_parameters=[
+            openapi.Parameter(
+                'fecha_inicio',
+                openapi.IN_QUERY,
+                description="Fecha de inicio (YYYY-MM-DD)",
+                type=openapi.TYPE_STRING,
+                format=openapi.FORMAT_DATE
+            ),
+            openapi.Parameter(
+                'fecha_fin',
+                openapi.IN_QUERY,
+                description="Fecha de fin (YYYY-MM-DD)",
+                type=openapi.TYPE_STRING,
+                format=openapi.FORMAT_DATE
+            ),
+        ],
+        responses={
+            200: openapi.Response(
+                description="Estadísticas calculadas",
+                examples={
+                    'application/json': {
+                        'total_ventas': 5000000.00,
+                        'cantidad_ventas': 120,
+                        'promedio_venta': 41666.67,
+                        'ventas_pendientes': 15
+                    }
+                }
+            )
+        }
+    )
     @action(detail=False, methods=['get'])
     def estadisticas(self, request):
         """Estadísticas de ventas"""
@@ -393,7 +516,13 @@ class VentaViewSet(viewsets.ModelViewSet):
 
 class StockViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    ViewSet de solo lectura para stock
+    ViewSet de solo lectura para consultar stock.
+    
+    Permite:
+    - Listar stock actual de todos los productos
+    - Búsqueda por código o descripción de producto
+    - Ver alertas de stock bajo
+    - Consultar movimientos de stock
     """
     queryset = StockUnico.objects.select_related('id_producto__id_categoria').all()
     serializer_class = StockSerializer
@@ -403,6 +532,10 @@ class StockViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ['stock_actual', 'fecha_ultima_actualizacion']
     ordering = ['id_producto__codigo']
     
+    @swagger_auto_schema(
+        operation_description="Obtiene productos con stock bajo (menor al stock mínimo configurado)",
+        responses={200: StockSerializer(many=True)}
+    )
     @action(detail=False, methods=['get'])
     def alertas(self, request):
         """Productos con stock por debajo del mínimo"""
@@ -428,7 +561,13 @@ class StockViewSet(viewsets.ReadOnlyModelViewSet):
 
 class MovimientoStockViewSet(viewsets.ModelViewSet):
     """
-    ViewSet para movimientos de stock
+    ViewSet para registrar movimientos de stock.
+    
+    Permite:
+    - Listar movimientos de entrada y salida
+    - Filtrar por tipo de movimiento y producto
+    - Registrar nuevos ajustes de stock
+    - Ver historial de movimientos
     """
     queryset = MovimientosStock.objects.select_related(
         'id_producto', 'id_empleado_autoriza'
@@ -447,7 +586,12 @@ class MovimientoStockViewSet(viewsets.ModelViewSet):
 
 class EmpleadoViewSet(viewsets.ModelViewSet):
     """
-    ViewSet para empleados
+    ViewSet para empleados del sistema.
+    
+    Gestiona los empleados y cajeros:
+    - Listar empleados con filtros por rol y estado
+    - Ver ventas realizadas por cada empleado
+    - Gestionar usuarios y permisos
     """
     queryset = Empleado.objects.select_related('id_rol').all()
     serializer_class = EmpleadoSerializer
@@ -456,6 +600,10 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
     filterset_fields = ['activo', 'id_rol']
     search_fields = ['nombre', 'apellido', 'usuario']
     
+    @swagger_auto_schema(
+        operation_description="Obtiene las ventas realizadas por el empleado (hasta 100 últimas)",
+        responses={200: VentaListSerializer(many=True)}
+    )
     @action(detail=True, methods=['get'])
     def ventas(self, request, pk=None):
         """Ventas realizadas por el empleado"""
@@ -482,7 +630,12 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
 
 class ProveedorViewSet(viewsets.ModelViewSet):
     """
-    ViewSet para proveedores
+    ViewSet para proveedores.
+    
+    Gestiona los proveedores del sistema:
+    - Listar proveedores activos
+    - Búsqueda por razón social, RUC o teléfono
+    - Ver compras realizadas a cada proveedor
     """
     queryset = Proveedor.objects.prefetch_related('compras_set').all()
     serializer_class = ProveedorSerializer
