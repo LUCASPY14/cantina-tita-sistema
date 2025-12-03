@@ -12,7 +12,7 @@ from .models import (
     # Productos
     Producto, StockUnico,
     # Proveedores y Compras
-    Proveedor, Compras, DetalleCompra, CtaCorrienteProv, CargasSaldo,
+    Proveedor, Compras, DetalleCompra, CargasSaldo,
     # Empleados
     Empleado,
     # Empresa y Precios
@@ -26,9 +26,9 @@ from .models import (
     # Medios de Pago
     TiposPago, MediosPago, TarifasComision, Cajas, CierresCaja,
     # Ventas
-    Ventas, DetalleVenta, PagosVenta, DetalleComisionVenta, ConciliacionPagos, CtaCorriente,
+    Ventas, DetalleVenta, PagosVenta, DetalleComisionVenta, ConciliacionPagos,
     # Notas de Crédito
-    NotasCredito, DetalleNota,
+    NotasCreditoCliente, DetalleNota,
     # Almuerzos
     PlanesAlmuerzo, SuscripcionesAlmuerzo, RegistroConsumoAlmuerzo, PagosAlmuerzoMensual,
     # Alertas y Auditoría
@@ -50,15 +50,15 @@ class CategoriaAdmin(admin.ModelAdmin):
 
 @admin.register(Producto)
 class ProductoAdmin(admin.ModelAdmin):
-    list_display = ['codigo', 'descripcion', 'id_categoria', 'stock_badge', 'activo', 'activo_badge']
+    list_display = ['codigo_barra', 'descripcion', 'id_categoria', 'stock_badge', 'activo', 'activo_badge']
     list_filter = ['id_categoria', 'activo', 'permite_stock_negativo']
-    search_fields = ['codigo', 'descripcion']
+    search_fields = ['codigo_barra', 'descripcion']
     list_editable = ['activo']
-    readonly_fields = ['fecha_creacion']
+    # readonly_fields = ['fecha_creacion']  # Campo no existe en este modelo
     
     fieldsets = (
         ('Información Básica', {
-            'fields': ('codigo', 'descripcion', 'id_categoria', 'id_unidad')
+            'fields': ('codigo_barra', 'descripcion', 'id_categoria', 'id_unidad_de_medida')
         }),
         ('Control de Stock', {
             'fields': ('stock_minimo', 'permite_stock_negativo'),
@@ -68,7 +68,7 @@ class ProductoAdmin(admin.ModelAdmin):
             'fields': ('id_impuesto',)
         }),
         ('Estado', {
-            'fields': ('activo', 'fecha_creacion')
+            'fields': ('activo',)
         }),
     )
     
@@ -309,13 +309,6 @@ class ComprasAdmin(admin.ModelAdmin):
 class DetalleCompraAdmin(admin.ModelAdmin):
     list_display = ['id_compra', 'id_producto', 'cantidad', 'costo_unitario_neto', 'subtotal_neto']
     search_fields = ['id_producto__descripcion', 'id_compra__nro_factura_proveedor']
-
-
-@admin.register(CtaCorrienteProv)
-class CtaCorrienteProvAdmin(admin.ModelAdmin):
-    list_display = ['id_proveedor', 'tipo_movimiento', 'monto', 'fecha', 'saldo_acumulado']
-    list_filter = ['tipo_movimiento', 'fecha']
-    search_fields = ['id_proveedor__razon_social', 'referencia_doc']
 
 
 @admin.register(CargasSaldo)
@@ -626,7 +619,7 @@ class VentasAdmin(admin.ModelAdmin):
 
 @admin.register(DetalleVenta)
 class DetalleVentaAdmin(admin.ModelAdmin):
-    list_display = ['id_venta', 'id_producto', 'cantidad', 'precio_unitario_total', 'subtotal_total']
+    list_display = ['id_venta', 'id_producto', 'cantidad', 'precio_unitario', 'subtotal_total']
     search_fields = ['id_producto__descripcion']
 
 
@@ -647,15 +640,8 @@ class ConciliacionPagosAdmin(admin.ModelAdmin):
     list_filter = ['estado', 'fecha_acreditacion']
 
 
-@admin.register(CtaCorriente)
-class CtaCorrienteAdmin(admin.ModelAdmin):
-    list_display = ['id_cliente', 'tipo_movimiento', 'monto', 'fecha', 'saldo_acumulado']
-    list_filter = ['tipo_movimiento', 'fecha']
-    search_fields = ['id_cliente__nombres', 'id_cliente__apellidos']
-
-
 # Notas de Crédito
-@admin.register(NotasCredito)
+@admin.register(NotasCreditoCliente)
 class NotasCreditoAdmin(admin.ModelAdmin):
     list_display = ['id_nota', 'id_cliente', 'monto_badge', 'fecha', 'estado_badge']
     list_filter = ['estado', 'fecha']
@@ -1002,7 +988,6 @@ cantina_admin_site.register(StockUnico, StockUnicoAdmin)
 cantina_admin_site.register(Proveedor, ProveedorAdmin)
 cantina_admin_site.register(Compras, ComprasAdmin)
 cantina_admin_site.register(DetalleCompra, DetalleCompraAdmin)
-cantina_admin_site.register(CtaCorrienteProv, CtaCorrienteProvAdmin)
 cantina_admin_site.register(CargasSaldo, CargasSaldoAdmin)
 cantina_admin_site.register(Empleado, EmpleadoAdmin)
 cantina_admin_site.register(DatosEmpresa, DatosEmpresaAdmin)
@@ -1031,8 +1016,7 @@ cantina_admin_site.register(DetalleVenta, DetalleVentaAdmin)
 cantina_admin_site.register(PagosVenta, PagosVentaAdmin)
 cantina_admin_site.register(DetalleComisionVenta, DetalleComisionVentaAdmin)
 cantina_admin_site.register(ConciliacionPagos, ConciliacionPagosAdmin)
-cantina_admin_site.register(CtaCorriente, CtaCorrienteAdmin)
-cantina_admin_site.register(NotasCredito, NotasCreditoAdmin)
+cantina_admin_site.register(NotasCreditoCliente, NotasCreditoAdmin)
 cantina_admin_site.register(DetalleNota, DetalleNotaAdmin)
 cantina_admin_site.register(PlanesAlmuerzo, PlanesAlmuerzoAdmin)
 cantina_admin_site.register(SuscripcionesAlmuerzo, SuscripcionesAlmuerzoAdmin)

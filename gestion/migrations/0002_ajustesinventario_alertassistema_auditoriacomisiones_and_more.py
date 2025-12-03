@@ -729,19 +729,19 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.RemoveField(
-            model_name='compraproveedor',
+            model_name='compras',
             name='proveedor',
         ),
         migrations.RemoveField(
-            model_name='compraproveedor',
+            model_name='compras',
             name='usuario',
         ),
         migrations.RemoveField(
-            model_name='venta',
+            model_name='ventas',
             name='cliente',
         ),
         migrations.RemoveField(
-            model_name='venta',
+            model_name='ventas',
             name='usuario',
         ),
         migrations.DeleteModel(

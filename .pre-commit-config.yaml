@@ -1,0 +1,31 @@
+# Pre-commit Hook Configuration
+# ==============================
+# Ejecuta validaciones automáticamente antes de cada commit
+
+repos:
+  # Django checks
+  - repo: local
+    hooks:
+      - id: django-check
+        name: Django Check
+        entry: python manage.py check
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  # Tests rápidos (solo validaciones básicas)
+  - repo: local
+    hooks:
+      - id: django-validations
+        name: Django Validations
+        entry: python precommit_check.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+# Instalación:
+# pip install pre-commit
+# pre-commit install
+
+# Ejecutar manualmente:
+# pre-commit run --all-files

@@ -1,0 +1,52 @@
+# Configuración de Coverage.py
+# ============================
+
+[run]
+# Archivos a incluir en la cobertura
+source = gestion
+
+# Archivos a omitir
+omit =
+    */migrations/*
+    */tests*.py
+    */admin.py
+    */__init__.py
+    */apps.py
+    */wsgi.py
+    */asgi.py
+    manage.py
+    */settings*.py
+
+# Ejecutar tests
+command_line = manage.py test gestion
+
+[report]
+# Formato del reporte
+precision = 2
+show_missing = True
+skip_covered = False
+skip_empty = True
+
+# Excluir líneas del reporte
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    def __str__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    @abstractmethod
+    @abc.abstractmethod
+
+# Cobertura mínima requerida
+fail_under = 70
+
+[html]
+# Configuración del reporte HTML
+directory = htmlcov
+title = Cobertura de Tests - Sistema Cuenta Corriente
+
+[xml]
+# Configuración del reporte XML
+output = coverage.xml

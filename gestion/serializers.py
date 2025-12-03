@@ -13,8 +13,6 @@ from .models import (
     Producto, Categoria, StockUnico, PreciosPorLista,
     # Clientes y Tarjetas
     Cliente, Hijo, Tarjeta, CargasSaldo, ConsumoTarjeta,
-    # Cuenta Corriente
-    CtaCorriente,
     # Empleados
     Empleado, TipoRolGeneral,
     # Proveedores y Compras
@@ -123,13 +121,12 @@ class ClienteSerializer(serializers.ModelSerializer):
     """Serializer para clientes"""
     nombre_completo = serializers.SerializerMethodField()
     total_hijos = serializers.SerializerMethodField()
-    saldo_cuenta_corriente = serializers.SerializerMethodField()
     
     class Meta:
         model = Cliente
         fields = ['id_cliente', 'nombres', 'apellidos', 'nombre_completo',
                   'ruc_ci', 'telefono', 'email', 'direccion', 'activo',
-                  'total_hijos', 'saldo_cuenta_corriente']
+                  'total_hijos']
         read_only_fields = ['id_cliente']
     
     def get_nombre_completo(self, obj):
@@ -137,12 +134,6 @@ class ClienteSerializer(serializers.ModelSerializer):
     
     def get_total_hijos(self, obj):
         return Hijo.objects.filter(id_cliente_responsable=obj, activo=True).count()
-    
-    def get_saldo_cuenta_corriente(self, obj):
-        saldo = CtaCorriente.objects.filter(id_cliente=obj).aggregate(
-            total=Sum('monto')
-        )['total']
-        return float(saldo) if saldo else 0.0
 
 
 class HijoSerializer(serializers.ModelSerializer):
@@ -290,23 +281,6 @@ class VentaDetailSerializer(serializers.ModelSerializer):
 # =============================================================================
 # SERIALIZERS DE CUENTA CORRIENTE
 # =============================================================================
-
-class CtaCorrienteSerializer(serializers.ModelSerializer):
-    """Serializer para movimientos de cuenta corriente"""
-    cliente_nombre = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = CtaCorriente
-        fields = ['id_movimiento', 'id_cliente', 'cliente_nombre',
-                  'tipo_movimiento', 'monto', 'fecha', 'descripcion',
-                  'referencia_doc']
-        read_only_fields = ['id_movimiento', 'fecha']
-    
-    def get_cliente_nombre(self, obj):
-        if obj.id_cliente:
-            return f"{obj.id_cliente.nombres} {obj.id_cliente.apellidos}"
-        return None
-
 
 # =============================================================================
 # SERIALIZERS DE EMPLEADOS

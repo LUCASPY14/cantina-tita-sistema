@@ -15,7 +15,7 @@ from gestion.models import (
     ConsumoTarjeta, Empleado, StockUnico, Cliente, Hijo,
     CargasSaldo, Proveedor, Categoria, Cajas, CierresCaja,
     MediosPago, TiposPago, PagosVenta, ConciliacionPagos,
-    Compras, DetalleCompra, CtaCorrienteProv, MovimientosStock,
+    Compras, DetalleCompra, MovimientosStock,
     TarifasComision, DetalleComisionVenta
 )
 
@@ -154,7 +154,10 @@ def procesar_venta(request):
         tarjeta = None
         if tarjeta_data and tarjeta_data.get('id'):
             try:
-                tarjeta = Tarjeta.objects.get(nro_tarjeta=tarjeta_data['id'])
+                tarjeta = Tarjeta.objects.select_related(
+                    'id_hijo',
+                    'id_hijo__id_cliente_responsable'
+                ).get(nro_tarjeta=tarjeta_data['id'])
                 
                 # Validar saldo
                 if tarjeta.saldo_actual < total:
@@ -177,7 +180,10 @@ def procesar_venta(request):
         # Crear detalles de venta y actualizar stock
         for item in items:
             try:
-                producto = Producto.objects.get(id_producto=item['id'])
+                producto = Producto.objects.select_related(
+                    'id_categoria',
+                    'stock'
+                ).get(id_producto=item['id'])
                 cantidad = Decimal(str(item['quantity']))
                 precio = Decimal(str(item['price']))
                 
@@ -299,7 +305,7 @@ def dashboard_view(request):
     # === Top 10 productos vendidos (hoy) ===
     top_productos_raw = DetalleVenta.objects.filter(
         id_venta__fecha__date=today
-    ).values(
+    ).select_related('id_producto').values(
         'id_producto__descripcion'
     ).annotate(
         total=Sum('cantidad')
@@ -346,6 +352,9 @@ def dashboard_view(request):
     # === Ventas por categoría (hoy) ===
     ventas_categoria_raw = DetalleVenta.objects.filter(
         id_venta__fecha__date=today
+    ).select_related(
+        'id_producto',
+        'id_producto__id_categoria'
     ).values(
         'id_producto__id_categoria__nombre'
     ).annotate(
@@ -393,6 +402,11 @@ def historial_view(request):
     """Historial de ventas"""
     ventas = Ventas.objects.select_related(
         'id_empleado_cajero'
+    ).prefetch_related(
+        'detalleventa_set',
+        'detalleventa_set__id_producto'
+    ).annotate(
+        items_count=Count('detalleventa')
     ).order_by('-fecha')[:100]
     
     context = {
@@ -441,15 +455,16 @@ def reportes_view(request):
         ventas = Ventas.objects.filter(
             fecha__date__gte=fecha_desde_obj,
             fecha__date__lte=fecha_hasta_obj
-        ).select_related('id_empleado_cajero').order_by('-fecha')
+        ).select_related('id_empleado_cajero').annotate(
+            items_count=Count('detalleventa')
+        ).order_by('-fecha')
         
         for venta in ventas:
-            items_count = DetalleVenta.objects.filter(id_venta=venta).count()
             datos.append([
                 venta.fecha.strftime('%d/%m/%Y %H:%M'),
                 venta.id_venta,
                 f"{venta.id_empleado_cajero.nombre} {venta.id_empleado_cajero.apellido}" if venta.id_empleado_cajero else 'N/A',
-                items_count,
+                venta.items_count,
                 f"{int(venta.monto_total):,}".replace(',', '.')
             ])
         
@@ -471,7 +486,7 @@ def reportes_view(request):
         productos = DetalleVenta.objects.filter(
             id_venta__fecha__date__gte=fecha_desde_obj,
             id_venta__fecha__date__lte=fecha_hasta_obj
-        ).values(
+        ).select_related('id_producto').values(
             'id_producto__descripcion',
             'id_producto__codigo'
         ).annotate(
@@ -507,6 +522,9 @@ def reportes_view(request):
         empleados = Ventas.objects.filter(
             fecha__date__gte=fecha_desde_obj,
             fecha__date__lte=fecha_hasta_obj
+        ).select_related(
+            'id_empleado_cajero',
+            'id_empleado_cajero__id_rol'
         ).values(
             'id_empleado_cajero__nombre',
             'id_empleado_cajero__apellido',
@@ -1312,6 +1330,175 @@ def cc_detalle_view(request, cliente_id):
         }
         
         return render(request, 'pos/cc_detalle.html', context)
+        
+    except Cliente.DoesNotExist:
+        return JsonResponse({'error': 'Cliente no encontrado'}, status=404)
+
+
+@login_required
+def cuenta_corriente_unificada(request, cliente_id):
+    """Vista unificada de cuenta corriente con timeline, tabla y gráficos"""
+    try:
+        from datetime import datetime, timedelta
+        from decimal import Decimal
+        
+        # Obtener cliente
+        cliente = Cliente.objects.select_related(
+            'id_lista_por_defecto', 'id_tipo_cliente'
+        ).get(id_cliente=cliente_id)
+        
+        # Obtener hijos con tarjetas
+        hijos = Hijo.objects.filter(
+            id_cliente_responsable=cliente
+        ).select_related('tarjeta')
+        
+        # Obtener filtros
+        fecha_desde = request.GET.get('fecha_desde')
+        fecha_hasta = request.GET.get('fecha_hasta')
+        tipo_movimiento = request.GET.get('tipo_movimiento', '')
+        
+        # Fechas por defecto: último mes
+        if not fecha_desde or not fecha_hasta:
+            fecha_hasta_dt = datetime.now()
+            fecha_desde_dt = fecha_hasta_dt - timedelta(days=30)
+            fecha_desde = fecha_desde_dt.strftime('%Y-%m-%d')
+            fecha_hasta = fecha_hasta_dt.strftime('%Y-%m-%d')
+        
+        # Query de ventas
+        ventas_query = Ventas.objects.filter(
+            id_hijo__id_cliente_responsable=cliente
+        ).select_related(
+            'id_hijo', 
+            'id_empleado_cajero'
+        ).prefetch_related(
+            'detalleventa_set',
+            'detalleventa_set__id_producto'
+        )
+        
+        # Query de recargas
+        recargas_query = CargasSaldo.objects.filter(
+            nro_tarjeta__id_hijo__id_cliente_responsable=cliente
+        ).select_related(
+            'nro_tarjeta',
+            'nro_tarjeta__id_hijo',
+            'id_empleado'
+        )
+        
+        # Aplicar filtros de fecha
+        if fecha_desde:
+            ventas_query = ventas_query.filter(fecha__date__gte=fecha_desde)
+            recargas_query = recargas_query.filter(fecha_carga__date__gte=fecha_desde)
+        if fecha_hasta:
+            ventas_query = ventas_query.filter(fecha__date__lte=fecha_hasta)
+            recargas_query = recargas_query.filter(fecha_carga__date__lte=fecha_hasta)
+        
+        # Obtener datos
+        ventas = ventas_query.order_by('-fecha')
+        recargas = recargas_query.order_by('-fecha_carga')
+        
+        # Construir lista unificada de movimientos
+        movimientos = []
+        saldo_acumulado = Decimal('0')
+        
+        # Agregar recargas (ABONOS - aumentan saldo)
+        for recarga in recargas:
+            if tipo_movimiento and tipo_movimiento != 'recarga':
+                continue
+            saldo_acumulado += recarga.monto_cargado
+            movimientos.append({
+                'fecha': recarga.fecha_carga,
+                'tipo': 'ABONO',
+                'descripcion': f'Recarga de saldo - Tarjeta {recarga.nro_tarjeta.nro_tarjeta}',
+                'monto': recarga.monto_cargado,
+                'saldo_acumulado': saldo_acumulado,
+                'estudiante': f"{recarga.nro_tarjeta.id_hijo.nombre} {recarga.nro_tarjeta.id_hijo.apellido}" if recarga.nro_tarjeta.id_hijo else None,
+                'empleado': f"{recarga.id_empleado.nombre} {recarga.id_empleado.apellido}" if recarga.id_empleado else None,
+                'referencia': f'Recarga #{recarga.id_carga}',
+                'items': None
+            })
+        
+        # Agregar ventas (CARGOS - disminuyen saldo)
+        for venta in ventas:
+            if tipo_movimiento and tipo_movimiento != 'venta':
+                continue
+            saldo_acumulado -= venta.monto_total
+            
+            # Obtener items de la venta
+            items = []
+            for detalle in venta.detalleventa_set.all():
+                items.append({
+                    'producto': detalle.id_producto.descripcion,
+                    'cantidad': detalle.cantidad,
+                    'precio_unitario': detalle.precio_unitario,
+                    'subtotal': detalle.subtotal_total
+                })
+            
+            movimientos.append({
+                'fecha': venta.fecha,
+                'tipo': 'CARGO',
+                'descripcion': f'Venta #{venta.id_venta}',
+                'monto': venta.monto_total,
+                'saldo_acumulado': saldo_acumulado,
+                'estudiante': f"{venta.id_hijo.nombre} {venta.id_hijo.apellido}" if venta.id_hijo else None,
+                'empleado': f"{venta.id_empleado_cajero.nombre} {venta.id_empleado_cajero.apellido}" if venta.id_empleado_cajero else None,
+                'referencia': f'Venta #{venta.id_venta}',
+                'items': items
+            })
+        
+        # Ordenar por fecha descendente
+        movimientos.sort(key=lambda x: x['fecha'], reverse=True)
+        
+        # Recalcular saldo acumulado en orden correcto
+        saldo = Decimal('0')
+        for mov in reversed(movimientos):
+            if mov['tipo'] == 'CARGO':
+                saldo -= mov['monto']
+            else:
+                saldo += mov['monto']
+            mov['saldo_acumulado'] = saldo
+        
+        # Calcular totales
+        total_ventas = ventas.count()
+        monto_ventas = ventas.aggregate(total=Sum('monto_total'))['total'] or Decimal('0')
+        total_recargas = recargas.count()
+        monto_recargas = recargas.aggregate(total=Sum('monto_cargado'))['total'] or Decimal('0')
+        
+        total_cargos = sum(m['monto'] for m in movimientos if m['tipo'] == 'CARGO')
+        total_abonos = sum(m['monto'] for m in movimientos if m['tipo'] == 'ABONO')
+        saldo_actual = total_abonos - total_cargos
+        
+        # Crédito disponible
+        credito_disponible = Decimal('0')
+        if cliente.limite_credito and cliente.limite_credito > 0:
+            credito_disponible = cliente.limite_credito + saldo_actual
+            if credito_disponible < 0:
+                credito_disponible = Decimal('0')
+        
+        # Preparar datos para gráfico (JSON)
+        movimientos_json = json.dumps([{
+            'fecha': m['fecha'].strftime('%d/%m/%Y'),
+            'saldo': float(m['saldo_acumulado'])
+        } for m in reversed(movimientos)])
+        
+        context = {
+            'cliente': cliente,
+            'hijos': hijos,
+            'movimientos': movimientos,
+            'movimientos_json': movimientos_json,
+            'total_ventas': total_ventas,
+            'monto_ventas': monto_ventas,
+            'total_recargas': total_recargas,
+            'monto_recargas': monto_recargas,
+            'total_cargos': total_cargos,
+            'total_abonos': total_abonos,
+            'saldo_actual': saldo_actual,
+            'credito_disponible': credito_disponible,
+            'fecha_desde': fecha_desde,
+            'fecha_hasta': fecha_hasta,
+            'tipo_movimiento': tipo_movimiento,
+        }
+        
+        return render(request, 'pos/cuenta_corriente_unificada.html', context)
         
     except Cliente.DoesNotExist:
         return JsonResponse({'error': 'Cliente no encontrado'}, status=404)
@@ -2438,13 +2625,15 @@ def compras_dashboard_view(request):
     total_mes = compras_mes.aggregate(total=Sum('monto_total'))['total'] or 0
     cantidad_mes = compras_mes.count()
     
-    # Compras pendientes de pago (usar CtaCorrienteProv para determinar pendientes)
-    compras_pendientes = 0  # Deshabilitado por ahora, requiere lógica de cuenta corriente
+    # Compras pendientes de pago (usar nuevo sistema)
+    compras_pendientes = Compras.objects.filter(
+        estado_pago__in=['PENDIENTE', 'PARCIAL']
+    ).count()
     
-    # Deuda total con proveedores
-    deuda_total = CtaCorrienteProv.objects.filter(
-        saldo_acumulado__gt=0
-    ).aggregate(total=Sum('saldo_acumulado'))['total'] or 0
+    # Deuda total con proveedores (suma de saldos pendientes)
+    deuda_total = Compras.objects.filter(
+        estado_pago__in=['PENDIENTE', 'PARCIAL']
+    ).aggregate(total=Sum('saldo_pendiente'))['total'] or 0
     
     context = {
         'compras_recientes': compras_recientes,
@@ -2504,14 +2693,9 @@ def nueva_compra_view(request):
                 
                 total_calculado += subtotal_item
             
-            # Crear/actualizar cuenta corriente proveedor
-            cta_corriente, created = CtaCorrienteProv.objects.get_or_create(
-                id_proveedor=proveedor,
-                defaults={'saldo': Decimal('0')}
-            )
-            cta_corriente.saldo += compra.total
-            cta_corriente.ultima_compra = timezone.now()
-            cta_corriente.save()
+            # El saldo pendiente y estado ya se establecen automáticamente en el modelo
+            # compra.saldo_pendiente = compra.total (por defecto)
+            # compra.estado_pago = 'PENDIENTE' (por defecto)
             
             return JsonResponse({
                 'success': True,
@@ -2647,10 +2831,18 @@ def recepcion_mercaderia_view(request, id_compra):
 @login_required
 def deuda_proveedores_view(request):
     """Reporte de deuda con proveedores"""
-    # Obtener cuentas corrientes con saldo pendiente
-    deudas = CtaCorrienteProv.objects.filter(
-        saldo__gt=0
-    ).select_related('id_proveedor').order_by('-saldo')
+    # Obtener compras con saldo pendiente agrupadas por proveedor
+    from django.db.models import Q
+    deudas = Compras.objects.filter(
+        Q(estado_pago='PENDIENTE') | Q(estado_pago='PARCIAL'),
+        saldo_pendiente__gt=0
+    ).values(
+        'id_proveedor__id_proveedor',
+        'id_proveedor__razon_social'
+    ).annotate(
+        saldo=Sum('saldo_pendiente'),
+        cantidad_compras=Count('id_compra')
+    ).order_by('-saldo')
     
     # Total de deuda
     total_deuda = deudas.aggregate(total=Sum('saldo'))['total'] or 0
@@ -3528,7 +3720,7 @@ def facturacion_mensual_almuerzos_view(request):
 @require_http_methods(["POST"])
 def generar_facturacion_mensual(request):
     """Generar facturación mensual automática para todas las suscripciones activas"""
-    from gestion.models import PagosAlmuerzoMensual, SuscripcionesAlmuerzo, RegistroConsumoAlmuerzo, CtaCorriente
+    from gestion.models import PagosAlmuerzoMensual, SuscripcionesAlmuerzo, RegistroConsumoAlmuerzo
     
     try:
         data = json.loads(request.body)
@@ -3587,24 +3779,9 @@ def generar_facturacion_mensual(request):
                     estado='Pendiente'
                 )
                 
-                # Agregar a cuenta corriente del responsable
-                responsable = suscripcion.id_hijo.id_cliente
-                if responsable:
-                    # Obtener saldo actual
-                    ultima_cta = CtaCorriente.objects.filter(
-                        id_cliente=responsable
-                    ).order_by('-id_movimiento').first()
-                    
-                    saldo_anterior = ultima_cta.saldo_nuevo if ultima_cta else Decimal('0')
-                    
-                    CtaCorriente.objects.create(
-                        id_cliente=responsable,
-                        tipo_movimiento='Cargo',
-                        concepto=f'Almuerzo {mes}/{anio} - {suscripcion.id_hijo.nombres}',
-                        monto=monto,
-                        saldo_anterior=saldo_anterior,
-                        saldo_nuevo=saldo_anterior + monto
-                    )
+                # El sistema nuevo maneja automáticamente el saldo pendiente
+                # a través de PagosAlmuerzoMensual.estado = 'Pendiente'
+                # No se requiere entrada manual en cuenta corriente
                 
                 facturas_creadas += 1
                 total_facturado += monto

@@ -70,7 +70,7 @@ class Categoria(models.Model):
 
 class UnidadMedida(models.Model):
     '''Tabla unidades_medida'''
-    id_unidad = models.AutoField(db_column='ID_Unidad', primary_key=True)
+    id_unidad_de_medida = models.AutoField(db_column='ID_Unidad_de_Medida', primary_key=True)
     nombre = models.CharField(db_column='Nombre', max_length=50)
     abreviatura = models.CharField(db_column='Abreviatura', max_length=10)
     activo = models.BooleanField(db_column='Activo', default=True)
@@ -126,10 +126,10 @@ class TipoRolGeneral(models.Model):
 class Cliente(models.Model):
     '''Tabla clientes - Clientes existentes en la BD'''
     id_cliente = models.AutoField(db_column='ID_Cliente', primary_key=True)
-    id_lista_por_defecto = models.ForeignKey(
+    id_lista = models.ForeignKey(
         ListaPrecios, 
         on_delete=models.PROTECT, 
-        db_column='ID_Lista_Por_Defecto'
+        db_column='ID_Lista'
     )
     id_tipo_cliente = models.ForeignKey(
         TipoCliente, 
@@ -232,22 +232,21 @@ class Producto(models.Model):
         db_column='ID_Categoria',
         related_name='productos'
     )
-    id_unidad = models.ForeignKey(
+    id_unidad_de_medida = models.ForeignKey(
         UnidadMedida, 
         on_delete=models.PROTECT, 
-        db_column='ID_Unidad'
+        db_column='ID_Unidad_de_Medida'
     )
     id_impuesto = models.ForeignKey(
         Impuesto, 
         on_delete=models.PROTECT, 
         db_column='ID_Impuesto'
     )
-    codigo = models.CharField(db_column='Codigo', max_length=50, unique=True, blank=True, null=True)
+    codigo_barra = models.CharField(db_column='Codigo_Barra', max_length=50, unique=True, blank=True, null=True)
     descripcion = models.CharField(db_column='Descripcion', max_length=255)
     stock_minimo = models.DecimalField(db_column='Stock_Minimo', max_digits=10, decimal_places=3, blank=True, null=True)
     permite_stock_negativo = models.BooleanField(db_column='Permite_Stock_Negativo', default=False, help_text='Permite que el producto tenga stock negativo (ej: almuerzos preparados bajo demanda)')
     activo = models.BooleanField(db_column='Activo', default=True)
-    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
 
     class Meta:
         managed = False
@@ -256,7 +255,7 @@ class Producto(models.Model):
         verbose_name_plural = 'Productos'
 
     def __str__(self):
-        return f'{self.codigo} - {self.descripcion}'
+        return f'{self.codigo_barra} - {self.descripcion}'
 
 
 class StockUnico(models.Model):
@@ -469,6 +468,13 @@ class Compras(models.Model):
     )
     fecha = models.DateTimeField(db_column='Fecha')
     monto_total = models.DecimalField(db_column='Monto_Total', max_digits=12, decimal_places=2)
+    saldo_pendiente = models.DecimalField(db_column='Saldo_Pendiente', max_digits=12, decimal_places=2, blank=True, null=True)
+    estado_pago = models.CharField(
+        db_column='Estado_Pago',
+        max_length=10,
+        choices=[('PENDIENTE', 'Pendiente'), ('PARCIAL', 'Parcial'), ('PAGADA', 'Pagada')],
+        default='PENDIENTE'
+    )
     nro_factura = models.CharField(db_column='Nro_Factura', max_length=50, blank=True, null=True)
     observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
 
@@ -512,36 +518,71 @@ class DetalleCompra(models.Model):
         return f'{self.id_producto.descripcion} x {self.cantidad}'
 
 
-class CtaCorrienteProv(models.Model):
-    '''Tabla cta_corriente_prov - Cuenta corriente de proveedores'''
-    id_movimientoprov = models.BigAutoField(db_column='ID_MovimientoProv', primary_key=True)
+class NotasCreditoProveedor(models.Model):
+    '''Tabla notas_credito_proveedor - Notas de crédito de proveedores'''
+    ESTADO_CHOICES = [
+        ('EMITIDA', 'Emitida'),
+        ('APLICADA', 'Aplicada'),
+        ('ANULADA', 'Anulada'),
+    ]
+
+    id_nota_proveedor = models.BigAutoField(db_column='ID_Nota_Proveedor', primary_key=True)
+    nro_factura_compra = models.BigIntegerField(db_column='Nro_Factura_Compra', blank=True, null=True)
     id_proveedor = models.ForeignKey(
         Proveedor,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         db_column='ID_Proveedor',
-        related_name='cuenta_corriente'
+        related_name='notas_credito'
     )
-    id_compra = models.ForeignKey(
+    id_compra_original = models.ForeignKey(
         Compras,
         on_delete=models.SET_NULL,
-        db_column='ID_Compra',
+        db_column='ID_Compra_Original',
         blank=True,
         null=True
     )
-    tipo_movimiento = models.CharField(db_column='Tipo_Movimiento', max_length=5)
-    monto = models.DecimalField(db_column='Monto', max_digits=12, decimal_places=2)
     fecha = models.DateTimeField(db_column='Fecha')
-    saldo_acumulado = models.DecimalField(db_column='Saldo_Acumulado', max_digits=12, decimal_places=2)
-    referencia_doc = models.CharField(db_column='Referencia_Doc', max_length=50, blank=True, null=True)
+    monto_total = models.DecimalField(db_column='Monto_Total', max_digits=12, decimal_places=2)
+    observacion = models.CharField(db_column='Observacion', max_length=255, blank=True, null=True)
+    estado = models.CharField(db_column='Estado', max_length=10, choices=ESTADO_CHOICES, default='EMITIDA')
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
 
     class Meta:
         managed = False
-        db_table = 'cta_corriente_prov'
-        verbose_name = 'Cuenta Corriente Proveedor'
-        verbose_name_plural = 'Cuentas Corrientes Proveedores'
+        db_table = 'notas_credito_proveedor'
+        verbose_name = 'Nota de Crédito Proveedor'
+        verbose_name_plural = 'Notas de Crédito Proveedores'
 
     def __str__(self):
-        return f'{self.id_proveedor.razon_social} - {self.tipo_movimiento}: Gs. {self.monto}'
+        return f'NC Proveedor #{self.id_nota_proveedor} - {self.id_proveedor.razon_social}: Gs. {self.monto_total}'
+
+
+class DetalleNotaCreditoProveedor(models.Model):
+    '''Tabla detalle_nota_credito_proveedor - Detalle de notas de crédito a proveedores'''
+    id_detalle_nc_proveedor = models.BigAutoField(db_column='ID_Detalle_NC_Proveedor', primary_key=True)
+    id_nota_proveedor = models.ForeignKey(
+        NotasCreditoProveedor,
+        on_delete=models.CASCADE,
+        db_column='ID_Nota_Proveedor',
+        related_name='detalles'
+    )
+    id_producto = models.ForeignKey(
+        Producto,
+        on_delete=models.PROTECT,
+        db_column='ID_Producto'
+    )
+    cantidad = models.DecimalField(db_column='Cantidad', max_digits=10, decimal_places=3)
+    precio_unitario = models.DecimalField(db_column='Precio_Unitario', max_digits=12, decimal_places=2)
+    subtotal = models.DecimalField(db_column='Subtotal', max_digits=12, decimal_places=2)
+
+    class Meta:
+        managed = False
+        db_table = 'detalle_nota_credito_proveedor'
+        verbose_name = 'Detalle NC Proveedor'
+        verbose_name_plural = 'Detalles NC Proveedores'
+
+    def __str__(self):
+        return f'{self.id_producto.descripcion} x {self.cantidad}'
 
 
 class CargasSaldo(models.Model):
@@ -560,10 +601,10 @@ class CargasSaldo(models.Model):
         blank=True,
         null=True
     )
-    id_nota_credito_origen = models.ForeignKey(
-        'NotasCredito',
+    id_nota = models.ForeignKey(
+        'NotasCreditoCliente',
         on_delete=models.PROTECT,
-        db_column='ID_Nota_Credito_Origen',
+        db_column='ID_Nota',
         blank=True,
         null=True
     )
@@ -973,12 +1014,6 @@ class CierresCaja(models.Model):
 
 class Ventas(models.Model):
     '''Tabla ventas - Ventas realizadas'''
-    ESTADO_CHOICES = [
-        ('Completada', 'Completada'),
-        ('Cancelada', 'Cancelada'),
-        ('Pendiente', 'Pendiente'),
-    ]
-
     TIPO_VENTA_CHOICES = [
         ('Venta Directa', 'Venta Directa'),
         ('Consumo Tarjeta', 'Consumo Tarjeta'),
@@ -987,11 +1022,7 @@ class Ventas(models.Model):
     ]
 
     id_venta = models.BigAutoField(db_column='ID_Venta', primary_key=True)
-    id_documento = models.OneToOneField(
-        DocumentosTributarios,
-        on_delete=models.PROTECT,
-        db_column='ID_Documento'
-    )
+    nro_factura_venta = models.BigIntegerField(db_column='Nro_Factura_Venta')
     id_cliente = models.ForeignKey(
         Cliente,
         on_delete=models.PROTECT,
@@ -1017,8 +1048,42 @@ class Ventas(models.Model):
     )
     fecha = models.DateTimeField(db_column='Fecha')
     monto_total = models.BigIntegerField(db_column='Monto_Total')
-    estado = models.CharField(db_column='Estado', max_length=10, choices=ESTADO_CHOICES, blank=True, null=True)
+    saldo_pendiente = models.BigIntegerField(db_column='Saldo_Pendiente', blank=True, null=True)
+    estado_pago = models.CharField(
+        db_column='Estado_Pago',
+        max_length=10,
+        choices=[('PENDIENTE', 'Pendiente'), ('PARCIAL', 'Parcial'), ('PAGADA', 'Pagada')],
+        default='PENDIENTE'
+    )
+    estado = models.CharField(
+        db_column='Estado',
+        max_length=10,
+        choices=[('PROCESADO', 'Procesado'), ('ANULADO', 'Anulado')],
+        default='PROCESADO'
+    )
     tipo_venta = models.CharField(db_column='Tipo_Venta', max_length=20, choices=TIPO_VENTA_CHOICES)
+
+    def clean(self):
+        """Validaciones de negocio para Ventas"""
+        from django.core.exceptions import ValidationError
+        
+        # Validar que saldo_pendiente <= monto_total
+        if self.saldo_pendiente and self.monto_total:
+            if self.saldo_pendiente > self.monto_total:
+                raise ValidationError({
+                    'saldo_pendiente': 'El saldo pendiente no puede ser mayor al total de la venta'
+                })
+        
+        # Validar consistencia estado_pago con saldo
+        if self.estado_pago == 'PAGADA' and self.saldo_pendiente and self.saldo_pendiente > 0:
+            raise ValidationError({
+                'estado_pago': 'Una venta PAGADA no puede tener saldo pendiente mayor a 0'
+            })
+        
+        if self.estado_pago == 'PENDIENTE' and self.saldo_pendiente != self.monto_total:
+            raise ValidationError({
+                'estado_pago': 'Una venta PENDIENTE debe tener saldo igual al total'
+            })
 
     class Meta:
         managed = False
@@ -1045,9 +1110,8 @@ class DetalleVenta(models.Model):
         db_column='ID_Producto'
     )
     cantidad = models.DecimalField(db_column='Cantidad', max_digits=10, decimal_places=3)
-    precio_unitario_total = models.BigIntegerField(db_column='Precio_Unitario_Total')
+    precio_unitario = models.BigIntegerField(db_column='Precio_Unitario')
     subtotal_total = models.BigIntegerField(db_column='Subtotal_Total')
-    monto_iva = models.BigIntegerField(db_column='Monto_IVA')
 
     class Meta:
         managed = False
@@ -1091,6 +1155,12 @@ class PagosVenta(models.Model):
     monto_aplicado = models.BigIntegerField(db_column='Monto_Aplicado')
     referencia_transaccion = models.CharField(db_column='Referencia_Transaccion', max_length=100, blank=True, null=True)
     fecha_pago = models.DateTimeField(db_column='Fecha_Pago', blank=True, null=True)
+    estado = models.CharField(
+        db_column='Estado',
+        max_length=10,
+        choices=[('PROCESADO', 'Procesado'), ('ANULADO', 'Anulado')],
+        default='PROCESADO'
+    )
 
     class Meta:
         managed = False
@@ -1100,6 +1170,94 @@ class PagosVenta(models.Model):
 
     def __str__(self):
         return f'Pago {self.id_pago_venta} - Venta {self.id_venta_id}: Gs. {self.monto_aplicado}'
+
+
+# ==================== SISTEMA DE CUENTA CORRIENTE ====================
+
+class PagosProveedores(models.Model):
+    '''Tabla pagos_proveedores - Pagos realizados a proveedores'''
+    id_pago_proveedor = models.BigAutoField(db_column='ID_Pago_Proveedor', primary_key=True)
+    id_compra = models.ForeignKey(
+        Compras,
+        on_delete=models.PROTECT,
+        db_column='ID_Compra',
+        related_name='pagos'
+    )
+    monto_aplicado = models.DecimalField(db_column='Monto_Aplicado', max_digits=12, decimal_places=2)
+    fecha_pago = models.DateTimeField(db_column='Fecha_Pago')
+    id_medio_pago = models.ForeignKey(
+        MediosPago,
+        on_delete=models.PROTECT,
+        db_column='ID_Medio_Pago'
+    )
+    referencia_transaccion = models.CharField(db_column='Referencia_Transaccion', max_length=100, blank=True, null=True)
+    estado = models.CharField(
+        db_column='Estado',
+        max_length=10,
+        choices=[('PROCESADO', 'Procesado'), ('ANULADO', 'Anulado')],
+        default='PROCESADO'
+    )
+    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+
+    class Meta:
+        managed = False
+        db_table = 'pagos_proveedores'
+        verbose_name = 'Pago a Proveedor'
+        verbose_name_plural = 'Pagos a Proveedores'
+
+    def __str__(self):
+        return f'Pago #{self.id_pago_proveedor} - Compra {self.id_compra_id}: Gs. {self.monto_aplicado}'
+
+
+class AplicacionPagosVentas(models.Model):
+    '''Tabla aplicacion_pagos_ventas - Aplicación de pagos a ventas'''
+    id_aplicacion = models.BigAutoField(db_column='ID_Aplicacion', primary_key=True)
+    id_pago_venta = models.ForeignKey(
+        PagosVenta,
+        on_delete=models.CASCADE,
+        db_column='ID_Pago_Venta'
+    )
+    id_venta = models.ForeignKey(
+        Ventas,
+        on_delete=models.CASCADE,
+        db_column='ID_Venta'
+    )
+    monto_aplicado = models.BigIntegerField(db_column='Monto_Aplicado')
+
+    class Meta:
+        managed = False
+        db_table = 'aplicacion_pagos_ventas'
+        verbose_name = 'Aplicación de Pago a Venta'
+        verbose_name_plural = 'Aplicaciones de Pagos a Ventas'
+
+    def __str__(self):
+        return f'Aplicación {self.id_aplicacion} - Pago {self.id_pago_venta_id} a Venta {self.id_venta_id}'
+
+
+class AplicacionPagosCompras(models.Model):
+    '''Tabla aplicacion_pagos_compras - Aplicación de pagos a compras'''
+    id_aplicacion = models.BigAutoField(db_column='ID_Aplicacion', primary_key=True)
+    id_pago_proveedor = models.ForeignKey(
+        PagosProveedores,
+        on_delete=models.CASCADE,
+        db_column='ID_Pago_Proveedor'
+    )
+    id_compra = models.ForeignKey(
+        Compras,
+        on_delete=models.CASCADE,
+        db_column='ID_Compra'
+    )
+    monto_aplicado = models.DecimalField(db_column='Monto_Aplicado', max_digits=12, decimal_places=2)
+
+    class Meta:
+        managed = False
+        db_table = 'aplicacion_pagos_compras'
+        verbose_name = 'Aplicación de Pago a Compra'
+        verbose_name_plural = 'Aplicaciones de Pagos a Compras'
+
+    def __str__(self):
+        return f'Aplicación {self.id_aplicacion} - Pago {self.id_pago_proveedor_id} a Compra {self.id_compra_id}'
 
 
 class DetalleComisionVenta(models.Model):
@@ -1152,42 +1310,10 @@ class ConciliacionPagos(models.Model):
         return f'Conciliación #{self.id_conciliacion} - {self.estado}'
 
 
-class CtaCorriente(models.Model):
-    '''Tabla cta_corriente - Cuenta corriente de clientes'''
-    id_movimiento = models.BigAutoField(db_column='ID_Movimiento', primary_key=True)
-    id_cliente = models.ForeignKey(
-        Cliente,
-        on_delete=models.CASCADE,
-        db_column='ID_Cliente',
-        related_name='cuenta_corriente'
-    )
-    id_venta = models.ForeignKey(
-        Ventas,
-        on_delete=models.SET_NULL,
-        db_column='ID_Venta',
-        blank=True,
-        null=True
-    )
-    fecha = models.DateTimeField(db_column='Fecha')
-    tipo_movimiento = models.CharField(db_column='Tipo_Movimiento', max_length=5)
-    monto = models.BigIntegerField(db_column='Monto')
-    referencia_doc = models.CharField(db_column='Referencia_Doc', max_length=50, blank=True, null=True)
-    saldo_acumulado = models.BigIntegerField(db_column='Saldo_Acumulado')
-
-    class Meta:
-        managed = False
-        db_table = 'cta_corriente'
-        verbose_name = 'Cuenta Corriente'
-        verbose_name_plural = 'Cuentas Corrientes'
-
-    def __str__(self):
-        return f'{self.id_cliente.nombre_completo} - {self.tipo_movimiento}: Gs. {self.monto}'
-
-
 # ==================== NOTAS DE CRÉDITO ====================
 
-class NotasCredito(models.Model):
-    '''Tabla notas_credito - Notas de crédito emitidas'''
+class NotasCreditoCliente(models.Model):
+    '''Tabla notas_credito_cliente - Notas de crédito emitidas'''
     ESTADO_CHOICES = [
         ('Emitida', 'Emitida'),
         ('Aplicada', 'Aplicada'),
@@ -1195,11 +1321,7 @@ class NotasCredito(models.Model):
     ]
 
     id_nota = models.BigAutoField(db_column='ID_Nota', primary_key=True)
-    id_documento = models.OneToOneField(
-        DocumentosTributarios,
-        on_delete=models.PROTECT,
-        db_column='ID_Documento'
-    )
+    nro_factura_venta = models.BigIntegerField(db_column='Nro_Factura_Venta')
     id_cliente = models.ForeignKey(
         Cliente,
         on_delete=models.PROTECT,
@@ -1215,14 +1337,14 @@ class NotasCredito(models.Model):
     )
     fecha = models.DateTimeField(db_column='Fecha')
     monto_total = models.DecimalField(db_column='Monto_Total', max_digits=12, decimal_places=2)
-    motivo_devolucion = models.CharField(db_column='Motivo_Devolucion', max_length=255, blank=True, null=True)
+    observacion = models.CharField(db_column='Observacion', max_length=255, blank=True, null=True)
     estado = models.CharField(db_column='Estado', max_length=8, choices=ESTADO_CHOICES, blank=True, null=True)
 
     class Meta:
         managed = False
-        db_table = 'notas_credito'
-        verbose_name = 'Nota de Crédito'
-        verbose_name_plural = 'Notas de Crédito'
+        db_table = 'notas_credito_cliente'
+        verbose_name = 'Nota de Crédito Cliente'
+        verbose_name_plural = 'Notas de Crédito Cliente'
 
     def __str__(self):
         return f'NC #{self.id_nota} - {self.id_cliente.nombre_completo}: Gs. {self.monto_total}'
@@ -1232,7 +1354,7 @@ class DetalleNota(models.Model):
     '''Tabla detalle_nota - Detalle de notas de crédito'''
     id_detalle = models.BigAutoField(db_column='ID_Detalle', primary_key=True)
     id_nota = models.ForeignKey(
-        NotasCredito,
+        NotasCreditoCliente,
         on_delete=models.CASCADE,
         db_column='ID_Nota',
         related_name='detalles'

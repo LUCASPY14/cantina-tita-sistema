@@ -32,6 +32,7 @@ urlpatterns = [
     # Cuenta Corriente
     path('cuenta-corriente/', pos_views.cuenta_corriente_view, name='cuenta_corriente'),
     path('cuenta-corriente/detalle/<int:cliente_id>/', pos_views.cc_detalle_view, name='cc_detalle'),
+    path('cuenta-corriente/unificada/<int:cliente_id>/', pos_views.cuenta_corriente_unificada, name='cuenta_corriente_unificada'),
     path('cuenta-corriente/pago/', pos_views.cc_registrar_pago, name='cc_registrar_pago'),
     path('cuenta-corriente/estado/<int:cliente_id>/', pos_views.cc_estado_cuenta, name='cc_estado_cuenta'),
     

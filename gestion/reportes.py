@@ -1,19 +1,29 @@
 """
 Sistema de Generación de Reportes para Cantina Tita
 Soporta PDF y Excel con filtros por fecha y periodo
+Incluye gráficos visuales con matplotlib
 """
 
 from django.http import HttpResponse
 from django.db.models import Sum, Count, Q, Avg
 from datetime import datetime, date, timedelta
 from decimal import Decimal
+import io
+import os
+import tempfile
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+
+import matplotlib
+matplotlib.use('Agg')  # Backend sin GUI
+import matplotlib.pyplot as plt
+from matplotlib.patches import Wedge
+import matplotlib.patches as mpatches
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -22,8 +32,10 @@ from openpyxl.utils import get_column_letter
 from gestion.models import (
     Ventas, DetalleVenta, Producto, Cliente, Tarjeta,
     ConsumoTarjeta, CargasSaldo, StockUnico, VistaStockAlerta,
-    VistaSaldoClientes, CtaCorriente, CtaCorrienteProv, Proveedor,
-    Empleado, Categoria
+    VistaSaldoClientes, Proveedor,
+    Empleado, Categoria, Compras,
+    PagosVenta, PagosProveedores, AplicacionPagosVentas, AplicacionPagosCompras,
+    NotasCreditoCliente, NotasCreditoProveedor
 )
 
 
@@ -81,6 +93,86 @@ class ReportesPDF:
         ])
         tabla.setStyle(style)
         return tabla
+    
+    @staticmethod
+    def _generar_grafico_barras(datos, labels, titulo, color='#3498db', width=6, height=4):
+        """Genera un gráfico de barras y retorna la imagen"""
+        fig, ax = plt.subplots(figsize=(width, height))
+        ax.bar(labels, datos, color=color, alpha=0.7, edgecolor='black')
+        ax.set_title(titulo, fontsize=14, fontweight='bold', pad=20)
+        ax.set_ylabel('Monto (Gs.)', fontsize=10)
+        ax.grid(axis='y', alpha=0.3, linestyle='--')
+        
+        # Rotar labels si son muchos
+        if len(labels) > 5:
+            plt.xticks(rotation=45, ha='right')
+        
+        plt.tight_layout()
+        
+        # Guardar en buffer
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+        buf.seek(0)
+        plt.close()
+        
+        return buf
+    
+    @staticmethod
+    def _generar_grafico_linea(datos, labels, titulo, color='#2ecc71', width=6, height=4):
+        """Genera un gráfico de línea y retorna la imagen"""
+        fig, ax = plt.subplots(figsize=(width, height))
+        ax.plot(labels, datos, color=color, linewidth=2, marker='o', markersize=6, alpha=0.8)
+        ax.fill_between(range(len(datos)), datos, alpha=0.2, color=color)
+        ax.set_title(titulo, fontsize=14, fontweight='bold', pad=20)
+        ax.set_ylabel('Monto (Gs.)', fontsize=10)
+        ax.grid(True, alpha=0.3, linestyle='--')
+        
+        # Rotar labels si son muchos
+        if len(labels) > 5:
+            plt.xticks(rotation=45, ha='right')
+        
+        plt.tight_layout()
+        
+        # Guardar en buffer
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+        buf.seek(0)
+        plt.close()
+        
+        return buf
+    
+    @staticmethod
+    def _generar_grafico_torta(datos, labels, titulo, width=6, height=6):
+        """Genera un gráfico de torta y retorna la imagen"""
+        fig, ax = plt.subplots(figsize=(width, height))
+        
+        colors_list = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6', 
+                      '#1abc9c', '#34495e', '#e67e22', '#95a5a6', '#16a085']
+        
+        wedges, texts, autotexts = ax.pie(
+            datos, 
+            labels=labels, 
+            autopct='%1.1f%%',
+            startangle=90,
+            colors=colors_list[:len(datos)],
+            textprops={'fontsize': 9}
+        )
+        
+        # Mejorar legibilidad
+        for autotext in autotexts:
+            autotext.set_color('white')
+            autotext.set_fontweight('bold')
+        
+        ax.set_title(titulo, fontsize=14, fontweight='bold', pad=20)
+        plt.tight_layout()
+        
+        # Guardar en buffer
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+        buf.seek(0)
+        plt.close()
+        
+        return buf
     
     @staticmethod
     def reporte_ventas(fecha_inicio=None, fecha_fin=None, id_cliente=None, id_cajero=None, 
@@ -160,6 +252,32 @@ class ReportesPDF:
         story.append(tabla_resumen)
         story.append(Spacer(1, 0.3 * inch))
         
+        # GRÁFICO: Ventas por día
+        if total_ventas['cantidad'] > 0:
+            from django.db.models.functions import TruncDate
+            
+            ventas_por_dia = ventas.annotate(
+                dia=TruncDate('fecha')
+            ).values('dia').annotate(
+                total=Sum('monto_total')
+            ).order_by('dia')[:10]
+            
+            if len(ventas_por_dia) > 1:
+                story.append(Paragraph("<b>Evolución de Ventas Diarias</b>", getSampleStyleSheet()['Heading2']))
+                story.append(Spacer(1, 0.2 * inch))
+                
+                labels = [item['dia'].strftime('%d/%m') for item in ventas_por_dia]
+                datos = [float(item['total']) for item in ventas_por_dia]
+                
+                img_buf = ReportesPDF._generar_grafico_linea(
+                    datos, labels, 
+                    'Ventas por Día (Guaraníes)',
+                    color='#2ecc71'
+                )
+                img = Image(img_buf, width=5*inch, height=3*inch)
+                story.append(img)
+                story.append(Spacer(1, 0.3 * inch))
+        
         # Detalle de ventas
         story.append(Paragraph("<b>Detalle de Ventas</b>", getSampleStyleSheet()['Heading2']))
         story.append(Spacer(1, 0.2 * inch))
@@ -231,7 +349,46 @@ class ReportesPDF:
             num_ventas=Count('id_detalle')
         ).order_by('-cantidad_total')[:30]
         
+        # Resumen
+        total_productos = len(productos)
+        total_cantidad = sum(p['cantidad_total'] for p in productos)
+        total_monto = sum(p['monto_total'] for p in productos)
+        
+        data_resumen = [
+            ['Métrica', 'Valor'],
+            ['Productos Vendidos', f"{total_productos}"],
+            ['Unidades Totales', f"{total_cantidad:.0f}"],
+            ['Monto Total', f"Gs. {total_monto:,.0f}"],
+        ]
+        
+        tabla_resumen = Table(data_resumen, colWidths=[3*inch, 3*inch])
+        ReportesPDF._aplicar_estilo_tabla(tabla_resumen, '#27ae60')
+        story.append(tabla_resumen)
+        story.append(Spacer(1, 0.3 * inch))
+        
+        # GRÁFICO: Top 10 productos
+        if len(productos) > 0:
+            story.append(Paragraph("<b>Top 10 Productos Más Vendidos</b>", getSampleStyleSheet()['Heading2']))
+            story.append(Spacer(1, 0.2 * inch))
+            
+            top_productos = list(productos)[:10]
+            labels = [p['id_producto__descripcion'][:15] + '...' if len(p['id_producto__descripcion']) > 15 
+                     else p['id_producto__descripcion'] for p in top_productos]
+            datos = [float(p['cantidad_total']) for p in top_productos]
+            
+            img_buf = ReportesPDF._generar_grafico_barras(
+                datos, labels,
+                'Cantidad de Unidades Vendidas',
+                color='#e74c3c'
+            )
+            img = Image(img_buf, width=5*inch, height=3*inch)
+            story.append(img)
+            story.append(Spacer(1, 0.3 * inch))
+        
         # Tabla
+        story.append(Paragraph("<b>Detalle de Productos</b>", getSampleStyleSheet()['Heading2']))
+        story.append(Spacer(1, 0.2 * inch))
+        
         data = [['#', 'Código', 'Producto', 'Cantidad', 'Total Vendido', 'Ventas']]
         for idx, producto in enumerate(productos, 1):
             data.append([
@@ -269,6 +426,36 @@ class ReportesPDF:
         
         # Alertas de stock
         alertas = VistaStockAlerta.objects.all().order_by('-nivel_alerta', 'stock_actual')[:30]
+        
+        # GRÁFICO: Distribución de alertas
+        if alertas:
+            criticos = sum(1 for a in alertas if a.stock_actual == 0)
+            bajos = sum(1 for a in alertas if a.stock_actual > 0 and a.stock_actual < a.stock_minimo)
+            ok = len(alertas) - criticos - bajos
+            
+            if criticos + bajos > 0:
+                story.append(Paragraph("<b>Distribución de Alertas de Stock</b>", getSampleStyleSheet()['Heading2']))
+                story.append(Spacer(1, 0.2 * inch))
+                
+                labels = []
+                datos = []
+                if criticos > 0:
+                    labels.append(f'Crítico ({criticos})')
+                    datos.append(criticos)
+                if bajos > 0:
+                    labels.append(f'Bajo ({bajos})')
+                    datos.append(bajos)
+                if ok > 0:
+                    labels.append(f'Normal ({ok})')
+                    datos.append(ok)
+                
+                img_buf = ReportesPDF._generar_grafico_torta(
+                    datos, labels,
+                    'Estado del Inventario'
+                )
+                img = Image(img_buf, width=4*inch, height=4*inch)
+                story.append(img)
+                story.append(Spacer(1, 0.3 * inch))
         
         if alertas:
             story.append(Paragraph("<b>⚠️ Alertas de Stock Crítico</b>", getSampleStyleSheet()['Heading2']))
@@ -337,6 +524,32 @@ class ReportesPDF:
         story.append(tabla_resumen)
         story.append(Spacer(1, 0.3 * inch))
         
+        # GRÁFICO: Consumos por día
+        if total_consumos['cantidad'] > 0:
+            from django.db.models.functions import TruncDate
+            
+            consumos_por_dia = consumos.annotate(
+                dia=TruncDate('fecha_consumo')
+            ).values('dia').annotate(
+                total=Sum('monto_consumido')
+            ).order_by('dia')[:10]
+            
+            if len(consumos_por_dia) > 1:
+                story.append(Paragraph("<b>Consumos Diarios</b>", getSampleStyleSheet()['Heading2']))
+                story.append(Spacer(1, 0.2 * inch))
+                
+                labels = [item['dia'].strftime('%d/%m') for item in consumos_por_dia]
+                datos = [float(item['total']) for item in consumos_por_dia]
+                
+                img_buf = ReportesPDF._generar_grafico_barras(
+                    datos, labels,
+                    'Consumo por Día (Guaraníes)',
+                    color='#9b59b6'
+                )
+                img = Image(img_buf, width=5*inch, height=3*inch)
+                story.append(img)
+                story.append(Spacer(1, 0.3 * inch))
+        
         # Detalle
         story.append(Paragraph("<b>Detalle de Consumos</b>", getSampleStyleSheet()['Heading2']))
         story.append(Spacer(1, 0.2 * inch))
@@ -396,6 +609,25 @@ class ReportesPDF:
         story.append(tabla_resumen)
         story.append(Spacer(1, 0.3 * inch))
         
+        # GRÁFICO: Top 10 clientes con mayor saldo
+        if con_saldo > 0:
+            story.append(Paragraph("<b>Top 10 Clientes con Mayor Saldo</b>", getSampleStyleSheet()['Heading2']))
+            story.append(Spacer(1, 0.2 * inch))
+            
+            top_clientes = list(queryset_completo.filter(saldo_actual__gt=0)[:10])
+            labels = [c.nombre_completo[:15] + '...' if len(c.nombre_completo) > 15 
+                     else c.nombre_completo for c in top_clientes]
+            datos = [float(c.saldo_actual) for c in top_clientes]
+            
+            img_buf = ReportesPDF._generar_grafico_barras(
+                datos, labels,
+                'Saldo Actual (Guaraníes)',
+                color='#1abc9c'
+            )
+            img = Image(img_buf, width=5*inch, height=3*inch)
+            story.append(img)
+            story.append(Spacer(1, 0.3 * inch))
+        
         # Detalle
         story.append(Paragraph("<b>Clientes con Saldo</b>", getSampleStyleSheet()['Heading2']))
         story.append(Spacer(1, 0.2 * inch))
@@ -422,202 +654,120 @@ class ReportesPDF:
     
     @staticmethod
     def reporte_cta_corriente_cliente(id_cliente=None, fecha_inicio=None, fecha_fin=None):
-        """Genera reporte de cuenta corriente de cliente en PDF"""
+        """Genera reporte de cuenta corriente de cliente en PDF usando el nuevo sistema"""
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="cta_corriente_cliente_{date.today()}.pdf"'
         
         doc = SimpleDocTemplate(response, pagesize=letter)
         story = []
         
-        # Título y subtítulo
+        # Header
+        cliente_nombre = "Todos los Clientes"
         if id_cliente:
             try:
                 cliente = Cliente.objects.get(pk=id_cliente)
-                titulo = f"Cuenta Corriente - {cliente.nombre_completo}"
-                subtitulo = f"RUC/CI: {cliente.ruc_ci}"
+                cliente_nombre = cliente.nombre_completo
             except Cliente.DoesNotExist:
-                titulo = "Cuenta Corriente - Cliente"
-                subtitulo = "Cliente no encontrado"
-        else:
-            titulo = "Cuenta Corriente - Todos los Clientes"
-            subtitulo = ""
+                cliente_nombre = "Cliente no encontrado"
         
-        if fecha_inicio and fecha_fin:
-            subtitulo += f" | Período: {fecha_inicio.strftime('%d/%m/%Y')} - {fecha_fin.strftime('%d/%m/%Y')}"
-        
+        titulo = f"Cuenta Corriente - {cliente_nombre}"
+        subtitulo = f"Fecha: {date.today().strftime('%d/%m/%Y')}"
         ReportesPDF._crear_header(story, titulo, subtitulo)
         
-        # Filtrar movimientos
-        movimientos = CtaCorriente.objects.select_related('id_cliente', 'id_venta').all()
+        # Query ventas pendientes
+        ventas = Ventas.objects.filter(
+            estado_pago__in=['PENDIENTE', 'PARCIAL']
+        ).select_related('id_cliente', 'id_empleado_cajero')
         
         if id_cliente:
-            movimientos = movimientos.filter(id_cliente_id=id_cliente)
+            ventas = ventas.filter(id_cliente_id=id_cliente)
         
         if fecha_inicio and fecha_fin:
-            movimientos = movimientos.filter(fecha__date__gte=fecha_inicio, fecha__date__lte=fecha_fin)
+            ventas = ventas.filter(fecha__date__gte=fecha_inicio, fecha__date__lte=fecha_fin)
         
-        movimientos = movimientos.order_by('id_cliente', 'fecha')[:100]
+        ventas = ventas.order_by('id_cliente', 'fecha')[:200]
         
-        if movimientos.exists():
-            # Resumen por cliente
-            clientes_resumen = {}
-            for mov in movimientos:
-                cliente_id = mov.id_cliente_id
-                if cliente_id not in clientes_resumen:
-                    clientes_resumen[cliente_id] = {
-                        'nombre': mov.id_cliente.nombre_completo,
-                        'cargos': 0,
-                        'abonos': 0,
-                        'movimientos': 0
-                    }
-                
-                if mov.tipo_movimiento == 'Cargo':
-                    clientes_resumen[cliente_id]['cargos'] += float(mov.monto)
-                else:
-                    clientes_resumen[cliente_id]['abonos'] += float(mov.monto)
-                clientes_resumen[cliente_id]['movimientos'] += 1
-            
-            # Tabla resumen
-            story.append(Paragraph("<b>Resumen por Cliente</b>", getSampleStyleSheet()['Heading2']))
-            story.append(Spacer(1, 0.2 * inch))
-            
-            data_resumen = [['Cliente', 'Movimientos', 'Total Cargos', 'Total Abonos', 'Saldo']]
-            for cliente_id, resumen in clientes_resumen.items():
-                saldo = resumen['cargos'] - resumen['abonos']
-                data_resumen.append([
-                    resumen['nombre'][:40],
-                    str(resumen['movimientos']),
-                    f"Gs. {resumen['cargos']:,.0f}",
-                    f"Gs. {resumen['abonos']:,.0f}",
-                    f"Gs. {saldo:,.0f}"
-                ])
-            
-            tabla_resumen = Table(data_resumen, colWidths=[2.5*inch, 0.8*inch, 1.2*inch, 1.2*inch, 1.2*inch])
-            ReportesPDF._aplicar_estilo_tabla(tabla_resumen, '#3498db')
-            story.append(tabla_resumen)
-            story.append(Spacer(1, 0.3 * inch))
-            
-            # Detalle de movimientos
-            story.append(Paragraph("<b>Detalle de Movimientos</b>", getSampleStyleSheet()['Heading2']))
-            story.append(Spacer(1, 0.2 * inch))
-            
-            data_detalle = [['Fecha', 'Cliente', 'Tipo', 'Monto', 'Saldo', 'Referencia']]
-            for mov in movimientos:
-                data_detalle.append([
-                    mov.fecha.strftime('%d/%m/%Y'),
-                    mov.id_cliente.nombre_completo[:25],
-                    mov.tipo_movimiento,
-                    f"Gs. {mov.monto:,.0f}",
-                    f"Gs. {mov.saldo_acumulado:,.0f}",
-                    mov.referencia_doc or '-'
-                ])
-            
-            tabla_detalle = Table(data_detalle, colWidths=[0.9*inch, 2*inch, 0.7*inch, 1.2*inch, 1.2*inch, 1*inch])
-            ReportesPDF._aplicar_estilo_tabla(tabla_detalle, '#2ecc71')
-            story.append(tabla_detalle)
-        else:
-            story.append(Paragraph("No hay movimientos en el período seleccionado", getSampleStyleSheet()['Normal']))
+        # Tabla
+        data = [['Fecha', 'Cliente', 'Venta #', 'Total', 'Saldo Pend.', 'Estado']]
+        total_pendiente = Decimal('0')
+        
+        for venta in ventas:
+            data.append([
+                venta.fecha.strftime('%d/%m/%Y'),
+                venta.id_cliente.nombre_completo[:30],
+                str(venta.id_venta),
+                f"Gs. {venta.monto_total:,.0f}",
+                f"Gs. {venta.saldo_pendiente:,.0f}",
+                venta.estado_pago
+            ])
+            total_pendiente += venta.saldo_pendiente
+        
+        # Total
+        data.append(['', '', '', 'TOTAL PENDIENTE:', f"Gs. {total_pendiente:,.0f}", ''])
+        
+        tabla = Table(data, colWidths=[1.2*inch, 1.8*inch, 0.8*inch, 1.2*inch, 1.2*inch, 1*inch])
+        ReportesPDF._aplicar_estilo_tabla(tabla)
+        story.append(tabla)
         
         doc.build(story)
         return response
     
     @staticmethod
     def reporte_cta_corriente_proveedor(id_proveedor=None, fecha_inicio=None, fecha_fin=None):
-        """Genera reporte de cuenta corriente de proveedor en PDF"""
+        """Genera reporte de cuenta corriente de proveedor en PDF usando el nuevo sistema"""
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="cta_corriente_proveedor_{date.today()}.pdf"'
         
         doc = SimpleDocTemplate(response, pagesize=letter)
         story = []
         
-        # Título y subtítulo
+        # Header
+        proveedor_nombre = "Todos los Proveedores"
         if id_proveedor:
             try:
                 proveedor = Proveedor.objects.get(pk=id_proveedor)
-                titulo = f"Cuenta Corriente - {proveedor.razon_social}"
-                subtitulo = f"RUC: {proveedor.ruc}"
+                proveedor_nombre = proveedor.razon_social
             except Proveedor.DoesNotExist:
-                titulo = "Cuenta Corriente - Proveedor"
-                subtitulo = "Proveedor no encontrado"
-        else:
-            titulo = "Cuenta Corriente - Todos los Proveedores"
-            subtitulo = ""
+                proveedor_nombre = "Proveedor no encontrado"
         
-        if fecha_inicio and fecha_fin:
-            subtitulo += f" | Período: {fecha_inicio.strftime('%d/%m/%Y')} - {fecha_fin.strftime('%d/%m/%Y')}"
-        
+        titulo = f"Cuenta Corriente - {proveedor_nombre}"
+        subtitulo = f"Fecha: {date.today().strftime('%d/%m/%Y')}"
         ReportesPDF._crear_header(story, titulo, subtitulo)
         
-        # Filtrar movimientos
-        movimientos = CtaCorrienteProv.objects.select_related('id_proveedor', 'id_compra').all()
+        # Query compras pendientes
+        compras = Compras.objects.filter(
+            estado_pago__in=['PENDIENTE', 'PARCIAL']
+        ).select_related('id_proveedor')
         
         if id_proveedor:
-            movimientos = movimientos.filter(id_proveedor_id=id_proveedor)
+            compras = compras.filter(id_proveedor_id=id_proveedor)
         
         if fecha_inicio and fecha_fin:
-            movimientos = movimientos.filter(fecha__date__gte=fecha_inicio, fecha__date__lte=fecha_fin)
+            compras = compras.filter(fecha__date__gte=fecha_inicio, fecha__date__lte=fecha_fin)
         
-        movimientos = movimientos.order_by('id_proveedor', 'fecha')[:100]
+        compras = compras.order_by('id_proveedor', 'fecha')[:200]
         
-        if movimientos.exists():
-            # Resumen por proveedor
-            proveedores_resumen = {}
-            for mov in movimientos:
-                prov_id = mov.id_proveedor_id
-                if prov_id not in proveedores_resumen:
-                    proveedores_resumen[prov_id] = {
-                        'nombre': mov.id_proveedor.razon_social,
-                        'cargos': 0,
-                        'abonos': 0,
-                        'movimientos': 0
-                    }
-                
-                if mov.tipo_movimiento == 'Cargo':
-                    proveedores_resumen[prov_id]['cargos'] += float(mov.monto)
-                else:
-                    proveedores_resumen[prov_id]['abonos'] += float(mov.monto)
-                proveedores_resumen[prov_id]['movimientos'] += 1
-            
-            # Tabla resumen
-            story.append(Paragraph("<b>Resumen por Proveedor</b>", getSampleStyleSheet()['Heading2']))
-            story.append(Spacer(1, 0.2 * inch))
-            
-            data_resumen = [['Proveedor', 'Movimientos', 'Total Cargos', 'Total Abonos', 'Saldo']]
-            for prov_id, resumen in proveedores_resumen.items():
-                saldo = resumen['cargos'] - resumen['abonos']
-                data_resumen.append([
-                    resumen['nombre'][:40],
-                    str(resumen['movimientos']),
-                    f"Gs. {resumen['cargos']:,.0f}",
-                    f"Gs. {resumen['abonos']:,.0f}",
-                    f"Gs. {saldo:,.0f}"
-                ])
-            
-            tabla_resumen = Table(data_resumen, colWidths=[2.5*inch, 0.8*inch, 1.2*inch, 1.2*inch, 1.2*inch])
-            ReportesPDF._aplicar_estilo_tabla(tabla_resumen, '#e74c3c')
-            story.append(tabla_resumen)
-            story.append(Spacer(1, 0.3 * inch))
-            
-            # Detalle de movimientos
-            story.append(Paragraph("<b>Detalle de Movimientos</b>", getSampleStyleSheet()['Heading2']))
-            story.append(Spacer(1, 0.2 * inch))
-            
-            data_detalle = [['Fecha', 'Proveedor', 'Tipo', 'Monto', 'Saldo', 'Referencia']]
-            for mov in movimientos:
-                data_detalle.append([
-                    mov.fecha.strftime('%d/%m/%Y'),
-                    mov.id_proveedor.razon_social[:25],
-                    mov.tipo_movimiento,
-                    f"Gs. {mov.monto:,.0f}",
-                    f"Gs. {mov.saldo_acumulado:,.0f}",
-                    mov.referencia_doc or '-'
-                ])
-            
-            tabla_detalle = Table(data_detalle, colWidths=[0.9*inch, 2*inch, 0.7*inch, 1.2*inch, 1.2*inch, 1*inch])
-            ReportesPDF._aplicar_estilo_tabla(tabla_detalle, '#9b59b6')
-            story.append(tabla_detalle)
-        else:
-            story.append(Paragraph("No hay movimientos en el período seleccionado", getSampleStyleSheet()['Normal']))
+        # Tabla
+        data = [['Fecha', 'Proveedor', 'Compra #', 'Total', 'Saldo Pend.', 'Estado']]
+        total_pendiente = Decimal('0')
+        
+        for compra in compras:
+            data.append([
+                compra.fecha.strftime('%d/%m/%Y'),
+                compra.id_proveedor.razon_social[:30],
+                str(compra.id_compra),
+                f"Gs. {compra.monto_total:,.0f}",
+                f"Gs. {compra.saldo_pendiente:,.0f}",
+                compra.estado_pago
+            ])
+            total_pendiente += compra.saldo_pendiente
+        
+        # Total
+        data.append(['', '', '', 'TOTAL PENDIENTE:', f"Gs. {total_pendiente:,.0f}", ''])
+        
+        tabla = Table(data, colWidths=[1.2*inch, 1.8*inch, 0.8*inch, 1.2*inch, 1.2*inch, 1*inch])
+        ReportesPDF._aplicar_estilo_tabla(tabla)
+        story.append(tabla)
         
         doc.build(story)
         return response
@@ -933,7 +1083,7 @@ class ReportesExcel:
     
     @staticmethod
     def reporte_cta_corriente_cliente(id_cliente=None, fecha_inicio=None, fecha_fin=None):
-        """Genera reporte de cuenta corriente de cliente en Excel"""
+        """Genera reporte de cuenta corriente de cliente en Excel usando el nuevo sistema"""
         wb = Workbook()
         ws = wb.active
         ws.title = "Cta Corriente Cliente"
@@ -954,37 +1104,47 @@ class ReportesExcel:
         
         if fecha_inicio and fecha_fin:
             ws['A3'] = f"Período: {fecha_inicio.strftime('%d/%m/%Y')} - {fecha_fin.strftime('%d/%m/%Y')}"
+        else:
+            ws['A3'] = f"Fecha: {date.today().strftime('%d/%m/%Y')}"
         
         # Headers
-        headers = ['Fecha', 'Cliente', 'RUC/CI', 'Tipo Movimiento', 'Monto', 'Saldo Acumulado', 'Referencia']
+        headers = ['Fecha', 'Cliente', 'RUC/CI', 'Venta #', 'Total Venta', 'Saldo Pendiente', 'Estado Pago']
         ws.append([])
         ws.append(headers)
         ReportesExcel._aplicar_estilo_header(ws, row=ws.max_row)
         
-        # Datos
-        movimientos = CtaCorriente.objects.select_related('id_cliente').all()
+        # Query ventas pendientes
+        ventas = Ventas.objects.filter(
+            estado_pago__in=['PENDIENTE', 'PARCIAL']
+        ).select_related('id_cliente')
         
         if id_cliente:
-            movimientos = movimientos.filter(id_cliente_id=id_cliente)
+            ventas = ventas.filter(id_cliente_id=id_cliente)
         
         if fecha_inicio and fecha_fin:
-            movimientos = movimientos.filter(fecha__date__gte=fecha_inicio, fecha__date__lte=fecha_fin)
+            ventas = ventas.filter(fecha__date__gte=fecha_inicio, fecha__date__lte=fecha_fin)
         
-        movimientos = movimientos.order_by('id_cliente', 'fecha')[:200]
+        ventas = ventas.order_by('id_cliente', 'fecha')[:200]
         
-        for mov in movimientos:
+        # Datos
+        total_pendiente = Decimal('0')
+        for venta in ventas:
             ws.append([
-                mov.fecha.strftime('%d/%m/%Y %H:%M'),
-                mov.id_cliente.nombre_completo,
-                mov.id_cliente.ruc_ci,
-                mov.tipo_movimiento,
-                float(mov.monto),
-                float(mov.saldo_acumulado),
-                mov.referencia_doc or ''
+                venta.fecha.strftime('%d/%m/%Y %H:%M'),
+                venta.id_cliente.nombre_completo,
+                venta.id_cliente.ruc_ci,
+                venta.id_venta,
+                float(venta.monto_total),
+                float(venta.saldo_pendiente),
+                venta.estado_pago
             ])
+            total_pendiente += venta.saldo_pendiente
+        
+        # Fila de total
+        ws.append(['', '', '', '', 'TOTAL PENDIENTE:', float(total_pendiente), ''])
         
         # Formato números
-        for row in ws.iter_rows(min_row=5, max_row=ws.max_row, min_col=5, max_col=6):
+        for row in ws.iter_rows(min_row=6, max_row=ws.max_row, min_col=5, max_col=6):
             for cell in row:
                 cell.number_format = '#,##0'
         
@@ -1000,7 +1160,7 @@ class ReportesExcel:
     
     @staticmethod
     def reporte_cta_corriente_proveedor(id_proveedor=None, fecha_inicio=None, fecha_fin=None):
-        """Genera reporte de cuenta corriente de proveedor en Excel"""
+        """Genera reporte de cuenta corriente de proveedor en Excel usando el nuevo sistema"""
         wb = Workbook()
         ws = wb.active
         ws.title = "Cta Corriente Proveedor"
@@ -1021,37 +1181,47 @@ class ReportesExcel:
         
         if fecha_inicio and fecha_fin:
             ws['A3'] = f"Período: {fecha_inicio.strftime('%d/%m/%Y')} - {fecha_fin.strftime('%d/%m/%Y')}"
+        else:
+            ws['A3'] = f"Fecha: {date.today().strftime('%d/%m/%Y')}"
         
         # Headers
-        headers = ['Fecha', 'Proveedor', 'RUC', 'Tipo Movimiento', 'Monto', 'Saldo Acumulado', 'Referencia']
+        headers = ['Fecha', 'Proveedor', 'RUC', 'Compra #', 'Total Compra', 'Saldo Pendiente', 'Estado Pago']
         ws.append([])
         ws.append(headers)
         ReportesExcel._aplicar_estilo_header(ws, row=ws.max_row)
         
-        # Datos
-        movimientos = CtaCorrienteProv.objects.select_related('id_proveedor').all()
+        # Query compras pendientes
+        compras = Compras.objects.filter(
+            estado_pago__in=['PENDIENTE', 'PARCIAL']
+        ).select_related('id_proveedor')
         
         if id_proveedor:
-            movimientos = movimientos.filter(id_proveedor_id=id_proveedor)
+            compras = compras.filter(id_proveedor_id=id_proveedor)
         
         if fecha_inicio and fecha_fin:
-            movimientos = movimientos.filter(fecha__date__gte=fecha_inicio, fecha__date__lte=fecha_fin)
+            compras = compras.filter(fecha__date__gte=fecha_inicio, fecha__date__lte=fecha_fin)
         
-        movimientos = movimientos.order_by('id_proveedor', 'fecha')[:200]
+        compras = compras.order_by('id_proveedor', 'fecha')[:200]
         
-        for mov in movimientos:
+        # Datos
+        total_pendiente = Decimal('0')
+        for compra in compras:
             ws.append([
-                mov.fecha.strftime('%d/%m/%Y %H:%M'),
-                mov.id_proveedor.razon_social,
-                mov.id_proveedor.ruc,
-                mov.tipo_movimiento,
-                float(mov.monto),
-                float(mov.saldo_acumulado),
-                mov.referencia_doc or ''
+                compra.fecha.strftime('%d/%m/%Y %H:%M'),
+                compra.id_proveedor.razon_social,
+                compra.id_proveedor.ruc,
+                compra.id_compra,
+                float(compra.monto_total),
+                float(compra.saldo_pendiente),
+                compra.estado_pago
             ])
+            total_pendiente += compra.saldo_pendiente
+        
+        # Fila de total
+        ws.append(['', '', '', '', 'TOTAL PENDIENTE:', float(total_pendiente), ''])
         
         # Formato números
-        for row in ws.iter_rows(min_row=5, max_row=ws.max_row, min_col=5, max_col=6):
+        for row in ws.iter_rows(min_row=6, max_row=ws.max_row, min_col=5, max_col=6):
             for cell in row:
                 cell.number_format = '#,##0'
         

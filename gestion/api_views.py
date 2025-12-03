@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 
 from .models import (
     Ventas, DetalleVenta, Producto, Categoria, Cliente, Hijo,
-    Tarjeta, CargasSaldo, ConsumoTarjeta, CtaCorriente,
+    Tarjeta, CargasSaldo, ConsumoTarjeta,
     Empleado, StockUnico, MovimientosStock, Proveedor
 )
 
@@ -22,7 +22,7 @@ from .serializers import (
     ProductoListSerializer, ProductoDetailSerializer,
     CategoriaSerializer, ClienteSerializer, HijoSerializer,
     TarjetaSerializer, CargasSaldoSerializer, ConsumoTarjetaSerializer,
-    CtaCorrienteSerializer, EmpleadoSerializer, StockSerializer,
+    EmpleadoSerializer, StockSerializer,
     MovimientoStockSerializer, ProveedorSerializer
 )
 
@@ -179,20 +179,25 @@ class ClienteViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['get'])
     def cuenta_corriente(self, request, pk=None):
-        """Obtener estado de cuenta corriente"""
+        """Obtener estado de cuenta corriente (saldo pendiente en ventas)"""
         cliente = self.get_object()
-        movimientos = CtaCorriente.objects.filter(
-            id_cliente=cliente
+        
+        # Obtener ventas con saldo pendiente
+        ventas_pendientes = Ventas.objects.filter(
+            id_cliente=cliente,
+            estado_pago__in=['PENDIENTE', 'PARCIAL']
         ).order_by('-fecha')[:50]
         
-        saldo_total = CtaCorriente.objects.filter(
-            id_cliente=cliente
-        ).aggregate(total=Sum('monto'))['total'] or 0
+        # Calcular saldo total pendiente
+        saldo_total = Ventas.objects.filter(
+            id_cliente=cliente,
+            estado_pago__in=['PENDIENTE', 'PARCIAL']
+        ).aggregate(total=Sum('saldo_pendiente'))['total'] or 0
         
-        serializer = CtaCorrienteSerializer(movimientos, many=True)
+        serializer = VentaListSerializer(ventas_pendientes, many=True)
         return Response({
             'saldo_actual': float(saldo_total),
-            'movimientos': serializer.data
+            'ventas_pendientes': serializer.data
         })
     
     @action(detail=True, methods=['get'])
