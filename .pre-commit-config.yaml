@@ -8,7 +8,7 @@ repos:
     hooks:
       - id: django-check
         name: Django Check
-        entry: python manage.py check
+        entry: D:/anteproyecto20112025/.venv/Scripts/python.exe manage.py check
         language: system
         pass_filenames: false
         always_run: true
@@ -18,7 +18,7 @@ repos:
     hooks:
       - id: django-validations
         name: Django Validations
-        entry: python precommit_check.py
+        entry: D:/anteproyecto20112025/.venv/Scripts/python.exe precommit_check.py
         language: system
         pass_filenames: false
         always_run: true

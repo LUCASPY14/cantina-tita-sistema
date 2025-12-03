@@ -728,34 +728,6 @@ class Migration(migrations.Migration):
                 'managed': False,
             },
         ),
-        migrations.RemoveField(
-            model_name='compras',
-            name='proveedor',
-        ),
-        migrations.RemoveField(
-            model_name='compras',
-            name='usuario',
-        ),
-        migrations.RemoveField(
-            model_name='ventas',
-            name='cliente',
-        ),
-        migrations.RemoveField(
-            model_name='ventas',
-            name='usuario',
-        ),
-        migrations.DeleteModel(
-            name='CategoriaDB',
-        ),
-        migrations.DeleteModel(
-            name='ClienteExistente',
-        ),
-        migrations.DeleteModel(
-            name='ProductoExistente',
-        ),
-        migrations.DeleteModel(
-            name='ProveedorDB',
-        ),
         migrations.AlterModelOptions(
             name='categoria',
             options={'managed': False, 'verbose_name': 'Categoría', 'verbose_name_plural': 'Categorías'},
@@ -810,11 +782,5 @@ class Migration(migrations.Migration):
                 'db_table': 'datos_facturacion_fisica',
                 'managed': False,
             },
-        ),
-        migrations.DeleteModel(
-            name='CompraProveedor',
-        ),
-        migrations.DeleteModel(
-            name='Venta',
         ),
     ]
