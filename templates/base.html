@@ -239,6 +239,9 @@
                 pesoIndex: null,
                 tempProduct: null,
                 
+                // Para monto personalizado (recargas)
+                esRecarga: false,
+                
                 // Notificaciones
                 notification: {
                     show: false,
@@ -248,7 +251,28 @@
                 
                 // Agregar producto al carrito
                 addToCart(product) {
-                    const existingItem = this.cart.find(item => item.id === product.id && !item.esPorKilo);
+                    // Verificar si es un producto de recarga (precio 0 o nombre contiene "recarga")
+                    const esRecarga = product.price === 0 || product.name.toLowerCase().includes('recarga');
+                    
+                    if (esRecarga) {
+                        // Abrir modal para ingresar monto personalizado
+                        this.tempProduct = product;
+                        this.esRecarga = true;
+                        
+                        setTimeout(() => {
+                            const inputMonto = document.getElementById('input-monto-recarga');
+                            if (inputMonto) {
+                                inputMonto.value = '10000';
+                                inputMonto.focus();
+                                inputMonto.select();
+                            }
+                        }, 100);
+                        
+                        document.getElementById('modal-monto-recarga').showModal();
+                        return;
+                    }
+                    
+                    const existingItem = this.cart.find(item => item.id === product.id && !item.esPorKilo && !item.esRecarga);
                     
                     if (existingItem) {
                         existingItem.quantity++;
@@ -258,7 +282,8 @@
                             name: product.name,
                             price: product.price,
                             quantity: 1,
-                            esPorKilo: false
+                            esPorKilo: false,
+                            esRecarga: false
                         });
                     }
                     
@@ -346,6 +371,49 @@
                     this.tempProduct = null;
                 },
                 
+                // Confirmar monto de recarga
+                confirmarMontoRecarga() {
+                    const inputMonto = document.getElementById('input-monto-recarga');
+                    const monto = parseFloat(inputMonto.value);
+                    
+                    if (!monto || monto <= 0) {
+                        this.showNotification('Ingrese un monto válido', 'error');
+                        return;
+                    }
+                    
+                    if (monto < 1000) {
+                        this.showNotification('El monto mínimo es Gs. 1.000', 'warning');
+                        return;
+                    }
+                    
+                    // Agregar al carrito con el monto personalizado
+                    const product = this.tempProduct;
+                    this.cart.push({
+                        id: product.id,
+                        name: product.name,
+                        price: monto,  // Usar el monto ingresado como precio
+                        quantity: 1,
+                        esPorKilo: false,
+                        esRecarga: true
+                    });
+                    
+                    playSound('beep');
+                    this.showNotification(`Recarga agregada: Gs. ${Math.round(monto).toLocaleString('es-PY')}`, 'success');
+                    
+                    // Cerrar modal
+                    document.getElementById('modal-monto-recarga').close();
+                    this.tempProduct = null;
+                    this.esRecarga = false;
+                },
+                
+                // Establecer monto rápido para recarga
+                setMontoRecarga(monto) {
+                    const inputMonto = document.getElementById('input-monto-recarga');
+                    if (inputMonto) {
+                        inputMonto.value = monto;
+                    }
+                },
+                
                 // Quitar producto del carrito
                 removeFromCart(index) {
                     this.cart.splice(index, 1);
@@ -417,12 +485,26 @@
                         return;
                     }
                     
+                    // Abrir modal de checkout para seleccionar tipo de pago
+                    document.getElementById('modal-checkout').showModal();
+                },
+                
+                // Confirmar y procesar venta con el tipo de pago seleccionado
+                confirmarCheckout() {
+                    // Obtener tipo de pago seleccionado
+                    const tipoPagoSelect = document.getElementById('tipo-pago-select');
+                    const tipoPagoId = tipoPagoSelect ? parseInt(tipoPagoSelect.value) : 1;
+                    
                     // Preparar datos de la venta
                     const ventaData = {
                         items: this.cart,
                         tarjeta: this.selectedCard,
-                        total: this.total
+                        total: this.total,
+                        tipo_pago_id: tipoPagoId
                     };
+                    
+                    // Cerrar modal
+                    document.getElementById('modal-checkout').close();
                     
                     // Enviar al backend
                     fetch('/pos/procesar-venta/', {

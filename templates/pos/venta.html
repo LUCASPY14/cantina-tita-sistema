@@ -128,18 +128,24 @@
                                 <div class="flex-1">
                                     <p class="font-semibold text-sm" x-text="item.name"></p>
                                     <p class="text-xs text-gray-600">
-                                        <span x-show="!item.esPorKilo">
+                                        <!-- Producto regular -->
+                                        <span x-show="!item.esPorKilo && !item.esRecarga">
                                             Gs. <span x-text="Math.round(item.price || 0).toLocaleString('es-PY')"></span>
                                         </span>
+                                        <!-- Producto por kilo -->
                                         <span x-show="item.esPorKilo">
                                             Gs. <span x-text="Math.round(item.price || 0).toLocaleString('es-PY')"></span>/kg
                                             × <span x-text="item.peso"></span>kg
                                             = Gs. <span x-text="Math.round((item.price || 0) * (item.peso || 1)).toLocaleString('es-PY')"></span>
                                         </span>
+                                        <!-- Producto recarga -->
+                                        <span x-show="item.esRecarga" class="badge badge-info badge-sm">
+                                            💳 Recarga: Gs. <span x-text="Math.round(item.price || 0).toLocaleString('es-PY')"></span>
+                                        </span>
                                     </p>
                                 </div>
                                 <div class="flex items-center gap-1">
-                                    <!-- Mostrar peso editable en vez de cantidad si es por kilo -->
+                                    <!-- Mostrar peso editable si es por kilo -->
                                     <template x-if="item.esPorKilo">
                                         <button 
                                             class="btn btn-xs btn-outline"
@@ -149,8 +155,8 @@
                                         </button>
                                     </template>
                                     
-                                    <!-- Controles de cantidad normal -->
-                                    <template x-if="!item.esPorKilo">
+                                    <!-- Controles de cantidad normal (no para kilo ni recarga) -->
+                                    <template x-if="!item.esPorKilo && !item.esRecarga">
                                         <div class="flex items-center gap-1">
                                             <button 
                                                 class="btn btn-xs btn-circle" 
@@ -166,6 +172,11 @@
                                                 +
                                             </button>
                                         </div>
+                                    </template>
+                                    
+                                    <!-- Para recargas mostrar cantidad fija -->
+                                    <template x-if="item.esRecarga">
+                                        <span class="badge badge-ghost">x1</span>
                                     </template>
                                 </div>
                                 <button 
@@ -268,6 +279,108 @@
             </button>
             <button class="btn btn-primary" @click="confirmarPeso()">
                 Aceptar
+            </button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<!-- Modal de Monto de Recarga -->
+<dialog id="modal-monto-recarga" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">💳 Ingresar Monto de Recarga</h3>
+        <div class="form-control">
+            <label class="label">
+                <span class="label-text font-semibold">Monto en Guaraníes:</span>
+            </label>
+            <input 
+                type="number" 
+                id="input-monto-recarga"
+                step="1000" 
+                min="1000" 
+                value="10000"
+                class="input input-bordered input-lg text-center text-2xl"
+                @keyup.enter="confirmarMontoRecarga()"
+            >
+            <label class="label">
+                <span class="label-text-alt">Mínimo: Gs. 1.000</span>
+            </label>
+        </div>
+        
+        <!-- Botones rápidos -->
+        <div class="grid grid-cols-3 gap-2 mt-4">
+            <button class="btn btn-outline btn-sm" @click="setMontoRecarga(5000)">Gs. 5.000</button>
+            <button class="btn btn-outline btn-sm" @click="setMontoRecarga(10000)">Gs. 10.000</button>
+            <button class="btn btn-outline btn-sm" @click="setMontoRecarga(20000)">Gs. 20.000</button>
+            <button class="btn btn-outline btn-sm" @click="setMontoRecarga(30000)">Gs. 30.000</button>
+            <button class="btn btn-outline btn-sm" @click="setMontoRecarga(50000)">Gs. 50.000</button>
+            <button class="btn btn-outline btn-sm" @click="setMontoRecarga(100000)">Gs. 100.000</button>
+        </div>
+        
+        <div class="modal-action">
+            <button class="btn" onclick="document.getElementById('modal-monto-recarga').close()">
+                Cancelar
+            </button>
+            <button class="btn btn-primary" @click="confirmarMontoRecarga()">
+                Agregar Recarga
+            </button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<!-- Modal de Checkout -->
+<dialog id="modal-checkout" class="modal">
+    <div class="modal-box max-w-md">
+        <h3 class="font-bold text-lg mb-4">💳 Confirmar Venta</h3>
+        
+        <!-- Resumen de la compra -->
+        <div class="bg-base-200 p-4 rounded-lg mb-4">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm">Items:</span>
+                <span class="font-bold" x-text="cart.length"></span>
+            </div>
+            <div class="flex justify-between items-center text-lg font-bold text-primary">
+                <span>TOTAL:</span>
+                <span>Gs. <span x-text="Math.round(total).toLocaleString('es-PY')"></span></span>
+            </div>
+        </div>
+        
+        <!-- Tipo de Pago -->
+        <div class="form-control mb-4">
+            <label class="label">
+                <span class="label-text font-semibold">Tipo de Pago:</span>
+            </label>
+            <select id="tipo-pago-select" class="select select-bordered w-full">
+                {% for tipo in tipos_pago %}
+                <option value="{{ tipo.id_tipo_pago }}">{{ tipo.descripcion }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <!-- Información del cliente/tarjeta -->
+        <div class="bg-info bg-opacity-10 p-3 rounded-lg mb-4" x-show="selectedCard">
+            <div class="text-sm">
+                <strong>Cliente:</strong> <span x-text="selectedCard ? selectedCard.nombre : 'N/A'"></span>
+            </div>
+            <div class="text-sm" x-show="selectedCard && selectedCard.id">
+                <strong>Tarjeta:</strong> #<span x-text="selectedCard.id"></span>
+            </div>
+            <div class="text-sm" x-show="selectedCard && selectedCard.saldo">
+                <strong>Saldo:</strong> Gs. <span x-text="selectedCard.saldo ? Math.round(selectedCard.saldo).toLocaleString('es-PY') : '0'"></span>
+            </div>
+        </div>
+        
+        <div class="modal-action">
+            <button class="btn btn-ghost" onclick="document.getElementById('modal-checkout').close()">
+                Cancelar
+            </button>
+            <button class="btn btn-primary" @click="confirmarCheckout()">
+                ✅ Confirmar y Procesar
             </button>
         </div>
     </div>

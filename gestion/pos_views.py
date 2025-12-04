@@ -53,9 +53,17 @@ def venta_view(request):
         # Marcar si es almuerzo por kilo
         producto.es_por_kilo = 'KILO' in producto.descripcion.upper()
     
+    # Obtener tipos de pago disponibles
+    tipos_pago = TiposPago.objects.filter(activo=True).order_by('descripcion')
+    
+    # Obtener medios de pago disponibles
+    medios_pago = MediosPago.objects.filter(activo=True).order_by('descripcion')
+    
     context = {
         'productos': productos,
         'lista_precios': lista_precios,
+        'tipos_pago': tipos_pago,
+        'medios_pago': medios_pago,
     }
     return render(request, 'pos/venta.html', context)
 
@@ -189,6 +197,8 @@ def procesar_venta(request):
         data = json.loads(request.body)
         items = data.get('items', [])
         tarjeta_data = data.get('tarjeta')
+        tipo_pago_id = data.get('tipo_pago_id', 1)  # Default: Contado
+        medio_pago_id = data.get('medio_pago_id')  # Opcional
         total = Decimal(str(data.get('total', 0)))
         
         if not items:
@@ -227,7 +237,7 @@ def procesar_venta(request):
             nro_factura_venta=0,  # Se generará después
             id_cliente=tarjeta.id_hijo.id_cliente_responsable if tarjeta and tarjeta.id_hijo else None,
             id_hijo=tarjeta.id_hijo if tarjeta else None,
-            id_tipo_pago_id=1,  # Asumiendo ID 1 para efectivo/tarjeta
+            id_tipo_pago_id=tipo_pago_id,
             id_empleado_cajero=empleado,
             fecha=timezone.now(),
             monto_total=int(total),
@@ -1044,23 +1054,50 @@ def exportar_pdf(datos, columnas, titulo, fecha_desde, fecha_hasta):
 def ticket_view(request, venta_id):
     """Vista para imprimir ticket de venta"""
     try:
-        venta = Ventas.objects.select_related('id_empleado_cajero').get(id_venta=venta_id)
-        detalles = DetalleVenta.objects.filter(id_venta=venta).select_related('id_producto')
+        venta = Ventas.objects.select_related(
+            'id_empleado_cajero',
+            'id_cliente',
+            'id_hijo',
+            'id_tipo_pago'
+        ).get(id_venta=venta_id)
+        
+        detalles = DetalleVenta.objects.filter(id_venta=venta).select_related(
+            'id_producto',
+            'id_producto__id_categoria'
+        )
         
         # Verificar si fue pago con tarjeta
         tarjeta = None
         saldo_anterior = None
         saldo_actual = None
+        consumo = None
         
         # Intentar obtener información de la tarjeta si es venta con hijo
         if venta.id_hijo:
             try:
                 tarjeta = venta.id_hijo.tarjeta
                 saldo_actual = tarjeta.saldo_actual
-                # Estimar saldo anterior (aproximado)
-                saldo_anterior = saldo_actual + venta.monto_total
+                
+                # Buscar el consumo registrado
+                consumo = ConsumoTarjeta.objects.filter(
+                    nro_tarjeta=tarjeta,
+                    detalle__contains=f'Venta #{venta.id_venta}'
+                ).first()
+                
+                if consumo:
+                    saldo_anterior = consumo.saldo_anterior
+                else:
+                    # Estimar saldo anterior
+                    saldo_anterior = saldo_actual + venta.monto_total
             except:
                 pass
+        
+        # Obtener datos de la empresa para el ticket
+        try:
+            from gestion.models import DatosEmpresa
+            empresa = DatosEmpresa.objects.first()
+        except:
+            empresa = None
         
         context = {
             'venta': venta,
@@ -1068,6 +1105,8 @@ def ticket_view(request, venta_id):
             'tarjeta': tarjeta,
             'saldo_anterior': saldo_anterior,
             'saldo_actual': saldo_actual,
+            'consumo': consumo,
+            'empresa': empresa,
         }
         
         return render(request, 'pos/ticket.html', context)
