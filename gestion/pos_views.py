@@ -5,6 +5,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q, F, Sum, Count
 from django.utils import timezone
 from decimal import Decimal
@@ -23,15 +24,38 @@ from gestion.models import (
 @login_required
 def venta_view(request):
     """Vista principal del POS"""
-    # Obtener productos activos con stock
+    # Obtener lista de precios por defecto (ID 1 o la primera)
+    try:
+        from gestion.models import ListaPrecios, PreciosPorLista
+        lista_precios = ListaPrecios.objects.filter(activo=True).first()
+    except:
+        lista_precios = None
+    
+    # Obtener productos activos con stock y precios
     productos = Producto.objects.filter(
         activo=True
-    ).select_related('id_categoria').annotate(
-        stock_actual=F('stock__stock_actual')
-    ).order_by('descripcion')[:50]
+    ).select_related('id_categoria', 'stock').order_by('descripcion')[:50]
+    
+    # Agregar precio de cada producto
+    for producto in productos:
+        if lista_precios:
+            try:
+                precio_obj = PreciosPorLista.objects.get(
+                    id_producto=producto,
+                    id_lista=lista_precios
+                )
+                producto.precio_actual = precio_obj.precio_unitario_neto
+            except PreciosPorLista.DoesNotExist:
+                producto.precio_actual = 0
+        else:
+            producto.precio_actual = 0
+        
+        # Marcar si es almuerzo por kilo
+        producto.es_por_kilo = 'KILO' in producto.descripcion.upper()
     
     context = {
         'productos': productos,
+        'lista_precios': lista_precios,
     }
     return render(request, 'pos/venta.html', context)
 
@@ -40,26 +64,39 @@ def venta_view(request):
 @require_http_methods(["POST"])
 def buscar_productos(request):
     """Búsqueda de productos en tiempo real con HTMX"""
+    from gestion.models import ListaPrecios, PreciosPorLista
+    
     query = request.POST.get('q', '').strip()
+    
+    # Obtener lista de precios
+    lista_precios = ListaPrecios.objects.filter(activo=True).first()
     
     if query:
         productos = Producto.objects.filter(
-            Q(descripcion__icontains=query) | Q(codigo__icontains=query),
+            Q(descripcion__icontains=query) | Q(codigo_barra__icontains=query),
             activo=True
-        ).select_related('id_categoria').annotate(
-            stock_actual=F('stock__stock_actual')
-        ).order_by('descripcion')[:30]
+        ).select_related('id_categoria', 'stock').order_by('descripcion')[:30]
     else:
         productos = Producto.objects.filter(
             activo=True
-        ).select_related('id_categoria').annotate(
-            stock_actual=F('stock__stock_actual')
-        ).order_by('descripcion')[:50]
+        ).select_related('id_categoria', 'stock').order_by('descripcion')[:50]
     
     # Agregar precio actual desde la tabla de precios
     for producto in productos:
-        # Por ahora usar precio base, luego integrar con lista de precios
-        producto.precio_actual = 2000  # Precio ejemplo
+        if lista_precios:
+            try:
+                precio_obj = PreciosPorLista.objects.get(
+                    id_producto=producto,
+                    id_lista=lista_precios
+                )
+                producto.precio_actual = precio_obj.precio_unitario_neto
+            except PreciosPorLista.DoesNotExist:
+                producto.precio_actual = 0
+        else:
+            producto.precio_actual = 0
+        
+        # Marcar si es por kilo
+        producto.es_por_kilo = 'KILO' in producto.descripcion.upper()
     
     return render(request, 'pos/partials/productos_grid.html', {
         'productos': productos
@@ -68,9 +105,13 @@ def buscar_productos(request):
 
 @login_required
 @require_http_methods(["GET"])
+@csrf_exempt
 def productos_por_categoria(request):
     """Filtrar productos por categoría"""
+    from gestion.models import ListaPrecios, PreciosPorLista
+    
     categoria = request.GET.get('categoria', 'todos')
+    lista_precios = ListaPrecios.objects.filter(activo=True).first()
     
     if categoria == 'todos':
         productos = Producto.objects.filter(activo=True)
@@ -80,13 +121,23 @@ def productos_por_categoria(request):
             id_categoria__nombre__icontains=categoria
         )
     
-    productos = productos.select_related('id_categoria').annotate(
-        stock_actual=F('stock__stock_actual')
-    ).order_by('descripcion')[:50]
+    productos = productos.select_related('id_categoria', 'stock').order_by('descripcion')[:50]
     
     # Agregar precio actual
     for producto in productos:
-        producto.precio_actual = 2000  # Precio ejemplo
+        if lista_precios:
+            try:
+                precio_obj = PreciosPorLista.objects.get(
+                    id_producto=producto,
+                    id_lista=lista_precios
+                )
+                producto.precio_actual = precio_obj.precio_unitario_neto
+            except PreciosPorLista.DoesNotExist:
+                producto.precio_actual = 0
+        else:
+            producto.precio_actual = 0
+        
+        producto.es_por_kilo = 'KILO' in producto.descripcion.upper()
     
     return render(request, 'pos/partials/productos_grid.html', {
         'productos': productos
@@ -95,6 +146,7 @@ def productos_por_categoria(request):
 
 @login_required
 @require_http_methods(["POST"])
+@csrf_exempt
 def buscar_tarjeta(request):
     """Buscar tarjeta de estudiante"""
     nro_tarjeta = request.POST.get('nro_tarjeta', '').strip()
@@ -129,6 +181,7 @@ def buscar_tarjeta(request):
 
 
 @login_required
+@csrf_exempt
 @require_http_methods(["POST"])
 def procesar_venta(request):
     """Procesar una venta desde el POS"""
@@ -171,10 +224,16 @@ def procesar_venta(request):
         
         # Crear la venta
         venta = Ventas.objects.create(
-            id_empleado=empleado,
+            nro_factura_venta=0,  # Se generará después
+            id_cliente=tarjeta.id_hijo.id_cliente_responsable if tarjeta and tarjeta.id_hijo else None,
+            id_hijo=tarjeta.id_hijo if tarjeta else None,
+            id_tipo_pago_id=1,  # Asumiendo ID 1 para efectivo/tarjeta
+            id_empleado_cajero=empleado,
+            fecha=timezone.now(),
             monto_total=int(total),
-            estado='COMPLETADA',
-            fecha=timezone.now()
+            estado_pago='PAGADA',
+            estado='PROCESADO',
+            tipo_venta='CANTINA'
         )
         
         # Crear detalles de venta y actualizar stock
@@ -184,7 +243,13 @@ def procesar_venta(request):
                     'id_categoria',
                     'stock'
                 ).get(id_producto=item['id'])
-                cantidad = Decimal(str(item['quantity']))
+                
+                # Manejar cantidad o peso según el tipo de producto
+                if item.get('esPorKilo'):
+                    cantidad = Decimal(str(item.get('peso', 1)))
+                else:
+                    cantidad = Decimal(str(item.get('quantity', 1)))
+                    
                 precio = Decimal(str(item['price']))
                 
                 # Crear detalle
@@ -208,19 +273,30 @@ def procesar_venta(request):
             except Producto.DoesNotExist:
                 continue
         
-        # Si hay tarjeta, registrar consumo y descontar saldo
+        # Si hay tarjeta, descontar saldo
         if tarjeta:
-            ConsumoTarjeta.objects.create(
-                nro_tarjeta=tarjeta,
-                fecha_consumo=timezone.now(),
-                monto_consumido=total,
-                detalle=f'Venta #{venta.id_venta}',
-                saldo_anterior=tarjeta.saldo_actual,
-                saldo_posterior=tarjeta.saldo_actual - total
-            )
+            # Guardar saldo anterior para el registro
+            saldo_anterior = tarjeta.saldo_actual
             
+            # Actualizar saldo de la tarjeta
             tarjeta.saldo_actual = F('saldo_actual') - total
             tarjeta.save()
+            
+            # Refrescar para obtener el nuevo saldo
+            tarjeta.refresh_from_db()
+            
+            # Registrar consumo (comentado temporalmente si hay problemas con triggers)
+            try:
+                ConsumoTarjeta.objects.create(
+                    nro_tarjeta=tarjeta,
+                    fecha_consumo=timezone.now(),
+                    monto_consumido=total,
+                    detalle=f'Venta #{venta.id_venta}',
+                    saldo_anterior=saldo_anterior,
+                    saldo_posterior=tarjeta.saldo_actual
+                )
+            except Exception as e:
+                print(f"Advertencia: No se pudo registrar el consumo: {e}")
         
         return JsonResponse({
             'success': True,
@@ -230,6 +306,9 @@ def procesar_venta(request):
         })
         
     except Exception as e:
+        import traceback
+        error_msg = f"{str(e)}\n{traceback.format_exc()}"
+        print(f"ERROR EN PROCESAR_VENTA: {error_msg}")
         return JsonResponse({
             'success': False,
             'error': str(e)
@@ -377,10 +456,14 @@ def dashboard_view(request):
     ).order_by('-fecha')[:10]
     
     # === Stock bajo ===
-    stock_bajo = Producto.objects.select_related('stock').filter(
-        stock__stock_actual__lt=F('stock_minimo'),
-        activo=True
+    stock_bajo = Producto.objects.filter(
+        activo=True,
+        stock_minimo__isnull=False
     ).annotate(
+        stock_actual_val=F('stock__stock_actual')
+    ).filter(
+        stock_actual_val__lt=F('stock_minimo')
+    ).select_related('id_categoria', 'stock', 'id_unidad_de_medida').annotate(
         stock_actual=F('stock__stock_actual')
     ).order_by('stock__stock_actual')[:10]
     
@@ -403,10 +486,10 @@ def historial_view(request):
     ventas = Ventas.objects.select_related(
         'id_empleado_cajero'
     ).prefetch_related(
-        'detalleventa_set',
-        'detalleventa_set__id_producto'
+        'detalles',
+        'detalles__id_producto'
     ).annotate(
-        items_count=Count('detalleventa')
+        items_count=Count('detalles')
     ).order_by('-fecha')[:100]
     
     context = {
@@ -456,7 +539,7 @@ def reportes_view(request):
             fecha__date__gte=fecha_desde_obj,
             fecha__date__lte=fecha_hasta_obj
         ).select_related('id_empleado_cajero').annotate(
-            items_count=Count('detalleventa')
+            items_count=Count('detalles')
         ).order_by('-fecha')
         
         for venta in ventas:
@@ -488,7 +571,7 @@ def reportes_view(request):
             id_venta__fecha__date__lte=fecha_hasta_obj
         ).select_related('id_producto').values(
             'id_producto__descripcion',
-            'id_producto__codigo'
+            'id_producto__codigo_barra'
         ).annotate(
             cantidad_total=Sum('cantidad'),
             monto_total=Sum('subtotal_total'),
@@ -498,7 +581,7 @@ def reportes_view(request):
         for p in productos:
             datos.append([
                 p['id_producto__descripcion'],
-                p['id_producto__codigo'],
+                p['id_producto__codigo_barra'],
                 p['cantidad_total'],
                 f"{int(p['monto_total']):,}".replace(',', '.'),
                 p['num_ventas']
@@ -716,7 +799,7 @@ def obtener_datos_reporte(tipo_reporte, fecha_desde, fecha_hasta):
             id_venta__fecha__date__lte=fecha_hasta
         ).values(
             'id_producto__descripcion',
-            'id_producto__codigo'
+            'id_producto__codigo_barra'
         ).annotate(
             cantidad_total=Sum('cantidad'),
             monto_total=Sum('subtotal_total'),
@@ -726,7 +809,7 @@ def obtener_datos_reporte(tipo_reporte, fecha_desde, fecha_hasta):
         for p in productos:
             datos.append([
                 p['id_producto__descripcion'],
-                p['id_producto__codigo'],
+                p['id_producto__codigo_barra'],
                 str(p['cantidad_total']),
                 f"{int(p['monto_total']):,}".replace(',', '.'),
                 str(p['num_ventas'])
@@ -1256,7 +1339,7 @@ def cuenta_corriente_view(request):
     from django.db.models import Count
     clientes = Cliente.objects.annotate(
         num_hijos=Count('hijos')
-    ).select_related('id_lista_por_defecto', 'id_tipo_cliente')
+    ).select_related('id_lista', 'id_tipo_cliente')
     
     # Aplicar filtros
     if buscar:
@@ -1300,7 +1383,7 @@ def cc_detalle_view(request, cliente_id):
     """Vista de detalle de cuenta corriente de un cliente"""
     try:
         cliente = Cliente.objects.select_related(
-            'id_lista_por_defecto', 'id_tipo_cliente'
+            'id_lista', 'id_tipo_cliente'
         ).get(id_cliente=cliente_id)
         
         # Obtener hijos del cliente
@@ -1344,7 +1427,7 @@ def cuenta_corriente_unificada(request, cliente_id):
         
         # Obtener cliente
         cliente = Cliente.objects.select_related(
-            'id_lista_por_defecto', 'id_tipo_cliente'
+            'id_lista', 'id_tipo_cliente'
         ).get(id_cliente=cliente_id)
         
         # Obtener hijos con tarjetas
@@ -1371,8 +1454,8 @@ def cuenta_corriente_unificada(request, cliente_id):
             'id_hijo', 
             'id_empleado_cajero'
         ).prefetch_related(
-            'detalleventa_set',
-            'detalleventa_set__id_producto'
+            'detalles',
+            'detalles__id_producto'
         )
         
         # Query de recargas
@@ -1425,7 +1508,7 @@ def cuenta_corriente_unificada(request, cliente_id):
             
             # Obtener items de la venta
             items = []
-            for detalle in venta.detalleventa_set.all():
+            for detalle in venta.detalles.all():
                 items.append({
                     'producto': detalle.id_producto.descripcion,
                     'cantidad': detalle.cantidad,
@@ -1857,7 +1940,7 @@ def inventario_dashboard(request):
         id_venta__fecha__gte=fecha_limite
     ).values(
         'id_producto__descripcion',
-        'id_producto__codigo'
+        'id_producto__codigo_barra'
     ).annotate(
         total_vendido=Sum('cantidad')
     ).order_by('-total_vendido')[:10]
@@ -1890,7 +1973,7 @@ def inventario_productos(request):
     
     # Query base
     productos = Producto.objects.filter(activo=True).select_related(
-        'id_categoria', 'id_unidad', 'stock'
+        'id_categoria', 'id_unidad_de_medida', 'stock'
     ).annotate(
         stock_actual_val=F('stock__stock_actual')
     )
@@ -1937,7 +2020,7 @@ def kardex_producto(request, producto_id):
     """Kardex completo de un producto (historial de movimientos)"""
     try:
         producto = Producto.objects.select_related(
-            'id_categoria', 'id_unidad', 'stock'
+            'id_categoria', 'id_unidad_de_medida', 'stock'
         ).get(id_producto=producto_id)
         
         # Obtener fechas del filtro
@@ -2020,10 +2103,10 @@ def ajuste_inventario_view(request):
             # Aplicar ajuste
             if tipo_ajuste == 'suma':
                 stock.stock_actual = F('stock_actual') + cantidad
-                descripcion_movimiento = f'Ajuste de inventario: +{cantidad} {producto.id_unidad.simbolo}'
+                descripcion_movimiento = f'Ajuste de inventario: +{cantidad} {producto.id_unidad_de_medida.abreviatura}'
             elif tipo_ajuste == 'resta':
                 stock.stock_actual = F('stock_actual') - cantidad
-                descripcion_movimiento = f'Ajuste de inventario: -{cantidad} {producto.id_unidad.simbolo}'
+                descripcion_movimiento = f'Ajuste de inventario: -{cantidad} {producto.id_unidad_de_medida.abreviatura}'
             else:
                 return JsonResponse({
                     'success': False,
@@ -2041,7 +2124,7 @@ def ajuste_inventario_view(request):
                 'stock_anterior': float(stock_anterior),
                 'cantidad_ajuste': float(cantidad),
                 'stock_nuevo': float(stock.stock_actual),
-                'mensaje': f'Ajuste realizado. Nuevo stock: {stock.stock_actual} {producto.id_unidad.simbolo}'
+                'mensaje': f'Ajuste realizado. Nuevo stock: {stock.stock_actual} {producto.id_unidad_de_medida.abreviatura}'
             })
             
         except Producto.DoesNotExist:
@@ -2057,7 +2140,7 @@ def ajuste_inventario_view(request):
     
     # GET - Mostrar formulario
     productos = Producto.objects.filter(activo=True).select_related(
-        'id_categoria', 'id_unidad', 'stock'
+        'id_categoria', 'id_unidad_de_medida', 'stock'
     ).order_by('descripcion')
     
     context = {
@@ -2078,13 +2161,13 @@ def alertas_inventario(request):
         stock_actual_val=F('stock__stock_actual')
     ).filter(
         stock_actual_val__lt=F('stock_minimo')
-    ).select_related('id_categoria', 'stock', 'id_unidad')
+    ).select_related('id_categoria', 'stock', 'id_unidad_de_medida')
     
     # Productos sin stock
     productos_sin_stock = Producto.objects.filter(
         activo=True,
         stock__stock_actual__lte=0
-    ).select_related('id_categoria', 'stock', 'id_unidad')
+    ).select_related('id_categoria', 'stock', 'id_unidad_de_medida')
     
     # Productos críticos (menos del 50% del stock mínimo)
     productos_criticos = Producto.objects.filter(
@@ -2094,7 +2177,7 @@ def alertas_inventario(request):
         stock_actual_val=F('stock__stock_actual')
     ).filter(
         stock_actual_val__lt=F('stock_minimo') * 0.5
-    ).select_related('id_categoria', 'stock', 'id_unidad')
+    ).select_related('id_categoria', 'stock', 'id_unidad_de_medida')
     
     context = {
         'productos_stock_bajo': productos_stock_bajo,

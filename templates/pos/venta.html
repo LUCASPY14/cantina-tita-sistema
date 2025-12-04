@@ -90,11 +90,13 @@
                         hx-post="{% url 'pos:buscar_tarjeta' %}"
                         hx-trigger="keyup[key=='Enter']"
                         hx-target="#tarjeta-info"
+                        hx-include="[name='csrfmiddlewaretoken']"
                         name="nro_tarjeta"
                     >
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                     
                     <div id="tarjeta-info">
-                        <div class="alert alert-info" x-show="!selectedCard">
+                        <div class="alert alert-info">
                             <span>👆 Escanee la tarjeta del estudiante</span>
                         </div>
                     </div>
@@ -126,23 +128,45 @@
                                 <div class="flex-1">
                                     <p class="font-semibold text-sm" x-text="item.name"></p>
                                     <p class="text-xs text-gray-600">
-                                        Gs. <span x-text="item.price.toLocaleString()"></span>
+                                        <span x-show="!item.esPorKilo">
+                                            Gs. <span x-text="Math.round(item.price || 0).toLocaleString('es-PY')"></span>
+                                        </span>
+                                        <span x-show="item.esPorKilo">
+                                            Gs. <span x-text="Math.round(item.price || 0).toLocaleString('es-PY')"></span>/kg
+                                            × <span x-text="item.peso"></span>kg
+                                            = Gs. <span x-text="Math.round((item.price || 0) * (item.peso || 1)).toLocaleString('es-PY')"></span>
+                                        </span>
                                     </p>
                                 </div>
                                 <div class="flex items-center gap-1">
-                                    <button 
-                                        class="btn btn-xs btn-circle" 
-                                        @click="decreaseQuantity(index)"
-                                    >
-                                        -
-                                    </button>
-                                    <span class="w-8 text-center font-bold" x-text="item.quantity"></span>
-                                    <button 
-                                        class="btn btn-xs btn-circle" 
-                                        @click="increaseQuantity(index)"
-                                    >
-                                        +
-                                    </button>
+                                    <!-- Mostrar peso editable en vez de cantidad si es por kilo -->
+                                    <template x-if="item.esPorKilo">
+                                        <button 
+                                            class="btn btn-xs btn-outline"
+                                            @click="editPeso(index)"
+                                        >
+                                            ⚖️ <span x-text="item.peso"></span>kg
+                                        </button>
+                                    </template>
+                                    
+                                    <!-- Controles de cantidad normal -->
+                                    <template x-if="!item.esPorKilo">
+                                        <div class="flex items-center gap-1">
+                                            <button 
+                                                class="btn btn-xs btn-circle" 
+                                                @click="decreaseQuantity(index)"
+                                            >
+                                                -
+                                            </button>
+                                            <span class="w-8 text-center font-bold" x-text="item.quantity"></span>
+                                            <button 
+                                                class="btn btn-xs btn-circle" 
+                                                @click="increaseQuantity(index)"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                    </template>
                                 </div>
                                 <button 
                                     class="btn btn-xs btn-circle btn-error"
@@ -165,7 +189,7 @@
                         <div class="flex justify-between items-center mb-4">
                             <span class="text-lg font-bold">TOTAL:</span>
                             <span class="text-2xl font-bold text-primary">
-                                Gs. <span x-text="total.toLocaleString()"></span>
+                                Gs. <span x-text="Math.round(total).toLocaleString('es-PY')"></span>
                             </span>
                         </div>
                         
@@ -207,6 +231,50 @@
     </div>
     
 </div>
+
+<!-- Modal de peso -->
+<dialog id="modal-peso" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">⚖️ Ingresar Peso</h3>
+        <div class="form-control">
+            <label class="label">
+                <span class="label-text font-semibold">Peso en kilogramos:</span>
+            </label>
+            <input 
+                type="number" 
+                id="input-peso"
+                step="0.1" 
+                min="0.1" 
+                value="1.0"
+                class="input input-bordered input-lg text-center text-2xl"
+                @keyup.enter="confirmarPeso()"
+            >
+            <label class="label">
+                <span class="label-text-alt">Ejemplos: 0.2, 0.5, 1.0, 1.5</span>
+            </label>
+        </div>
+        
+        <!-- Botones rápidos -->
+        <div class="grid grid-cols-4 gap-2 mt-4">
+            <button class="btn btn-outline" @click="setPeso(0.2)">0.2 kg</button>
+            <button class="btn btn-outline" @click="setPeso(0.5)">0.5 kg</button>
+            <button class="btn btn-outline" @click="setPeso(1.0)">1.0 kg</button>
+            <button class="btn btn-outline" @click="setPeso(1.5)">1.5 kg</button>
+        </div>
+        
+        <div class="modal-action">
+            <button class="btn" onclick="document.getElementById('modal-peso').close()">
+                Cancelar
+            </button>
+            <button class="btn btn-primary" @click="confirmarPeso()">
+                Aceptar
+            </button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
 
 <!-- Modal de confirmación de venta -->
 <dialog id="modal-confirmar-venta" class="modal">

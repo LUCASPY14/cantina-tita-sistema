@@ -232,6 +232,13 @@
                 // Tarjeta seleccionada
                 selectedCard: null,
                 
+                // Número de tarjeta temporal
+                cardNumber: '',
+                
+                // Para productos por kilo
+                pesoIndex: null,
+                tempProduct: null,
+                
                 // Notificaciones
                 notification: {
                     show: false,
@@ -241,7 +248,7 @@
                 
                 // Agregar producto al carrito
                 addToCart(product) {
-                    const existingItem = this.cart.find(item => item.id === product.id);
+                    const existingItem = this.cart.find(item => item.id === product.id && !item.esPorKilo);
                     
                     if (existingItem) {
                         existingItem.quantity++;
@@ -250,12 +257,93 @@
                             id: product.id,
                             name: product.name,
                             price: product.price,
-                            quantity: 1
+                            quantity: 1,
+                            esPorKilo: false
                         });
                     }
                     
                     playSound('beep');
                     this.showNotification('Producto agregado', 'success');
+                },
+                
+                // Agregar producto por kilo al carrito
+                addProductoPorKilo(product) {
+                    // Abrir modal para ingresar peso
+                    this.pesoIndex = -1; // -1 indica que es un nuevo producto
+                    this.tempProduct = product; // Guardar producto temporalmente
+                    
+                    // Resetear input de peso
+                    setTimeout(() => {
+                        const inputPeso = document.getElementById('input-peso');
+                        if (inputPeso) {
+                            inputPeso.value = '1.0';
+                            inputPeso.focus();
+                            inputPeso.select();
+                        }
+                    }, 100);
+                    
+                    document.getElementById('modal-peso').showModal();
+                },
+                
+                // Editar peso de un producto en el carrito
+                editPeso(index) {
+                    this.pesoIndex = index;
+                    const item = this.cart[index];
+                    
+                    setTimeout(() => {
+                        const inputPeso = document.getElementById('input-peso');
+                        if (inputPeso) {
+                            inputPeso.value = item.peso || 1.0;
+                            inputPeso.focus();
+                            inputPeso.select();
+                        }
+                    }, 100);
+                    
+                    document.getElementById('modal-peso').showModal();
+                },
+                
+                // Establecer peso rápido
+                setPeso(peso) {
+                    const inputPeso = document.getElementById('input-peso');
+                    if (inputPeso) {
+                        inputPeso.value = peso;
+                    }
+                },
+                
+                // Confirmar peso
+                confirmarPeso() {
+                    const inputPeso = document.getElementById('input-peso');
+                    const peso = parseFloat(inputPeso.value);
+                    
+                    if (!peso || peso <= 0) {
+                        this.showNotification('Ingrese un peso válido', 'error');
+                        return;
+                    }
+                    
+                    if (this.pesoIndex === -1) {
+                        // Es un producto nuevo
+                        const product = this.tempProduct;
+                        this.cart.push({
+                            id: product.id,
+                            name: product.name,
+                            price: product.price,
+                            peso: peso,
+                            quantity: 1, // Siempre 1 para productos por kilo
+                            esPorKilo: true
+                        });
+                        playSound('beep');
+                        this.showNotification(`Agregado ${peso}kg`, 'success');
+                    } else {
+                        // Está editando un producto existente
+                        this.cart[this.pesoIndex].peso = peso;
+                        playSound('beep');
+                        this.showNotification(`Peso actualizado: ${peso}kg`, 'success');
+                    }
+                    
+                    // Cerrar modal
+                    document.getElementById('modal-peso').close();
+                    this.pesoIndex = null;
+                    this.tempProduct = null;
                 },
                 
                 // Quitar producto del carrito
@@ -283,7 +371,12 @@
                 // Calcular total
                 get total() {
                     return this.cart.reduce((sum, item) => {
-                        return sum + (item.price * item.quantity);
+                        const precio = parseFloat(item.price) || 0;
+                        if (item.esPorKilo) {
+                            return sum + (precio * (item.peso || 1));
+                        } else {
+                            return sum + (precio * (item.quantity || 1));
+                        }
                     }, 0);
                 },
                 
@@ -301,8 +394,105 @@
                     }, 3000);
                 },
                 
+                // Escanear tarjeta
+                scanCard() {
+                    playSound('scan');
+                },
+                
+                // Seleccionar cliente genérico
+                selectGenericCard() {
+                    this.selectedCard = {
+                        id: null,
+                        nombre: 'Cliente Genérico',
+                        saldo: 999999999
+                    };
+                    playSound('beep');
+                    this.showNotification('Cliente genérico seleccionado', 'info');
+                },
+                
+                // Procesar venta
+                processSale() {
+                    if (!this.cart || this.cart.length === 0) {
+                        this.showNotification('El carrito está vacío', 'warning');
+                        return;
+                    }
+                    
+                    // Preparar datos de la venta
+                    const ventaData = {
+                        items: this.cart,
+                        tarjeta: this.selectedCard,
+                        total: this.total
+                    };
+                    
+                    // Enviar al backend
+                    fetch('/pos/procesar-venta/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.getCookie('csrftoken')
+                        },
+                        body: JSON.stringify(ventaData)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            playSound('success');
+                            this.showNotification('¡Venta exitosa!', 'success');
+                            
+                            // Guardar ID de venta para el ticket
+                            const ventaId = data.venta_id;
+                            
+                            this.clearCart();
+                            
+                            // Abrir ticket en nueva ventana
+                            if (ventaId) {
+                                const ticketWindow = window.open(
+                                    `/pos/ticket/${ventaId}/`,
+                                    'ticket',
+                                    'width=400,height=600,scrollbars=yes'
+                                );
+                            }
+                            
+                            // Resetear tarjeta
+                            this.selectedCard = null;
+                            const nroTarjetaInput = document.querySelector('input[name="nro_tarjeta"]');
+                            if (nroTarjetaInput) nroTarjetaInput.value = '';
+                            const tarjetaInfo = document.getElementById('tarjeta-info');
+                            if (tarjetaInfo) tarjetaInfo.innerHTML = '<div class="alert alert-info"><span>👆 Escanee la tarjeta del estudiante</span></div>';
+                            
+                        } else {
+                            playSound('error');
+                            this.showNotification(data.error || 'Error al procesar venta', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        playSound('error');
+                        this.showNotification('Error de conexión', 'error');
+                        console.error('Error:', error);
+                    });
+                },
+                
+                // Obtener cookie CSRF
+                getCookie(name) {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i = 0; i < cookies.length; i++) {
+                            const cookie = cookies[i].trim();
+                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                break;
+                            }
+                        }
+                    }
+                    return cookieValue;
+                },
+                
                 // Atajos de teclado
                 init() {
+                    // Exponer instancia globalmente para acceso desde HTMX
+                    window.posAppInstance = this;
+                    
                     document.addEventListener('keydown', (e) => {
                         // F1 - Cliente genérico
                         if (e.key === 'F1') {
@@ -326,6 +516,32 @@
                         }
                     });
                 }
+            }
+        }
+        
+        // Función helper para agregar productos desde onclick
+        function agregarProductoAlCarrito(element) {
+            if (!window.posAppInstance) {
+                console.error('posAppInstance no está disponible');
+                return;
+            }
+            
+            const precio = parseFloat(element.dataset.productoPrice) || 0;
+            console.log('Precio desde data attribute:', element.dataset.productoPrice);
+            console.log('Precio parseado:', precio);
+            
+            const producto = {
+                id: parseInt(element.dataset.productoId),
+                name: element.dataset.productoName,
+                price: precio
+            };
+            
+            const esPorKilo = element.dataset.esPorKilo === 'true';
+            
+            if (esPorKilo) {
+                window.posAppInstance.addProductoPorKilo(producto);
+            } else {
+                window.posAppInstance.addToCart(producto);
             }
         }
     </script>

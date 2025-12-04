@@ -1,44 +1,76 @@
+{% load paraguay_filters l10n %}
 <!-- Información de la tarjeta escaneada -->
 {% if tarjeta %}
-<div class="bg-success text-white p-4 rounded-lg fade-in">
-    <div class="flex items-center gap-2 mb-2">
-        <span class="text-2xl">👤</span>
-        <div>
-            <p class="font-bold">{{ tarjeta.estudiante_nombre }}</p>
-            <p class="text-xs opacity-80">Tarjeta: {{ tarjeta.codigo_tarjeta }}</p>
+<div class="bg-gradient-to-br from-success to-green-600 text-white p-4 rounded-lg fade-in shadow-lg">
+    <!-- Información del estudiante -->
+    <div class="flex items-start gap-3 mb-3">
+        <span class="text-3xl">👤</span>
+        <div class="flex-1">
+            <p class="font-bold text-lg">{{ tarjeta.estudiante_nombre }}</p>
+            <p class="text-xs opacity-90">Tarjeta: #{{ tarjeta.nro_tarjeta }}</p>
+            {% if tarjeta.id_hijo %}
+                <p class="text-xs opacity-90 mt-1">
+                    📚 Grado: {{ tarjeta.id_hijo.grado|default:"N/A" }}
+                </p>
+                {% if tarjeta.id_hijo.id_cliente_responsable %}
+                <p class="text-xs opacity-90">
+                    👨‍👩‍👧 Responsable: {{ tarjeta.id_hijo.id_cliente_responsable.nombres }} {{ tarjeta.id_hijo.id_cliente_responsable.apellidos }}
+                </p>
+                {% endif %}
+            {% endif %}
         </div>
     </div>
-    <div class="flex justify-between items-center mt-3">
-        <span class="text-sm">Saldo disponible:</span>
-        <span class="text-2xl font-bold">
-            Gs. {{ tarjeta.saldo_actual|floatformat:0 }}
-        </span>
+    
+    <!-- Saldo disponible -->
+    <div class="bg-white/20 backdrop-blur-sm rounded-lg p-3 mb-2">
+        <div class="flex justify-between items-center">
+            <span class="text-sm font-medium">Saldo Disponible:</span>
+            <span class="text-2xl font-bold">
+                {{ tarjeta.saldo_actual|guaranies }}
+            </span>
+        </div>
     </div>
+    
+    <!-- Saldo después de la venta (Alpine.js calculará) -->
+    <div class="bg-white/10 rounded-lg p-2" x-data="{ get saldoDespues() { return {{ tarjeta.saldo_actual|unlocalize }} - (window.posAppInstance ? window.posAppInstance.total : 0) } }">
+        <div class="flex justify-between items-center text-xs">
+            <span>Saldo después de venta:</span>
+            <span class="font-bold" :class="saldoDespues >= 0 ? 'text-white' : 'text-red-300'">
+                Gs. <span x-text="Math.round(saldoDespues).toLocaleString('es-PY')"></span>
+            </span>
+        </div>
+    </div>
+    
+    <!-- Alertas -->
     {% if tarjeta.saldo_actual < 5000 %}
-    <div class="alert alert-warning mt-2 text-xs">
-        ⚠️ Saldo bajo
+    <div class="alert alert-warning mt-3 text-xs py-2">
+        <span>⚠️ Saldo bajo - Considere recargar</span>
+    </div>
+    {% endif %}
+    
+    {% if tarjeta.estado == 'BLOQUEADA' %}
+    <div class="alert alert-error mt-3 text-xs py-2">
+        <span>🚫 Tarjeta bloqueada</span>
     </div>
     {% endif %}
 </div>
 
 <script>
     // Actualizar la tarjeta seleccionada en Alpine
-    document.addEventListener('alpine:init', () => {
-        Alpine.store('pos', {
-            selectedCard: {
-                id: {{ tarjeta.nro_tarjeta }},
-                nombre: '{{ tarjeta.estudiante_nombre|escapejs }}',
-                saldo: {{ tarjeta.saldo_actual }}
-            }
-        });
-    });
-    
-    playSound('scan');
+    if (window.posAppInstance) {
+        window.posAppInstance.selectedCard = {
+            id: '{{ tarjeta.nro_tarjeta }}',
+            nombre: '{{ tarjeta.estudiante_nombre|escapejs }}',
+            saldo: {{ tarjeta.saldo_actual }},
+            hijo_id: {{ tarjeta.id_hijo.id_hijo|default:'null' }}
+        };
+        if (typeof playSound === 'function') playSound('scan');
+    }
 </script>
 
 {% else %}
 <div class="alert alert-error">
-    <span>❌ Tarjeta no encontrada</span>
+    <span>❌ Tarjeta no encontrada o inactiva</span>
 </div>
 
 <script>

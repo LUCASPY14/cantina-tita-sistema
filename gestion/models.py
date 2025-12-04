@@ -1670,15 +1670,15 @@ class AuditoriaComisiones(models.Model):
 class VistaStockAlerta(models.Model):
     '''Vista v_stock_alerta - Productos con stock bajo'''
     id_producto = models.IntegerField(db_column='ID_Producto', primary_key=True)
-    producto = models.CharField(db_column='producto', max_length=255)
-    codigo = models.CharField(db_column='Codigo', max_length=50, blank=True, null=True)
-    categoria = models.CharField(db_column='categoria', max_length=100)
+    codigo_barra = models.CharField(db_column='Codigo_Barra', max_length=50, blank=True, null=True)
+    descripcion = models.CharField(db_column='Descripcion', max_length=255)
+    categoria = models.CharField(db_column='Categoria', max_length=100)
     stock_actual = models.DecimalField(db_column='Stock_Actual', max_digits=10, decimal_places=3)
     stock_minimo = models.DecimalField(db_column='Stock_Minimo', max_digits=10, decimal_places=3)
-    cantidad_faltante = models.DecimalField(db_column='cantidad_faltante', max_digits=10, decimal_places=3)
-    unidad_medida = models.CharField(db_column='unidad_medida', max_length=50)
-    nivel_alerta = models.CharField(db_column='nivel_alerta', max_length=8)
-    ultima_actualizacion = models.DateTimeField(db_column='ultima_actualizacion', blank=True, null=True)
+    diferencia = models.DecimalField(db_column='Diferencia', max_digits=11, decimal_places=3)
+    nivel_alerta = models.CharField(db_column='Nivel_Alerta', max_length=7)
+    fecha_ultima_actualizacion = models.DateTimeField(db_column='Fecha_Ultima_Actualizacion', blank=True, null=True)
+    unidad_medida = models.CharField(db_column='Unidad_Medida', max_length=50)
 
     class Meta:
         managed = False
@@ -1687,7 +1687,7 @@ class VistaStockAlerta(models.Model):
         verbose_name_plural = 'Alertas de Stock'
 
     def __str__(self):
-        return f'{self.producto} - {self.nivel_alerta} (Stock: {self.stock_actual})'
+        return f'{self.descripcion} - {self.nivel_alerta} (Stock: {self.stock_actual})'
 
 
 class VistaSaldoClientes(models.Model):
@@ -1924,11 +1924,11 @@ class VistaConsumosEstudiante(models.Model):
 class VistaStockCriticoAlertas(models.Model):
     '''Vista v_stock_critico_alertas - Productos con stock crítico'''
     id_producto = models.IntegerField(db_column='ID_Producto', primary_key=True)
-    codigo = models.CharField(db_column='Codigo', max_length=50)
+    codigo_barra = models.CharField(db_column='Codigo_Barra', max_length=50)
     descripcion = models.CharField(db_column='Descripcion', max_length=255)
+    categoria = models.CharField(db_column='Categoria', max_length=100)
+    stock_actual = models.DecimalField(db_column='Stock_Actual', max_digits=10, decimal_places=3)
     stock_minimo = models.DecimalField(db_column='Stock_Minimo', max_digits=10, decimal_places=3)
-    nombre_categoria = models.CharField(db_column='Nombre_Categoria', max_length=100)
-    nivel_alerta = models.CharField(db_column='Nivel_Alerta', max_length=50)
 
     class Meta:
         managed = False
@@ -1937,7 +1937,7 @@ class VistaStockCriticoAlertas(models.Model):
         verbose_name_plural = 'Vista: Stock Crítico'
 
     def __str__(self):
-        return f'{self.codigo} - {self.nivel_alerta}'
+        return f'{self.codigo_barra} - {self.descripcion}'
 
 
 class VistaRecargasHistorial(models.Model):
@@ -1989,18 +1989,16 @@ class VistaResumenCajaDiario(models.Model):
 class VistaNotasCreditoDetallado(models.Model):
     '''Vista v_notas_credito_detallado - Notas de crédito con detalles'''
     id_nota = models.BigIntegerField(db_column='ID_Nota', primary_key=True)
-    id_documento = models.BigIntegerField(db_column='ID_Documento')
     fecha = models.DateTimeField(db_column='Fecha')
     monto_total = models.DecimalField(db_column='Monto_Total', max_digits=12, decimal_places=2)
     estado = models.CharField(db_column='Estado', max_length=20)
-    motivo_devolucion = models.CharField(db_column='Motivo_Devolucion', max_length=255)
-    venta_origen = models.BigIntegerField(db_column='Venta_Origen')
-    fecha_venta_origen = models.DateTimeField(db_column='Fecha_Venta_Origen')
+    observacion = models.CharField(db_column='Observacion', max_length=255, blank=True, null=True)
     cliente = models.CharField(db_column='Cliente', max_length=201)
-    ruc_ci = models.CharField(db_column='Ruc_CI', max_length=20)
-    telefono = models.CharField(db_column='Telefono', max_length=20)
-    nro_timbrado = models.IntegerField(db_column='Nro_Timbrado')
-    nro_secuencial = models.IntegerField(db_column='Nro_Secuencial')
+    venta_original = models.BigIntegerField(db_column='Venta_Original', blank=True, null=True)
+    fecha_venta_original = models.DateTimeField(db_column='Fecha_Venta_Original', blank=True, null=True)
+    monto_venta_original = models.DecimalField(db_column='Monto_Venta_Original', max_digits=12, decimal_places=2, blank=True, null=True)
+    cantidad_items = models.IntegerField(db_column='Cantidad_Items')
+    productos = models.TextField(db_column='Productos', blank=True, null=True)
 
     class Meta:
         managed = False

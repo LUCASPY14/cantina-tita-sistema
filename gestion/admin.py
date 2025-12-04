@@ -316,7 +316,7 @@ class CargasSaldoAdmin(admin.ModelAdmin):
     list_display = ['id_carga', 'nro_tarjeta', 'monto_badge', 'fecha_carga', 'id_cliente_origen']
     list_filter = ['fecha_carga']
     search_fields = ['nro_tarjeta__nro_tarjeta', 'id_cliente_origen__nombres']
-    date_hierarchy = 'fecha_carga'
+    # date_hierarchy removed due to MySQL timezone tables requirement
     readonly_fields = ['fecha_carga']
     
     def monto_badge(self, obj):
@@ -442,7 +442,7 @@ class TarifasComisionAdmin(admin.ModelAdmin):
     ]
     search_fields = ['id_medio_pago__descripcion']
     ordering = ['-fecha_inicio_vigencia', 'id_medio_pago']
-    date_hierarchy = 'fecha_inicio_vigencia'
+    # date_hierarchy removed due to MySQL timezone tables requirement
     
     fieldsets = (
         ('Información General', {
@@ -479,9 +479,10 @@ class TarifasComisionAdmin(admin.ModelAdmin):
     def porcentaje_display(self, obj):
         """Muestra el porcentaje formateado"""
         porcentaje = float(obj.porcentaje_comision) * 100
+        porcentaje_formateado = '{:.2f}%'.format(porcentaje)
         return format_html(
-            '<span style="font-weight: bold; color: #007bff;">{:.2f}%</span>',
-            porcentaje
+            '<span style="font-weight: bold; color: #007bff;">{}</span>',
+            porcentaje_formateado
         )
     porcentaje_display.short_description = 'Porcentaje'
     porcentaje_display.admin_order_field = 'porcentaje_comision'
@@ -489,9 +490,10 @@ class TarifasComisionAdmin(admin.ModelAdmin):
     def monto_fijo_display(self, obj):
         """Muestra el monto fijo formateado"""
         if obj.monto_fijo_comision:
+            monto_formateado = '{:,.0f}'.format(float(obj.monto_fijo_comision))
             return format_html(
-                '<span style="color: #dc3545;">Gs {:,.0f}</span>',
-                obj.monto_fijo_comision
+                '<span style="color: #dc3545;">Gs {}</span>',
+                monto_formateado
             )
         return format_html('<span style="color: #999;">-</span>')
     monto_fijo_display.short_description = 'Monto Fijo'
@@ -748,6 +750,8 @@ class VistaConsumosEstudianteAdmin(admin.ModelAdmin):
     
     def saldo_badge(self, obj):
         saldo = obj.saldo_actual
+        if saldo is None:
+            return format_html('<span style="color: #999;">Sin datos</span>')
         color = '#4caf50' if saldo > 10000 else '#ff9800' if saldo > 0 else '#f44336'
         saldo_formateado = '{:,.0f}'.format(saldo)
         return format_html('<span style="color: {}; font-weight: bold;">Gs. {}</span>', color, saldo_formateado)
@@ -765,24 +769,29 @@ class VistaConsumosEstudianteAdmin(admin.ModelAdmin):
 
 @admin.register(VistaStockCriticoAlertas)
 class VistaStockCriticoAlertasAdmin(admin.ModelAdmin):
-    list_display = ['codigo', 'descripcion', 'nombre_categoria', 'stock_minimo', 'nivel_alerta_badge']
-    list_filter = ['nombre_categoria', 'nivel_alerta']
-    search_fields = ['codigo', 'descripcion']
+    list_display = ['codigo_barra', 'descripcion', 'categoria', 'stock_actual', 'stock_minimo', 'diferencia_badge']
+    list_filter = ['categoria']
+    search_fields = ['codigo_barra', 'descripcion']
     
-    def nivel_alerta_badge(self, obj):
-        colors = {
-            'CRÍTICO - SIN STOCK': '#f44336',
-            'URGENTE': '#ff5722',
-            'BAJO': '#ff9800',
-            'ATENCIÓN': '#ffc107',
-            'REQUIERE ATENCIÓN': '#ff9800'
-        }
-        color = colors.get(obj.nivel_alerta, '#999')
+    def diferencia_badge(self, obj):
+        diferencia = obj.stock_minimo - obj.stock_actual
+        if diferencia > 50:
+            color = '#f44336'  # Rojo - crítico
+            nivel = 'CRÍTICO'
+        elif diferencia > 20:
+            color = '#ff5722'  # Naranja oscuro - urgente
+            nivel = 'URGENTE'
+        elif diferencia > 0:
+            color = '#ff9800'  # Naranja - bajo
+            nivel = 'BAJO'
+        else:
+            color = '#4caf50'  # Verde - OK
+            nivel = 'OK'
         return format_html(
             '<span style="background-color: {}; color: white; padding: 4px 12px; border-radius: 12px; font-weight: bold;">{}</span>',
-            color, obj.nivel_alerta
+            color, nivel
         )
-    nivel_alerta_badge.short_description = 'Nivel de Alerta'
+    diferencia_badge.short_description = 'Estado'
     
     def has_add_permission(self, request):
         return False
@@ -846,9 +855,9 @@ class VistaResumenCajaDiarioAdmin(admin.ModelAdmin):
 
 @admin.register(VistaNotasCreditoDetallado)
 class VistaNotasCreditoDetalladoAdmin(admin.ModelAdmin):
-    list_display = ['id_nota', 'cliente', 'monto_badge', 'estado_badge', 'venta_origen']
+    list_display = ['id_nota', 'cliente', 'monto_badge', 'estado_badge', 'venta_original', 'fecha']
     list_filter = ['estado']
-    search_fields = ['cliente', 'ruc_ci', 'motivo_devolucion']
+    search_fields = ['cliente', 'productos']
     
     def monto_badge(self, obj):
         monto_formateado = '{:,.0f}'.format(float(obj.monto_total))
@@ -941,10 +950,25 @@ class AuditoriaComisionesAdmin(admin.ModelAdmin):
 # Vistas
 @admin.register(VistaStockAlerta)
 class VistaStockAlertaAdmin(admin.ModelAdmin):
-    list_display = ['producto', 'codigo', 'categoria', 'stock_actual', 'stock_minimo', 'cantidad_faltante', 'nivel_alerta']
+    list_display = ['descripcion', 'codigo_barra', 'categoria', 'stock_actual', 'stock_minimo', 'diferencia', 'nivel_alerta_badge']
     list_filter = ['nivel_alerta', 'categoria']
-    search_fields = ['producto', 'codigo']
-    ordering = ['-nivel_alerta', '-cantidad_faltante']
+    search_fields = ['descripcion', 'codigo_barra']
+    ordering = ['-nivel_alerta', '-diferencia']
+    
+    def nivel_alerta_badge(self, obj):
+        colors = {
+            'CRÍTICO': '#f44336',
+            'URGENTE': '#ff5722',
+            'BAJO': '#ff9800',
+            'ATENCIÓN': '#ffc107'
+        }
+        color = colors.get(obj.nivel_alerta, '#999')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 4px 12px; border-radius: 12px; font-weight: bold;">{}</span>',
+            color, obj.nivel_alerta
+        )
+    nivel_alerta_badge.short_description = 'Nivel de Alerta'
+    nivel_alerta_badge.admin_order_field = 'nivel_alerta'
     
     def has_add_permission(self, request):
         return False
