@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Generar Cuentas Mensuales{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-2xl">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">
+            📋 Generar Cuentas Mensuales
+        </h1>
+        <a href="{% url 'pos:cuentas_mensuales' %}" class="btn btn-outline btn-sm">
+            ← Volver a Cuentas
+        </a>
+    </div>
+
+    <!-- Advertencia -->
+    <div class="alert alert-warning shadow-lg mb-6">
+        <div>
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <div>
+                <h3 class="font-bold">Importante</h3>
+                <div class="text-sm">Esta acción generará cuentas para todos los estudiantes que tienen consumos de almuerzo registrados en el período seleccionado.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información del Período -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+            <h2 class="card-title">📊 Resumen del Período</h2>
+            <div class="stats stats-vertical lg:stats-horizontal shadow">
+                <div class="stat">
+                    <div class="stat-title">Período</div>
+                    <div class="stat-value text-2xl">
+                        {% if mes == 1 %}Enero
+                        {% elif mes == 2 %}Febrero
+                        {% elif mes == 3 %}Marzo
+                        {% elif mes == 4 %}Abril
+                        {% elif mes == 5 %}Mayo
+                        {% elif mes == 6 %}Junio
+                        {% elif mes == 7 %}Julio
+                        {% elif mes == 8 %}Agosto
+                        {% elif mes == 9 %}Septiembre
+                        {% elif mes == 10 %}Octubre
+                        {% elif mes == 11 %}Noviembre
+                        {% else %}Diciembre
+                        {% endif %} {{ anio }}
+                    </div>
+                </div>
+                <div class="stat">
+                    <div class="stat-title">Consumos Pendientes</div>
+                    <div class="stat-value text-primary">{{ consumos_pendientes }}</div>
+                    <div class="stat-desc">estudiantes con consumos</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title mb-4">⚙️ Configuración</h2>
+            
+            <form method="POST" onsubmit="return confirm('¿Está seguro de generar las cuentas mensuales? Esta acción marcará todos los consumos como facturados.');">
+                {% csrf_token %}
+                <input type="hidden" name="anio" value="{{ anio }}">
+                <input type="hidden" name="mes" value="{{ mes }}">
+                
+                <!-- Forma de Cobro -->
+                <div class="form-control mb-6">
+                    <label class="label">
+                        <span class="label-text font-semibold">Forma de Cobro</span>
+                    </label>
+                    <div class="flex flex-col gap-3">
+                        <label class="label cursor-pointer border rounded-lg p-4 hover:bg-base-200">
+                            <div class="flex items-center gap-3">
+                                <input type="radio" name="forma_cobro" value="CREDITO_MENSUAL" class="radio radio-primary" checked>
+                                <div>
+                                    <span class="label-text font-bold">Crédito Mensual</span>
+                                    <p class="text-sm text-gray-500">Los padres pagan al final del mes</p>
+                                </div>
+                            </div>
+                        </label>
+                        
+                        <label class="label cursor-pointer border rounded-lg p-4 hover:bg-base-200">
+                            <div class="flex items-center gap-3">
+                                <input type="radio" name="forma_cobro" value="CONTADO_ANTICIPADO" class="radio radio-primary">
+                                <div>
+                                    <span class="label-text font-bold">Contado Anticipado</span>
+                                    <p class="text-sm text-gray-500">Los padres pagaron al inicio del mes</p>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Información Adicional -->
+                <div class="alert alert-info mb-6">
+                    <div>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current flex-shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <div class="text-sm">
+                            <strong>¿Qué hará esta acción?</strong>
+                            <ul class="list-disc list-inside mt-2">
+                                <li>Creará una cuenta mensual por cada estudiante con consumos</li>
+                                <li>Calculará el total de almuerzos y el monto a pagar</li>
+                                <li>Marcará todos los consumos como facturados</li>
+                                <li>Las cuentas quedarán en estado PENDIENTE</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones -->
+                <div class="flex gap-4 justify-end">
+                    <a href="{% url 'pos:cuentas_mensuales' %}" class="btn btn-ghost">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        ✅ Generar Cuentas
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

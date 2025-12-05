@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Reporte Diario - Almuerzos{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">
+            📅 Reporte Diario de Almuerzos
+        </h1>
+        <a href="{% url 'pos:almuerzo_reportes' %}" class="btn btn-outline btn-sm">
+            ← Volver a Reportes
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+            <h2 class="card-title text-lg mb-4">🔍 Filtrar por Fechas</h2>
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Fecha Desde</span>
+                    </label>
+                    <input type="date" name="fecha_desde" value="{{ fecha_desde|date:'Y-m-d' }}" 
+                           class="input input-bordered w-full">
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Fecha Hasta</span>
+                    </label>
+                    <input type="date" name="fecha_hasta" value="{{ fecha_hasta|date:'Y-m-d' }}" 
+                           class="input input-bordered w-full">
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">&nbsp;</span>
+                    </label>
+                    <div class="flex gap-2">
+                        <button type="submit" class="btn btn-primary flex-1">
+                            Buscar
+                        </button>
+                        <a href="{% url 'pos:reporte_almuerzos_diarios' %}" class="btn btn-ghost">
+                            Limpiar
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="stat bg-base-100 shadow rounded-lg">
+            <div class="stat-figure text-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+            </div>
+            <div class="stat-title">Total de Almuerzos</div>
+            <div class="stat-value text-primary">{{ total.cantidad|default:0 }}</div>
+            <div class="stat-desc">{{ fecha_desde|date:"d/m/Y" }} - {{ fecha_hasta|date:"d/m/Y" }}</div>
+        </div>
+
+        <div class="stat bg-base-100 shadow rounded-lg">
+            <div class="stat-figure text-success">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="stat-title">Monto Total</div>
+            <div class="stat-value text-success">Gs. {{ total.monto_total|floatformat:0|intcomma|default:"0" }}</div>
+            <div class="stat-desc">Total del período</div>
+        </div>
+    </div>
+
+    <!-- Tabla de Registros -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="card-title">📋 Detalle de Registros</h2>
+                <button onclick="window.print()" class="btn btn-sm btn-outline">
+                    🖨️ Imprimir
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Fecha/Hora</th>
+                            <th>Estudiante</th>
+                            <th>Tarjeta</th>
+                            <th>Tipo Almuerzo</th>
+                            <th>Costo</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for registro in registros %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <div class="font-semibold">{{ registro.fecha_consumo|date:"d/m/Y" }}</div>
+                                <div class="text-xs text-gray-500">{{ registro.hora_registro|time:"H:i" }}</div>
+                            </td>
+                            <td>{{ registro.id_hijo.nombre }} {{ registro.id_hijo.apellido }}</td>
+                            <td>
+                                <span class="badge badge-ghost">{{ registro.nro_tarjeta.nro_tarjeta }}</span>
+                            </td>
+                            <td>
+                                <div class="badge badge-primary">{{ registro.id_tipo_almuerzo.nombre }}</div>
+                            </td>
+                            <td class="font-mono font-bold">Gs. {{ registro.costo_almuerzo|floatformat:0|intcomma }}</td>
+                            <td>
+                                {% if registro.marcado_en_cuenta %}
+                                <div class="badge badge-warning">En Cuenta</div>
+                                {% else %}
+                                <div class="badge badge-success">Pagado</div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-gray-500 py-8">
+                                No hay registros para este período
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="font-bold bg-base-200">
+                            <td colspan="5" class="text-right">TOTAL:</td>
+                            <td class="text-xl">Gs. {{ total.monto_total|floatformat:0|intcomma|default:"0" }}</td>
+                            <td>{{ total.cantidad|default:0 }} registros</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, form, .card-actions {
+        display: none !important;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Reporte Mensual Separado - Almuerzos{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">
+            📊 Reporte Mensual Separado
+        </h1>
+        <a href="{% url 'pos:almuerzo_reportes' %}" class="btn btn-outline btn-sm">
+            ← Volver a Reportes
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+            <h2 class="card-title text-lg mb-4">🔍 Seleccionar Período</h2>
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Año</span>
+                    </label>
+                    <select name="anio" class="select select-bordered w-full">
+                        <option value="2024" {% if anio == 2024 %}selected{% endif %}>2024</option>
+                        <option value="2025" {% if anio == 2025 %}selected{% endif %}>2025</option>
+                        <option value="2026" {% if anio == 2026 %}selected{% endif %}>2026</option>
+                        <option value="2027" {% if anio == 2027 %}selected{% endif %}>2027</option>
+                    </select>
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Mes</span>
+                    </label>
+                    <select name="mes" class="select select-bordered w-full">
+                        <option value="1" {% if mes == 1 %}selected{% endif %}>Enero</option>
+                        <option value="2" {% if mes == 2 %}selected{% endif %}>Febrero</option>
+                        <option value="3" {% if mes == 3 %}selected{% endif %}>Marzo</option>
+                        <option value="4" {% if mes == 4 %}selected{% endif %}>Abril</option>
+                        <option value="5" {% if mes == 5 %}selected{% endif %}>Mayo</option>
+                        <option value="6" {% if mes == 6 %}selected{% endif %}>Junio</option>
+                        <option value="7" {% if mes == 7 %}selected{% endif %}>Julio</option>
+                        <option value="8" {% if mes == 8 %}selected{% endif %}>Agosto</option>
+                        <option value="9" {% if mes == 9 %}selected{% endif %}>Septiembre</option>
+                        <option value="10" {% if mes == 10 %}selected{% endif %}>Octubre</option>
+                        <option value="11" {% if mes == 11 %}selected{% endif %}>Noviembre</option>
+                        <option value="12" {% if mes == 12 %}selected{% endif %}>Diciembre</option>
+                    </select>
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">&nbsp;</span>
+                    </label>
+                    <button type="submit" class="btn btn-primary w-full">
+                        Generar Reporte
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla de Reporte -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title mb-4">📋 Consumos Separados: Almuerzos vs Tarjeta</h2>
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr>
+                            <th>Estudiante</th>
+                            <th>Tarjeta</th>
+                            <th class="bg-orange-100">Almuerzos</th>
+                            <th class="bg-orange-100">Monto Almuerzos</th>
+                            <th class="bg-blue-100">Consumos Tarjeta</th>
+                            <th class="bg-blue-100">Monto Tarjeta</th>
+                            <th>Total General</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in reporte %}
+                        <tr>
+                            <td>{{ item.nombre_hijo }}</td>
+                            <td><span class="badge badge-ghost">{{ item.nro_tarjeta }}</span></td>
+                            <td class="bg-orange-50 font-bold">{{ item.total_almuerzos|default:0 }}</td>
+                            <td class="bg-orange-50 font-mono">Gs. {{ item.monto_almuerzos|floatformat:0|intcomma|default:"0" }}</td>
+                            <td class="bg-blue-50 font-bold">{{ item.total_consumos_tarjeta|default:0 }}</td>
+                            <td class="bg-blue-50 font-mono">Gs. {{ item.monto_consumos_tarjeta|floatformat:0|intcomma|default:"0" }}</td>
+                            <td class="font-bold font-mono text-lg">Gs. {{ item.total_general|floatformat:0|intcomma|default:"0" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-gray-500 py-8">
+                                No hay datos para este período
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

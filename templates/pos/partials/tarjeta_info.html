@@ -1,7 +1,11 @@
 {% load paraguay_filters l10n %}
 <!-- Información de la tarjeta escaneada -->
 {% if tarjeta %}
-<div class="bg-gradient-to-br from-success to-green-600 text-white p-4 rounded-lg fade-in shadow-lg">
+<div class="bg-gradient-to-br from-success to-green-600 text-white p-4 rounded-lg fade-in shadow-lg"
+     data-tarjeta-id="{{ tarjeta.nro_tarjeta }}"
+     data-tarjeta-nombre="{{ tarjeta.estudiante_nombre|escapejs }}"
+     data-tarjeta-saldo="{{ tarjeta.saldo_actual|unlocalize }}"
+     data-tarjeta-hijo-id="{% if tarjeta.id_hijo %}{{ tarjeta.id_hijo.id_hijo }}{% endif %}">
     <!-- Información del estudiante -->
     <div class="flex items-start gap-3 mb-3">
         <span class="text-3xl">👤</span>
@@ -57,6 +61,9 @@
 
 <script>
     // Actualizar la tarjeta seleccionada en Alpine
+    console.log('DEBUG Frontend: Ejecutando script de tarjeta');
+    console.log('DEBUG Frontend: window.posAppInstance existe?', !!window.posAppInstance);
+    
     if (window.posAppInstance) {
         window.posAppInstance.selectedCard = {
             id: '{{ tarjeta.nro_tarjeta }}',
@@ -64,7 +71,10 @@
             saldo: {{ tarjeta.saldo_actual }},
             hijo_id: {{ tarjeta.id_hijo.id_hijo|default:'null' }}
         };
+        console.log('DEBUG Frontend: selectedCard establecido:', window.posAppInstance.selectedCard);
         if (typeof playSound === 'function') playSound('scan');
+    } else {
+        console.error('DEBUG Frontend: window.posAppInstance NO está disponible');
     }
 </script>
 

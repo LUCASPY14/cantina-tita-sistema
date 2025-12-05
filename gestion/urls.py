@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import almuerzo_views
 
 app_name = 'gestion'
 
@@ -24,6 +25,16 @@ urlpatterns = [
     path('reportes/clientes/excel/', views.reporte_clientes_excel, name='reporte_clientes_excel'),
     path('reportes/cta-corriente-cliente/excel/', views.reporte_cta_corriente_cliente_excel, name='reporte_cta_corriente_cliente_excel'),
     path('reportes/cta-corriente-proveedor/excel/', views.reporte_cta_corriente_proveedor_excel, name='reporte_cta_corriente_proveedor_excel'),
+    
+    # URLs para módulo de almuerzos
+    path('pos/almuerzo/', almuerzo_views.pos_almuerzo, name='pos_almuerzo'),
+    path('pos/almuerzo/api/', almuerzo_views.pos_almuerzo_api, name='pos_almuerzo_api'),
+    path('pos/almuerzo/anular/', almuerzo_views.anular_ultimo_almuerzo, name='anular_almuerzo'),
+    path('almuerzo/cuentas/', almuerzo_views.lista_cuentas_mensuales, name='cuentas_mensuales'),
+    path('almuerzo/cuentas/generar/', almuerzo_views.generar_cuentas_mes, name='generar_cuentas'),
+    path('almuerzo/cuentas/pagar/', almuerzo_views.registrar_pago_almuerzo, name='pagar_almuerzo'),
+    path('almuerzo/reportes/diario/', almuerzo_views.reporte_almuerzos_diarios, name='reporte_almuerzos'),
+    path('almuerzo/reportes/mensual/', almuerzo_views.reporte_mensual_separado, name='reporte_mensual_separado'),
 ]
 
 

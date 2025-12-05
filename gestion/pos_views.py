@@ -7,6 +7,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q, F, Sum, Count
+from django.db import transaction
 from django.utils import timezone
 from decimal import Decimal
 import json
@@ -17,7 +18,8 @@ from gestion.models import (
     CargasSaldo, Proveedor, Categoria, Cajas, CierresCaja,
     MediosPago, TiposPago, PagosVenta, ConciliacionPagos,
     Compras, DetalleCompra, MovimientosStock,
-    TarifasComision, DetalleComisionVenta
+    TarifasComision, DetalleComisionVenta, ListaPrecios, TipoCliente,
+    TipoRolGeneral, DocumentosTributarios, Timbrados
 )
 
 
@@ -191,6 +193,7 @@ def buscar_tarjeta(request):
 @login_required
 @csrf_exempt
 @require_http_methods(["POST"])
+@transaction.atomic
 def procesar_venta(request):
     """Procesar una venta desde el POS"""
     try:
@@ -211,31 +214,144 @@ def procesar_venta(request):
         try:
             empleado = Empleado.objects.get(usuario=request.user.username)
         except Empleado.DoesNotExist:
-            empleado = None
+            # Buscar o crear rol genérico
+            rol_generico, _ = TipoRolGeneral.objects.get_or_create(
+                nombre_rol='SISTEMA',
+                defaults={'descripcion': 'Rol del sistema'}
+            )
+            
+            # Crear o buscar empleado genérico
+            empleado, created = Empleado.objects.get_or_create(
+                usuario='SISTEMA',
+                defaults={
+                    'id_rol': rol_generico,
+                    'nombre': 'SISTEMA',
+                    'apellido': 'POS',
+                    'contrasena_hash': 'N/A',
+                    'direccion': 'N/A',
+                    'ciudad': 'N/A',
+                    'telefono': '0',
+                    'email': 'sistema@pos.local',
+                    'activo': True
+                }
+            )
+        
+        # Obtener o crear cliente genérico
+        try:
+            # Obtener lista de precios por defecto
+            lista_precios_default = ListaPrecios.objects.filter(activo=True).first()
+            if not lista_precios_default:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No hay lista de precios activa en el sistema'
+                })
+            
+            # Obtener tipo de cliente por defecto
+            tipo_cliente_default = TipoCliente.objects.first()
+            if not tipo_cliente_default:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No hay tipo de cliente configurado en el sistema'
+                })
+            
+            cliente_generico, created = Cliente.objects.get_or_create(
+                ruc_ci='0000000',
+                defaults={
+                    'nombres': 'CLIENTE',
+                    'apellidos': 'GENERICO',
+                    'id_lista': lista_precios_default,
+                    'id_tipo_cliente': tipo_cliente_default,
+                    'direccion': 'N/A',
+                    'ciudad': 'N/A',
+                    'telefono': '0',
+                    'email': 'generico@sistema.local',
+                    'limite_credito': 0,
+                    'activo': True
+                }
+            )
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Error al crear cliente genérico: {str(e)}'
+            })
         
         # Obtener tarjeta si se especificó
         tarjeta = None
+        cliente = cliente_generico  # Por defecto usar cliente genérico
+        
         if tarjeta_data and tarjeta_data.get('id'):
             try:
-                tarjeta = Tarjeta.objects.select_related(
+                nro_tarjeta = tarjeta_data['id']
+                
+                # Usar select_for_update() para bloquear la tarjeta durante toda la transacción
+                tarjeta = Tarjeta.objects.select_for_update().select_related(
                     'id_hijo',
                     'id_hijo__id_cliente_responsable'
-                ).get(nro_tarjeta=tarjeta_data['id'])
+                ).get(nro_tarjeta=nro_tarjeta)
+                
+                # Usar el cliente de la tarjeta
+                if tarjeta.id_hijo and tarjeta.id_hijo.id_cliente_responsable:
+                    cliente = tarjeta.id_hijo.id_cliente_responsable
                 
                 # Validar saldo
                 if tarjeta.saldo_actual < total:
                     return JsonResponse({
                         'success': False,
-                        'error': f'Saldo insuficiente. Disponible: Gs. {tarjeta.saldo_actual:,.0f}'
-                    })
+                    'error': f'Saldo insuficiente. Disponible: Gs. {tarjeta.saldo_actual:,.0f}'
+                })
                     
             except Tarjeta.DoesNotExist:
                 pass
+            except Exception as e:
+                pass        # Determinar si se debe crear factura según la lógica de negocio:
+        # - Con tarjeta (consumo de saldo): NO se emite factura
+        # - Contado/Crédito: SÍ se emite factura
+        nro_factura = None
+        
+        if tarjeta:
+            # Venta con tarjeta: NO emitir factura, solo registrar consumo
+            nro_factura = None
+        else:
+            # Venta contado/crédito: SÍ emitir factura
+            try:
+                # Buscar timbrado activo
+                timbrado_activo = Timbrados.objects.filter(activo=True).first()
+                if not timbrado_activo:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'No hay timbrado activo configurado para emitir facturas'
+                    })
+                
+                # Obtener el último nro_secuencial para este timbrado
+                ultimo_doc = DocumentosTributarios.objects.filter(
+                    nro_timbrado=timbrado_activo
+                ).order_by('-nro_secuencial').first()
+                
+                nuevo_secuencial = (ultimo_doc.nro_secuencial + 1) if ultimo_doc else 1
+                
+                # Crear documento tributario
+                documento = DocumentosTributarios.objects.create(
+                    nro_timbrado=timbrado_activo,
+                    nro_secuencial=nuevo_secuencial,
+                    fecha_emision=timezone.now(),
+                    monto_total=int(total),
+                    monto_exento=0,
+                    monto_gravado_5=0,
+                    monto_iva_5=0,
+                    monto_gravado_10=0,
+                    monto_iva_10=0
+                )
+                nro_factura = documento.id_documento
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Error al crear factura: {str(e)}'
+                })
         
         # Crear la venta
         venta = Ventas.objects.create(
-            nro_factura_venta=0,  # Se generará después
-            id_cliente=tarjeta.id_hijo.id_cliente_responsable if tarjeta and tarjeta.id_hijo else None,
+            nro_factura_venta=nro_factura,  # NULL si es con tarjeta, ID_Documento si es contado/crédito
+            id_cliente=cliente,  # Usar el cliente obtenido (genérico o de tarjeta)
             id_hijo=tarjeta.id_hijo if tarjeta else None,
             id_tipo_pago_id=tipo_pago_id,
             id_empleado_cajero=empleado,
@@ -246,7 +362,7 @@ def procesar_venta(request):
             tipo_venta='CANTINA'
         )
         
-        # Crear detalles de venta y actualizar stock
+        # Crear detalles de venta
         for item in items:
             try:
                 producto = Producto.objects.select_related(
@@ -261,15 +377,15 @@ def procesar_venta(request):
                     cantidad = Decimal(str(item.get('quantity', 1)))
                     
                 precio = Decimal(str(item['price']))
+                subtotal = precio * cantidad
                 
-                # Crear detalle
+                # Crear detalle (simplificado para venta con tarjeta, completo para contado/crédito)
                 DetalleVenta.objects.create(
                     id_venta=venta,
                     id_producto=producto,
                     cantidad=cantidad,
-                    precio_unitario_total=int(precio),
-                    subtotal_total=int(precio * cantidad),
-                    monto_iva=0
+                    precio_unitario=int(precio),
+                    subtotal_total=int(subtotal)
                 )
                 
                 # Actualizar stock
@@ -283,30 +399,53 @@ def procesar_venta(request):
             except Producto.DoesNotExist:
                 continue
         
-        # Si hay tarjeta, descontar saldo
+        # Si hay tarjeta, descontar saldo (proceso simplificado)
         if tarjeta:
-            # Guardar saldo anterior para el registro
+            print(f"DEBUG: Descontando saldo de tarjeta {tarjeta.nro_tarjeta}")
+            print(f"DEBUG: Saldo anterior: {tarjeta.saldo_actual}, Total a descontar: {total}")
+            
+            # Guardar saldo anterior para el registro ANTES de cualquier modificación
             saldo_anterior = tarjeta.saldo_actual
             
-            # Actualizar saldo de la tarjeta
-            tarjeta.saldo_actual = F('saldo_actual') - total
-            tarjeta.save()
+            # Calcular saldo posterior
+            saldo_posterior = saldo_anterior - total
             
-            # Refrescar para obtener el nuevo saldo
-            tarjeta.refresh_from_db()
+            print(f"DEBUG: Saldo posterior calculado: {saldo_posterior}")
             
-            # Registrar consumo (comentado temporalmente si hay problemas con triggers)
+            # Registrar consumo PRIMERO, antes de actualizar la tarjeta
             try:
-                ConsumoTarjeta.objects.create(
-                    nro_tarjeta=tarjeta,
+                saldo_ant_int = int(saldo_anterior)
+                saldo_post_int = int(saldo_posterior)
+                tarjeta_id = tarjeta.nro_tarjeta  # Guardar el ID antes de cualquier modificación
+                
+                print(f"DEBUG PRE-CREATE: saldo_anterior={saldo_ant_int}, saldo_posterior={saldo_post_int}")
+                
+                # Usar el ID directamente en lugar del objeto para evitar que Django refresque
+                consumo_creado = ConsumoTarjeta.objects.create(
+                    nro_tarjeta_id=tarjeta_id,  # Usar _id para evitar refresh del FK
                     fecha_consumo=timezone.now(),
-                    monto_consumido=total,
+                    monto_consumido=int(total),
                     detalle=f'Venta #{venta.id_venta}',
-                    saldo_anterior=saldo_anterior,
-                    saldo_posterior=tarjeta.saldo_actual
+                    saldo_anterior=saldo_ant_int,
+                    saldo_posterior=saldo_post_int
                 )
+                
+                print(f"DEBUG POST-CREATE: Consumo {consumo_creado.id_consumo} creado")
+                print(f"DEBUG POST-CREATE: Valores enviados - Ant={saldo_ant_int}, Post={saldo_post_int}")
+                
+                # Verificar inmediatamente en la BD
+                consumo_verificado = ConsumoTarjeta.objects.get(id_consumo=consumo_creado.id_consumo)
+                print(f"DEBUG VERIFICACION DB: Consumo {consumo_verificado.id_consumo} en BD - Ant={consumo_verificado.saldo_anterior}, Post={consumo_verificado.saldo_posterior}")
+                
+                print(f"DEBUG: Consumo registrado exitosamente")
             except Exception as e:
-                print(f"Advertencia: No se pudo registrar el consumo: {e}")
+                print(f"ERROR: No se pudo registrar el consumo: {e}")
+                raise  # Re-lanzar para que la transacción haga rollback
+            
+            # AHORA actualizar el saldo de la tarjeta (después del consumo)
+            tarjeta.saldo_actual = saldo_posterior
+            tarjeta.save()
+            print(f"DEBUG: Saldo de tarjeta actualizado a {tarjeta.saldo_actual}")
         
         return JsonResponse({
             'success': True,
@@ -316,9 +455,6 @@ def procesar_venta(request):
         })
         
     except Exception as e:
-        import traceback
-        error_msg = f"{str(e)}\n{traceback.format_exc()}"
-        print(f"ERROR EN PROCESAR_VENTA: {error_msg}")
         return JsonResponse({
             'success': False,
             'error': str(e)
@@ -1076,20 +1212,22 @@ def ticket_view(request, venta_id):
         if venta.id_hijo:
             try:
                 tarjeta = venta.id_hijo.tarjeta
-                saldo_actual = tarjeta.saldo_actual
                 
-                # Buscar el consumo registrado
+                # Buscar el consumo por el detalle exacto (más confiable)
                 consumo = ConsumoTarjeta.objects.filter(
                     nro_tarjeta=tarjeta,
-                    detalle__contains=f'Venta #{venta.id_venta}'
-                ).first()
+                    detalle=f'Venta #{venta.id_venta}'
+                ).order_by('-fecha_consumo').first()
                 
                 if consumo:
                     saldo_anterior = consumo.saldo_anterior
+                    saldo_actual = consumo.saldo_posterior
                 else:
-                    # Estimar saldo anterior
+                    # Si no se encuentra el consumo, usar el saldo actual de la tarjeta
+                    # y calcular el anterior
+                    saldo_actual = tarjeta.saldo_actual
                     saldo_anterior = saldo_actual + venta.monto_total
-            except:
+            except Exception as e:
                 pass
         
         # Obtener datos de la empresa para el ticket

@@ -2,7 +2,7 @@
 URLs para el módulo POS (Punto de Venta)
 """
 from django.urls import path
-from gestion import pos_views
+from gestion import pos_views, almuerzo_views
 
 app_name = 'pos'
 
@@ -75,7 +75,7 @@ urlpatterns = [
     path('comisiones/configurar/', pos_views.configurar_tarifas_view, name='configurar_tarifas'),
     path('comisiones/reporte/', pos_views.reporte_comisiones_view, name='reporte_comisiones'),
     
-    # Sistema de Almuerzos
+    # Sistema de Almuerzos (LEGACY - Sistema antiguo)
     path('almuerzos/', pos_views.almuerzos_dashboard_view, name='almuerzos_dashboard'),
     path('almuerzos/planes/', pos_views.planes_almuerzo_view, name='planes_almuerzo'),
     path('almuerzos/planes/crear/', pos_views.crear_plan_almuerzo, name='crear_plan_almuerzo'),
@@ -88,6 +88,18 @@ urlpatterns = [
     path('almuerzos/facturacion/', pos_views.facturacion_mensual_almuerzos_view, name='facturacion_mensual_almuerzos'),
     path('almuerzos/facturacion/generar/', pos_views.generar_facturacion_mensual, name='generar_facturacion_mensual'),
     path('almuerzos/reportes/', pos_views.reportes_almuerzos_view, name='reportes_almuerzos'),
+    
+    # Sistema de Almuerzos NUEVO (Diciembre 2025 - Separado de tarjetas)
+    path('almuerzo/', almuerzo_views.pos_almuerzo, name='pos_almuerzo'),
+    path('almuerzo/api/', almuerzo_views.pos_almuerzo_api, name='pos_almuerzo_api'),
+    path('almuerzo/anular/', almuerzo_views.anular_ultimo_almuerzo, name='anular_almuerzo'),
+    path('almuerzo/reportes/', almuerzo_views.almuerzo_reportes, name='almuerzo_reportes'),
+    path('almuerzo/reportes/diario/', almuerzo_views.reporte_almuerzos_diarios, name='reporte_almuerzos_diarios'),
+    path('almuerzo/reportes/mensual/', almuerzo_views.reporte_mensual_separado, name='reporte_mensual_separado'),
+    path('almuerzo/reportes/estudiante/', almuerzo_views.reporte_por_estudiante, name='reporte_por_estudiante'),
+    path('almuerzo/cuentas/', almuerzo_views.lista_cuentas_mensuales, name='cuentas_mensuales'),
+    path('almuerzo/cuentas/generar/', almuerzo_views.generar_cuentas_mes, name='generar_cuentas'),
+    path('almuerzo/cuentas/pagar/', almuerzo_views.registrar_pago_almuerzo, name='pagar_almuerzo'),
     
     # Otras vistas
     path('dashboard/', pos_views.dashboard_view, name='dashboard'),

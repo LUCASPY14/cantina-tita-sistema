@@ -1022,7 +1022,7 @@ class Ventas(models.Model):
     ]
 
     id_venta = models.BigAutoField(db_column='ID_Venta', primary_key=True)
-    nro_factura_venta = models.BigIntegerField(db_column='Nro_Factura_Venta')
+    nro_factura_venta = models.BigIntegerField(db_column='Nro_Factura_Venta', null=True, blank=True)
     id_cliente = models.ForeignKey(
         Cliente,
         on_delete=models.PROTECT,
@@ -1434,34 +1434,6 @@ class SuscripcionesAlmuerzo(models.Model):
 
     def __str__(self):
         return f'{self.id_hijo.nombre_completo} - {self.id_plan_almuerzo.nombre_plan}'
-
-
-class RegistroConsumoAlmuerzo(models.Model):
-    '''Tabla registro_consumo_almuerzo - Registro diario de consumo'''
-    id_registro_consumo = models.BigAutoField(db_column='ID_Registro_Consumo', primary_key=True)
-    id_hijo = models.ForeignKey(
-        Hijo,
-        on_delete=models.PROTECT,
-        db_column='ID_Hijo',
-        related_name='consumos'
-    )
-    fecha_consumo = models.DateField(db_column='Fecha_Consumo')
-    id_suscripcion = models.ForeignKey(
-        SuscripcionesAlmuerzo,
-        on_delete=models.PROTECT,
-        db_column='ID_Suscripcion'
-    )
-    hora_registro = models.TimeField(db_column='Hora_Registro', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'registro_consumo_almuerzo'
-        verbose_name = 'Registro de Consumo'
-        verbose_name_plural = 'Registros de Consumo'
-        unique_together = (('id_hijo', 'fecha_consumo'),)
-
-    def __str__(self):
-        return f'{self.id_hijo.nombre_completo} - {self.fecha_consumo}'
 
 
 class PagosAlmuerzoMensual(models.Model):
@@ -2008,3 +1980,241 @@ class VistaNotasCreditoDetallado(models.Model):
 
     def __str__(self):
         return f'NC {self.id_nota} - {self.cliente}'
+
+
+# =============================================================================
+# MÓDULO DE ALMUERZOS - Diciembre 2025
+# =============================================================================
+
+class TipoAlmuerzo(models.Model):
+    '''Tabla tipos_almuerzo - Catálogo de tipos de almuerzo'''
+    id_tipo_almuerzo = models.AutoField(db_column='ID_Tipo_Almuerzo', primary_key=True)
+    nombre = models.CharField(db_column='Nombre', max_length=100)
+    descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
+    precio_unitario = models.DecimalField(db_column='Precio_Unitario', max_digits=10, decimal_places=2)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
+
+    class Meta:
+        managed = False
+        db_table = 'tipos_almuerzo'
+        verbose_name = 'Tipo de Almuerzo'
+        verbose_name_plural = 'Tipos de Almuerzo'
+
+    def __str__(self):
+        return f'{self.nombre} - Gs. {self.precio_unitario:,.0f}'
+
+
+class RegistroConsumoAlmuerzo(models.Model):
+    '''Tabla registro_consumo_almuerzo - Registro diario de almuerzos'''
+    id_registro_consumo = models.BigAutoField(db_column='ID_Registro_Consumo', primary_key=True)
+    id_hijo = models.ForeignKey(
+        Hijo,
+        on_delete=models.PROTECT,
+        db_column='ID_Hijo'
+    )
+    nro_tarjeta = models.ForeignKey(
+        Tarjeta,
+        on_delete=models.PROTECT,
+        db_column='Nro_Tarjeta',
+        blank=True,
+        null=True,
+        related_name='registros_almuerzo'
+    )
+    id_tipo_almuerzo = models.ForeignKey(
+        TipoAlmuerzo,
+        on_delete=models.PROTECT,
+        db_column='ID_Tipo_Almuerzo',
+        blank=True,
+        null=True
+    )
+    fecha_consumo = models.DateField(db_column='Fecha_Consumo', auto_now_add=True)
+    costo_almuerzo = models.DecimalField(db_column='Costo_Almuerzo', max_digits=10, decimal_places=2, blank=True, null=True)
+    marcado_en_cuenta = models.BooleanField(db_column='Marcado_En_Cuenta', default=False)
+    id_suscripcion = models.BigIntegerField(db_column='ID_Suscripcion', blank=True, null=True)
+    hora_registro = models.TimeField(db_column='Hora_Registro', auto_now_add=True)
+
+    class Meta:
+        managed = False
+        db_table = 'registro_consumo_almuerzo'
+        verbose_name = 'Registro de Almuerzo'
+        verbose_name_plural = 'Registros de Almuerzos'
+        ordering = ['-fecha_consumo', '-hora_registro']
+
+    def __str__(self):
+        return f'{self.id_hijo.nombre_completo} - {self.fecha_consumo}'
+
+
+class CuentaAlmuerzoMensual(models.Model):
+    '''Tabla cuentas_almuerzo_mensual - Cuentas mensuales de almuerzo'''
+    FORMA_COBRO_CHOICES = [
+        ('CONTADO_ANTICIPADO', 'Contado Anticipado'),
+        ('CREDITO_MENSUAL', 'Crédito Mensual'),
+    ]
+    
+    ESTADO_CHOICES = [
+        ('PENDIENTE', 'Pendiente'),
+        ('PARCIAL', 'Parcial'),
+        ('PAGADO', 'Pagado'),
+    ]
+
+    id_cuenta = models.BigAutoField(db_column='ID_Cuenta', primary_key=True)
+    id_hijo = models.ForeignKey(
+        Hijo,
+        on_delete=models.PROTECT,
+        db_column='ID_Hijo'
+    )
+    anio = models.IntegerField(db_column='Anio')
+    mes = models.SmallIntegerField(db_column='Mes')
+    cantidad_almuerzos = models.IntegerField(db_column='Cantidad_Almuerzos', default=0)
+    monto_total = models.DecimalField(db_column='Monto_Total', max_digits=10, decimal_places=2, default=0)
+    forma_cobro = models.CharField(db_column='Forma_Cobro', max_length=20, choices=FORMA_COBRO_CHOICES)
+    monto_pagado = models.DecimalField(db_column='Monto_Pagado', max_digits=10, decimal_places=2, default=0)
+    estado = models.CharField(db_column='Estado', max_length=10, choices=ESTADO_CHOICES, default='PENDIENTE')
+    fecha_generacion = models.DateField(db_column='Fecha_Generacion')
+    fecha_actualizacion = models.DateTimeField(db_column='Fecha_Actualizacion', auto_now=True)
+    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'cuentas_almuerzo_mensual'
+        verbose_name = 'Cuenta Mensual de Almuerzo'
+        verbose_name_plural = 'Cuentas Mensuales de Almuerzo'
+        unique_together = [['id_hijo', 'anio', 'mes']]
+        ordering = ['-anio', '-mes']
+
+    def __str__(self):
+        return f'{self.id_hijo.nombre_completo} - {self.mes}/{self.anio}'
+    
+    @property
+    def saldo_pendiente(self):
+        return self.monto_total - self.monto_pagado
+    
+    @property
+    def nombre_mes(self):
+        meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+        return meses[self.mes] if 1 <= self.mes <= 12 else ''
+
+
+class PagoCuentaAlmuerzo(models.Model):
+    '''Tabla pagos_cuentas_almuerzo - Pagos de cuentas de almuerzo'''
+    MEDIO_PAGO_CHOICES = [
+        ('EFECTIVO', 'Efectivo'),
+        ('DEBITO', 'Débito'),
+        ('CREDITO', 'Crédito'),
+        ('TRANSFERENCIA', 'Transferencia'),
+        ('OTRO', 'Otro'),
+    ]
+
+    id_pago = models.BigAutoField(db_column='ID_Pago', primary_key=True)
+    id_cuenta = models.ForeignKey(
+        CuentaAlmuerzoMensual,
+        on_delete=models.PROTECT,
+        db_column='ID_Cuenta',
+        related_name='pagos'
+    )
+    fecha_pago = models.DateTimeField(db_column='Fecha_Pago', auto_now_add=True)
+    medio_pago = models.CharField(db_column='Medio_Pago', max_length=15, choices=MEDIO_PAGO_CHOICES)
+    monto = models.DecimalField(db_column='Monto', max_digits=10, decimal_places=2)
+    referencia = models.CharField(db_column='Referencia', max_length=50, blank=True, null=True)
+    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
+    id_empleado_registro = models.ForeignKey(
+        'Empleado',
+        on_delete=models.SET_NULL,
+        db_column='ID_Empleado_Registro',
+        blank=True,
+        null=True
+    )
+
+    class Meta:
+        managed = False
+        db_table = 'pagos_cuentas_almuerzo'
+        verbose_name = 'Pago de Cuenta de Almuerzo'
+        verbose_name_plural = 'Pagos de Cuentas de Almuerzo'
+        ordering = ['-fecha_pago']
+
+    def __str__(self):
+        return f'Pago #{self.id_pago} - Gs. {self.monto:,.0f}'
+
+
+# =============================================================================
+# VISTAS DEL MÓDULO DE ALMUERZOS
+# =============================================================================
+
+class VistaAlmuerzosDiarios(models.Model):
+    '''Vista v_almuerzos_diarios - Almuerzos registrados con detalles'''
+    id_registro_consumo = models.BigIntegerField(db_column='ID_Registro_Consumo', primary_key=True)
+    fecha_consumo = models.DateField(db_column='Fecha_Consumo')
+    hora_registro = models.TimeField(db_column='Hora_Registro')
+    id_hijo = models.IntegerField(db_column='ID_Hijo')
+    estudiante = models.CharField(db_column='Estudiante', max_length=202)
+    responsable_nombre = models.CharField(db_column='Responsable_Nombre', max_length=100)
+    responsable_apellido = models.CharField(db_column='Responsable_Apellido', max_length=100)
+    nro_tarjeta = models.CharField(db_column='Nro_Tarjeta', max_length=20, blank=True, null=True)
+    tipo_almuerzo = models.CharField(db_column='Tipo_Almuerzo', max_length=100, blank=True, null=True)
+    descripcion_almuerzo = models.TextField(db_column='Descripcion_Almuerzo', blank=True, null=True)
+    costo_almuerzo = models.DecimalField(db_column='Costo_Almuerzo', max_digits=10, decimal_places=2, blank=True, null=True)
+    marcado_en_cuenta = models.BooleanField(db_column='Marcado_En_Cuenta')
+    origen = models.CharField(db_column='Origen', max_length=11)
+    id_suscripcion = models.BigIntegerField(db_column='ID_Suscripcion', blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'v_almuerzos_diarios'
+        verbose_name = 'Vista: Almuerzos Diarios'
+        verbose_name_plural = 'Vista: Almuerzos Diarios'
+
+    def __str__(self):
+        return f'{self.estudiante} - {self.fecha_consumo}'
+
+
+class VistaCuentasAlmuerzoDetallado(models.Model):
+    '''Vista v_cuentas_almuerzo_detallado - Cuentas mensuales con detalles'''
+    id_cuenta = models.BigIntegerField(db_column='ID_Cuenta', primary_key=True)
+    id_hijo = models.IntegerField(db_column='ID_Hijo')
+    estudiante = models.CharField(db_column='Estudiante', max_length=202)
+    responsable_nombre = models.CharField(db_column='Responsable_Nombre', max_length=100)
+    responsable_apellido = models.CharField(db_column='Responsable_Apellido', max_length=100)
+    responsable_telefono = models.CharField(db_column='Responsable_Telefono', max_length=20, blank=True, null=True)
+    anio = models.IntegerField(db_column='Anio')
+    mes = models.SmallIntegerField(db_column='Mes')
+    cantidad_almuerzos = models.IntegerField(db_column='Cantidad_Almuerzos')
+    monto_total = models.DecimalField(db_column='Monto_Total', max_digits=10, decimal_places=2)
+    forma_cobro = models.CharField(db_column='Forma_Cobro', max_length=20)
+    monto_pagado = models.DecimalField(db_column='Monto_Pagado', max_digits=10, decimal_places=2)
+    saldo_pendiente = models.DecimalField(db_column='Saldo_Pendiente', max_digits=11, decimal_places=2)
+    estado = models.CharField(db_column='Estado', max_length=10)
+    fecha_generacion = models.DateField(db_column='Fecha_Generacion')
+    fecha_actualizacion = models.DateTimeField(db_column='Fecha_Actualizacion')
+    cantidad_pagos = models.BigIntegerField(db_column='Cantidad_Pagos')
+
+    class Meta:
+        managed = False
+        db_table = 'v_cuentas_almuerzo_detallado'
+        verbose_name = 'Vista: Cuentas de Almuerzo Detallado'
+        verbose_name_plural = 'Vista: Cuentas de Almuerzo Detallado'
+
+    def __str__(self):
+        return f'{self.estudiante} - {self.mes}/{self.anio}'
+
+
+class VistaReporteMensualSeparado(models.Model):
+    '''Vista v_reporte_mensual_separado - Reporte mensual: almuerzos vs tarjeta'''
+    id_hijo = models.IntegerField(db_column='ID_Hijo', primary_key=True)
+    estudiante = models.CharField(db_column='Estudiante', max_length=202)
+    nro_tarjeta = models.CharField(db_column='Nro_Tarjeta', max_length=20, blank=True, null=True)
+    saldo_tarjeta_actual = models.BigIntegerField(db_column='Saldo_Tarjeta_Actual', blank=True, null=True)
+    almuerzos_mes_actual = models.DecimalField(db_column='Almuerzos_Mes_Actual', max_digits=23, decimal_places=0)
+    total_almuerzos_mes = models.DecimalField(db_column='Total_Almuerzos_Mes', max_digits=32, decimal_places=2)
+    consumos_tarjeta_mes = models.DecimalField(db_column='Consumos_Tarjeta_Mes', max_digits=32, decimal_places=2)
+    cargas_tarjeta_mes = models.DecimalField(db_column='Cargas_Tarjeta_Mes', max_digits=32, decimal_places=2)
+
+    class Meta:
+        managed = False
+        db_table = 'v_reporte_mensual_separado'
+        verbose_name = 'Vista: Reporte Mensual Separado'
+        verbose_name_plural = 'Vista: Reportes Mensuales Separados'
+
+    def __str__(self):
+        return f'{self.estudiante} - Mes Actual'

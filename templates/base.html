@@ -142,6 +142,7 @@
                         <span class="text-primary">{{ request.user.username }}</span>
                     </li>
                     <li><a href="{% url 'pos:venta' %}">🏪 Punto de Venta</a></li>
+                    <li><a href="{% url 'pos:pos_almuerzo' %}">🍽️ POS Almuerzo</a></li>
                     <li><a href="{% url 'pos:recargas' %}">💳 Recargas</a></li>
                     <li><a href="{% url 'pos:cuenta_corriente' %}">📋 Cuenta Corriente</a></li>
                     <li><a href="{% url 'pos:proveedores' %}">🏭 Proveedores</a></li>
@@ -150,6 +151,7 @@
                     <li><a href="{% url 'pos:compras_dashboard' %}">🛒 Compras</a></li>
                     <li><a href="{% url 'pos:comisiones_dashboard' %}">💳 Comisiones</a></li>
                     <li><a href="{% url 'pos:almuerzos_dashboard' %}">🍽️ Almuerzos</a></li>
+                    <li><a href="{% url 'pos:almuerzo_reportes' %}">📊 Reportes Almuerzo</a></li>
                     <li><a href="{% url 'pos:alertas_sistema' %}">🔔 Alertas</a></li>
                     <li><a href="{% url 'pos:dashboard' %}">📊 Dashboard</a></li>
                     <li><a href="{% url 'pos:historial' %}">📜 Historial Ventas</a></li>
@@ -231,6 +233,9 @@
                 
                 // Tarjeta seleccionada
                 selectedCard: null,
+                
+                // Flag para evitar doble procesamiento
+                procesandoVenta: false,
                 
                 // Número de tarjeta temporal
                 cardNumber: '',
@@ -491,6 +496,13 @@
                 
                 // Confirmar y procesar venta con el tipo de pago seleccionado
                 confirmarCheckout() {
+                    // Prevenir doble procesamiento
+                    if (this.procesandoVenta) {
+                        return;
+                    }
+                    
+                    this.procesandoVenta = true;
+                    
                     // Obtener tipo de pago seleccionado
                     const tipoPagoSelect = document.getElementById('tipo-pago-select');
                     const tipoPagoId = tipoPagoSelect ? parseInt(tipoPagoSelect.value) : 1;
@@ -517,6 +529,8 @@
                     })
                     .then(response => response.json())
                     .then(data => {
+                        this.procesandoVenta = false;  // Liberar el lock
+                        
                         if (data.success) {
                             playSound('success');
                             this.showNotification('¡Venta exitosa!', 'success');
@@ -543,11 +557,13 @@
                             if (tarjetaInfo) tarjetaInfo.innerHTML = '<div class="alert alert-info"><span>👆 Escanee la tarjeta del estudiante</span></div>';
                             
                         } else {
+                            this.procesandoVenta = false;  // Liberar el lock
                             playSound('error');
                             this.showNotification(data.error || 'Error al procesar venta', 'error');
                         }
                     })
                     .catch(error => {
+                        this.procesandoVenta = false;  // Liberar el lock en caso de error
                         playSound('error');
                         this.showNotification('Error de conexión', 'error');
                         console.error('Error:', error);
@@ -574,6 +590,24 @@
                 init() {
                     // Exponer instancia globalmente para acceso desde HTMX
                     window.posAppInstance = this;
+                    
+                    // Listener para actualizar selectedCard después del swap de HTMX
+                    document.body.addEventListener('htmx:afterSwap', (event) => {
+                        if (event.detail.target.id === 'tarjeta-info') {
+                            const tarjetaData = document.querySelector('#tarjeta-info [data-tarjeta-id]');
+                            
+                            if (tarjetaData) {
+                                this.selectedCard = {
+                                    id: tarjetaData.dataset.tarjetaId,
+                                    nombre: tarjetaData.dataset.tarjetaNombre,
+                                    saldo: parseFloat(tarjetaData.dataset.tarjetaSaldo),
+                                    hijo_id: tarjetaData.dataset.tarjetaHijoId ? parseInt(tarjetaData.dataset.tarjetaHijoId) : null
+                                };
+                            } else {
+                                this.selectedCard = null;
+                            }
+                        }
+                    });
                     
                     document.addEventListener('keydown', (e) => {
                         // F1 - Cliente genérico

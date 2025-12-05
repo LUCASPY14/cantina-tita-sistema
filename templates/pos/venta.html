@@ -92,6 +92,7 @@
                         hx-target="#tarjeta-info"
                         hx-include="[name='csrfmiddlewaretoken']"
                         name="nro_tarjeta"
+                        id="tarjeta-input"
                     >
                     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                     
@@ -368,10 +369,10 @@
                 <strong>Cliente:</strong> <span x-text="selectedCard ? selectedCard.nombre : 'N/A'"></span>
             </div>
             <div class="text-sm" x-show="selectedCard && selectedCard.id">
-                <strong>Tarjeta:</strong> #<span x-text="selectedCard.id"></span>
+                <strong>Tarjeta:</strong> #<span x-text="selectedCard ? selectedCard.id : ''"></span>
             </div>
-            <div class="text-sm" x-show="selectedCard && selectedCard.saldo">
-                <strong>Saldo:</strong> Gs. <span x-text="selectedCard.saldo ? Math.round(selectedCard.saldo).toLocaleString('es-PY') : '0'"></span>
+            <div class="text-sm" x-show="selectedCard && selectedCard.saldo != null">
+                <strong>Saldo:</strong> Gs. <span x-text="selectedCard && selectedCard.saldo != null ? Math.round(selectedCard.saldo).toLocaleString('es-PY') : '0'"></span>
             </div>
         </div>
         
@@ -379,8 +380,13 @@
             <button class="btn btn-ghost" onclick="document.getElementById('modal-checkout').close()">
                 Cancelar
             </button>
-            <button class="btn btn-primary" @click="confirmarCheckout()">
-                ✅ Confirmar y Procesar
+            <button 
+                class="btn btn-primary" 
+                @click="confirmarCheckout()" 
+                :disabled="procesandoVenta"
+                type="button">
+                <span x-show="!procesandoVenta">✅ Confirmar y Procesar</span>
+                <span x-show="procesandoVenta" class="loading loading-spinner loading-sm"></span>
             </button>
         </div>
     </div>
@@ -408,88 +414,9 @@
 
 {% block extra_js %}
 <script>
-    // Función para procesar la venta
-    function processSale() {
-        const app = Alpine.store || window;
-        
-        if (!this.cart || this.cart.length === 0) {
-            this.showNotification('El carrito está vacío', 'warning');
-            return;
-        }
-        
-        // Preparar datos de la venta
-        const ventaData = {
-            items: this.cart,
-            tarjeta: this.selectedCard,
-            total: this.total
-        };
-        
-        // Enviar al backend
-        fetch('{% url "pos:procesar_venta" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(ventaData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                playSound('success');
-                this.showNotification('¡Venta exitosa!', 'success');
-                
-                // Guardar ID de venta para el ticket
-                const ventaId = data.venta_id;
-                
-                this.clearCart();
-                
-                // Abrir ticket en nueva ventana
-                if (ventaId) {
-                    const ticketWindow = window.open(
-                        `/pos/ticket/${ventaId}/`,
-                        'ticket',
-                        'width=400,height=600,scrollbars=yes'
-                    );
-                    
-                    // Auto-imprimir después de 1 segundo (opcional)
-                    // setTimeout(() => {
-                    //     if (ticketWindow) ticketWindow.print();
-                    // }, 1000);
-                }
-                
-                // Resetear tarjeta
-                this.selectedCard = null;
-                document.getElementById('nro_tarjeta').value = '';
-                document.getElementById('tarjeta-info').innerHTML = '';
-                
-            } else {
-                playSound('error');
-                this.showNotification(data.error || 'Error al procesar venta', 'error');
-            }
-        })
-        .catch(error => {
-            playSound('error');
-            this.showNotification('Error de conexión', 'error');
-            console.error('Error:', error);
-        });
-        });
-    }
-    
     // Función para escanear tarjeta
     function scanCard() {
         playSound('scan');
-    }
-    
-    // Función para cliente genérico
-    function selectGenericCard() {
-        this.selectedCard = {
-            id: null,
-            nombre: 'Cliente Genérico',
-            saldo: 999999999
-        };
-        playSound('beep');
-        this.showNotification('Cliente genérico seleccionado', 'info');
     }
     
     // Obtener cookie CSRF
