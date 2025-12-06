@@ -93,6 +93,7 @@ urlpatterns = [
     path('almuerzo/', almuerzo_views.pos_almuerzo, name='pos_almuerzo'),
     path('almuerzo/api/', almuerzo_views.pos_almuerzo_api, name='pos_almuerzo_api'),
     path('almuerzo/anular/', almuerzo_views.anular_ultimo_almuerzo, name='anular_almuerzo'),
+    path('almuerzo/ticket/<int:registro_id>/', almuerzo_views.ticket_almuerzo, name='ticket_almuerzo'),
     path('almuerzo/reportes/', almuerzo_views.almuerzo_reportes, name='almuerzo_reportes'),
     path('almuerzo/reportes/diario/', almuerzo_views.reporte_almuerzos_diarios, name='reporte_almuerzos_diarios'),
     path('almuerzo/reportes/mensual/', almuerzo_views.reporte_mensual_separado, name='reporte_mensual_separado'),
@@ -100,6 +101,26 @@ urlpatterns = [
     path('almuerzo/cuentas/', almuerzo_views.lista_cuentas_mensuales, name='cuentas_mensuales'),
     path('almuerzo/cuentas/generar/', almuerzo_views.generar_cuentas_mes, name='generar_cuentas'),
     path('almuerzo/cuentas/pagar/', almuerzo_views.registrar_pago_almuerzo, name='pagar_almuerzo'),
+    path('almuerzo/configurar-precio/', almuerzo_views.configurar_precio_almuerzo, name='configurar_precio_almuerzo'),
+    
+    # Sistema de Autorizaciones
+    path('autorizacion/validar/', almuerzo_views.validar_autorizacion, name='validar_autorizacion'),
+    path('almuerzo/anular/<int:registro_id>/', almuerzo_views.anular_almuerzo, name='anular_almuerzo_id'),
+    path('venta/anular/<int:venta_id>/', pos_views.anular_venta, name='anular_venta'),
+    path('recarga/anular/<int:recarga_id>/', pos_views.anular_recarga, name='anular_recarga'),
+    
+    # Administración de Tarjetas de Autorización
+    path('admin/autorizaciones/', pos_views.admin_tarjetas_autorizacion, name='admin_autorizaciones'),
+    path('admin/autorizaciones/crear/', pos_views.crear_tarjeta_autorizacion, name='crear_tarjeta_autorizacion'),
+    path('admin/autorizaciones/editar/<int:tarjeta_id>/', pos_views.editar_tarjeta_autorizacion, name='editar_tarjeta_autorizacion'),
+    path('admin/autorizaciones/toggle/<int:tarjeta_id>/', pos_views.toggle_tarjeta_autorizacion, name='toggle_tarjeta_autorizacion'),
+    path('admin/autorizaciones/logs/', pos_views.ver_logs_autorizacion, name='logs_autorizaciones'),
+    
+    # Gestión de Fotos de Hijos
+    path('admin/fotos-hijos/', pos_views.gestionar_fotos_hijos, name='gestionar_fotos_hijos'),
+    path('hijo/<int:hijo_id>/capturar-foto/', pos_views.capturar_foto_hijo, name='capturar_foto_hijo'),
+    path('hijo/<int:hijo_id>/eliminar-foto/', pos_views.eliminar_foto_hijo, name='eliminar_foto_hijo'),
+    path('obtener-foto-hijo/', pos_views.obtener_foto_hijo, name='obtener_foto_hijo'),
     
     # Otras vistas
     path('dashboard/', pos_views.dashboard_view, name='dashboard'),

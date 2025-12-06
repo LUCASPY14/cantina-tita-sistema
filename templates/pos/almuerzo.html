@@ -259,7 +259,89 @@
         window.onload = function() {
             inputBarra.focus();
             inputBarra.select();
+            
+            // Si hubo registro exitoso, imprimir ticket directamente con iframe oculto
+            {% if registro_id %}
+            imprimirTicketAlmuerzo({{ registro_id }});
+            {% endif %}
         };
+        
+        // Función para imprimir ticket de almuerzo directamente sin popup
+        function imprimirTicketAlmuerzo(registroId) {
+            const ticketUrl = `/pos/almuerzo/ticket/${registroId}/`;
+            
+            // Crear iframe oculto para imprimir
+            const iframe = document.createElement('iframe');
+            iframe.id = 'ticket-print-iframe';
+            iframe.style.position = 'fixed';
+            iframe.style.top = '-9999px';
+            iframe.style.left = '-9999px';
+            iframe.style.width = '80mm';
+            iframe.style.height = '100%';
+            iframe.style.border = 'none';
+            iframe.style.visibility = 'hidden';
+            iframe.style.opacity = '0';
+            
+            // Agregar al DOM
+            document.body.appendChild(iframe);
+            
+            // Al cargar el iframe, imprimir automáticamente
+            iframe.onload = function() {
+                setTimeout(() => {
+                    try {
+                        // Forzar foco en el iframe
+                        iframe.contentWindow.focus();
+                        
+                        // Imprimir inmediatamente
+                        iframe.contentWindow.print();
+                        
+                        console.log('✅ Ticket enviado a impresora automáticamente');
+                        
+                        // Limpiar después de imprimir
+                        setTimeout(() => {
+                            if (iframe.parentNode) {
+                                document.body.removeChild(iframe);
+                            }
+                        }, 1000);
+                    } catch (e) {
+                        console.error('❌ Error al imprimir:', e);
+                        // Fallback: abrir en nueva ventana
+                        window.open(ticketUrl, '_blank', 'width=400,height=700');
+                        if (iframe.parentNode) {
+                            document.body.removeChild(iframe);
+                        }
+                    }
+                }, 500);
+            };
+            
+            iframe.onerror = function() {
+                console.error('❌ Error al cargar ticket');
+                if (iframe.parentNode) {
+                    document.body.removeChild(iframe);
+                }
+            };
+            
+            // Cargar el ticket
+            iframe.src = ticketUrl;
+        }
+                    window.open(ticketUrl, 'ticket_almuerzo', 'width=400,height=700');
+                    if (iframe.parentNode) {
+                        document.body.removeChild(iframe);
+                    }
+                }
+            };
+            
+            iframe.onerror = function() {
+                console.error('Error al cargar el ticket');
+                alert('⚠️ Error al cargar el ticket');
+                if (iframe.parentNode) {
+                    document.body.removeChild(iframe);
+                }
+            };
+            
+            iframe.src = ticketUrl;
+            document.body.appendChild(iframe);
+        }
         
         // Re-enfocar al hacer click en cualquier parte
         document.addEventListener('click', function() {
@@ -285,33 +367,172 @@
                 });
             }, 5000);
         }
-        
-        // Función para anular registro
+    </script>
+
+    <!-- Modal de Autorización -->
+    <dialog id="modalAutorizacion" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4">🔐 Autorización Requerida</h3>
+            <p class="py-4">Para anular este registro, debe escanear una tarjeta de autorización:</p>
+            
+            <form id="formAutorizacion" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" id="registroAnular" name="registro_id" value="">
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Código de Tarjeta de Autorización</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="inputAutorizacion"
+                        name="codigo_barra"
+                        placeholder="Escanee la tarjeta del administrador" 
+                        class="input input-bordered input-lg text-center font-mono"
+                        autocomplete="off"
+                        required
+                    >
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Motivo de la anulación</span>
+                    </label>
+                    <textarea 
+                        id="motivoAnulacion"
+                        name="motivo"
+                        class="textarea textarea-bordered" 
+                        placeholder="Ej: Registro duplicado, estudiante ausente, etc."
+                        rows="2"
+                    ></textarea>
+                </div>
+
+                <div id="mensajeAutorizacion" class="hidden">
+                    <!-- Mensajes dinámicos -->
+                </div>
+
+                <div class="modal-action">
+                    <button type="button" class="btn" onclick="cerrarModalAutorizacion()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        Validar y Anular
+                    </button>
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
+
+    <script>
+        let logAutorizacionId = null;
+
         function anularRegistro(registroId) {
-            if (!confirm('¿Está seguro de anular este registro?')) {
+            document.getElementById('registroAnular').value = registroId;
+            document.getElementById('modalAutorizacion').showModal();
+            setTimeout(() => {
+                document.getElementById('inputAutorizacion').focus();
+            }, 300);
+        }
+
+        function cerrarModalAutorizacion() {
+            document.getElementById('modalAutorizacion').close();
+            document.getElementById('formAutorizacion').reset();
+            document.getElementById('mensajeAutorizacion').classList.add('hidden');
+            logAutorizacionId = null;
+        }
+
+        // Proceso de dos pasos: 1) Validar autorización, 2) Anular registro
+        document.getElementById('formAutorizacion').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const codigoBarra = formData.get('codigo_barra');
+            const registroId = formData.get('registro_id');
+            const motivo = formData.get('motivo');
+            
+            if (!codigoBarra) {
+                mostrarMensaje('Por favor escanee una tarjeta de autorización', 'error');
                 return;
             }
-            
-            fetch('/pos/almuerzo/anular/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: `registro_id=${registroId}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('✅ ' + data.message);
-                    location.reload();
-                } else {
-                    alert('❌ ' + data.error);
+
+            // Paso 1: Validar autorización
+            if (!logAutorizacionId) {
+                try {
+                    const response = await fetch('{% url "pos:validar_autorizacion" %}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: new URLSearchParams({
+                            'codigo_barra': codigoBarra,
+                            'tipo_operacion': 'ANULAR_ALMUERZO',
+                            'id_registro': registroId
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        logAutorizacionId = data.log_id;
+                        mostrarMensaje(`✅ ${data.message} - ${data.tarjeta_tipo}`, 'success');
+                        
+                        // Paso 2: Anular el registro
+                        setTimeout(() => ejecutarAnulacion(registroId, motivo), 500);
+                    } else {
+                        mostrarMensaje(`❌ ${data.message}`, 'error');
+                        document.getElementById('inputAutorizacion').value = '';
+                        document.getElementById('inputAutorizacion').focus();
+                    }
+                } catch (error) {
+                    mostrarMensaje('❌ Error al validar autorización', 'error');
+                    console.error(error);
                 }
-            })
-            .catch(error => {
-                alert('❌ Error: ' + error);
-            });
+            }
+        });
+
+        async function ejecutarAnulacion(registroId, motivo) {
+            try {
+                const response = await fetch(`/pos/almuerzo/anular/${registroId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: new URLSearchParams({
+                        'log_id': logAutorizacionId,
+                        'motivo': motivo || 'Sin motivo especificado'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    mostrarMensaje(`✅ ${data.message}`, 'success');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    mostrarMensaje(`❌ ${data.message}`, 'error');
+                }
+            } catch (error) {
+                mostrarMensaje('❌ Error al anular registro', 'error');
+                console.error(error);
+            }
+        }
+
+        function mostrarMensaje(texto, tipo) {
+            const div = document.getElementById('mensajeAutorizacion');
+            div.className = tipo === 'success' 
+                ? 'alert alert-success' 
+                : 'alert alert-error';
+            div.textContent = texto;
+            div.classList.remove('hidden');
+        }
+        
+        // Función para anular registro - REEMPLAZADA POR EL MODAL DE AUTORIZACIÓN
+
         }
         
         // Sonido de confirmación (opcional)

@@ -62,9 +62,9 @@
                                 Gs. {{ venta.monto_total|floatformat:0|default:"0" }}
                             </td>
                             <td>
-                                {% if venta.estado == 'Completada' %}
+                                {% if venta.estado == 'PROCESADO' or venta.estado == 'Completada' %}
                                     <span class="badge badge-success">{{ venta.estado }}</span>
-                                {% elif venta.estado == 'Cancelada' %}
+                                {% elif venta.estado == 'ANULADA' or venta.estado == 'Cancelada' %}
                                     <span class="badge badge-error">{{ venta.estado }}</span>
                                 {% elif venta.estado == 'Pendiente' %}
                                     <span class="badge badge-warning">{{ venta.estado }}</span>
@@ -82,6 +82,12 @@
                                     <button class="btn btn-xs btn-primary" 
                                             onclick="imprimirTicket({{ venta.id_documento.id_documento }})">
                                         🖨️ Ticket
+                                    </button>
+                                    {% endif %}
+                                    {% if venta.estado != 'ANULADA' and venta.estado != 'Cancelada' and forloop.first %}
+                                    <button class="btn btn-xs btn-error" 
+                                            onclick="anularVenta({{ venta.id_venta }})">
+                                        ❌ Anular
                                     </button>
                                     {% endif %}
                                 </div>
@@ -120,7 +126,168 @@
     </form>
 </dialog>
 
+<!-- Modal de Autorización para Anular Venta -->
+<dialog id="modalAutorizacionVenta" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">🔐 Autorización Requerida</h3>
+        <p class="py-4">Para anular esta venta, debe escanear una tarjeta de autorización:</p>
+        
+        <form id="formAutorizacionVenta" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" id="ventaAnular" name="venta_id" value="">
+            
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Código de Tarjeta de Autorización</span>
+                </label>
+                <input 
+                    type="text" 
+                    id="inputAutorizacionVenta"
+                    name="codigo_barra"
+                    placeholder="Escanee la tarjeta del administrador" 
+                    class="input input-bordered input-lg text-center font-mono"
+                    autocomplete="off"
+                    required
+                >
+            </div>
+
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Motivo de la anulación</span>
+                </label>
+                <textarea 
+                    id="motivoAnulacionVenta"
+                    name="motivo"
+                    class="textarea textarea-bordered" 
+                    placeholder="Ej: Error en venta, producto equivocado, etc."
+                    rows="2"
+                ></textarea>
+            </div>
+
+            <div id="mensajeAutorizacionVenta" class="hidden">
+                <!-- Mensajes dinámicos -->
+            </div>
+
+            <div class="modal-action">
+                <button type="button" class="btn" onclick="cerrarModalAutorizacionVenta()">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    Validar y Anular
+                </button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
 <script>
+let logAutorizacionVentaId = null;
+
+function anularVenta(ventaId) {
+    document.getElementById('ventaAnular').value = ventaId;
+    document.getElementById('modalAutorizacionVenta').showModal();
+    setTimeout(() => {
+        document.getElementById('inputAutorizacionVenta').focus();
+    }, 300);
+}
+
+function cerrarModalAutorizacionVenta() {
+    document.getElementById('modalAutorizacionVenta').close();
+    document.getElementById('formAutorizacionVenta').reset();
+    document.getElementById('mensajeAutorizacionVenta').classList.add('hidden');
+    logAutorizacionVentaId = null;
+}
+
+// Proceso de dos pasos: 1) Validar autorización, 2) Anular venta
+document.getElementById('formAutorizacionVenta').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const codigoBarra = formData.get('codigo_barra');
+    const ventaId = formData.get('venta_id');
+    const motivo = formData.get('motivo');
+    
+    if (!codigoBarra) {
+        mostrarMensajeVenta('Por favor escanee una tarjeta de autorización', 'error');
+        return;
+    }
+
+    // Paso 1: Validar autorización
+    if (!logAutorizacionVentaId) {
+        try {
+            const response = await fetch('{% url "pos:validar_autorizacion" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: new URLSearchParams({
+                    'codigo_barra': codigoBarra,
+                    'tipo_operacion': 'ANULAR_VENTA',
+                    'id_registro': ventaId
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                logAutorizacionVentaId = data.log_id;
+                mostrarMensajeVenta(`✅ ${data.message} - ${data.tarjeta_tipo}`, 'success');
+                
+                // Paso 2: Anular la venta
+                setTimeout(() => ejecutarAnulacionVenta(ventaId, motivo), 500);
+            } else {
+                mostrarMensajeVenta(`❌ ${data.message}`, 'error');
+                document.getElementById('inputAutorizacionVenta').value = '';
+                document.getElementById('inputAutorizacionVenta').focus();
+            }
+        } catch (error) {
+            mostrarMensajeVenta('❌ Error al validar autorización', 'error');
+            console.error(error);
+        }
+    }
+});
+
+async function ejecutarAnulacionVenta(ventaId, motivo) {
+    try {
+        const response = await fetch(`/pos/venta/anular/${ventaId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: new URLSearchParams({
+                'log_id': logAutorizacionVentaId,
+                'motivo': motivo || 'Sin motivo especificado'
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarMensajeVenta(`✅ ${data.message}`, 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            mostrarMensajeVenta(`❌ ${data.message}`, 'error');
+        }
+    } catch (error) {
+        mostrarMensajeVenta('❌ Error al anular venta', 'error');
+        console.error(error);
+    }
+}
+
+function mostrarMensajeVenta(texto, tipo) {
+    const div = document.getElementById('mensajeAutorizacionVenta');
+    div.className = tipo === 'success' 
+        ? 'alert alert-success' 
+        : 'alert alert-error';
+    div.textContent = texto;
+    div.classList.remove('hidden');
+}
+
 function verDetalle(idVenta) {
     // Implementar carga de detalle vía AJAX
     const modal = document.getElementById('modal_detalle_venta');

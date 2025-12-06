@@ -174,6 +174,8 @@ class Hijo(models.Model):
     nombre = models.CharField(db_column='Nombre', max_length=100)
     apellido = models.CharField(db_column='Apellido', max_length=100)
     fecha_nacimiento = models.DateField(db_column='Fecha_Nacimiento', blank=True, null=True)
+    foto_perfil = models.CharField(db_column='Foto_Perfil', max_length=255, blank=True, null=True)
+    fecha_foto = models.DateTimeField(db_column='Fecha_Foto', blank=True, null=True)
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
@@ -188,6 +190,10 @@ class Hijo(models.Model):
     @property
     def nombre_completo(self):
         return f'{self.nombre} {self.apellido}'
+    
+    @property
+    def tiene_foto(self):
+        return bool(self.foto_perfil)
 
 
 class Tarjeta(models.Model):
@@ -1992,6 +1998,9 @@ class TipoAlmuerzo(models.Model):
     nombre = models.CharField(db_column='Nombre', max_length=100)
     descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
     precio_unitario = models.DecimalField(db_column='Precio_Unitario', max_digits=10, decimal_places=2)
+    incluye_plato_principal = models.BooleanField(db_column='Incluye_Plato_Principal', default=True)
+    incluye_postre = models.BooleanField(db_column='Incluye_Postre', default=False)
+    incluye_bebida = models.BooleanField(db_column='Incluye_Bebida', default=False)
     fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
     activo = models.BooleanField(db_column='Activo', default=True)
 
@@ -2003,6 +2012,21 @@ class TipoAlmuerzo(models.Model):
 
     def __str__(self):
         return f'{self.nombre} - Gs. {self.precio_unitario:,.0f}'
+    
+    def get_componentes(self):
+        '''Retorna lista de componentes incluidos'''
+        componentes = []
+        if self.incluye_plato_principal:
+            componentes.append('Plato Principal')
+        if self.incluye_postre:
+            componentes.append('Postre')
+        if self.incluye_bebida:
+            componentes.append('Bebida')
+        return componentes
+    
+    def get_componentes_display(self):
+        '''Retorna string con componentes separados por coma'''
+        return ', '.join(self.get_componentes())
 
 
 class RegistroConsumoAlmuerzo(models.Model):
@@ -2218,3 +2242,119 @@ class VistaReporteMensualSeparado(models.Model):
 
     def __str__(self):
         return f'{self.estudiante} - Mes Actual'
+
+
+# =============================================================================
+# SISTEMA DE AUTORIZACIÓN CON TARJETAS
+# =============================================================================
+
+class TarjetaAutorizacion(models.Model):
+    '''Tabla tarjetas_autorizacion - Tarjetas para autorizar operaciones críticas'''
+    TIPO_AUTORIZACION_CHOICES = [
+        ('ADMIN', 'Administrador'),
+        ('SUPERVISOR', 'Supervisor'),
+        ('CAJERO', 'Cajero'),
+    ]
+    
+    id_tarjeta_autorizacion = models.AutoField(db_column='ID_Tarjeta_Autorizacion', primary_key=True)
+    codigo_barra = models.CharField(db_column='Codigo_Barra', max_length=50, unique=True)
+    id_empleado = models.ForeignKey(
+        'Empleado',
+        on_delete=models.SET_NULL,
+        db_column='ID_Empleado',
+        blank=True,
+        null=True
+    )
+    tipo_autorizacion = models.CharField(
+        db_column='Tipo_Autorizacion',
+        max_length=15,
+        choices=TIPO_AUTORIZACION_CHOICES,
+        default='ADMIN'
+    )
+    puede_anular_almuerzos = models.BooleanField(db_column='Puede_Anular_Almuerzos', default=True)
+    puede_anular_ventas = models.BooleanField(db_column='Puede_Anular_Ventas', default=True)
+    puede_anular_recargas = models.BooleanField(db_column='Puede_Anular_Recargas', default=True)
+    puede_modificar_precios = models.BooleanField(db_column='Puede_Modificar_Precios', default=False)
+    activo = models.BooleanField(db_column='Activo', default=True)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    fecha_vencimiento = models.DateField(db_column='Fecha_Vencimiento', blank=True, null=True)
+    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'tarjetas_autorizacion'
+        verbose_name = 'Tarjeta de Autorización'
+        verbose_name_plural = 'Tarjetas de Autorización'
+    
+    def __str__(self):
+        empleado_info = f' - {self.id_empleado.nombre_completo}' if self.id_empleado else ''
+        return f'{self.codigo_barra} ({self.get_tipo_autorizacion_display()}){empleado_info}'
+    
+    def tiene_permiso(self, tipo_operacion):
+        '''Verifica si la tarjeta tiene permiso para una operación'''
+        if not self.activo:
+            return False
+        
+        if self.fecha_vencimiento and self.fecha_vencimiento < timezone.now().date():
+            return False
+        
+        permisos = {
+            'ANULAR_ALMUERZO': self.puede_anular_almuerzos,
+            'ANULAR_VENTA': self.puede_anular_ventas,
+            'ANULAR_RECARGA': self.puede_anular_recargas,
+            'MODIFICAR_PRECIO': self.puede_modificar_precios,
+        }
+        
+        return permisos.get(tipo_operacion, False)
+
+
+class LogAutorizacion(models.Model):
+    '''Tabla log_autorizaciones - Registro de todas las autorizaciones realizadas'''
+    TIPO_OPERACION_CHOICES = [
+        ('ANULAR_ALMUERZO', 'Anular Almuerzo'),
+        ('ANULAR_VENTA', 'Anular Venta'),
+        ('ANULAR_RECARGA', 'Anular Recarga'),
+        ('MODIFICAR_PRECIO', 'Modificar Precio'),
+        ('OTRO', 'Otro'),
+    ]
+    
+    RESULTADO_CHOICES = [
+        ('EXITOSO', 'Exitoso'),
+        ('RECHAZADO', 'Rechazado'),
+        ('ERROR', 'Error'),
+    ]
+    
+    id_log = models.BigAutoField(db_column='ID_Log', primary_key=True)
+    id_tarjeta_autorizacion = models.ForeignKey(
+        TarjetaAutorizacion,
+        on_delete=models.CASCADE,
+        db_column='ID_Tarjeta_Autorizacion'
+    )
+    codigo_barra = models.CharField(db_column='Codigo_Barra', max_length=50)
+    tipo_operacion = models.CharField(
+        db_column='Tipo_Operacion',
+        max_length=20,
+        choices=TIPO_OPERACION_CHOICES
+    )
+    id_registro_afectado = models.BigIntegerField(db_column='ID_Registro_Afectado', blank=True, null=True)
+    descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
+    id_usuario = models.IntegerField(db_column='ID_Usuario', blank=True, null=True)
+    fecha_hora = models.DateTimeField(db_column='Fecha_Hora', auto_now_add=True)
+    ip_origen = models.CharField(db_column='IP_Origen', max_length=45, blank=True, null=True)
+    resultado = models.CharField(
+        db_column='Resultado',
+        max_length=15,
+        choices=RESULTADO_CHOICES,
+        default='EXITOSO'
+    )
+    
+    class Meta:
+        managed = False
+        db_table = 'log_autorizaciones'
+        verbose_name = 'Log de Autorización'
+        verbose_name_plural = 'Logs de Autorizaciones'
+        ordering = ['-fecha_hora']
+    
+    def __str__(self):
+        return f'{self.get_tipo_operacion_display()} - {self.fecha_hora.strftime("%d/%m/%Y %H:%M")}'
+

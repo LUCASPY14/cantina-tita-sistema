@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
+from django.conf.urls.static import static
 from gestion.cantina_admin import cantina_admin_site
 from gestion.auth_views import CustomLoginView, CustomLogoutView, dashboard_redirect
 from rest_framework import permissions
@@ -89,3 +90,5 @@ if settings.DEBUG:
     urlpatterns += [
         path('__debug__/', include('debug_toolbar.urls')),
     ]
+    # Servir archivos media en desarrollo
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

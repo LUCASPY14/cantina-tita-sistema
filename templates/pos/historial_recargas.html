@@ -133,11 +133,19 @@
                             <td>Gs. {{ recarga.saldo_anterior|floatformat:0 }}</td>
                             <td class="font-bold">Gs. {{ recarga.saldo_posterior|floatformat:0 }}</td>
                             <td>
-                                <a href="{% url 'pos:comprobante_recarga' recarga.id_carga_saldo %}" 
-                                   target="_blank"
-                                   class="btn btn-xs btn-outline">
-                                    🖨️ Comprobante
-                                </a>
+                                <div class="flex gap-2">
+                                    <a href="{% url 'pos:comprobante_recarga' recarga.id_carga_saldo %}" 
+                                       target="_blank"
+                                       class="btn btn-xs btn-outline">
+                                        🖨️ Comprobante
+                                    </a>
+                                    {% if forloop.first %}
+                                    <button class="btn btn-xs btn-error"
+                                            onclick="anularRecarga({{ recarga.id_carga_saldo }})">
+                                        ❌ Anular
+                                    </button>
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                         {% empty %}
@@ -175,4 +183,168 @@
     </div>
     
 </div>
+
+<!-- Modal de Autorización para Anular Recarga -->
+<dialog id="modalAutorizacionRecarga" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">🔐 Autorización Requerida</h3>
+        <p class="py-4">Para anular esta recarga, debe escanear una tarjeta de autorización:</p>
+        
+        <form id="formAutorizacionRecarga" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" id="recargaAnular" name="recarga_id" value="">
+            
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Código de Tarjeta de Autorización</span>
+                </label>
+                <input 
+                    type="text" 
+                    id="inputAutorizacionRecarga"
+                    name="codigo_barra"
+                    placeholder="Escanee la tarjeta del administrador" 
+                    class="input input-bordered input-lg text-center font-mono"
+                    autocomplete="off"
+                    required
+                >
+            </div>
+
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Motivo de la anulación</span>
+                </label>
+                <textarea 
+                    id="motivoAnulacionRecarga"
+                    name="motivo"
+                    class="textarea textarea-bordered" 
+                    placeholder="Ej: Recarga duplicada, error en monto, etc."
+                    rows="2"
+                ></textarea>
+            </div>
+
+            <div id="mensajeAutorizacionRecarga" class="hidden">
+                <!-- Mensajes dinámicos -->
+            </div>
+
+            <div class="modal-action">
+                <button type="button" class="btn" onclick="cerrarModalAutorizacionRecarga()">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    Validar y Anular
+                </button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<script>
+let logAutorizacionRecargaId = null;
+
+function anularRecarga(recargaId) {
+    document.getElementById('recargaAnular').value = recargaId;
+    document.getElementById('modalAutorizacionRecarga').showModal();
+    setTimeout(() => {
+        document.getElementById('inputAutorizacionRecarga').focus();
+    }, 300);
+}
+
+function cerrarModalAutorizacionRecarga() {
+    document.getElementById('modalAutorizacionRecarga').close();
+    document.getElementById('formAutorizacionRecarga').reset();
+    document.getElementById('mensajeAutorizacionRecarga').classList.add('hidden');
+    logAutorizacionRecargaId = null;
+}
+
+// Proceso de dos pasos: 1) Validar autorización, 2) Anular recarga
+document.getElementById('formAutorizacionRecarga').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const codigoBarra = formData.get('codigo_barra');
+    const recargaId = formData.get('recarga_id');
+    const motivo = formData.get('motivo');
+    
+    if (!codigoBarra) {
+        mostrarMensajeRecarga('Por favor escanee una tarjeta de autorización', 'error');
+        return;
+    }
+
+    // Paso 1: Validar autorización
+    if (!logAutorizacionRecargaId) {
+        try {
+            const response = await fetch('{% url "pos:validar_autorizacion" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: new URLSearchParams({
+                    'codigo_barra': codigoBarra,
+                    'tipo_operacion': 'ANULAR_RECARGA',
+                    'id_registro': recargaId
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                logAutorizacionRecargaId = data.log_id;
+                mostrarMensajeRecarga(`✅ ${data.message} - ${data.tarjeta_tipo}`, 'success');
+                
+                // Paso 2: Anular la recarga
+                setTimeout(() => ejecutarAnulacionRecarga(recargaId, motivo), 500);
+            } else {
+                mostrarMensajeRecarga(`❌ ${data.message}`, 'error');
+                document.getElementById('inputAutorizacionRecarga').value = '';
+                document.getElementById('inputAutorizacionRecarga').focus();
+            }
+        } catch (error) {
+            mostrarMensajeRecarga('❌ Error al validar autorización', 'error');
+            console.error(error);
+        }
+    }
+});
+
+async function ejecutarAnulacionRecarga(recargaId, motivo) {
+    try {
+        const response = await fetch(`/pos/recarga/anular/${recargaId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: new URLSearchParams({
+                'log_id': logAutorizacionRecargaId,
+                'motivo': motivo || 'Sin motivo especificado'
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarMensajeRecarga(`✅ ${data.message}`, 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            mostrarMensajeRecarga(`❌ ${data.message}`, 'error');
+        }
+    } catch (error) {
+        mostrarMensajeRecarga('❌ Error al anular recarga', 'error');
+        console.error(error);
+    }
+}
+
+function mostrarMensajeRecarga(texto, tipo) {
+    const div = document.getElementById('mensajeAutorizacionRecarga');
+    div.className = tipo === 'success' 
+        ? 'alert alert-success' 
+        : 'alert alert-error';
+    div.textContent = texto;
+    div.classList.remove('hidden');
+}
+</script>
+
 {% endblock %}

@@ -17,7 +17,10 @@ from .models import (
     CuentaAlmuerzoMensual,
     PagoCuentaAlmuerzo,
     Tarjeta,
-    Hijo
+    Hijo,
+    TarjetaAutorizacion,
+    LogAutorizacion,
+    Cliente
 )
 
 
@@ -178,6 +181,7 @@ def pos_almuerzo(request):
                 context['registro'] = registro
                 context['tipo_almuerzo'] = tipo_almuerzo
                 context['cuenta_mensual'] = cuenta_mensual
+                context['registro_id'] = registro.id_registro_consumo  # Para abrir el ticket
                 
                 # Actualizar lista de últimos registros
                 context['ultimos_registros'] = RegistroConsumoAlmuerzo.objects.select_related(
@@ -666,3 +670,264 @@ def reporte_por_estudiante(request):
     
     return render(request, 'pos/almuerzo_reporte_estudiante.html', context)
 
+
+# =============================================================================
+# TICKET DE CONTROL DE ALMUERZO
+# =============================================================================
+
+@require_http_methods(["GET"])
+def ticket_almuerzo(request, registro_id):
+    """
+    Genera ticket de control de almuerzo para el estudiante
+    Se imprime automáticamente al registrar
+    """
+    from .models import Cliente
+    
+    try:
+        registro = RegistroConsumoAlmuerzo.objects.select_related(
+            'id_hijo',
+            'nro_tarjeta',
+            'id_tipo_almuerzo'
+        ).get(id_registro_consumo=registro_id)
+        
+        hijo = registro.id_hijo
+        
+        # Obtener responsable
+        responsable = Cliente.objects.filter(
+            id_cliente=hijo.id_cliente_responsable_id
+        ).first()
+        
+        # Obtener cuenta mensual
+        cuenta_mensual = CuentaAlmuerzoMensual.objects.filter(
+            id_hijo=hijo,
+            mes=registro.fecha_consumo.month,
+            anio=registro.fecha_consumo.year
+        ).first()
+        
+        context = {
+            'registro': registro,
+            'hijo': hijo,
+            'responsable': responsable,
+            'cuenta_mensual': cuenta_mensual,
+        }
+        
+        return render(request, 'pos/ticket_almuerzo.html', context)
+        
+    except RegistroConsumoAlmuerzo.DoesNotExist:
+        return JsonResponse({
+            'error': 'Registro no encontrado'
+        }, status=404)
+
+
+# =============================================================================
+# CONFIGURACIÓN DE PRECIO DE ALMUERZO
+# =============================================================================
+
+@require_http_methods(["GET", "POST"])
+def configurar_precio_almuerzo(request):
+    """
+    Vista para que el administrador configure el precio del almuerzo
+    El cambio de precio se aplica inmediatamente a todos los nuevos registros
+    """
+    from .models import Cliente
+    
+    tipo_almuerzo = TipoAlmuerzo.objects.filter(activo=True).first()
+    
+    if request.method == "POST":
+        nuevo_precio = request.POST.get('precio_unitario')
+        
+        try:
+            nuevo_precio = Decimal(nuevo_precio)
+            
+            if nuevo_precio <= 0:
+                messages.error(request, '❌ El precio debe ser mayor a 0')
+            else:
+                precio_anterior = tipo_almuerzo.precio_unitario
+                tipo_almuerzo.precio_unitario = nuevo_precio
+                tipo_almuerzo.save()
+                
+                messages.success(
+                    request,
+                    f'✅ Precio actualizado: Gs. {precio_anterior:,.0f} → Gs. {nuevo_precio:,.0f}'
+                )
+                
+                return redirect('pos:configurar_precio_almuerzo')
+                
+        except (ValueError, TypeError):
+            messages.error(request, '❌ Precio inválido')
+    
+    # Obtener estadísticas para mostrar impacto
+    hoy = date.today()
+    registros_hoy = RegistroConsumoAlmuerzo.objects.filter(fecha_consumo=hoy).count()
+    cuentas_pendientes = CuentaAlmuerzoMensual.objects.filter(
+        estado__in=['PENDIENTE', 'PARCIAL']
+    ).count()
+    
+    context = {
+        'tipo_almuerzo': tipo_almuerzo,
+        'registros_hoy': registros_hoy,
+        'cuentas_pendientes': cuentas_pendientes,
+    }
+    
+    return render(request, 'almuerzo/configurar_precio.html', context)
+
+
+# =============================================================================
+# SISTEMA DE AUTORIZACIONES PARA ANULACIONES
+# =============================================================================
+
+@require_http_methods(["POST"])
+def validar_autorizacion(request):
+    """
+    Valida si una tarjeta de autorización tiene permisos para una operación
+    """
+    try:
+        codigo_barra = request.POST.get('codigo_barra', '').strip()
+        tipo_operacion = request.POST.get('tipo_operacion', '')
+        id_registro = request.POST.get('id_registro', None)
+        
+        if not codigo_barra:
+            return JsonResponse({
+                'success': False,
+                'message': 'Debe escanear una tarjeta de autorización'
+            })
+        
+        # Buscar la tarjeta
+        try:
+            tarjeta = TarjetaAutorizacion.objects.get(codigo_barra=codigo_barra)
+        except TarjetaAutorizacion.DoesNotExist:
+            # Registrar intento fallido
+            LogAutorizacion.objects.create(
+                id_tarjeta_autorizacion=None,
+                codigo_barra=codigo_barra,
+                tipo_operacion=tipo_operacion,
+                id_registro_afectado=id_registro,
+                descripcion=f'Tarjeta no encontrada: {codigo_barra}',
+                resultado='RECHAZADO'
+            )
+            return JsonResponse({
+                'success': False,
+                'message': 'Tarjeta de autorización no válida'
+            })
+        
+        # Verificar si tiene permiso
+        if not tarjeta.tiene_permiso(tipo_operacion):
+            # Registrar intento rechazado
+            LogAutorizacion.objects.create(
+                id_tarjeta_autorizacion=tarjeta,
+                codigo_barra=codigo_barra,
+                tipo_operacion=tipo_operacion,
+                id_registro_afectado=id_registro,
+                descripcion=f'Sin permisos para {tipo_operacion}',
+                resultado='RECHAZADO'
+            )
+            return JsonResponse({
+                'success': False,
+                'message': f'Esta tarjeta no tiene permisos para {tipo_operacion.replace("_", " ").lower()}'
+            })
+        
+        # Autorización exitosa
+        log = LogAutorizacion.objects.create(
+            id_tarjeta_autorizacion=tarjeta,
+            codigo_barra=codigo_barra,
+            tipo_operacion=tipo_operacion,
+            id_registro_afectado=id_registro,
+            descripcion=f'Autorización concedida por {tarjeta.get_tipo_autorizacion_display()}',
+            resultado='EXITOSO'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Autorización concedida',
+            'tarjeta_tipo': tarjeta.get_tipo_autorizacion_display(),
+            'log_id': log.id_log
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al validar autorización: {str(e)}'
+        })
+
+
+@require_http_methods(["POST"])
+def anular_almuerzo(request, registro_id):
+    """
+    Anula un registro de almuerzo después de validar autorización
+    """
+    try:
+        # Obtener el log de autorización
+        log_id = request.POST.get('log_id')
+        motivo = request.POST.get('motivo', 'Sin motivo especificado')
+        
+        if not log_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'Se requiere autorización para anular'
+            })
+        
+        # Verificar que el log sea reciente (últimos 30 segundos)
+        try:
+            log = LogAutorizacion.objects.get(
+                id_log=log_id,
+                resultado='EXITOSO',
+                fecha_hora__gte=timezone.now() - timezone.timedelta(seconds=30)
+            )
+        except LogAutorizacion.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Autorización expirada. Escanee nuevamente la tarjeta.'
+            })
+        
+        # Obtener el registro de almuerzo
+        registro = get_object_or_404(RegistroConsumoAlmuerzo, id_registro_consumo=registro_id)
+        
+        # Verificar que no esté ya anulado
+        if hasattr(registro, 'anulado') and registro.anulado:
+            return JsonResponse({
+                'success': False,
+                'message': 'Este registro ya está anulado'
+            })
+        
+        with transaction.atomic():
+            # Guardar información para el log
+            hijo_nombre = registro.id_hijo.nombre_completo
+            costo = registro.costo_almuerzo
+            fecha = registro.fecha_consumo
+            
+            # Marcar como anulado (si existe el campo)
+            # Si no existe, eliminar el registro
+            try:
+                registro.anulado = True
+                registro.fecha_anulacion = timezone.now()
+                registro.motivo_anulacion = motivo
+                registro.save()
+            except AttributeError:
+                # Si no existe el campo anulado, eliminar el registro
+                registro.delete()
+            
+            # Actualizar el log de autorización
+            log.descripcion += f' | Anulado: {hijo_nombre} - Gs. {costo:,.0f} ({fecha}). Motivo: {motivo}'
+            log.id_registro_afectado = registro_id
+            log.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Almuerzo anulado correctamente. {hijo_nombre} - Gs. {costo:,.0f}'
+            })
+        
+    except Exception as e:
+        # Registrar error en el log si existe
+        if log_id:
+            try:
+                log = LogAutorizacion.objects.get(id_log=log_id)
+                log.resultado = 'ERROR'
+                log.descripcion += f' | Error: {str(e)}'
+                log.save()
+            except:
+                pass
+        
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al anular almuerzo: {str(e)}'
+        })

@@ -1,7 +1,7 @@
 """
 Views para el sistema POS (Punto de Venta)
 """
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
@@ -19,8 +19,14 @@ from gestion.models import (
     MediosPago, TiposPago, PagosVenta, ConciliacionPagos,
     Compras, DetalleCompra, MovimientosStock,
     TarifasComision, DetalleComisionVenta, ListaPrecios, TipoCliente,
-    TipoRolGeneral, DocumentosTributarios, Timbrados
+    TipoRolGeneral, DocumentosTributarios, Timbrados,
+    TarjetaAutorizacion, LogAutorizacion
 )
+
+import os
+import base64
+from django.conf import settings
+from django.core.files.base import ContentFile
 
 
 @login_required
@@ -175,6 +181,16 @@ def buscar_tarjeta(request):
         # Agregar información del estudiante
         if tarjeta.id_hijo:
             tarjeta.estudiante_nombre = f"{tarjeta.id_hijo.nombre} {tarjeta.id_hijo.apellido}"
+            
+            # Agregar información de foto
+            tarjeta.foto_url = None
+            tarjeta.tiene_foto = False
+            tarjeta.fecha_foto = None
+            
+            if tarjeta.id_hijo.foto_perfil:
+                tarjeta.foto_url = settings.MEDIA_URL + tarjeta.id_hijo.foto_perfil
+                tarjeta.tiene_foto = True
+                tarjeta.fecha_foto = tarjeta.id_hijo.fecha_foto
         else:
             tarjeta.estudiante_nombre = "Estudiante"
         
@@ -4148,3 +4164,658 @@ def reportes_almuerzos_view(request):
     }
     
     return render(request, 'gestion/reportes_almuerzos.html', context)
+
+
+# =============================================================================
+# SISTEMA DE AUTORIZACIONES PARA ANULAR VENTAS Y RECARGAS
+# =============================================================================
+
+@login_required
+@require_http_methods(["POST"])
+def anular_venta(request, venta_id):
+    """
+    Anula una venta después de validar autorización
+    """
+    try:
+        # Obtener el log de autorización
+        log_id = request.POST.get('log_id')
+        motivo = request.POST.get('motivo', 'Sin motivo especificado')
+        
+        if not log_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'Se requiere autorización para anular'
+            })
+        
+        # Verificar que el log sea reciente (últimos 30 segundos)
+        try:
+            log = LogAutorizacion.objects.get(
+                id_log=log_id,
+                resultado='EXITOSO',
+                fecha_hora__gte=timezone.now() - timezone.timedelta(seconds=30)
+            )
+        except LogAutorizacion.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Autorización expirada. Escanee nuevamente la tarjeta.'
+            })
+        
+        # Obtener la venta
+        venta = get_object_or_404(Ventas, id_venta=venta_id)
+        
+        # Verificar que no esté ya anulada
+        if venta.estado == 'ANULADA':
+            return JsonResponse({
+                'success': False,
+                'message': 'Esta venta ya está anulada'
+            })
+        
+        with transaction.atomic():
+            # Guardar información para el log
+            cliente_nombre = venta.id_cliente.nombre_completo if venta.id_cliente else 'Genérico'
+            total = venta.monto_total
+            fecha = venta.fecha
+            
+            # Si fue venta con tarjeta, devolver el saldo
+            if venta.id_hijo and venta.id_hijo.tarjeta:
+                tarjeta = venta.id_hijo.tarjeta
+                
+                # Buscar el consumo asociado
+                consumo = ConsumoTarjeta.objects.filter(
+                    nro_tarjeta=tarjeta,
+                    detalle__contains=f'Venta #{venta.id_venta}'
+                ).first()
+                
+                if consumo:
+                    # Devolver el monto a la tarjeta
+                    tarjeta.saldo_actual = F('saldo_actual') + consumo.monto_consumido
+                    tarjeta.save()
+                    
+                    # Crear registro de devolución en ConsumoTarjeta
+                    tarjeta.refresh_from_db()
+                    ConsumoTarjeta.objects.create(
+                        nro_tarjeta=tarjeta,
+                        fecha_consumo=timezone.now(),
+                        monto_consumido=-consumo.monto_consumido,  # Negativo para devolución
+                        detalle=f'Devolución - Anulación Venta #{venta.id_venta}. Motivo: {motivo}',
+                        saldo_anterior=tarjeta.saldo_actual - consumo.monto_consumido,
+                        saldo_posterior=tarjeta.saldo_actual
+                    )
+            
+            # Restaurar stock de productos vendidos
+            detalles = DetalleVenta.objects.filter(id_venta=venta)
+            for detalle in detalles:
+                try:
+                    stock = StockUnico.objects.get(id_producto=detalle.id_producto)
+                    stock.stock_actual = F('stock_actual') + detalle.cantidad
+                    stock.save()
+                except StockUnico.DoesNotExist:
+                    pass
+            
+            # Marcar venta como anulada
+            venta.estado = 'ANULADA'
+            venta.observaciones = f'ANULADA: {motivo}. Autorizado el {timezone.now().strftime("%d/%m/%Y %H:%M")}'
+            venta.save()
+            
+            # Actualizar el log de autorización
+            log.descripcion += f' | Anulada: Venta #{venta.id_venta} - {cliente_nombre} - Gs. {total:,.0f} ({fecha}). Motivo: {motivo}'
+            log.id_registro_afectado = venta_id
+            log.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Venta anulada correctamente. #{venta.id_venta} - Gs. {total:,.0f}'
+            })
+        
+    except Exception as e:
+        # Registrar error en el log si existe
+        if log_id:
+            try:
+                log = LogAutorizacion.objects.get(id_log=log_id)
+                log.resultado = 'ERROR'
+                log.descripcion += f' | Error: {str(e)}'
+                log.save()
+            except:
+                pass
+        
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al anular venta: {str(e)}'
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
+def anular_recarga(request, recarga_id):
+    """
+    Anula una recarga después de validar autorización
+    """
+    try:
+        # Obtener el log de autorización
+        log_id = request.POST.get('log_id')
+        motivo = request.POST.get('motivo', 'Sin motivo especificado')
+        
+        if not log_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'Se requiere autorización para anular'
+            })
+        
+        # Verificar que el log sea reciente (últimos 30 segundos)
+        try:
+            log = LogAutorizacion.objects.get(
+                id_log=log_id,
+                resultado='EXITOSO',
+                fecha_hora__gte=timezone.now() - timezone.timedelta(seconds=30)
+            )
+        except LogAutorizacion.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Autorización expirada. Escanee nuevamente la tarjeta.'
+            })
+        
+        # Obtener la recarga
+        recarga = get_object_or_404(CargasSaldo, id_carga_saldo=recarga_id)
+        
+        # Verificar que no esté ya anulada
+        if hasattr(recarga, 'anulada') and recarga.anulada:
+            return JsonResponse({
+                'success': False,
+                'message': 'Esta recarga ya está anulada'
+            })
+        
+        with transaction.atomic():
+            # Guardar información para el log
+            tarjeta = recarga.nro_tarjeta
+            hijo_nombre = tarjeta.id_hijo.nombre_completo if tarjeta.id_hijo else 'N/A'
+            monto = recarga.monto_cargado
+            fecha = recarga.fecha_carga
+            
+            # Descontar el monto de la tarjeta
+            tarjeta.saldo_actual = F('saldo_actual') - monto
+            tarjeta.save()
+            
+            # Crear registro de devolución en ConsumoTarjeta
+            tarjeta.refresh_from_db()
+            ConsumoTarjeta.objects.create(
+                nro_tarjeta=tarjeta,
+                fecha_consumo=timezone.now(),
+                monto_consumido=monto,  # Positivo porque se descuenta
+                detalle=f'Anulación Recarga #{recarga.id_carga_saldo}. Motivo: {motivo}',
+                saldo_anterior=tarjeta.saldo_actual + monto,
+                saldo_posterior=tarjeta.saldo_actual
+            )
+            
+            # Marcar como anulada (o eliminar según lógica de negocio)
+            try:
+                recarga.anulada = True
+                recarga.fecha_anulacion = timezone.now()
+                recarga.motivo_anulacion = motivo
+                recarga.save()
+            except AttributeError:
+                # Si no existe el campo, eliminar
+                recarga.delete()
+            
+            # Actualizar el log de autorización
+            log.descripcion += f' | Anulada: Recarga #{recarga_id} - {hijo_nombre} - Gs. {monto:,.0f} ({fecha}). Motivo: {motivo}'
+            log.id_registro_afectado = recarga_id
+            log.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Recarga anulada correctamente. #{recarga_id} - Gs. {monto:,.0f}'
+            })
+        
+    except Exception as e:
+        # Registrar error en el log si existe
+        if log_id:
+            try:
+                log = LogAutorizacion.objects.get(id_log=log_id)
+                log.resultado = 'ERROR'
+                log.descripcion += f' | Error: {str(e)}'
+                log.save()
+            except:
+                pass
+        
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al anular recarga: {str(e)}'
+        })
+
+
+# =============================================================================
+# ADMINISTRACIÓN DE TARJETAS DE AUTORIZACIÓN
+# =============================================================================
+
+@login_required
+@require_http_methods(["GET"])
+def admin_tarjetas_autorizacion(request):
+    """
+    Vista principal de administración de tarjetas de autorización
+    """
+    # Obtener todas las tarjetas
+    tarjetas = TarjetaAutorizacion.objects.select_related('id_empleado').order_by('-activo', 'tipo_autorizacion')
+    
+    # Estadísticas
+    total_tarjetas = tarjetas.count()
+    tarjetas_activas = tarjetas.filter(activo=True).count()
+    tarjetas_admin = tarjetas.filter(tipo_autorizacion='ADMIN').count()
+    tarjetas_supervisor = tarjetas.filter(tipo_autorizacion='SUPERVISOR').count()
+    
+    # Últimas autorizaciones (últimas 50)
+    ultimos_logs = LogAutorizacion.objects.select_related(
+        'id_tarjeta_autorizacion'
+    ).order_by('-fecha_hora')[:50]
+    
+    context = {
+        'tarjetas': tarjetas,
+        'total_tarjetas': total_tarjetas,
+        'tarjetas_activas': tarjetas_activas,
+        'tarjetas_admin': tarjetas_admin,
+        'tarjetas_supervisor': tarjetas_supervisor,
+        'ultimos_logs': ultimos_logs,
+    }
+    
+    return render(request, 'pos/admin_autorizaciones.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def crear_tarjeta_autorizacion(request):
+    """
+    Crear una nueva tarjeta de autorización
+    """
+    try:
+        codigo_barra = request.POST.get('codigo_barra', '').strip()
+        tipo_autorizacion = request.POST.get('tipo_autorizacion', 'SUPERVISOR')
+        id_empleado = request.POST.get('id_empleado')
+        
+        # Permisos
+        puede_anular_almuerzos = request.POST.get('puede_anular_almuerzos') == 'on'
+        puede_anular_ventas = request.POST.get('puede_anular_ventas') == 'on'
+        puede_anular_recargas = request.POST.get('puede_anular_recargas') == 'on'
+        puede_modificar_precios = request.POST.get('puede_modificar_precios') == 'on'
+        
+        observaciones = request.POST.get('observaciones', '')
+        fecha_vencimiento = request.POST.get('fecha_vencimiento') or None
+        
+        if not codigo_barra:
+            return JsonResponse({
+                'success': False,
+                'message': 'El código de barra es obligatorio'
+            })
+        
+        # Verificar que no exista
+        if TarjetaAutorizacion.objects.filter(codigo_barra=codigo_barra).exists():
+            return JsonResponse({
+                'success': False,
+                'message': 'Ya existe una tarjeta con este código'
+            })
+        
+        # Obtener empleado si se especificó
+        empleado = None
+        if id_empleado:
+            try:
+                empleado = Empleado.objects.get(id_empleado=id_empleado)
+            except Empleado.DoesNotExist:
+                pass
+        
+        # Crear tarjeta
+        tarjeta = TarjetaAutorizacion.objects.create(
+            codigo_barra=codigo_barra,
+            id_empleado=empleado,
+            tipo_autorizacion=tipo_autorizacion,
+            puede_anular_almuerzos=puede_anular_almuerzos,
+            puede_anular_ventas=puede_anular_ventas,
+            puede_anular_recargas=puede_anular_recargas,
+            puede_modificar_precios=puede_modificar_precios,
+            observaciones=observaciones,
+            fecha_vencimiento=fecha_vencimiento,
+            activo=True
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Tarjeta {codigo_barra} creada exitosamente',
+            'tarjeta_id': tarjeta.id_tarjeta_autorizacion
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al crear tarjeta: {str(e)}'
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
+def editar_tarjeta_autorizacion(request, tarjeta_id):
+    """
+    Editar una tarjeta de autorización existente
+    """
+    try:
+        tarjeta = get_object_or_404(TarjetaAutorizacion, id_tarjeta_autorizacion=tarjeta_id)
+        
+        # Actualizar campos
+        tarjeta.tipo_autorizacion = request.POST.get('tipo_autorizacion', tarjeta.tipo_autorizacion)
+        
+        # Permisos
+        tarjeta.puede_anular_almuerzos = request.POST.get('puede_anular_almuerzos') == 'on'
+        tarjeta.puede_anular_ventas = request.POST.get('puede_anular_ventas') == 'on'
+        tarjeta.puede_anular_recargas = request.POST.get('puede_anular_recargas') == 'on'
+        tarjeta.puede_modificar_precios = request.POST.get('puede_modificar_precios') == 'on'
+        
+        tarjeta.observaciones = request.POST.get('observaciones', '')
+        fecha_vencimiento = request.POST.get('fecha_vencimiento')
+        tarjeta.fecha_vencimiento = fecha_vencimiento if fecha_vencimiento else None
+        
+        # Empleado
+        id_empleado = request.POST.get('id_empleado')
+        if id_empleado:
+            try:
+                tarjeta.id_empleado = Empleado.objects.get(id_empleado=id_empleado)
+            except Empleado.DoesNotExist:
+                tarjeta.id_empleado = None
+        else:
+            tarjeta.id_empleado = None
+        
+        tarjeta.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Tarjeta {tarjeta.codigo_barra} actualizada'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al editar tarjeta: {str(e)}'
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
+def toggle_tarjeta_autorizacion(request, tarjeta_id):
+    """
+    Activar/desactivar una tarjeta de autorización
+    """
+    try:
+        tarjeta = get_object_or_404(TarjetaAutorizacion, id_tarjeta_autorizacion=tarjeta_id)
+        tarjeta.activo = not tarjeta.activo
+        tarjeta.save()
+        
+        estado = "activada" if tarjeta.activo else "desactivada"
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Tarjeta {tarjeta.codigo_barra} {estado}',
+            'activo': tarjeta.activo
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al cambiar estado: {str(e)}'
+        })
+
+
+@login_required
+@require_http_methods(["GET"])
+def ver_logs_autorizacion(request):
+    """
+    Vista de logs de autorización con filtros
+    """
+    # Filtros
+    fecha_desde = request.GET.get('fecha_desde')
+    fecha_hasta = request.GET.get('fecha_hasta')
+    tipo_operacion = request.GET.get('tipo_operacion')
+    resultado = request.GET.get('resultado')
+    tarjeta_id = request.GET.get('tarjeta_id')
+    
+    logs = LogAutorizacion.objects.select_related(
+        'id_tarjeta_autorizacion'
+    ).order_by('-fecha_hora')
+    
+    # Aplicar filtros
+    if fecha_desde:
+        logs = logs.filter(fecha_hora__gte=fecha_desde)
+    if fecha_hasta:
+        logs = logs.filter(fecha_hora__lte=fecha_hasta)
+    if tipo_operacion:
+        logs = logs.filter(tipo_operacion=tipo_operacion)
+    if resultado:
+        logs = logs.filter(resultado=resultado)
+    if tarjeta_id:
+        logs = logs.filter(id_tarjeta_autorizacion_id=tarjeta_id)
+    
+    # Paginación
+    from django.core.paginator import Paginator
+    paginator = Paginator(logs, 50)
+    page_number = request.GET.get('page', 1)
+    logs_page = paginator.get_page(page_number)
+    
+    # Estadísticas
+    total_logs = logs.count()
+    exitosos = logs.filter(resultado='EXITOSO').count()
+    rechazados = logs.filter(resultado='RECHAZADO').count()
+    
+    # Obtener todas las tarjetas para el filtro
+    tarjetas = TarjetaAutorizacion.objects.filter(activo=True).order_by('codigo_barra')
+    
+    context = {
+        'logs': logs_page,
+        'total_logs': total_logs,
+        'exitosos': exitosos,
+        'rechazados': rechazados,
+        'tarjetas': tarjetas,
+        'fecha_desde': fecha_desde,
+        'fecha_hasta': fecha_hasta,
+        'tipo_operacion': tipo_operacion,
+        'resultado': resultado,
+        'tarjeta_id': tarjeta_id,
+    }
+    
+    return render(request, 'pos/logs_autorizaciones.html', context)
+
+
+# =============================================================================
+# GESTIÓN DE FOTOS DE HIJOS PARA IDENTIFICACIÓN EN POS
+# =============================================================================
+
+@login_required
+@require_http_methods(["GET"])
+def gestionar_fotos_hijos(request):
+    """
+    Vista para gestionar fotos de identificación de hijos
+    """
+    # Filtros
+    buscar = request.GET.get('buscar', '')
+    sin_foto = request.GET.get('sin_foto', '')
+    
+    hijos = Hijo.objects.filter(activo=True).select_related(
+        'id_cliente_responsable',
+        'tarjeta'
+    ).order_by('apellido', 'nombre')
+    
+    if buscar:
+        hijos = hijos.filter(
+            Q(nombre__icontains=buscar) | 
+            Q(apellido__icontains=buscar) |
+            Q(tarjeta__nro_tarjeta__icontains=buscar)
+        )
+    
+    if sin_foto:
+        hijos = hijos.filter(Q(foto_perfil__isnull=True) | Q(foto_perfil=''))
+    
+    # Estadísticas
+    total_hijos = Hijo.objects.filter(activo=True).count()
+    con_foto = Hijo.objects.filter(activo=True).exclude(
+        Q(foto_perfil__isnull=True) | Q(foto_perfil='')
+    ).count()
+    sin_foto_count = total_hijos - con_foto
+    
+    context = {
+        'hijos': hijos,
+        'total_hijos': total_hijos,
+        'con_foto': con_foto,
+        'sin_foto_count': sin_foto_count,
+        'buscar': buscar,
+        'filtro_sin_foto': sin_foto,
+    }
+    
+    return render(request, 'pos/gestionar_fotos.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def capturar_foto_hijo(request, hijo_id):
+    """
+    Captura y guarda la foto de un hijo desde webcam
+    """
+    try:
+        hijo = get_object_or_404(Hijo, id_hijo=hijo_id)
+        
+        # Obtener imagen en base64 del POST
+        imagen_data = request.POST.get('imagen')
+        
+        if not imagen_data:
+            return JsonResponse({
+                'success': False,
+                'message': 'No se recibió la imagen'
+            })
+        
+        # Remover el prefijo data:image/png;base64,
+        if ',' in imagen_data:
+            imagen_data = imagen_data.split(',')[1]
+        
+        # Decodificar base64
+        try:
+            imagen_bytes = base64.b64decode(imagen_data)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al decodificar imagen: {str(e)}'
+            })
+        
+        # Crear directorio si no existe
+        fotos_dir = os.path.join(settings.MEDIA_ROOT, 'fotos_hijos')
+        os.makedirs(fotos_dir, exist_ok=True)
+        
+        # Nombre de archivo único
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        nombre_archivo = f'hijo_{hijo.id_hijo}_{timestamp}.png'
+        ruta_completa = os.path.join(fotos_dir, nombre_archivo)
+        
+        # Guardar archivo
+        with open(ruta_completa, 'wb') as f:
+            f.write(imagen_bytes)
+        
+        # Eliminar foto anterior si existe
+        if hijo.foto_perfil:
+            ruta_anterior = os.path.join(settings.MEDIA_ROOT, hijo.foto_perfil)
+            if os.path.exists(ruta_anterior):
+                try:
+                    os.remove(ruta_anterior)
+                except:
+                    pass
+        
+        # Actualizar modelo
+        hijo.foto_perfil = f'fotos_hijos/{nombre_archivo}'
+        hijo.fecha_foto = timezone.now()
+        hijo.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Foto de {hijo.nombre_completo} guardada exitosamente',
+            'foto_url': settings.MEDIA_URL + hijo.foto_perfil
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al guardar foto: {str(e)}'
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
+def eliminar_foto_hijo(request, hijo_id):
+    """
+    Elimina la foto de un hijo
+    """
+    try:
+        hijo = get_object_or_404(Hijo, id_hijo=hijo_id)
+        
+        if not hijo.foto_perfil:
+            return JsonResponse({
+                'success': False,
+                'message': 'Este hijo no tiene foto'
+            })
+        
+        # Eliminar archivo físico
+        ruta_foto = os.path.join(settings.MEDIA_ROOT, hijo.foto_perfil)
+        if os.path.exists(ruta_foto):
+            try:
+                os.remove(ruta_foto)
+            except Exception as e:
+                print(f"Error al eliminar archivo: {e}")
+        
+        # Limpiar campos en BD
+        hijo.foto_perfil = None
+        hijo.fecha_foto = None
+        hijo.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Foto de {hijo.nombre_completo} eliminada'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al eliminar foto: {str(e)}'
+        })
+
+
+@login_required
+@require_http_methods(["GET"])
+def obtener_foto_hijo(request):
+    """
+    Obtiene la foto de un hijo por número de tarjeta (para POS)
+    """
+    nro_tarjeta = request.GET.get('nro_tarjeta', '').strip()
+    
+    if not nro_tarjeta:
+        return JsonResponse({
+            'success': False,
+            'message': 'Número de tarjeta requerido'
+        })
+    
+    try:
+        tarjeta = Tarjeta.objects.select_related('id_hijo').get(nro_tarjeta=nro_tarjeta)
+        hijo = tarjeta.id_hijo
+        
+        response_data = {
+            'success': True,
+            'hijo': {
+                'id': hijo.id_hijo,
+                'nombre': hijo.nombre_completo,
+                'tiene_foto': hijo.tiene_foto,
+                'foto_url': settings.MEDIA_URL + hijo.foto_perfil if hijo.foto_perfil else None,
+                'fecha_foto': hijo.fecha_foto.strftime('%d/%m/%Y %H:%M') if hijo.fecha_foto else None
+            }
+        }
+        
+        return JsonResponse(response_data)
+        
+    except Tarjeta.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Tarjeta no encontrada'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        })
