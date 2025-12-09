@@ -38,6 +38,10 @@ from .models import (
     # Nuevos modelos - 26 NOV 2025
     ConsumoTarjeta, VistaVentasDiaDetallado, VistaConsumosEstudiante, VistaStockCriticoAlertas,
     VistaRecargasHistorial, VistaResumenCajaDiario, VistaNotasCreditoDetallado,
+    # Gestión Académica - 08 DIC 2025
+    Grado, HistorialGradoHijo,
+    # Alérgenos y Promociones - 08 DIC 2025
+    Alergeno, ProductoAlergeno, Promocion, ProductoPromocion, CategoriaPromocion, PromocionAplicada,
 )
 
 
@@ -170,9 +174,31 @@ class EmpleadoAdmin(admin.ModelAdmin):
 
 @admin.register(Hijo)
 class HijoAdmin(admin.ModelAdmin):
-    list_display = ['nombre', 'apellido', 'id_cliente_responsable', 'activo']
-    list_filter = ['activo']
-    search_fields = ['nombre', 'apellido']
+    list_display = ['nombre', 'apellido', 'id_cliente_responsable', 'grado', 'tiene_restricciones', 'activo']
+    list_filter = ['activo', 'grado']
+    search_fields = ['nombre', 'apellido', 'restricciones_compra']
+    
+    fieldsets = (
+        ('Información Personal', {
+            'fields': ('nombre', 'apellido', 'id_cliente_responsable', 'fecha_nacimiento', 'grado')
+        }),
+        ('Restricciones Alimentarias', {
+            'fields': ('restricciones_compra',),
+            'description': '⚠️ Ingrese restricciones alimentarias, alergias o intolerancias (ej: "Alérgico al maní, intolerante a la lactosa")'
+        }),
+        ('Foto e Identificación', {
+            'fields': ('foto_perfil', 'fecha_foto'),
+            'classes': ('collapse',)
+        }),
+        ('Estado', {
+            'fields': ('activo',)
+        }),
+    )
+    
+    def tiene_restricciones(self, obj):
+        return bool(obj.restricciones_compra)
+    tiene_restricciones.boolean = True
+    tiene_restricciones.short_description = '⚠️ Restricciones'
 
 
 @admin.register(Tarjeta)
@@ -1048,6 +1074,245 @@ cantina_admin_site.register(RegistroConsumoAlmuerzo, RegistroConsumoAlmuerzoAdmi
 cantina_admin_site.register(PagosAlmuerzoMensual, PagosAlmuerzoMensualAdmin)
 cantina_admin_site.register(AlertasSistema, AlertasSistemaAdmin)
 cantina_admin_site.register(SolicitudesNotificacion, SolicitudesNotificacionAdmin)
+
+# ============================================================================
+# ADMIN PARA GESTIÓN ACADÉMICA
+# ============================================================================
+
+@admin.register(Grado, site=cantina_admin_site)
+class GradoAdmin(admin.ModelAdmin):
+    list_display = ['nombre_grado', 'nivel', 'orden_visualizacion', 'es_ultimo_grado']
+    list_filter = ['nivel', 'es_ultimo_grado']
+    search_fields = ['nombre_grado']
+    ordering = ['orden_visualizacion']
+    
+    fieldsets = (
+        ('Información del Grado', {
+            'fields': ('nombre_grado', 'nivel', 'orden_visualizacion')
+        }),
+        ('Configuración', {
+            'fields': ('es_ultimo_grado',),
+            'description': 'Marcar si es el último grado del sistema'
+        }),
+    )
+
+@admin.register(HistorialGradoHijo, site=cantina_admin_site)
+class HistorialGradoHijoAdmin(admin.ModelAdmin):
+    list_display = ['id_hijo', 'grado_anterior', 'grado_nuevo', 'anio_escolar', 'motivo', 'fecha_cambio', 'usuario_registro']
+    list_filter = ['anio_escolar', 'motivo', 'fecha_cambio']
+    search_fields = ['id_hijo__nombre_completo', 'grado_anterior', 'grado_nuevo']
+    date_hierarchy = 'fecha_cambio'
+    ordering = ['-fecha_cambio']
+    readonly_fields = ['fecha_cambio']
+    
+    fieldsets = (
+        ('Estudiante', {
+            'fields': ('id_hijo',)
+        }),
+        ('Cambio de Grado', {
+            'fields': ('grado_anterior', 'grado_nuevo', 'anio_escolar', 'motivo')
+        }),
+        ('Auditoría', {
+            'fields': ('fecha_cambio', 'usuario_registro', 'observaciones'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        # Los registros se crean automáticamente desde el sistema
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        # No permitir eliminar el historial
+        return False
+
+
+# =============================================================================
+# ADMINISTRACIÓN DE ALÉRGENOS Y RESTRICCIONES ALIMENTARIAS
+# =============================================================================
+
+@admin.register(Alergeno, site=cantina_admin_site)
+class AlergenoAdmin(admin.ModelAdmin):
+    list_display = ['icono_nombre', 'nivel_severidad', 'cantidad_palabras_clave', 'activo', 'fecha_creacion']
+    list_filter = ['nivel_severidad', 'activo', 'fecha_creacion']
+    search_fields = ['nombre', 'descripcion']
+    readonly_fields = ['fecha_creacion']
+    ordering = ['nivel_severidad', 'nombre']
+    
+    fieldsets = (
+        ('Información Básica', {
+            'fields': ('nombre', 'icono', 'descripcion')
+        }),
+        ('Clasificación', {
+            'fields': ('nivel_severidad', 'activo')
+        }),
+        ('Palabras Clave para Detección', {
+            'fields': ('palabras_clave',),
+            'description': 'Formato JSON: ["palabra1", "palabra2", "palabra3"]. Ejemplos: ["maní", "peanut", "cacahuete"]'
+        }),
+        ('Auditoría', {
+            'fields': ('fecha_creacion', 'usuario_creacion'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def icono_nombre(self, obj):
+        return f'{obj.icono} {obj.nombre}' if obj.icono else obj.nombre
+    icono_nombre.short_description = 'Alérgeno'
+    
+    def cantidad_palabras_clave(self, obj):
+        import json
+        try:
+            palabras = json.loads(obj.palabras_clave) if isinstance(obj.palabras_clave, str) else obj.palabras_clave
+            return len(palabras)
+        except:
+            return 0
+    cantidad_palabras_clave.short_description = 'N° Palabras'
+
+
+@admin.register(ProductoAlergeno, site=cantina_admin_site)
+class ProductoAlergenoAdmin(admin.ModelAdmin):
+    list_display = ['id_producto', 'id_alergeno', 'tipo_presencia', 'fecha_registro', 'usuario_registro']
+    list_filter = ['contiene', 'id_alergeno', 'fecha_registro']
+    search_fields = ['id_producto__descripcion', 'id_alergeno__nombre']
+    readonly_fields = ['fecha_registro']
+    autocomplete_fields = ['id_producto', 'id_alergeno']
+    
+    fieldsets = (
+        ('Relación', {
+            'fields': ('id_producto', 'id_alergeno', 'contiene')
+        }),
+        ('Observaciones', {
+            'fields': ('observaciones',)
+        }),
+        ('Auditoría', {
+            'fields': ('fecha_registro', 'usuario_registro'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def tipo_presencia(self, obj):
+        if obj.contiene:
+            return format_html('<span style="color: red; font-weight: bold;">⚠️ Contiene</span>')
+        else:
+            return format_html('<span style="color: orange;">⚠️ Puede contener trazas</span>')
+    tipo_presencia.short_description = 'Tipo'
+
+
+# =============================================================================
+# ADMINISTRACIÓN DE PROMOCIONES Y DESCUENTOS
+# =============================================================================
+
+@admin.register(Promocion, site=cantina_admin_site)
+class PromocionAdmin(admin.ModelAdmin):
+    list_display = ['nombre', 'tipo_promocion', 'valor_mostrado', 'vigencia_estado', 'usos_mostrado', 'activo', 'prioridad']
+    list_filter = ['tipo_promocion', 'activo', 'aplica_a', 'fecha_inicio']
+    search_fields = ['nombre', 'descripcion', 'codigo_promocion']
+    date_hierarchy = 'fecha_inicio'
+    ordering = ['prioridad', '-fecha_inicio']
+    readonly_fields = ['fecha_creacion', 'usos_actuales']
+    
+    fieldsets = (
+        ('Información Básica', {
+            'fields': ('nombre', 'descripcion', 'activo', 'prioridad')
+        }),
+        ('Configuración de Descuento', {
+            'fields': ('tipo_promocion', 'valor_descuento', 'aplica_a')
+        }),
+        ('Vigencia', {
+            'fields': ('fecha_inicio', 'fecha_fin', 'hora_inicio', 'hora_fin', 'dias_semana'),
+            'description': 'Días de semana en formato JSON: [1,2,3,4,5] (1=Lun, 7=Dom)'
+        }),
+        ('Condiciones', {
+            'fields': ('min_cantidad', 'monto_minimo', 'requiere_codigo', 'codigo_promocion')
+        }),
+        ('Límites de Uso', {
+            'fields': ('max_usos_cliente', 'max_usos_total', 'usos_actuales')
+        }),
+        ('Auditoría', {
+            'fields': ('fecha_creacion', 'usuario_creacion'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def valor_mostrado(self, obj):
+        if obj.tipo_promocion == 'DESCUENTO_PORCENTAJE':
+            return f'{obj.valor_descuento}%'
+        elif obj.tipo_promocion in ['DESCUENTO_MONTO', 'PRECIO_FIJO']:
+            return f'Gs. {obj.valor_descuento:,.0f}'
+        elif obj.tipo_promocion == 'NXM':
+            return f'{int(100/obj.valor_descuento)}x{int(100/obj.valor_descuento)-1}'
+        return str(obj.valor_descuento)
+    valor_mostrado.short_description = 'Valor'
+    
+    def vigencia_estado(self, obj):
+        from django.utils import timezone
+        ahora = timezone.now().date()
+        
+        if obj.fecha_inicio > ahora:
+            return format_html('<span style="color: gray;">⏳ Próximamente</span>')
+        elif obj.fecha_fin and obj.fecha_fin < ahora:
+            return format_html('<span style="color: red;">❌ Expirada</span>')
+        else:
+            return format_html('<span style="color: green;">✅ Vigente</span>')
+    vigencia_estado.short_description = 'Estado'
+    
+    def usos_mostrado(self, obj):
+        if obj.max_usos_total:
+            porcentaje = (obj.usos_actuales / obj.max_usos_total) * 100
+            color = 'red' if porcentaje >= 90 else 'orange' if porcentaje >= 70 else 'green'
+            return format_html(
+                '<span style="color: {};">{} / {}</span>',
+                color, obj.usos_actuales, obj.max_usos_total
+            )
+        return f'{obj.usos_actuales} (sin límite)'
+    usos_mostrado.short_description = 'Usos'
+    
+    def nivel_severidad_ficticio(self, obj):
+        # Campo ficticio para agrupar en filtros
+        return obj.activo
+    nivel_severidad_ficticio.short_description = 'Estado'
+
+
+class ProductoPromocionInline(admin.TabularInline):
+    model = ProductoPromocion
+    extra = 1
+    autocomplete_fields = ['id_producto']
+
+
+class CategoriaPromocionInline(admin.TabularInline):
+    model = CategoriaPromocion
+    extra = 1
+    autocomplete_fields = ['id_categoria']
+
+
+@admin.register(PromocionAplicada, site=cantina_admin_site)
+class PromocionAplicadaAdmin(admin.ModelAdmin):
+    list_display = ['id_venta', 'id_promocion', 'monto_descontado_mostrado', 'fecha_aplicacion']
+    list_filter = ['id_promocion', 'fecha_aplicacion']
+    search_fields = ['id_venta__id_venta']
+    readonly_fields = ['fecha_aplicacion']
+    date_hierarchy = 'fecha_aplicacion'
+    
+    fieldsets = (
+        ('Aplicación', {
+            'fields': ('id_venta', 'id_promocion', 'monto_descontado', 'fecha_aplicacion')
+        }),
+    )
+    
+    def monto_descontado_mostrado(self, obj):
+        return format_html('<span style="color: green; font-weight: bold;">-Gs. {:,.0f}</span>', obj.monto_descontado)
+    monto_descontado_mostrado.short_description = 'Descuento'
+    
+    def has_add_permission(self, request):
+        # Se crean automáticamente desde el POS
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        # No permitir editar
+        return False
+
+
 cantina_admin_site.register(AuditoriaEmpleados, AuditoriaEmpleadosAdmin)
 cantina_admin_site.register(AuditoriaUsuariosWeb, AuditoriaUsuariosWebAdmin)
 cantina_admin_site.register(AuditoriaComisiones, AuditoriaComisionesAdmin)

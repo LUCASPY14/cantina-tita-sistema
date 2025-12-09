@@ -174,6 +174,8 @@ class Hijo(models.Model):
     nombre = models.CharField(db_column='Nombre', max_length=100)
     apellido = models.CharField(db_column='Apellido', max_length=100)
     fecha_nacimiento = models.DateField(db_column='Fecha_Nacimiento', blank=True, null=True)
+    grado = models.CharField(db_column='Grado', max_length=50, blank=True, null=True)
+    restricciones_compra = models.TextField(db_column='Restricciones_Compra', blank=True, null=True)
     foto_perfil = models.CharField(db_column='Foto_Perfil', max_length=255, blank=True, null=True)
     fecha_foto = models.DateTimeField(db_column='Fecha_Foto', blank=True, null=True)
     activo = models.BooleanField(db_column='Activo', default=True)
@@ -1021,10 +1023,8 @@ class CierresCaja(models.Model):
 class Ventas(models.Model):
     '''Tabla ventas - Ventas realizadas'''
     TIPO_VENTA_CHOICES = [
-        ('Venta Directa', 'Venta Directa'),
-        ('Consumo Tarjeta', 'Consumo Tarjeta'),
-        ('Carga Saldo', 'Carga Saldo'),
-        ('Pago Almuerzo', 'Pago Almuerzo'),
+        ('CONTADO', 'Contado'),
+        ('CREDITO', 'Crédito'),
     ]
 
     id_venta = models.BigAutoField(db_column='ID_Venta', primary_key=True)
@@ -1068,6 +1068,26 @@ class Ventas(models.Model):
         default='PROCESADO'
     )
     tipo_venta = models.CharField(db_column='Tipo_Venta', max_length=20, choices=TIPO_VENTA_CHOICES)
+    autorizado_por = models.ForeignKey(
+        'Empleado',
+        on_delete=models.PROTECT,
+        db_column='Autorizado_Por',
+        related_name='ventas_autorizadas',
+        blank=True,
+        null=True,
+        help_text='Supervisor que autorizó la venta (para ventas a crédito con saldo insuficiente)'
+    )
+    motivo_credito = models.TextField(
+        db_column='Motivo_Credito',
+        blank=True,
+        null=True,
+        help_text='Justificación de la venta a crédito'
+    )
+    genera_factura_legal = models.BooleanField(
+        db_column='Genera_Factura_Legal',
+        default=False,
+        help_text='True si la venta genera factura contable (solo pagos con medios externos)'
+    )
 
     def clean(self):
         """Validaciones de negocio para Ventas"""
@@ -2357,4 +2377,700 @@ class LogAutorizacion(models.Model):
     
     def __str__(self):
         return f'{self.get_tipo_operacion_display()} - {self.fecha_hora.strftime("%d/%m/%Y %H:%M")}'
+
+
+# =============================================================================
+# MODELOS PARA GESTIÓN DE GRADOS
+# =============================================================================
+
+class Grado(models.Model):
+    '''Tabla grados - Catálogo de niveles educativos'''
+    id_grado = models.AutoField(db_column='ID_Grado', primary_key=True)
+    nombre_grado = models.CharField(db_column='Nombre_Grado', max_length=50, unique=True)
+    nivel = models.IntegerField(db_column='Nivel')
+    orden_visualizacion = models.IntegerField(db_column='Orden_Visualizacion')
+    es_ultimo_grado = models.BooleanField(db_column='Es_Ultimo_Grado', default=False)
+    activo = models.BooleanField(db_column='Activo', default=True)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'grados'
+        verbose_name = 'Grado'
+        verbose_name_plural = 'Grados'
+        ordering = ['orden_visualizacion']
+    
+    def __str__(self):
+        return self.nombre_grado
+    
+    def siguiente_grado(self):
+        '''Retorna el siguiente grado en la secuencia'''
+        siguiente = Grado.objects.filter(
+            nivel=self.nivel + 1,
+            activo=True
+        ).first()
+        return siguiente
+
+
+class HistorialGradoHijo(models.Model):
+    '''Tabla historial_grados_hijos - Registro de cambios de grado'''
+    MOTIVO_CHOICES = [
+        ('INGRESO', 'Ingreso'),
+        ('PROMOCION', 'Promoción'),
+        ('CAMBIO_MANUAL', 'Cambio Manual'),
+        ('REINGRESO', 'Reingreso'),
+    ]
+    
+    id_historial = models.AutoField(db_column='ID_Historial', primary_key=True)
+    id_hijo = models.ForeignKey(
+        Hijo,
+        on_delete=models.CASCADE,
+        db_column='ID_Hijo',
+        related_name='historial_grados'
+    )
+    grado_anterior = models.CharField(db_column='Grado_Anterior', max_length=50, blank=True, null=True)
+    grado_nuevo = models.CharField(db_column='Grado_Nuevo', max_length=50)
+    anio_escolar = models.IntegerField(db_column='Anio_Escolar')
+    fecha_cambio = models.DateTimeField(db_column='Fecha_Cambio', auto_now_add=True)
+    motivo = models.CharField(
+        db_column='Motivo',
+        max_length=20,
+        choices=MOTIVO_CHOICES,
+        default='PROMOCION'
+    )
+    usuario_registro = models.CharField(db_column='Usuario_Registro', max_length=100, blank=True, null=True)
+    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'historial_grados_hijos'
+        verbose_name = 'Historial de Grado'
+        verbose_name_plural = 'Historial de Grados'
+        ordering = ['-fecha_cambio']
+    
+    def __str__(self):
+        return f'{self.id_hijo.nombre_completo} - {self.grado_nuevo} ({self.anio_escolar})'
+
+
+# ==================== SISTEMA DE SEGURIDAD Y AUDITORÍA ====================
+
+class IntentoLogin(models.Model):
+    '''Tabla intentos_login - Rate limiting y seguridad'''
+    id_intento = models.AutoField(db_column='ID_Intento', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    ip_address = models.CharField(db_column='IP_Address', max_length=45)
+    ciudad = models.CharField(db_column='Ciudad', max_length=100, blank=True, null=True)
+    pais = models.CharField(db_column='Pais', max_length=100, blank=True, null=True)
+    fecha_intento = models.DateTimeField(db_column='Fecha_Intento')
+    exitoso = models.BooleanField(db_column='Exitoso', default=False)
+    motivo_fallo = models.CharField(db_column='Motivo_Fallo', max_length=100, blank=True, null=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'intentos_login'
+        verbose_name = 'Intento de Login'
+        verbose_name_plural = 'Intentos de Login'
+        ordering = ['-fecha_intento']
+    
+    def __str__(self):
+        estado = "✓" if self.exitoso else "✗"
+        ubicacion = f" ({self.ciudad}, {self.pais})" if self.ciudad and self.pais else ""
+        return f'{estado} {self.usuario}{ubicacion} - {self.fecha_intento}'
+
+
+class AuditoriaOperacion(models.Model):
+    '''Tabla auditoria_operaciones - Logging completo del sistema'''
+    TIPO_USUARIO_CHOICES = [
+        ('EMPLEADO', 'Empleado'),
+        ('CLIENTE_WEB', 'Cliente Web'),
+        ('ADMIN', 'Administrador'),
+    ]
+    
+    RESULTADO_CHOICES = [
+        ('EXITOSO', 'Exitoso'),
+        ('FALLIDO', 'Fallido'),
+    ]
+    
+    id_auditoria = models.AutoField(db_column='ID_Auditoria', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    id_usuario = models.IntegerField(db_column='ID_Usuario', blank=True, null=True)
+    operacion = models.CharField(db_column='Operacion', max_length=100)
+    tabla_afectada = models.CharField(db_column='Tabla_Afectada', max_length=100, blank=True, null=True)
+    id_registro = models.IntegerField(db_column='ID_Registro', blank=True, null=True)
+    descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
+    datos_anteriores = models.JSONField(db_column='Datos_Anteriores', blank=True, null=True)
+    datos_nuevos = models.JSONField(db_column='Datos_Nuevos', blank=True, null=True)
+    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
+    ciudad = models.CharField(db_column='Ciudad', max_length=100, blank=True, null=True)
+    pais = models.CharField(db_column='Pais', max_length=100, blank=True, null=True)
+    user_agent = models.TextField(db_column='User_Agent', blank=True, null=True)
+    fecha_operacion = models.DateTimeField(db_column='Fecha_Operacion')
+    resultado = models.CharField(db_column='Resultado', max_length=20, choices=RESULTADO_CHOICES)
+    mensaje_error = models.TextField(db_column='Mensaje_Error', blank=True, null=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'auditoria_operaciones'
+        verbose_name = 'Auditoría de Operación'
+        verbose_name_plural = 'Auditoría de Operaciones'
+        ordering = ['-fecha_operacion']
+    
+    def __str__(self):
+        ubicacion = f" ({self.ciudad}, {self.pais})" if self.ciudad and self.pais else ""
+        return f'{self.operacion} por {self.usuario}{ubicacion} - {self.fecha_operacion}'
+
+
+class TokenRecuperacion(models.Model):
+    '''Tabla tokens_recuperacion - Tokens para reset de contraseña'''
+    id_token = models.AutoField(db_column='ID_Token', primary_key=True)
+    id_cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.CASCADE,
+        db_column='ID_Cliente'
+    )
+    token = models.CharField(db_column='Token', max_length=64, unique=True)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion')
+    fecha_expiracion = models.DateTimeField(db_column='Fecha_Expiracion')
+    usado = models.BooleanField(db_column='Usado', default=False)
+    fecha_uso = models.DateTimeField(db_column='Fecha_Uso', blank=True, null=True)
+    ip_solicitud = models.CharField(db_column='IP_Solicitud', max_length=45, blank=True, null=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'tokens_recuperacion'
+        verbose_name = 'Token de Recuperación'
+        verbose_name_plural = 'Tokens de Recuperación'
+        ordering = ['-fecha_creacion']
+    
+    def __str__(self):
+        return f'Token para {self.id_cliente.nombre_completo} - {self.fecha_creacion}'
+
+
+class BloqueoCuenta(models.Model):
+    '''Tabla bloqueos_cuenta - Gestión de bloqueos de seguridad'''
+    TIPO_USUARIO_CHOICES = [
+        ('EMPLEADO', 'Empleado'),
+        ('CLIENTE_WEB', 'Cliente Web'),
+    ]
+    
+    id_bloqueo = models.AutoField(db_column='ID_Bloqueo', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    motivo = models.CharField(db_column='Motivo', max_length=255)
+    fecha_bloqueo = models.DateTimeField(db_column='Fecha_Bloqueo')
+    fecha_desbloqueo = models.DateTimeField(db_column='Fecha_Desbloqueo', blank=True, null=True)
+    bloqueado_por = models.CharField(db_column='Bloqueado_Por', max_length=100, blank=True, null=True)
+    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'bloqueos_cuenta'
+        verbose_name = 'Bloqueo de Cuenta'
+        verbose_name_plural = 'Bloqueos de Cuentas'
+        ordering = ['-fecha_bloqueo']
+    
+    def __str__(self):
+        estado = "🔒 Activo" if self.activo else "🔓 Desbloqueado"
+        return f'{estado} - {self.usuario} - {self.motivo}'
+
+
+class PatronAcceso(models.Model):
+    '''Tabla patrones_acceso - Patrones habituales de acceso'''
+    TIPO_USUARIO_CHOICES = [
+        ('EMPLEADO', 'Empleado'),
+        ('CLIENTE_WEB', 'Cliente Web'),
+        ('ADMIN', 'Administrador'),
+    ]
+    
+    id_patron = models.AutoField(db_column='ID_Patron', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    ip_address = models.CharField(db_column='IP_Address', max_length=45)
+    horario_inicio = models.TimeField(db_column='Horario_Inicio', blank=True, null=True)
+    horario_fin = models.TimeField(db_column='Horario_Fin', blank=True, null=True)
+    dias_semana = models.CharField(db_column='Dias_Semana', max_length=50, blank=True, null=True)  # JSON
+    primera_deteccion = models.DateTimeField(db_column='Primera_Deteccion')
+    ultima_deteccion = models.DateTimeField(db_column='Ultima_Deteccion')
+    frecuencia_accesos = models.IntegerField(db_column='Frecuencia_Accesos', default=1)
+    es_habitual = models.BooleanField(db_column='Es_Habitual', default=False)
+    
+    class Meta:
+        managed = False
+        db_table = 'patrones_acceso'
+        verbose_name = 'Patrón de Acceso'
+        verbose_name_plural = 'Patrones de Acceso'
+        ordering = ['-ultima_deteccion']
+    
+    def __str__(self):
+        return f'{self.usuario} - {self.ip_address} ({self.frecuencia_accesos} accesos)'
+
+
+class AnomaliaDetectada(models.Model):
+    '''Tabla anomalias_detectadas - Anomalías de seguridad'''
+    TIPO_ANOMALIA_CHOICES = [
+        ('IP_NUEVA', 'IP Nueva'),
+        ('HORARIO_INUSUAL', 'Horario Inusual'),
+        ('MULTIPLES_SESIONES', 'Múltiples Sesiones'),
+        ('UBICACION_SOSPECHOSA', 'Ubicación Sospechosa'),
+    ]
+    
+    NIVEL_RIESGO_CHOICES = [
+        ('BAJO', 'Bajo'),
+        ('MEDIO', 'Medio'),
+        ('ALTO', 'Alto'),
+    ]
+    
+    id_anomalia = models.AutoField(db_column='ID_Anomalia', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    tipo_anomalia = models.CharField(db_column='Tipo_Anomalia', max_length=30, choices=TIPO_ANOMALIA_CHOICES)
+    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
+    fecha_deteccion = models.DateTimeField(db_column='Fecha_Deteccion')
+    descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
+    nivel_riesgo = models.CharField(db_column='Nivel_Riesgo', max_length=10, choices=NIVEL_RIESGO_CHOICES, default='MEDIO')
+    notificado = models.BooleanField(db_column='Notificado', default=False)
+    
+    class Meta:
+        managed = False
+        db_table = 'anomalias_detectadas'
+        verbose_name = 'Anomalía Detectada'
+        verbose_name_plural = 'Anomalías Detectadas'
+        ordering = ['-fecha_deteccion']
+    
+    def __str__(self):
+        return f'{self.tipo_anomalia} - {self.usuario} - {self.nivel_riesgo}'
+
+
+class SesionActiva(models.Model):
+    '''Tabla sesiones_activas - Control de sesiones activas'''
+    TIPO_USUARIO_CHOICES = [
+        ('EMPLEADO', 'Empleado'),
+        ('CLIENTE_WEB', 'Cliente Web'),
+        ('ADMIN', 'Administrador'),
+    ]
+    
+    id_sesion = models.AutoField(db_column='ID_Sesion', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    session_key = models.CharField(db_column='Session_Key', max_length=255, unique=True)
+    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
+    user_agent = models.TextField(db_column='User_Agent', blank=True, null=True)
+    fecha_inicio = models.DateTimeField(db_column='Fecha_Inicio')
+    ultima_actividad = models.DateTimeField(db_column='Ultima_Actividad')
+    activa = models.BooleanField(db_column='Activa', default=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'sesiones_activas'
+        verbose_name = 'Sesión Activa'
+        verbose_name_plural = 'Sesiones Activas'
+        ordering = ['-ultima_actividad']
+    
+    def __str__(self):
+        estado = "🟢 Activa" if self.activa else "🔴 Cerrada"
+        return f'{estado} - {self.usuario} - {self.ip_address}'
+
+
+class Autenticacion2Fa(models.Model):
+    '''Tabla autenticacion_2fa - Autenticación de dos factores (2FA)'''
+    TIPO_USUARIO_CHOICES = [
+        ('ADMIN', 'Administrador'),
+        ('CAJERO', 'Cajero'),
+        ('CLIENTE_WEB', 'Cliente Web'),
+    ]
+    
+    id_2fa = models.AutoField(db_column='ID_2FA', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    secret_key = models.CharField(db_column='Secret_Key', max_length=32, help_text='Clave secreta TOTP codificada en Base32')
+    backup_codes = models.TextField(db_column='Backup_Codes', blank=True, null=True, help_text='Códigos de respaldo JSON (array de strings hasheados)')
+    habilitado = models.BooleanField(db_column='Habilitado', default=False, help_text='Si el usuario tiene 2FA activo')
+    fecha_activacion = models.DateTimeField(db_column='Fecha_Activacion', blank=True, null=True, help_text='Cuando se activó por primera vez')
+    ultima_verificacion = models.DateTimeField(db_column='Ultima_Verificacion', blank=True, null=True, help_text='Último uso exitoso del código')
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'autenticacion_2fa'
+        verbose_name = 'Autenticación 2FA'
+        verbose_name_plural = 'Autenticaciones 2FA'
+        unique_together = [['usuario', 'tipo_usuario']]
+        ordering = ['-fecha_creacion']
+    
+    def __str__(self):
+        estado = "✅ Habilitado" if self.habilitado else "❌ Deshabilitado"
+        return f'{self.usuario} ({self.tipo_usuario}) - 2FA {estado}'
+
+
+class RestriccionHoraria(models.Model):
+    '''Tabla restricciones_horarias - Control de acceso por horarios'''
+    TIPO_USUARIO_CHOICES = [
+        ('ADMIN', 'Administrador'),
+        ('CAJERO', 'Cajero'),
+        ('CLIENTE_WEB', 'Cliente Web'),
+    ]
+    
+    DIA_SEMANA_CHOICES = [
+        ('LUNES', 'Lunes'),
+        ('MARTES', 'Martes'),
+        ('MIERCOLES', 'Miércoles'),
+        ('JUEVES', 'Jueves'),
+        ('VIERNES', 'Viernes'),
+        ('SABADO', 'Sábado'),
+        ('DOMINGO', 'Domingo'),
+    ]
+    
+    id_restriccion = models.AutoField(db_column='ID_Restriccion', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100, blank=True, null=True, help_text='Usuario específico (NULL = aplica a tipo_usuario)')
+    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    dia_semana = models.CharField(db_column='Dia_Semana', max_length=20, choices=DIA_SEMANA_CHOICES)
+    hora_inicio = models.TimeField(db_column='Hora_Inicio', help_text='Hora de inicio permitida')
+    hora_fin = models.TimeField(db_column='Hora_Fin', help_text='Hora de fin permitida')
+    activo = models.BooleanField(db_column='Activo', default=True, help_text='Si la restricción está activa')
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'restricciones_horarias'
+        verbose_name = 'Restricción Horaria'
+        verbose_name_plural = 'Restricciones Horarias'
+        ordering = ['dia_semana', 'hora_inicio']
+    
+    def __str__(self):
+        destino = self.usuario if self.usuario else f'Todos {self.tipo_usuario}'
+        return f'{destino} - {self.dia_semana} {self.hora_inicio}-{self.hora_fin}'
+
+
+class Intento2Fa(models.Model):
+    '''Tabla intentos_2fa - Registro de intentos de verificación 2FA'''
+    TIPO_USUARIO_CHOICES = [
+        ('ADMIN', 'Administrador'),
+        ('CAJERO', 'Cajero'),
+        ('CLIENTE_WEB', 'Cliente Web'),
+    ]
+    
+    TIPO_CODIGO_CHOICES = [
+        ('TOTP', 'TOTP'),
+        ('BACKUP', 'Código de Respaldo'),
+    ]
+    
+    id_intento = models.AutoField(db_column='ID_Intento', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
+    ciudad = models.CharField(db_column='Ciudad', max_length=100, blank=True, null=True)
+    pais = models.CharField(db_column='Pais', max_length=100, blank=True, null=True)
+    codigo_ingresado = models.CharField(db_column='Codigo_Ingresado', max_length=10, blank=True, null=True)
+    exitoso = models.BooleanField(db_column='Exitoso', default=False)
+    tipo_codigo = models.CharField(db_column='Tipo_Codigo', max_length=10, choices=TIPO_CODIGO_CHOICES, blank=True, null=True)
+    fecha_intento = models.DateTimeField(db_column='Fecha_Intento', auto_now_add=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'intentos_2fa'
+        verbose_name = 'Intento 2FA'
+        verbose_name_plural = 'Intentos 2FA'
+        ordering = ['-fecha_intento']
+    
+    def __str__(self):
+        estado = '✓' if self.exitoso else '✗'
+        ubicacion = f' ({self.ciudad}, {self.pais})' if self.ciudad and self.pais else ''
+        return f'{estado} {self.usuario}{ubicacion} - {self.fecha_intento}'
+
+
+class RenovacionSesion(models.Model):
+    '''Tabla renovaciones_sesion - Auditoría de renovaciones de tokens'''
+    id_renovacion = models.AutoField(db_column='ID_Renovacion', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    session_key_anterior = models.CharField(db_column='Session_Key_Anterior', max_length=255, blank=True, null=True)
+    session_key_nuevo = models.CharField(db_column='Session_Key_Nuevo', max_length=255, blank=True, null=True)
+    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
+    user_agent = models.TextField(db_column='User_Agent', blank=True, null=True)
+    fecha_renovacion = models.DateTimeField(db_column='Fecha_Renovacion', auto_now_add=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'renovaciones_sesion'
+        verbose_name = 'Renovación de Sesión'
+        verbose_name_plural = 'Renovaciones de Sesión'
+        ordering = ['-fecha_renovacion']
+    
+    def __str__(self):
+        return f'{self.usuario} - {self.fecha_renovacion}'
+
+
+# =============================================================================
+# SISTEMA DE ALÉRGENOS Y RESTRICCIONES ALIMENTARIAS
+# =============================================================================
+
+class Alergeno(models.Model):
+    '''Tabla alergenos - Catálogo de alérgenos e ingredientes restringidos'''
+    SEVERIDAD_CHOICES = [
+        ('CRITICO', 'Crítico'),
+        ('ALTO', 'Alto'),
+        ('MEDIO', 'Medio'),
+        ('BAJO', 'Bajo'),
+    ]
+    
+    id_alergeno = models.AutoField(db_column='ID_Alergeno', primary_key=True)
+    nombre = models.CharField(db_column='Nombre', max_length=100, unique=True)
+    descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
+    palabras_clave = models.JSONField(
+        db_column='Palabras_Clave',
+        help_text='Array de palabras clave para búsqueda (ej: ["maní", "peanut", "cacahuete"])'
+    )
+    nivel_severidad = models.CharField(
+        db_column='Nivel_Severidad',
+        max_length=10,
+        choices=SEVERIDAD_CHOICES,
+        default='MEDIO'
+    )
+    icono = models.CharField(
+        db_column='Icono',
+        max_length=10,
+        blank=True,
+        null=True,
+        help_text='Emoji representativo (ej: 🥜, 🥛, 🌾)'
+    )
+    activo = models.BooleanField(db_column='Activo', default=True)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    usuario_creacion = models.CharField(db_column='Usuario_Creacion', max_length=100, blank=True, null=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'alergenos'
+        verbose_name = 'Alérgeno'
+        verbose_name_plural = 'Alérgenos'
+        ordering = ['nivel_severidad', 'nombre']
+    
+    def __str__(self):
+        icono = f'{self.icono} ' if self.icono else ''
+        return f'{icono}{self.nombre}'
+
+
+class ProductoAlergeno(models.Model):
+    '''Tabla producto_alergenos - Relación entre productos y alérgenos'''
+    id_producto_alergeno = models.AutoField(db_column='ID_Producto_Alergeno', primary_key=True)
+    id_producto = models.ForeignKey(
+        'Producto',
+        on_delete=models.CASCADE,
+        db_column='ID_Producto',
+        related_name='alergenos_producto'
+    )
+    id_alergeno = models.ForeignKey(
+        Alergeno,
+        on_delete=models.CASCADE,
+        db_column='ID_Alergeno',
+        related_name='productos_con_alergeno'
+    )
+    contiene = models.BooleanField(
+        db_column='Contiene',
+        default=True,
+        help_text='True: Contiene el alérgeno. False: Puede contener trazas'
+    )
+    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
+    fecha_registro = models.DateTimeField(db_column='Fecha_Registro', auto_now_add=True)
+    usuario_registro = models.CharField(db_column='Usuario_Registro', max_length=100, blank=True, null=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'producto_alergenos'
+        verbose_name = 'Producto-Alérgeno'
+        verbose_name_plural = 'Productos-Alérgenos'
+        unique_together = [['id_producto', 'id_alergeno']]
+    
+    def __str__(self):
+        tipo = 'Contiene' if self.contiene else 'Puede contener trazas de'
+        return f'{self.id_producto.descripcion} - {tipo} {self.id_alergeno.nombre}'
+
+
+# =============================================================================
+# SISTEMA DE PROMOCIONES Y DESCUENTOS
+# =============================================================================
+
+class Promocion(models.Model):
+    '''Tabla promociones - Sistema de promociones y descuentos'''
+    TIPO_CHOICES = [
+        ('DESCUENTO_PORCENTAJE', 'Descuento Porcentaje'),
+        ('DESCUENTO_MONTO', 'Descuento Monto Fijo'),
+        ('PRECIO_FIJO', 'Precio Fijo'),
+        ('NXM', 'N x M (ej: 2x1, 3x2)'),
+        ('COMBO', 'Combo de Productos'),
+    ]
+    
+    APLICA_CHOICES = [
+        ('PRODUCTO', 'Producto Específico'),
+        ('CATEGORIA', 'Categoría'),
+        ('TOTAL_VENTA', 'Total de Venta'),
+        ('ESTUDIANTE_GRADO', 'Grado de Estudiante'),
+    ]
+    
+    id_promocion = models.AutoField(db_column='ID_Promocion', primary_key=True)
+    nombre = models.CharField(db_column='Nombre', max_length=200)
+    descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
+    tipo_promocion = models.CharField(
+        db_column='Tipo_Promocion',
+        max_length=25,
+        choices=TIPO_CHOICES
+    )
+    valor_descuento = models.DecimalField(
+        db_column='Valor_Descuento',
+        max_digits=10,
+        decimal_places=2,
+        help_text='Porcentaje (10.00 = 10%) o monto fijo (5000 = Gs. 5000)'
+    )
+    fecha_inicio = models.DateField(db_column='Fecha_Inicio')
+    fecha_fin = models.DateField(db_column='Fecha_Fin', blank=True, null=True)
+    hora_inicio = models.TimeField(db_column='Hora_Inicio', blank=True, null=True)
+    hora_fin = models.TimeField(db_column='Hora_Fin', blank=True, null=True)
+    dias_semana = models.JSONField(
+        db_column='Dias_Semana',
+        blank=True,
+        null=True,
+        help_text='Array de días [1=Lun, 2=Mar, 3=Mie, 4=Jue, 5=Vie, 6=Sab, 7=Dom]'
+    )
+    aplica_a = models.CharField(
+        db_column='Aplica_A',
+        max_length=20,
+        choices=APLICA_CHOICES
+    )
+    min_cantidad = models.IntegerField(
+        db_column='Min_Cantidad',
+        default=1,
+        help_text='Cantidad mínima de productos para aplicar'
+    )
+    monto_minimo = models.DecimalField(
+        db_column='Monto_Minimo',
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text='Monto mínimo de compra para aplicar'
+    )
+    max_usos_cliente = models.IntegerField(
+        db_column='Max_Usos_Cliente',
+        blank=True,
+        null=True,
+        help_text='Máximo de usos por cliente/estudiante'
+    )
+    max_usos_total = models.IntegerField(
+        db_column='Max_Usos_Total',
+        blank=True,
+        null=True,
+        help_text='Máximo de usos totales'
+    )
+    usos_actuales = models.IntegerField(db_column='Usos_Actuales', default=0)
+    requiere_codigo = models.BooleanField(db_column='Requiere_Codigo', default=False)
+    codigo_promocion = models.CharField(
+        db_column='Codigo_Promocion',
+        max_length=50,
+        blank=True,
+        null=True,
+        unique=True
+    )
+    prioridad = models.IntegerField(
+        db_column='Prioridad',
+        default=1,
+        help_text='Orden de aplicación (1=Mayor prioridad)'
+    )
+    activo = models.BooleanField(db_column='Activo', default=True)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    usuario_creacion = models.CharField(db_column='Usuario_Creacion', max_length=100, blank=True, null=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'promociones'
+        verbose_name = 'Promoción'
+        verbose_name_plural = 'Promociones'
+        ordering = ['prioridad', '-fecha_inicio']
+    
+    def __str__(self):
+        return f'{self.nombre} ({self.get_tipo_promocion_display()})'
+
+
+class ProductoPromocion(models.Model):
+    '''Tabla productos_promocion - Productos incluidos en promoción'''
+    id_producto_promocion = models.AutoField(db_column='ID_Producto_Promocion', primary_key=True)
+    id_promocion = models.ForeignKey(
+        Promocion,
+        on_delete=models.CASCADE,
+        db_column='ID_Promocion',
+        related_name='productos_promocion'
+    )
+    id_producto = models.ForeignKey(
+        'Producto',
+        on_delete=models.CASCADE,
+        db_column='ID_Producto',
+        related_name='promociones_producto'
+    )
+    
+    class Meta:
+        managed = False
+        db_table = 'productos_promocion'
+        verbose_name = 'Producto en Promoción'
+        verbose_name_plural = 'Productos en Promoción'
+        unique_together = [['id_promocion', 'id_producto']]
+    
+    def __str__(self):
+        return f'{self.id_promocion.nombre} - {self.id_producto.descripcion}'
+
+
+class CategoriaPromocion(models.Model):
+    '''Tabla categorias_promocion - Categorías incluidas en promoción'''
+    id_categoria_promocion = models.AutoField(db_column='ID_Categoria_Promocion', primary_key=True)
+    id_promocion = models.ForeignKey(
+        Promocion,
+        on_delete=models.CASCADE,
+        db_column='ID_Promocion',
+        related_name='categorias_promocion'
+    )
+    id_categoria = models.ForeignKey(
+        Categoria,
+        on_delete=models.CASCADE,
+        db_column='ID_Categoria',
+        related_name='promociones_categoria'
+    )
+    
+    class Meta:
+        managed = False
+        db_table = 'categorias_promocion'
+        verbose_name = 'Categoría en Promoción'
+        verbose_name_plural = 'Categorías en Promoción'
+        unique_together = [['id_promocion', 'id_categoria']]
+    
+    def __str__(self):
+        return f'{self.id_promocion.nombre} - {self.id_categoria.nombre}'
+
+
+class PromocionAplicada(models.Model):
+    '''Tabla promociones_aplicadas - Registro de promociones aplicadas en ventas'''
+    id_aplicacion = models.AutoField(db_column='ID_Aplicacion', primary_key=True)
+    id_venta = models.ForeignKey(
+        'Ventas',
+        on_delete=models.CASCADE,
+        db_column='ID_Venta',
+        related_name='promociones_aplicadas'
+    )
+    id_promocion = models.ForeignKey(
+        Promocion,
+        on_delete=models.PROTECT,
+        db_column='ID_Promocion',
+        related_name='aplicaciones'
+    )
+    monto_descontado = models.DecimalField(
+        db_column='Monto_Descontado',
+        max_digits=10,
+        decimal_places=2
+    )
+    fecha_aplicacion = models.DateTimeField(db_column='Fecha_Aplicacion', auto_now_add=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'promociones_aplicadas'
+        verbose_name = 'Promoción Aplicada'
+        verbose_name_plural = 'Promociones Aplicadas'
+    
+    def __str__(self):
+        return f'Venta #{self.id_venta.id_venta} - {self.id_promocion.nombre} (-Gs. {self.monto_descontado:,.0f})'
+
 

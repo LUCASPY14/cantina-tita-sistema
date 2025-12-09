@@ -81,20 +81,24 @@
                 <div class="card-body p-4">
                     <h3 class="font-bold text-lg mb-3">💳 Tarjeta</h3>
                     
-                    <input 
-                        type="text" 
-                        placeholder="Escanear o escribir N° tarjeta..."
-                        class="input input-bordered w-full mb-2"
-                        x-model="cardNumber"
-                        @keyup.enter="scanCard()"
-                        hx-post="{% url 'pos:buscar_tarjeta' %}"
-                        hx-trigger="keyup[key=='Enter']"
-                        hx-target="#tarjeta-info"
-                        hx-include="[name='csrfmiddlewaretoken']"
-                        name="nro_tarjeta"
-                        id="tarjeta-input"
-                    >
-                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                    <form hx-post="{% url 'pos:buscar_tarjeta' %}"
+                          hx-trigger="submit"
+                          hx-target="#tarjeta-info"
+                          hx-swap="innerHTML"
+                          @htmx:after-swap="cardNumber = ''; setTimeout(() => $refs.tarjetaInput.focus(), 100)">
+                        {% csrf_token %}
+                        <input 
+                            type="text" 
+                            placeholder="Escanear o escribir N° tarjeta..."
+                            class="input input-bordered w-full mb-2"
+                            x-model="cardNumber"
+                            x-ref="tarjetaInput"
+                            name="nro_tarjeta"
+                            id="tarjeta-input"
+                            autocomplete="off"
+                            autofocus
+                        >
+                    </form>
                     
                     <div id="tarjeta-info">
                         <div class="alert alert-info">
@@ -106,9 +110,7 @@
                         Cliente Genérico (F1)
                     </button>
                 </div>
-            </div>
-            
-            <!-- Carrito de compras -->
+            </div>            <!-- Carrito de compras -->
             <div class="card bg-white shadow-xl mb-4">
                 <div class="card-body p-4">
                     <div class="flex justify-between items-center mb-3">
@@ -198,7 +200,38 @@
                     
                     <!-- Total -->
                     <div class="border-t pt-3">
-                        <div class="flex justify-between items-center mb-4">
+                        <!-- Subtotal y descuentos -->
+                        <div class="space-y-2 mb-3">
+                            <!-- Subtotal -->
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-600">Subtotal:</span>
+                                <span class="font-mono">
+                                    Gs. <span x-text="Math.round(subtotal).toLocaleString('es-PY')"></span>
+                                </span>
+                            </div>
+                            
+                            <!-- Promoción aplicada (si hay) -->
+                            <div x-show="promocionAplicada" class="flex justify-between items-center text-sm bg-success/10 p-2 rounded">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xl">🎉</span>
+                                    <div class="flex flex-col">
+                                        <span class="font-semibold text-success" x-text="promocionAplicada?.nombre"></span>
+                                        <span class="text-xs text-gray-500" x-text="promocionAplicada?.descripcion"></span>
+                                    </div>
+                                </div>
+                                <span class="font-mono font-bold text-success">
+                                    -Gs. <span x-text="Math.round(descuentoPromocion).toLocaleString('es-PY')"></span>
+                                </span>
+                            </div>
+                            
+                            <!-- Mensaje si está calculando -->
+                            <div x-show="calculandoPromocion" class="text-xs text-center text-gray-400 italic">
+                                Calculando promociones...
+                            </div>
+                        </div>
+                        
+                        <!-- Total final -->
+                        <div class="flex justify-between items-center mb-4 pt-2 border-t">
                             <span class="text-lg font-bold">TOTAL:</span>
                             <span class="text-2xl font-bold text-primary">
                                 Gs. <span x-text="Math.round(total).toLocaleString('es-PY')"></span>
@@ -336,8 +369,8 @@
 
 <!-- Modal de Checkout -->
 <dialog id="modal-checkout" class="modal">
-    <div class="modal-box max-w-md">
-        <h3 class="font-bold text-lg mb-4">💳 Confirmar Venta</h3>
+    <div class="modal-box max-w-2xl">
+        <h3 class="font-bold text-lg mb-4">💰 Procesar Pago</h3>
         
         <!-- Resumen de la compra -->
         <div class="bg-base-200 p-4 rounded-lg mb-4">
@@ -345,22 +378,104 @@
                 <span class="text-sm">Items:</span>
                 <span class="font-bold" x-text="cart.length"></span>
             </div>
-            <div class="flex justify-between items-center text-lg font-bold text-primary">
-                <span>TOTAL:</span>
+            
+            <!-- Subtotal y Promoción -->
+            <template x-if="promocionAplicada">
+                <div>
+                    <div class="flex justify-between items-center text-sm text-gray-600">
+                        <span>Subtotal:</span>
+                        <span>Gs. <span x-text="Math.round(subtotal).toLocaleString('es-PY')"></span></span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm text-success">
+                        <span>🎉 <span x-text="promocionAplicada.nombre"></span>:</span>
+                        <span>-Gs. <span x-text="Math.round(descuentoPromocion).toLocaleString('es-PY')"></span></span>
+                    </div>
+                </div>
+            </template>
+            
+            <div class="flex justify-between items-center text-2xl font-bold text-primary border-t pt-2 mt-2">
+                <span>TOTAL A PAGAR:</span>
                 <span>Gs. <span x-text="Math.round(total).toLocaleString('es-PY')"></span></span>
             </div>
         </div>
         
-        <!-- Tipo de Pago -->
-        <div class="form-control mb-4">
-            <label class="label">
-                <span class="label-text font-semibold">Tipo de Pago:</span>
-            </label>
-            <select id="tipo-pago-select" class="select select-bordered w-full">
-                {% for tipo in tipos_pago %}
-                <option value="{{ tipo.id_tipo_pago }}">{{ tipo.descripcion }}</option>
-                {% endfor %}
-            </select>
+        <!-- Pagos agregados -->
+        <div class="mb-4" x-show="pagosMixtos.length > 0">
+            <h4 class="font-semibold mb-2 text-sm">💳 Pagos registrados:</h4>
+            <div class="space-y-2 max-h-40 overflow-y-auto">
+                <template x-for="(pago, index) in pagosMixtos" :key="index">
+                    <div class="flex justify-between items-center bg-success/10 p-2 rounded">
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg">💵</span>
+                            <span class="font-semibold text-sm" x-text="pago.descripcion"></span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-sm">Gs. <span x-text="Math.round(pago.monto).toLocaleString('es-PY')"></span></span>
+                            <button @click="eliminarPago(index)" class="btn btn-xs btn-error">
+                                ❌
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            
+            <!-- Totalizadores -->
+            <div class="border-t pt-2 mt-3 space-y-1">
+                <div class="flex justify-between text-sm">
+                    <span>Total pagado:</span>
+                    <span class="font-mono font-semibold text-success">
+                        Gs. <span x-text="Math.round(totalPagado).toLocaleString('es-PY')"></span>
+                    </span>
+                </div>
+                <div class="flex justify-between text-base font-bold" 
+                     :class="{'text-error': pendientePago > 0.01, 'text-success': pendientePago <= 0.01}">
+                    <span>Pendiente:</span>
+                    <span class="font-mono">
+                        Gs. <span x-text="Math.round(pendientePago).toLocaleString('es-PY')"></span>
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mensaje inicial si no hay pagos -->
+        <div x-show="pagosMixtos.length === 0" class="alert alert-info mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>Seleccione uno o más medios de pago</span>
+        </div>
+        
+        <!-- Botones para agregar pagos -->
+        <div class="grid grid-cols-3 gap-2 mb-4">
+            <!-- Efectivo -->
+            <button @click="agregarPago(1, 'Efectivo')" class="btn btn-lg btn-outline btn-success" type="button">
+                💵 Efectivo
+            </button>
+            
+            <!-- Tarjeta Estudiantil (Exclusiva) -->
+            <button @click="agregarPago(6, 'Tarjeta Estudiantil')" class="btn btn-lg btn-outline btn-primary" type="button" x-show="selectedCard && selectedCard.saldo">
+                🎫 Tarjeta
+            </button>
+            
+            <!-- Transferencia -->
+            <button @click="agregarPago(2, 'Transferencia')" class="btn btn-lg btn-outline btn-info" type="button">
+                🏦 Transferencia
+            </button>
+            
+            <!-- Tarjeta Débito/QR -->
+            <button @click="agregarPago(3, 'Débito/QR')" class="btn btn-lg btn-outline btn-accent" type="button">
+                💳 Débito/QR
+            </button>
+            
+            <!-- Tarjeta Crédito/QR -->
+            <button @click="agregarPago(4, 'Crédito/QR')" class="btn btn-lg btn-outline btn-secondary" type="button">
+                💎 Crédito/QR
+            </button>
+            
+            <!-- Giros Tigo -->
+            <button @click="agregarPago(5, 'Giros Tigo')" class="btn btn-lg btn-outline btn-warning" type="button">
+                📱 Giros Tigo
+            </button>
         </div>
         
         <!-- Información del cliente/tarjeta -->
@@ -381,11 +496,11 @@
                 Cancelar
             </button>
             <button 
-                class="btn btn-primary" 
+                class="btn btn-primary btn-lg" 
                 @click="confirmarCheckout()" 
-                :disabled="procesandoVenta"
+                :disabled="procesandoVenta || !validarPagoCompleto()"
                 type="button">
-                <span x-show="!procesandoVenta">✅ Confirmar y Procesar</span>
+                <span x-show="!procesandoVenta">✅ Confirmar Venta</span>
                 <span x-show="procesandoVenta" class="loading loading-spinner loading-sm"></span>
             </button>
         </div>
@@ -393,6 +508,94 @@
     <form method="dialog" class="modal-backdrop">
         <button>close</button>
     </form>
+</dialog>
+
+<!-- Modal de RESTRICCIONES ALIMENTARIAS - Confirmación del Cajero -->
+<dialog id="modal-restricciones" class="modal" x-data="restriccionesModal()">
+    <div class="modal-box max-w-2xl">
+        <h3 class="font-bold text-2xl text-error mb-4">
+            ⚠️ ATENCIÓN: RESTRICCIONES ALIMENTARIAS
+        </h3>
+        
+        <div class="alert alert-warning mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+                <h4 class="font-bold">Este estudiante tiene restricciones de compra registradas</h4>
+                <p class="text-sm">Por favor lea cuidadosamente antes de continuar</p>
+            </div>
+        </div>
+        
+        <!-- Información del estudiante -->
+        <div class="bg-base-200 p-4 rounded-lg mb-4">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="avatar placeholder">
+                    <div class="bg-neutral text-neutral-content rounded-full w-12">
+                        <span class="text-xl">👤</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="font-bold text-lg" x-text="datosEstudiante.nombre"></div>
+                    <div class="text-sm opacity-70">
+                        Tarjeta: #<span x-text="datosEstudiante.tarjeta"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Restricciones -->
+        <div class="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-4">
+            <h5 class="font-bold text-red-800 mb-2 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+                RESTRICCIONES REGISTRADAS:
+            </h5>
+            <div class="text-red-700 text-sm whitespace-pre-wrap max-h-64 overflow-y-auto p-2 bg-white rounded" 
+                 x-text="datosEstudiante.restricciones"></div>
+        </div>
+        
+        <!-- Checkbox de confirmación -->
+        <div class="form-control mb-4">
+            <label class="label cursor-pointer justify-start gap-3 bg-yellow-50 p-4 rounded-lg border-2 border-yellow-300">
+                <input 
+                    type="checkbox" 
+                    class="checkbox checkbox-warning checkbox-lg" 
+                    x-model="confirmado"
+                />
+                <span class="label-text font-bold text-base">
+                    ✅ He leído las restricciones y confirmo que los productos de esta venta son apropiados
+                </span>
+            </label>
+        </div>
+        
+        <!-- Justificación opcional -->
+        <div class="form-control mb-4" x-show="confirmado">
+            <label class="label">
+                <span class="label-text font-semibold">Observaciones (opcional):</span>
+            </label>
+            <textarea 
+                x-model="justificacion"
+                class="textarea textarea-bordered h-20" 
+                placeholder="Ej: Cliente autorizó verbalmente, producto no contiene ingrediente restringido, etc."></textarea>
+        </div>
+        
+        <div class="modal-action">
+            <button 
+                class="btn btn-ghost btn-lg" 
+                @click="cancelar()">
+                ❌ Cancelar Venta
+            </button>
+            <button 
+                class="btn btn-warning btn-lg" 
+                @click="procederConVenta()"
+                :disabled="!confirmado">
+                <span x-show="!confirmado">⚠️ Debe confirmar para continuar</span>
+                <span x-show="confirmado">✅ Proceder con Venta</span>
+            </button>
+        </div>
+    </div>
 </dialog>
 
 <!-- Modal de confirmación de venta -->
@@ -410,6 +613,242 @@
         </div>
     </div>
 </dialog>
+
+<!-- Modal de AUTORIZACIÓN DE SUPERVISOR - Saldo Insuficiente -->
+<dialog id="modal-autorizacion-supervisor" class="modal" x-data="autorizacionSupervisorModal()">
+    <div class="modal-box max-w-2xl">
+        <h3 class="font-bold text-2xl text-warning mb-4">
+            🔐 AUTORIZACIÓN REQUERIDA
+        </h3>
+        
+        <div class="alert alert-error mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+                <h4 class="font-bold">Saldo Insuficiente en Tarjeta</h4>
+                <p class="text-sm">Se require autorización de supervisor para procesar como venta a crédito</p>
+            </div>
+        </div>
+        
+        <!-- Información del estudiante y saldo -->
+        <div class="bg-base-200 p-4 rounded-lg mb-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <div class="text-sm opacity-70">Estudiante:</div>
+                    <div class="font-bold" x-text="datosEstudiante.nombre"></div>
+                </div>
+                <div>
+                    <div class="text-sm opacity-70">Tarjeta:</div>
+                    <div class="font-bold">#<span x-text="datosEstudiante.tarjeta"></span></div>
+                </div>
+                <div>
+                    <div class="text-sm opacity-70">Saldo Disponible:</div>
+                    <div class="font-bold text-success">Gs. <span x-text="formatNumber(datosEstudiante.saldo)"></span></div>
+                </div>
+                <div>
+                    <div class="text-sm opacity-70">Total a Pagar:</div>
+                    <div class="font-bold text-error">Gs. <span x-text="formatNumber(datosEstudiante.total)"></span></div>
+                </div>
+            </div>
+            <div class="divider"></div>
+            <div class="text-center">
+                <div class="text-sm opacity-70">Monto Faltante:</div>
+                <div class="text-2xl font-bold text-warning">
+                    Gs. <span x-text="formatNumber(datosEstudiante.faltante)"></span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Escanear tarjeta de supervisor -->
+        <div class="form-control mb-4">
+            <label class="label">
+                <span class="label-text font-bold">Escanear Tarjeta de Supervisor:</span>
+            </label>
+            <input 
+                type="text" 
+                x-model="nroTarjetaSupervisor"
+                @keyup.enter="validarSupervisor()"
+                placeholder="Escanear tarjeta de supervisor..." 
+                class="input input-bordered input-lg" 
+                x-ref="inputSupervisor"
+                autocomplete="off">
+            <label class="label" x-show="supervisorValidado">
+                <span class="label-text-alt text-success">
+                    ✅ Supervisor: <span x-text="nombreSupervisor"></span>
+                </span>
+            </label>
+            <label class="label" x-show="errorSupervisor">
+                <span class="label-text-alt text-error" x-text="errorSupervisor"></span>
+            </label>
+        </div>
+        
+        <!-- Motivo/Justificación -->
+        <div class="form-control mb-4">
+            <label class="label">
+                <span class="label-text font-bold">Motivo del Crédito:</span>
+            </label>
+            <textarea 
+                x-model="motivoCredito"
+                class="textarea textarea-bordered h-24" 
+                placeholder="Ej: Autorizado por el padre/madre, Emergencia escolar, etc."></textarea>
+        </div>
+        
+        <div class="modal-action">
+            <button 
+                class="btn btn-ghost btn-lg" 
+                @click="cancelar()">
+                ❌ Cancelar
+            </button>
+            <button 
+                class="btn btn-warning btn-lg" 
+                @click="autorizarCredito()"
+                :disabled="!supervisorValidado || !motivoCredito">
+                <span x-show="!supervisorValidado || !motivoCredito">🔒 Complete los datos</span>
+                <span x-show="supervisorValidado && motivoCredito">✅ Autorizar Venta a Crédito</span>
+            </button>
+        </div>
+    </div>
+</dialog>
+
+<script>
+    // App Alpine para modal de autorización de supervisor
+    function autorizacionSupervisorModal() {
+        return {
+            nroTarjetaSupervisor: '',
+            supervisorValidado: false,
+            nombreSupervisor: '',
+            idSupervisor: null,
+            errorSupervisor: '',
+            motivoCredito: '',
+            datosEstudiante: {
+                nombre: '',
+                tarjeta: '',
+                saldo: 0,
+                total: 0,
+                faltante: 0
+            },
+            
+            mostrar(datos) {
+                this.datosEstudiante = datos;
+                this.nroTarjetaSupervisor = '';
+                this.supervisorValidado = false;
+                this.nombreSupervisor = '';
+                this.idSupervisor = null;
+                this.errorSupervisor = '';
+                this.motivoCredito = '';
+                
+                document.getElementById('modal-autorizacion-supervisor').showModal();
+                
+                setTimeout(() => {
+                    this.$refs.inputSupervisor.focus();
+                }, 100);
+            },
+            
+            async validarSupervisor() {
+                if (!this.nroTarjetaSupervisor) return;
+                
+                try {
+                    const response = await fetch('{% url "pos:validar_supervisor" %}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: JSON.stringify({
+                            nro_tarjeta: this.nroTarjetaSupervisor
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.supervisorValidado = true;
+                        this.nombreSupervisor = data.nombre;
+                        this.idSupervisor = data.id_empleado;
+                        this.errorSupervisor = '';
+                    } else {
+                        this.supervisorValidado = false;
+                        this.errorSupervisor = data.error || 'Tarjeta de supervisor no válida';
+                    }
+                } catch (error) {
+                    console.error('Error al validar supervisor:', error);
+                    this.errorSupervisor = 'Error al validar supervisor';
+                }
+            },
+            
+            cancelar() {
+                document.getElementById('modal-autorizacion-supervisor').close();
+                // Notificar que se canceló
+                const event = new CustomEvent('autorizacionCancelada');
+                window.dispatchEvent(event);
+            },
+            
+            autorizarCredito() {
+                if (!this.supervisorValidado || !this.motivoCredito) return;
+                
+                document.getElementById('modal-autorizacion-supervisor').close();
+                
+                // Notificar que se autorizó
+                const event = new CustomEvent('autorizacionAprobada', {
+                    detail: {
+                        autorizado_por_id: this.idSupervisor,
+                        motivo_credito: this.motivoCredito
+                    }
+                });
+                window.dispatchEvent(event);
+            },
+            
+            formatNumber(num) {
+                return Math.round(num).toLocaleString('es-PY');
+            }
+        }
+    }
+</script>
+
+<script>
+    // App Alpine para modal de restricciones
+    function restriccionesModal() {
+        return {
+            confirmado: false,
+            justificacion: '',
+            datosEstudiante: {
+                nombre: '',
+                tarjeta: '',
+                restricciones: ''
+            },
+            
+            mostrar(datos) {
+                this.datosEstudiante = datos;
+                this.confirmado = false;
+                this.justificacion = '';
+                document.getElementById('modal-restricciones').showModal();
+            },
+            
+            cancelar() {
+                document.getElementById('modal-restricciones').close();
+                // Notificar que se canceló
+                const event = new CustomEvent('restriccionesCanceladas');
+                window.dispatchEvent(event);
+            },
+            
+            procederConVenta() {
+                if (!this.confirmado) return;
+                
+                document.getElementById('modal-restricciones').close();
+                
+                // Notificar que se confirmó con datos para auditoría
+                const event = new CustomEvent('restriccionesConfirmadas', {
+                    detail: {
+                        confirmado: true,
+                        justificacion: this.justificacion
+                    }
+                });
+                window.dispatchEvent(event);
+            }
+        }
+    }
+</script>
 {% endblock %}
 
 {% block extra_js %}

@@ -424,7 +424,7 @@ function reportesAlmuerzos() {
 
         generarReporte() {
             const params = new URLSearchParams(this.filtros);
-            window.location.href = '{% url "reportes_almuerzos" %}?' + params.toString();
+            window.location.href = '{% url "pos:reportes_almuerzos" %}?' + params.toString();
         },
 
         async exportarPDF() {

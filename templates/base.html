@@ -156,7 +156,14 @@
                     <li><a href="{% url 'pos:dashboard' %}">📊 Dashboard</a></li>
                     <li><a href="{% url 'pos:historial' %}">📜 Historial Ventas</a></li>
                     <li><a href="{% url 'pos:reportes' %}">📈 Reportes</a></li>
+                    <li class="menu-title"><span class="text-xs text-gray-500">Administración</span></li>
+                    <li><a href="{% url 'pos:gestionar_clientes' %}">👥 Clientes</a></li>
+                    <li><a href="{% url 'pos:gestionar_fotos_hijos' %}">📸 Fotos Hijos</a></li>
+                    <li><a href="{% url 'pos:gestionar_grados' %}">🎓 Grados</a></li>
                     <li><a href="{% url 'admin:index' %}">⚙️ Administración</a></li>
+                    <li><a href="{% url 'pos:dashboard_seguridad' %}">🔒 Seguridad</a></li>
+                    <li class="menu-title"><span class="text-xs text-gray-500">Portal</span></li>
+                    <li><a href="{% url 'pos:portal_login' %}" target="_blank">🌐 Portal Clientes</a></li>
                     <li>
                         <form method="post" action="{% url 'logout' %}" style="display: inline;">
                             {% csrf_token %}
@@ -237,6 +244,10 @@
                 // Flag para evitar doble procesamiento
                 procesandoVenta: false,
                 
+                // Variables para restricciones alimentarias
+                restriccionesConfirmadas: false,
+                justificacionRestricciones: '',
+                
                 // Número de tarjeta temporal
                 cardNumber: '',
                 
@@ -246,6 +257,17 @@
                 
                 // Para monto personalizado (recargas)
                 esRecarga: false,
+                
+                // Promociones
+                promocionAplicada: null,
+                descuentoPromocion: 0,
+                calculandoPromocion: false,
+                
+                // Pagos Mixtos
+                pagosMixtos: [],
+                totalPagado: 0,
+                pendientePago: 0,
+                mediosPagoDisponibles: [],
                 
                 // Notificaciones
                 notification: {
@@ -294,6 +316,9 @@
                     
                     playSound('beep');
                     this.showNotification('Producto agregado', 'success');
+                    
+                    // Recalcular promociones después de agregar
+                    this.calcularPromociones();
                 },
                 
                 // Agregar producto por kilo al carrito
@@ -374,6 +399,9 @@
                     document.getElementById('modal-peso').close();
                     this.pesoIndex = null;
                     this.tempProduct = null;
+                    
+                    // Recalcular promociones
+                    this.calcularPromociones();
                 },
                 
                 // Confirmar monto de recarga
@@ -423,12 +451,18 @@
                 removeFromCart(index) {
                     this.cart.splice(index, 1);
                     playSound('error');
+                    
+                    // Recalcular promociones después de quitar
+                    this.calcularPromociones();
                 },
                 
                 // Incrementar cantidad
                 increaseQuantity(index) {
                     this.cart[index].quantity++;
                     playSound('beep');
+                    
+                    // Recalcular promociones
+                    this.calcularPromociones();
                 },
                 
                 // Decrementar cantidad
@@ -436,13 +470,16 @@
                     if (this.cart[index].quantity > 1) {
                         this.cart[index].quantity--;
                         playSound('beep');
+                        
+                        // Recalcular promociones
+                        this.calcularPromociones();
                     } else {
                         this.removeFromCart(index);
                     }
                 },
                 
-                // Calcular total
-                get total() {
+                // Calcular subtotal (antes de descuentos)
+                get subtotal() {
                     return this.cart.reduce((sum, item) => {
                         const precio = parseFloat(item.price) || 0;
                         if (item.esPorKilo) {
@@ -453,10 +490,92 @@
                     }, 0);
                 },
                 
+                // Calcular total (con descuentos aplicados)
+                get total() {
+                    return Math.max(0, this.subtotal - this.descuentoPromocion);
+                },
+                
+                // Calcular promociones disponibles
+                async calcularPromociones() {
+                    // Solo calcular si hay items en el carrito
+                    if (!this.cart || this.cart.length === 0) {
+                        this.promocionAplicada = null;
+                        this.descuentoPromocion = 0;
+                        return;
+                    }
+                    
+                    // Evitar múltiples llamadas simultáneas
+                    if (this.calculandoPromocion) {
+                        return;
+                    }
+                    
+                    this.calculandoPromocion = true;
+                    
+                    try {
+                        // Preparar items del carrito
+                        const items = this.cart.map(item => ({
+                            producto_id: item.id,
+                            cantidad: item.esPorKilo ? (item.peso || 1) : (item.quantity || 1),
+                            precio_unitario: parseFloat(item.price) || 0,
+                            subtotal: item.esPorKilo 
+                                ? (parseFloat(item.price) || 0) * (item.peso || 1)
+                                : (parseFloat(item.price) || 0) * (item.quantity || 1)
+                        }));
+                        
+                        // Obtener grado del estudiante si existe
+                        const grado = this.selectedCard && this.selectedCard.grado 
+                            ? this.selectedCard.grado 
+                            : null;
+                        
+                        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                        
+                        const response = await fetch('/pos/calcular-promociones/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrftoken
+                            },
+                            body: JSON.stringify({
+                                items: items,
+                                grado_estudiante: grado,
+                                codigo_promocion: null // Por ahora sin códigos promocionales
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            
+                            if (data.mejor_promocion) {
+                                this.promocionAplicada = data.mejor_promocion;
+                                this.descuentoPromocion = data.descuento_maximo || 0;
+                                
+                                console.log('🎉 Promoción aplicada:', this.promocionAplicada.nombre, 
+                                           '- Descuento:', this.descuentoPromocion);
+                            } else {
+                                this.promocionAplicada = null;
+                                this.descuentoPromocion = 0;
+                            }
+                        } else {
+                            // Si falla, resetear promoción
+                            this.promocionAplicada = null;
+                            this.descuentoPromocion = 0;
+                        }
+                    } catch (error) {
+                        console.error('Error al calcular promociones:', error);
+                        // En caso de error, resetear
+                        this.promocionAplicada = null;
+                        this.descuentoPromocion = 0;
+                    } finally {
+                        this.calculandoPromocion = false;
+                    }
+                },
+                
                 // Limpiar carrito
                 clearCart() {
                     this.cart = [];
                     this.selectedCard = null;
+                    this.promocionAplicada = null;
+                    this.descuentoPromocion = 0;
                 },
                 
                 // Mostrar notificación
@@ -490,8 +609,58 @@
                         return;
                     }
                     
+                    // Resetear pagos mixtos
+                    this.pagosMixtos = [];
+                    this.calcularTotales();
+                    
                     // Abrir modal de checkout para seleccionar tipo de pago
                     document.getElementById('modal-checkout').showModal();
+                },
+                
+                // Agregar un pago al listado
+                agregarPago(medioId, descripcionMedio) {
+                    const montoStr = prompt(`¿Cuánto se paga con ${descripcionMedio}?\n\nPendiente: Gs. ${Math.round(this.pendientePago).toLocaleString('es-PY')}`);
+                    
+                    if (!montoStr) return; // Usuario canceló
+                    
+                    const monto = parseFloat(montoStr.replace(/\./g, '').replace(/,/g, '.'));
+                    
+                    if (isNaN(monto) || monto <= 0) {
+                        this.showNotification('Monto inválido', 'error');
+                        return;
+                    }
+                    
+                    if (monto > this.pendientePago + 0.01) {
+                        this.showNotification('El monto excede el pendiente', 'error');
+                        return;
+                    }
+                    
+                    this.pagosMixtos.push({
+                        medio_id: medioId,
+                        descripcion: descripcionMedio,
+                        monto: monto
+                    });
+                    
+                    this.calcularTotales();
+                    playSound('beep');
+                },
+                
+                // Eliminar un pago del listado
+                eliminarPago(index) {
+                    this.pagosMixtos.splice(index, 1);
+                    this.calcularTotales();
+                    playSound('error');
+                },
+                
+                // Calcular totales de pagos
+                calcularTotales() {
+                    this.totalPagado = this.pagosMixtos.reduce((sum, p) => sum + p.monto, 0);
+                    this.pendientePago = this.total - this.totalPagado;
+                },
+                
+                // Validar que el pago esté completo
+                validarPagoCompleto() {
+                    return Math.abs(this.pendientePago) < 0.01;
                 },
                 
                 // Confirmar y procesar venta con el tipo de pago seleccionado
@@ -501,22 +670,96 @@
                         return;
                     }
                     
+                    // 💰 VALIDAR PAGOS MIXTOS
+                    if (this.pagosMixtos.length === 0) {
+                        this.showNotification('Debe agregar al menos un medio de pago', 'warning');
+                        return;
+                    }
+                    
+                    if (!this.validarPagoCompleto()) {
+                        this.showNotification(`Falta pagar: Gs. ${Math.round(this.pendientePago).toLocaleString('es-PY')}`, 'error');
+                        return;
+                    }
+                    
+                    // ⚠️ VERIFICAR RESTRICCIONES ALIMENTARIAS
+                    if (this.selectedCard && this.selectedCard.tiene_restricciones) {
+                        console.log('⚠️ Tarjeta con restricciones detectada, mostrando modal...');
+                        
+                        // Cerrar modal de checkout
+                        document.getElementById('modal-checkout').close();
+                        
+                        // Preparar datos para el modal de restricciones
+                        const modalRestricciones = document.getElementById('modal-restricciones');
+                        const modalComponent = Alpine.$data(modalRestricciones);
+                        
+                        // Mostrar modal de restricciones
+                        modalComponent.mostrar({
+                            nombre: this.selectedCard.nombre_completo || this.selectedCard.nombre,
+                            tarjeta: this.selectedCard.id,
+                            restricciones: this.selectedCard.restricciones
+                        });
+                        
+                        // Esperar confirmación del cajero
+                        const confirmarRestricciones = (e) => {
+                            console.log('✅ Cajero confirmó restricciones, procediendo con venta...');
+                            this.justificacionRestricciones = e.detail.justificacion;
+                            this.restriccionesConfirmadas = true;
+                            window.removeEventListener('restriccionesConfirmadas', confirmarRestricciones);
+                            window.removeEventListener('restriccionesCanceladas', cancelarRestricciones);
+                            // Procesar venta después de confirmación
+                            this.procesarVentaFinal();
+                        };
+                        
+                        const cancelarRestricciones = () => {
+                            console.log('❌ Cajero canceló la venta por restricciones');
+                            this.procesandoVenta = false;
+                            window.removeEventListener('restriccionesConfirmadas', confirmarRestricciones);
+                            window.removeEventListener('restriccionesCanceladas', cancelarRestricciones);
+                            this.showNotification('Venta cancelada por restricciones alimentarias', 'warning');
+                        };
+                        
+                        window.addEventListener('restriccionesConfirmadas', confirmarRestricciones);
+                        window.addEventListener('restriccionesCanceladas', cancelarRestricciones);
+                        
+                        return;  // No continuar, esperar confirmación
+                    }
+                    
+                    // Si no hay restricciones, procesar normalmente
+                    this.procesarVentaFinal();
+                },
+                
+                // Procesar venta después de todas las validaciones
+                procesarVentaFinal() {
+                    if (this.procesandoVenta) {
+                        return;
+                    }
+                    
                     this.procesandoVenta = true;
                     
-                    // Obtener tipo de pago seleccionado
-                    const tipoPagoSelect = document.getElementById('tipo-pago-select');
-                    const tipoPagoId = tipoPagoSelect ? parseInt(tipoPagoSelect.value) : 1;
-                    
-                    // Preparar datos de la venta
+                    // Preparar datos de la venta (con pagos mixtos)
                     const ventaData = {
                         items: this.cart,
                         tarjeta: this.selectedCard,
                         total: this.total,
-                        tipo_pago_id: tipoPagoId
+                        // 💰 PAGOS MIXTOS en lugar de tipo_pago_id único
+                        pagos: this.pagosMixtos.map(p => ({
+                            medio_id: p.medio_id,
+                            monto: p.monto
+                        })),
+                        // Agregar información de restricciones si fueron confirmadas
+                        restricciones_confirmadas: this.restriccionesConfirmadas || false,
+                        justificacion_restricciones: this.justificacionRestricciones || '',
+                        // Agregar información de promoción si hay alguna aplicada
+                        promocion_id: this.promocionAplicada ? this.promocionAplicada.id : null,
+                        descuento_promocion: this.descuentoPromocion || 0
                     };
                     
-                    // Cerrar modal
-                    document.getElementById('modal-checkout').close();
+                    // Cerrar modal si está abierto
+                    try {
+                        document.getElementById('modal-checkout').close();
+                    } catch (e) {
+                        // Modal ya cerrado
+                    }
                     
                     // Enviar al backend
                     fetch('/pos/procesar-venta/', {
@@ -530,6 +773,8 @@
                     .then(response => response.json())
                     .then(data => {
                         this.procesandoVenta = false;  // Liberar el lock
+                        this.restriccionesConfirmadas = false;  // Reset
+                        this.justificacionRestricciones = '';  // Reset
                         
                         if (data.success) {
                             playSound('success');
@@ -590,22 +835,13 @@
                 init() {
                     // Exponer instancia globalmente para acceso desde HTMX
                     window.posAppInstance = this;
+                    console.log('✅ Alpine.js posApp inicializado');
                     
-                    // Listener para actualizar selectedCard después del swap de HTMX
+                    // Listener para HTMX después de swap (el script en tarjeta_info.html se ejecuta automáticamente)
                     document.body.addEventListener('htmx:afterSwap', (event) => {
                         if (event.detail.target.id === 'tarjeta-info') {
-                            const tarjetaData = document.querySelector('#tarjeta-info [data-tarjeta-id]');
-                            
-                            if (tarjetaData) {
-                                this.selectedCard = {
-                                    id: tarjetaData.dataset.tarjetaId,
-                                    nombre: tarjetaData.dataset.tarjetaNombre,
-                                    saldo: parseFloat(tarjetaData.dataset.tarjetaSaldo),
-                                    hijo_id: tarjetaData.dataset.tarjetaHijoId ? parseInt(tarjetaData.dataset.tarjetaHijoId) : null
-                                };
-                            } else {
-                                this.selectedCard = null;
-                            }
+                            console.log('🔄 HTMX swap completado en tarjeta-info');
+                            // El script dentro del partial ya estableció selectedCard
                         }
                     });
                     
@@ -636,7 +872,7 @@
         }
         
         // Función helper para agregar productos desde onclick
-        function agregarProductoAlCarrito(element) {
+        async function agregarProductoAlCarrito(element) {
             if (!window.posAppInstance) {
                 console.error('posAppInstance no está disponible');
                 return;
@@ -654,11 +890,109 @@
             
             const esPorKilo = element.dataset.esPorKilo === 'true';
             
+            // 🔍 VERIFICAR RESTRICCIONES ALIMENTARIAS si hay tarjeta seleccionada con restricciones
+            if (window.posAppInstance.selectedCard && window.posAppInstance.selectedCard.tiene_restricciones) {
+                const restricciones = window.posAppInstance.selectedCard.restricciones || '';
+                
+                // Solo verificar si hay restricciones no vacías
+                if (restricciones.trim()) {
+                    console.log('⚠️ Verificando restricciones para producto:', producto.name);
+                    
+                    try {
+                        const resultado = await verificarRestriccionProducto(producto.id, restricciones);
+                        
+                        if (resultado.tiene_conflicto) {
+                            const clienteNombre = window.posAppInstance.selectedCard.nombre_completo || 
+                                                 window.posAppInstance.selectedCard.nombre || 
+                                                 'Cliente';
+                            
+                            // Si es CRÍTICO, bloquear completamente
+                            if (resultado.nivel_riesgo === 'CRITICO') {
+                                window.posAppInstance.showNotification(
+                                    `🚫 BLOQUEADO: ${producto.name} - ${resultado.mensaje}`,
+                                    'error'
+                                );
+                                
+                                // Mostrar alerta detallada
+                                alert(`🚫 VENTA BLOQUEADA\n\n` +
+                                      `Cliente: ${clienteNombre}\n` +
+                                      `Producto: ${producto.name}\n` +
+                                      `Nivel de Riesgo: ${resultado.nivel_riesgo}\n\n` +
+                                      `${resultado.mensaje}\n\n` +
+                                      `Coincidencias detectadas:\n${resultado.coincidencias.map(c => `• ${c}`).join('\n')}\n\n` +
+                                      `⛔ Este producto NO puede venderse a este cliente por seguridad.`);
+                                
+                                return; // BLOQUEAR VENTA
+                            }
+                            
+                            // Para ALTO, MEDIO, BAJO: advertir pero permitir
+                            const iconoRiesgo = {
+                                'ALTO': '⚠️',
+                                'MEDIO': '⚡',
+                                'BAJO': 'ℹ️'
+                            }[resultado.nivel_riesgo] || '⚠️';
+                            
+                            window.posAppInstance.showNotification(
+                                `${iconoRiesgo} ADVERTENCIA: ${resultado.mensaje}`,
+                                'warning'
+                            );
+                            
+                            // Confirmar antes de agregar
+                            const confirmar = confirm(
+                                `${iconoRiesgo} ADVERTENCIA DE RESTRICCIÓN\n\n` +
+                                `Cliente: ${clienteNombre}\n` +
+                                `Producto: ${producto.name}\n` +
+                                `Nivel de Riesgo: ${resultado.nivel_riesgo}\n\n` +
+                                `${resultado.mensaje}\n\n` +
+                                `Coincidencias:\n${resultado.coincidencias.map(c => `• ${c}`).join('\n')}\n\n` +
+                                `¿Confirma que desea agregar este producto al carrito?`
+                            );
+                            
+                            if (!confirmar) {
+                                return; // Usuario canceló
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error al verificar restricciones:', error);
+                        // En caso de error, permitir la venta (fail-safe)
+                        window.posAppInstance.showNotification(
+                            'No se pudo verificar restricciones (agregando producto)',
+                            'warning'
+                        );
+                    }
+                }
+            }
+            
+            // Agregar producto al carrito (si pasó las validaciones)
             if (esPorKilo) {
                 window.posAppInstance.addProductoPorKilo(producto);
             } else {
                 window.posAppInstance.addToCart(producto);
             }
+        }
+        
+        // Función helper para verificar restricciones de un producto
+        async function verificarRestriccionProducto(productoId, restriccionesTexto) {
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            const response = await fetch('/pos/analizar-restriccion/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    producto_id: productoId,
+                    restricciones: restriccionesTexto
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Error al verificar restricciones');
+            }
+            
+            const data = await response.json();
+            return data;
         }
     </script>
     

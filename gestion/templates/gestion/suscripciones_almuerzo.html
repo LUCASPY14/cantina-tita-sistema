@@ -416,7 +416,7 @@ function suscripcionesAlmuerzo() {
             this.guardando = true;
 
             try {
-                const response = await fetch('{% url "crear_suscripcion_almuerzo" %}', {
+                const response = await fetch('{% url "pos:crear_suscripcion_almuerzo" %}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

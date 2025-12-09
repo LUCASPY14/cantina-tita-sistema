@@ -66,6 +66,21 @@
         </div>
     </div>
     
+    <!-- Restricciones de compra -->
+    
+    <!-- Restricciones de compra -->
+    {% if tarjeta.id_hijo.restricciones_compra %}
+    <div class="alert alert-warning mt-3 text-sm py-3 bg-red-100 border-2 border-red-400">
+        <div class="flex gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-red-600 shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <div>
+                <div class="font-bold text-red-800 mb-1">⚠️ RESTRICCIONES DE COMPRA:</div>
+                <div class="text-red-700 whitespace-pre-wrap text-xs">{{ tarjeta.id_hijo.restricciones_compra }}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- Alertas -->
     {% if tarjeta.saldo_actual < 5000 %}
     <div class="alert alert-warning mt-3 text-xs py-2">
@@ -89,13 +104,25 @@
         window.posAppInstance.selectedCard = {
             id: '{{ tarjeta.nro_tarjeta }}',
             nombre: '{{ tarjeta.estudiante_nombre|escapejs }}',
-            saldo: {{ tarjeta.saldo_actual }},
-            hijo_id: {{ tarjeta.id_hijo.id_hijo|default:'null' }}
+            saldo: {{ tarjeta.saldo_actual|unlocalize }},
+            hijo_id: {{ tarjeta.id_hijo.id_hijo|default:'null' }},
+            tiene_restricciones: {% if tarjeta.id_hijo.restricciones_compra %}true{% else %}false{% endif %},
+            restricciones: `{{ tarjeta.id_hijo.restricciones_compra|escapejs }}`,
+            nombre_completo: '{{ tarjeta.id_hijo.nombre|escapejs }} {{ tarjeta.id_hijo.apellido|escapejs }}',
+            grado: '{{ tarjeta.id_hijo.grado|default:"" }}'
         };
-        console.log('DEBUG Frontend: selectedCard establecido:', window.posAppInstance.selectedCard);
+        console.log('✅ Tarjeta cargada:', window.posAppInstance.selectedCard);
+        
+        {% if tarjeta.id_hijo.restricciones_compra %}
+        console.log('⚠️ RESTRICCIONES DETECTADAS para tarjeta {{ tarjeta.nro_tarjeta }}');
+        window.posAppInstance.showNotification('⚠️ Esta tarjeta tiene restricciones alimentarias', 'warning');
+        {% else %}
+        window.posAppInstance.showNotification('✅ Tarjeta cargada: {{ tarjeta.estudiante_nombre|escapejs }}', 'success');
+        {% endif %}
+        
         if (typeof playSound === 'function') playSound('scan');
     } else {
-        console.error('DEBUG Frontend: window.posAppInstance NO está disponible');
+        console.error('❌ ERROR: window.posAppInstance NO está disponible');
     }
 </script>
 
@@ -105,6 +132,9 @@
 </div>
 
 <script>
-    playSound('error');
+    if (window.posAppInstance) {
+        window.posAppInstance.showNotification('❌ Tarjeta no encontrada o inactiva', 'error');
+    }
+    if (typeof playSound === 'function') playSound('error');
 </script>
 {% endif %}

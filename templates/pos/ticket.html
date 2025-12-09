@@ -262,12 +262,26 @@
         
         <!-- Información de pago -->
         <div class="payment-info">
-            <div>
-                <span>Forma de Pago:</span>
-                <span>{% if tarjeta %}Tarjeta{% else %}Efectivo{% endif %}</span>
-            </div>
+            <div style="font-weight: bold; margin-bottom: 5px;">Forma de Pago:</div>
+            
+            {% if pagos_venta %}
+                <!-- Pagos Mixtos -->
+                {% for pago in pagos_venta %}
+                <div style="margin-left: 10px;">
+                    <span>{{ pago.id_medio_pago.descripcion }}:</span>
+                    <span>Gs. {{ pago.monto_aplicado|floatformat:0 }}</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <!-- Sistema anterior (compatibilidad) -->
+                <div>
+                    <span>Método:</span>
+                    <span>{% if tarjeta %}Débito de Tarjeta{% else %}Efectivo{% endif %}</span>
+                </div>
+            {% endif %}
+            
             {% if tarjeta %}
-            <div>
+            <div style="margin-top: 8px; border-top: 1px solid #ccc; padding-top: 5px;">
                 <span>Saldo Anterior:</span>
                 <span>Gs. {{ saldo_anterior|floatformat:0 }}</span>
             </div>

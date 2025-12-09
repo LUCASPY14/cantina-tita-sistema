@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restricciones de Compra - Cantina Tita</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body>
+    <div class="navbar bg-primary text-primary-content">
+        <div class="flex-1">
+            <a href="{% url 'pos:portal_dashboard' %}" class="btn btn-ghost text-xl">🏪 Cantina Tita</a>
+        </div>
+        <div class="flex-none">
+            <a href="{% url 'pos:portal_dashboard' %}" class="btn btn-ghost">← Volver</a>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8 max-w-3xl">
+        
+        <div class="card bg-base-100 shadow-2xl">
+            <div class="card-body">
+                <h2 class="card-title text-2xl mb-2">🚫 Restricciones de Compra</h2>
+                <p class="text-gray-600 mb-6">Para: <span class="font-bold">{{ hijo.nombre_completo }}</span></p>
+                
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} mb-4">
+                        <span>{{ message }}</span>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                
+                <div class="alert alert-info mb-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <div class="text-sm">
+                        <div class="font-bold mb-2">¿Para qué sirve esto?</div>
+                        <p>Las restricciones de compra permiten indicar al personal de la cantina qué productos NO debe comprar su hijo/a.</p>
+                        <p class="mt-2"><strong>El cajero verá este mensaje</strong> cada vez que se escanee la tarjeta de su hijo/a.</p>
+                    </div>
+                </div>
+                
+                <form method="post" x-data="restriccionesApp()">
+                    {% csrf_token %}
+                    
+                    <!-- Plantillas Predefinidas -->
+                    <div class="mb-6">
+                        <label class="label">
+                            <span class="label-text font-semibold">📋 Plantillas Predefinidas (Opcional)</span>
+                        </label>
+                        <div class="bg-base-200 p-4 rounded-lg space-y-2">
+                            <p class="text-sm text-gray-600 mb-3">Seleccione una o más plantillas y personalícelas según necesite:</p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <button type="button" @click="agregarPlantilla('maní')" class="btn btn-sm btn-outline btn-warning">
+                                    🥜 Alergia a Maní
+                                </button>
+                                <button type="button" @click="agregarPlantilla('lactosa')" class="btn btn-sm btn-outline btn-info">
+                                    🥛 Intolerancia a Lactosa
+                                </button>
+                                <button type="button" @click="agregarPlantilla('gluten')" class="btn btn-sm btn-outline btn-error">
+                                    🌾 Celiaquía (Sin Gluten)
+                                </button>
+                                <button type="button" @click="agregarPlantilla('azucar')" class="btn btn-sm btn-outline btn-accent">
+                                    🍬 Restricción de Azúcar
+                                </button>
+                                <button type="button" @click="agregarPlantilla('vegetariano')" class="btn btn-sm btn-outline btn-success">
+                                    🥗 Vegetariano
+                                </button>
+                                <button type="button" @click="agregarPlantilla('gaseosas')" class="btn btn-sm btn-outline btn-primary">
+                                    🥤 Sin Gaseosas
+                                </button>
+                                <button type="button" @click="agregarPlantilla('golosinas')" class="btn btn-sm btn-outline btn-secondary">
+                                    🍭 Sin Golosinas
+                                </button>
+                                <button type="button" @click="agregarPlantilla('chatarra')" class="btn btn-sm btn-outline">
+                                    🍔 Sin Comida Chatarra
+                                </button>
+                            </div>
+                            
+                            <button type="button" @click="limpiarRestricciones()" class="btn btn-sm btn-ghost mt-2">
+                                🗑️ Limpiar Todo
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-control mb-6">
+                        <label class="label">
+                            <span class="label-text font-semibold">Especifique las restricciones:</span>
+                        </label>
+                        <textarea name="restricciones" rows="6" 
+                                  x-model="restricciones"
+                                  class="textarea textarea-bordered h-32" 
+                                  placeholder="Ejemplo:&#10;- No comprar gaseosas&#10;- No vender golosinas con colorantes&#10;- Alergia a los frutos secos&#10;- Solo puede comprar agua y frutas"></textarea>
+                        <label class="label">
+                            <span class="label-text-alt">Dejar en blanco si no hay restricciones</span>
+                        </label>
+                    </div>
+                    
+                    <script>
+                        function restriccionesApp() {
+                            return {
+                                restricciones: `{{ hijo.restricciones_compra|default:''|escapejs }}`,
+                                
+                                plantillas: {
+                                    maní: '⚠️ ALERGIA SEVERA A MANÍ Y FRUTOS SECOS\n- No vender ningún producto que contenga maní, almendras, nueces, avellanas\n- Verificar ingredientes en productos empaquetados\n- Contactar emergencia si consume accidentalmente: [Teléfono]',
+                                    
+                                    lactosa: '🥛 INTOLERANCIA A LA LACTOSA\n- No vender productos lácteos: leche, yogurt, queso\n- Verificar que chocolates y postres sean sin lactosa\n- Autorizado: bebidas vegetales, productos deslactosados',
+                                    
+                                    gluten: '🌾 CELIAQUÍA - SIN GLUTEN (CRÍTICO)\n- NO vender pan, galletas, tortas, empanadas convencionales\n- Solo productos certificados sin gluten (etiqueta)\n- Contaminación cruzada puede causar daño intestinal severo',
+                                    
+                                    azucar: '🍬 RESTRICCIÓN DE AZÚCAR (Diabetes/Dieta)\n- Evitar gaseosas, jugos azucarados, golosinas\n- Preferir: agua, frutas naturales, snacks salados\n- Máximo 1 producto dulce por día (light/sin azúcar)',
+                                    
+                                    vegetariano: '🥗 DIETA VEGETARIANA\n- No vender productos con carne, pollo, pescado, embutidos\n- Autorizado: frutas, verduras, lácteos, huevos, cereales, legumbres\n- Verificar ingredientes en sándwiches y platos preparados',
+                                    
+                                    gaseosas: '🥤 SIN GASEOSAS\n- No vender bebidas gaseosas (Coca-Cola, Sprite, Fanta, etc.)\n- Autorizado: agua, jugos naturales, bebidas sin gas\n- Razón: Salud dental y nutricional',
+                                    
+                                    golosinas: '🍭 SIN GOLOSINAS NI DULCES\n- No vender caramelos, chicles, chocolates, chupetines\n- Autorizado: frutas, cereales, snacks salados saludables\n- Consultar antes de vender postres',
+                                    
+                                    chatarra: '🍔 SIN COMIDA CHATARRA\n- Evitar: papas fritas, snacks ultra-procesados, comida rápida\n- Preferir: frutas, frutos secos, yogurt, sándwiches caseros\n- Promover alimentación saludable'
+                                },
+                                
+                                agregarPlantilla(tipo) {
+                                    const plantilla = this.plantillas[tipo];
+                                    if (!plantilla) return;
+                                    
+                                    // Si ya hay restricciones, agregar con separador
+                                    if (this.restricciones.trim()) {
+                                        this.restricciones += '\n\n━━━━━━━━━━━━━━━━━━━━\n\n' + plantilla;
+                                    } else {
+                                        this.restricciones = plantilla;
+                                    }
+                                },
+                                
+                                limpiarRestricciones() {
+                                    if (confirm('¿Está seguro de eliminar todas las restricciones?')) {
+                                        this.restricciones = '';
+                                    }
+                                }
+                            }
+                        }
+                    </script>
+                    
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-yellow-700">
+                                    <strong>Importante:</strong> Esta información es de carácter informativo. El personal hará lo posible por cumplir las restricciones, pero no se puede garantizar un control absoluto. Recomendamos hablar directamente con su hijo/a sobre estos temas.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-4">
+                        <a href="{% url 'pos:portal_dashboard' %}" class="btn btn-ghost flex-1">Cancelar</a>
+                        <button type="submit" class="btn btn-primary flex-1">
+                            💾 Guardar Restricciones
+                        </button>
+                    </div>
+                </form>
+                
+                {% if hijo.restricciones_compra %}
+                <div class="divider mt-8">Vista Previa</div>
+                
+                <div class="alert alert-warning">
+                    <div class="flex gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-red-600 shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                        <div>
+                            <div class="font-bold text-red-800 mb-1">⚠️ RESTRICCIONES DE COMPRA:</div>
+                            <div class="text-red-700 whitespace-pre-wrap text-sm">{{ hijo.restricciones_compra }}</div>
+                            <div class="text-xs text-gray-600 mt-2 italic">
+                                ↑ Así es como el cajero verá las restricciones en el POS
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

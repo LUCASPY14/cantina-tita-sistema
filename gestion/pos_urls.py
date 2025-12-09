@@ -2,7 +2,7 @@
 URLs para el módulo POS (Punto de Venta)
 """
 from django.urls import path
-from gestion import pos_views, almuerzo_views
+from gestion import pos_views, almuerzo_views, cliente_views, seguridad_views
 
 app_name = 'pos'
 
@@ -117,17 +117,67 @@ urlpatterns = [
     path('admin/autorizaciones/logs/', pos_views.ver_logs_autorizacion, name='logs_autorizaciones'),
     
     # Gestión de Fotos de Hijos
-    path('admin/fotos-hijos/', pos_views.gestionar_fotos_hijos, name='gestionar_fotos_hijos'),
+    path('fotos-hijos/', pos_views.gestionar_fotos_hijos, name='gestionar_fotos_hijos'),
     path('hijo/<int:hijo_id>/capturar-foto/', pos_views.capturar_foto_hijo, name='capturar_foto_hijo'),
     path('hijo/<int:hijo_id>/eliminar-foto/', pos_views.eliminar_foto_hijo, name='eliminar_foto_hijo'),
     path('obtener-foto-hijo/', pos_views.obtener_foto_hijo, name='obtener_foto_hijo'),
+    
+    # Gestión de Grados y Promociones
+    path('grados/', pos_views.gestionar_grados_view, name='gestionar_grados'),
+    path('hijo/<int:hijo_id>/asignar-grado/', pos_views.asignar_grado_hijo, name='asignar_grado_hijo'),
+    path('grados/promocionar/', pos_views.promocionar_grado_masivo, name='promocionar_grado_masivo'),
+    path('grados/historial/', pos_views.historial_grados_view, name='historial_grados'),
+    
+    # Gestión de Clientes y Usuarios Web
+    path('clientes/', cliente_views.gestionar_clientes_view, name='gestionar_clientes'),
+    path('clientes/crear/', cliente_views.crear_cliente_view, name='crear_cliente'),
+    path('clientes/<int:cliente_id>/crear-usuario/', cliente_views.crear_usuario_web_cliente, name='crear_usuario_web_cliente'),
+    
+    # Portal Web de Clientes
+    path('portal/login/', cliente_views.portal_login_view, name='portal_login'),
+    path('portal/logout/', cliente_views.portal_logout_view, name='portal_logout'),
+    path('portal/', cliente_views.portal_dashboard_view, name='portal_dashboard'),
+    path('portal/hijo/<int:hijo_id>/consumos/', cliente_views.portal_consumos_hijo_view, name='portal_consumos_hijo'),
+    path('portal/hijo/<int:hijo_id>/restricciones/', cliente_views.portal_restricciones_hijo_view, name='portal_restricciones_hijo'),
+    path('portal/recargas/', cliente_views.portal_recargas_view, name='portal_recargas'),
+    path('portal/cambiar-password/', cliente_views.portal_cambiar_password_view, name='portal_cambiar_password'),
+    path('portal/recuperar-password/', cliente_views.portal_recuperar_password_view, name='portal_recuperar_password'),
+    path('portal/reset-password/<str:token>/', cliente_views.portal_reset_password_view, name='portal_reset_password'),
+    
+    # Autenticación 2FA
+    path('portal/configurar-2fa/', cliente_views.configurar_2fa_view, name='configurar_2fa'),
+    path('portal/activar-2fa/', cliente_views.activar_2fa_view, name='activar_2fa'),
+    path('portal/verificar-2fa/', cliente_views.verificar_2fa_view, name='verificar_2fa'),
+    path('portal/deshabilitar-2fa/', cliente_views.deshabilitar_2fa_view, name='deshabilitar_2fa'),
+    
+    # Dashboard de Seguridad
+    path('seguridad/', seguridad_views.dashboard_seguridad_view, name='dashboard_seguridad'),
+    path('seguridad/logs/', seguridad_views.logs_auditoria_view, name='logs_auditoria'),
+    path('seguridad/exportar-logs/', seguridad_views.exportar_logs_view, name='exportar_logs'),
+    path('seguridad/intentos-login/', seguridad_views.intentos_login_view, name='intentos_login'),
+    path('seguridad/desbloquear/<int:bloqueo_id>/', seguridad_views.desbloquear_cuenta_view, name='desbloquear_cuenta'),
     
     # Otras vistas
     path('dashboard/', pos_views.dashboard_view, name='dashboard'),
     path('historial/', pos_views.historial_view, name='historial'),
     path('reportes/', pos_views.reportes_view, name='reportes'),
     path('reportes/exportar/', pos_views.exportar_reporte, name='exportar_reporte'),
+    
+    # =============================================================================
+    # NUEVAS FEATURES: RESTRICCIONES Y PROMOCIONES (Diciembre 2025)
+    # =============================================================================
+    
+    # APIs para Matching de Restricciones Alimentarias
+    path('analizar-restriccion/', pos_views.analizar_restriccion_producto, name='analizar_restriccion'),
+    path('analizar-carrito-restricciones/', pos_views.analizar_carrito_restricciones, name='analizar_carrito_restricciones'),
+    
+    # APIs para Sistema de Promociones
+    path('calcular-promociones/', pos_views.calcular_promociones_carrito, name='calcular_promociones'),
+    
+    # Autorización de Supervisor (Saldo Insuficiente)
+    path('validar-supervisor/', pos_views.validar_supervisor, name='validar_supervisor'),
 ]
+
 
 
 

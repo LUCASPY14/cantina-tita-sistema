@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block titulo %}Logs de Auditoría{% endblock %}
+
+{% block contenido %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold">📋 Logs de Auditoría</h1>
+            <p class="text-gray-600 mt-2">Historial completo de operaciones del sistema</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{% url 'pos:exportar_logs' %}?{{ request.GET.urlencode }}" class="btn btn-success">
+                📥 Exportar CSV
+            </a>
+            <a href="{% url 'pos:dashboard_seguridad' %}" class="btn btn-outline">
+                ← Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+            <h3 class="font-bold mb-4">Filtros</h3>
+            <form method="get" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Desde</span>
+                    </label>
+                    <input type="date" name="fecha_desde" value="{{ filtros.fecha_desde }}" 
+                           class="input input-bordered input-sm">
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Hasta</span>
+                    </label>
+                    <input type="date" name="fecha_hasta" value="{{ filtros.fecha_hasta }}" 
+                           class="input input-bordered input-sm">
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Usuario</span>
+                    </label>
+                    <input type="text" name="usuario" value="{{ filtros.usuario }}" 
+                           placeholder="Buscar usuario..." class="input input-bordered input-sm">
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Operación</span>
+                    </label>
+                    <select name="operacion" class="select select-bordered select-sm">
+                        <option value="">Todas</option>
+                        {% for op in operaciones_disponibles %}
+                        <option value="{{ op }}" {% if filtros.operacion == op %}selected{% endif %}>
+                            {{ op }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Tipo Usuario</span>
+                    </label>
+                    <select name="tipo_usuario" class="select select-bordered select-sm">
+                        <option value="">Todos</option>
+                        <option value="EMPLEADO" {% if filtros.tipo_usuario == 'EMPLEADO' %}selected{% endif %}>Empleado</option>
+                        <option value="CLIENTE_WEB" {% if filtros.tipo_usuario == 'CLIENTE_WEB' %}selected{% endif %}>Cliente Web</option>
+                        <option value="ADMIN" {% if filtros.tipo_usuario == 'ADMIN' %}selected{% endif %}>Admin</option>
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Resultado</span>
+                    </label>
+                    <select name="resultado" class="select select-bordered select-sm">
+                        <option value="">Todos</option>
+                        <option value="EXITOSO" {% if filtros.resultado == 'EXITOSO' %}selected{% endif %}>Exitoso</option>
+                        <option value="FALLIDO" {% if filtros.resultado == 'FALLIDO' %}selected{% endif %}>Fallido</option>
+                    </select>
+                </div>
+                <div class="col-span-full flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm">🔍 Filtrar</button>
+                    <a href="{% url 'pos:logs_auditoria' %}" class="btn btn-ghost btn-sm">🔄 Limpiar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resultado -->
+    <div class="alert alert-info mb-4">
+        <span>Mostrando {{ logs|length }} de {{ total_logs }} registros</span>
+    </div>
+
+    <!-- Tabla de Logs -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <div class="overflow-x-auto">
+                <table class="table table-xs">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Fecha/Hora</th>
+                            <th>Usuario</th>
+                            <th>Tipo</th>
+                            <th>Operación</th>
+                            <th>Tabla</th>
+                            <th>Descripción</th>
+                            <th>IP</th>
+                            <th>Resultado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr class="{% if log.resultado == 'FALLIDO' %}bg-error bg-opacity-10{% endif %}">
+                            <td>{{ log.id_auditoria }}</td>
+                            <td class="whitespace-nowrap">{{ log.fecha_operacion|date:"d/m/Y H:i:s" }}</td>
+                            <td class="font-semibold">{{ log.usuario }}</td>
+                            <td><span class="badge badge-sm">{{ log.tipo_usuario }}</span></td>
+                            <td class="font-mono text-xs">{{ log.operacion }}</td>
+                            <td class="text-xs">{{ log.tabla_afectada|default:"-" }}</td>
+                            <td class="text-sm">{{ log.descripcion|truncatewords:10 }}</td>
+                            <td class="font-mono text-xs">{{ log.ip_address }}</td>
+                            <td>
+                                {% if log.resultado == 'EXITOSO' %}
+                                    <span class="badge badge-success badge-xs">✓</span>
+                                {% else %}
+                                    <span class="badge badge-error badge-xs">✗</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center text-gray-500 py-8">
+                                No hay logs que coincidan con los filtros
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

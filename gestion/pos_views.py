@@ -23,6 +23,17 @@ from gestion.models import (
     TarjetaAutorizacion, LogAutorizacion
 )
 
+from gestion.seguridad_utils import registrar_auditoria
+from gestion.restricciones_utils import (
+    analizar_restricciones_producto,
+    analizar_carrito_completo
+)
+from gestion.promociones_utils import (
+    calcular_promociones_disponibles,
+    registrar_promocion_aplicada
+)
+
+
 import os
 import base64
 from django.conf import settings
@@ -167,20 +178,44 @@ def buscar_tarjeta(request):
     """Buscar tarjeta de estudiante"""
     nro_tarjeta = request.POST.get('nro_tarjeta', '').strip()
     
+    print(f"🔍 Buscando tarjeta: '{nro_tarjeta}'")
+    print(f"📋 Método: {request.method}")
+    
     if not nro_tarjeta:
+        print("❌ No se proporcionó número de tarjeta")
         return render(request, 'pos/partials/tarjeta_info.html', {
             'tarjeta': None
         })
     
     try:
+        # Buscar tarjeta activa (estado puede ser 'Activa' o 'ACTIVA')
+        # Usar only() para especificar exactamente qué campos queremos
         tarjeta = Tarjeta.objects.select_related(
             'id_hijo',
             'id_hijo__id_cliente_responsable'
-        ).get(nro_tarjeta=nro_tarjeta, estado='ACTIVA')
+        ).only(
+            'nro_tarjeta', 'estado', 'saldo_actual',
+            'id_hijo__id_hijo', 'id_hijo__nombre', 'id_hijo__apellido', 
+            'id_hijo__grado', 'id_hijo__foto_perfil', 'id_hijo__fecha_foto',
+            'id_hijo__id_cliente_responsable__id_cliente',
+            'id_hijo__id_cliente_responsable__nombres',
+            'id_hijo__id_cliente_responsable__apellidos'
+        ).filter(nro_tarjeta=nro_tarjeta).filter(
+            Q(estado='ACTIVA') | Q(estado='Activa')
+        ).first()
+        
+        if not tarjeta:
+            print(f"❌ Tarjeta {nro_tarjeta} no encontrada o inactiva")
+            return render(request, 'pos/partials/tarjeta_info.html', {
+                'tarjeta': None
+            })
+        
+        print(f"✅ Tarjeta encontrada: {tarjeta.nro_tarjeta}, Estado: {tarjeta.estado}")
         
         # Agregar información del estudiante
         if tarjeta.id_hijo:
             tarjeta.estudiante_nombre = f"{tarjeta.id_hijo.nombre} {tarjeta.id_hijo.apellido}"
+            print(f"👤 Estudiante: {tarjeta.estudiante_nombre}")
             
             # Agregar información de foto
             tarjeta.foto_url = None
@@ -190,7 +225,8 @@ def buscar_tarjeta(request):
             if tarjeta.id_hijo.foto_perfil:
                 tarjeta.foto_url = settings.MEDIA_URL + tarjeta.id_hijo.foto_perfil
                 tarjeta.tiene_foto = True
-                tarjeta.fecha_foto = tarjeta.id_hijo.fecha_foto
+                if hasattr(tarjeta.id_hijo, 'fecha_foto'):
+                    tarjeta.fecha_foto = tarjeta.id_hijo.fecha_foto
         else:
             tarjeta.estudiante_nombre = "Estudiante"
         
@@ -200,7 +236,10 @@ def buscar_tarjeta(request):
             'tarjeta': tarjeta
         })
         
-    except Tarjeta.DoesNotExist:
+    except Exception as e:
+        print(f"❌ ERROR al buscar tarjeta: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return render(request, 'pos/partials/tarjeta_info.html', {
             'tarjeta': None
         })
@@ -216,15 +255,40 @@ def procesar_venta(request):
         data = json.loads(request.body)
         items = data.get('items', [])
         tarjeta_data = data.get('tarjeta')
+        total = Decimal(str(data.get('total', 0)))
+        
+        # 💰 CAPTURAR PAGOS MIXTOS (nuevo sistema)
+        pagos_mixtos = data.get('pagos', [])
+        
+        # Mantener compatibilidad con sistema anterior (tipo_pago_id único)
         tipo_pago_id = data.get('tipo_pago_id', 1)  # Default: Contado
         medio_pago_id = data.get('medio_pago_id')  # Opcional
-        total = Decimal(str(data.get('total', 0)))
+        
+        # ⚠️ CAPTURAR DATOS DE RESTRICCIONES ALIMENTARIAS
+        restricciones_confirmadas = data.get('restricciones_confirmadas', False)
+        justificacion_restricciones = data.get('justificacion_restricciones', '')
+        
+        # 🎉 CAPTURAR DATOS DE PROMOCIÓN SI HAY ALGUNA APLICADA
+        promocion_id = data.get('promocion_id')
+        descuento_promocion = Decimal(str(data.get('descuento_promocion', 0)))
         
         if not items:
             return JsonResponse({
                 'success': False,
                 'error': 'El carrito está vacío'
             })
+        
+        # 💰 VALIDAR PAGOS MIXTOS si existen
+        if pagos_mixtos:
+            suma_pagos = sum(Decimal(str(p.get('monto', 0))) for p in pagos_mixtos)
+            diferencia = abs(suma_pagos - total)
+            
+            # Tolerancia de 1 guaraní por redondeo
+            if diferencia > Decimal('1'):
+                return JsonResponse({
+                    'success': False,
+                    'error': f'La suma de pagos (Gs. {int(suma_pagos):,}) no coincide con el total (Gs. {int(total):,}). Diferencia: Gs. {int(diferencia):,}'
+                })
         
         # Obtener empleado actual (si existe en el modelo)
         try:
@@ -294,6 +358,7 @@ def procesar_venta(request):
         # Obtener tarjeta si se especificó
         tarjeta = None
         cliente = cliente_generico  # Por defecto usar cliente genérico
+        tiene_tarjeta_exclusiva = False  # Flag para determinar si usa tarjeta exclusiva
         
         if tarjeta_data and tarjeta_data.get('id'):
             try:
@@ -309,26 +374,82 @@ def procesar_venta(request):
                 if tarjeta.id_hijo and tarjeta.id_hijo.id_cliente_responsable:
                     cliente = tarjeta.id_hijo.id_cliente_responsable
                 
-                # Validar saldo
-                if tarjeta.saldo_actual < total:
-                    return JsonResponse({
-                        'success': False,
-                    'error': f'Saldo insuficiente. Disponible: Gs. {tarjeta.saldo_actual:,.0f}'
-                })
+                # Si se usa SOLO tarjeta (sin pagos mixtos externos), es consumo exclusivo
+                usa_solo_tarjeta = not pagos_mixtos or all(
+                    p.get('medio_id') == 6 for p in pagos_mixtos  # ID 6 = Tarjeta Estudiantil
+                )
+                
+                if usa_solo_tarjeta:
+                    tiene_tarjeta_exclusiva = True
+                    # Validar saldo solo si es consumo exclusivo de tarjeta
+                    if tarjeta.saldo_actual < total:
+                        return JsonResponse({
+                            'success': False,
+                            'error': f'Saldo insuficiente. Disponible: Gs. {tarjeta.saldo_actual:,.0f}',
+                            'requiere_autorizacion_supervisor': True,  # Indicar que puede autorizarse
+                            'monto_faltante': int(total - tarjeta.saldo_actual)
+                        })
                     
             except Tarjeta.DoesNotExist:
                 pass
             except Exception as e:
-                pass        # Determinar si se debe crear factura según la lógica de negocio:
-        # - Con tarjeta (consumo de saldo): NO se emite factura
-        # - Contado/Crédito: SÍ se emite factura
-        nro_factura = None
+                pass        # ================================================
+        # DETERMINAR TIPO DE VENTA Y EMISIÓN DE FACTURA
+        # ================================================
+        # LÓGICA DE NEGOCIO:
+        # 1. Con tarjeta exclusiva (solo saldo): NO emite factura → tipo_venta = 'CONTADO'
+        # 2. Con pagos externos (efectivo, débito, etc.): SÍ emite factura → tipo_venta = 'CONTADO'
+        # 3. Con autorización supervisor (saldo insuficiente): SÍ emite factura → tipo_venta = 'CREDITO'
         
-        if tarjeta:
-            # Venta con tarjeta: NO emitir factura, solo registrar consumo
-            nro_factura = None
+        nro_factura = None
+        tipo_venta_final = 'CONTADO'  # Default
+        genera_factura_legal = False
+        autorizado_por_id = data.get('autorizado_por_id')  # ID del supervisor que autoriza
+        motivo_credito = data.get('motivo_credito', '')  # Justificación del crédito
+        
+        # Verificar si hay pagos con medios externos (que no sean tarjeta exclusiva)
+        tiene_pagos_externos = False
+        if pagos_mixtos:
+            tiene_pagos_externos = any(
+                p.get('medio_id') != 6 for p in pagos_mixtos  # ID 6 = Tarjeta Estudiantil
+            )
+        
+        # CASO 1: Venta a CRÉDITO con autorización de supervisor
+        if autorizado_por_id:
+            tipo_venta_final = 'CREDITO'
+            genera_factura_legal = True
+            
+            # Validar que el supervisor existe
+            try:
+                supervisor = Empleado.objects.get(id_empleado=autorizado_por_id)
+                print(f"✅ Autorización de supervisor: {supervisor.nombre} {supervisor.apellido}")
+            except Empleado.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Supervisor no encontrado'
+                })
+        
+        # CASO 2: Venta con pagos externos (efectivo, débito, QR, etc.)
+        elif tiene_pagos_externos:
+            tipo_venta_final = 'CONTADO'
+            genera_factura_legal = True
+        
+        # CASO 3: Venta solo con tarjeta exclusiva
+        elif tiene_tarjeta_exclusiva:
+            tipo_venta_final = 'CONTADO'
+            genera_factura_legal = False
+        
+        # CASO 4: Venta sin tarjeta (cliente genérico con efectivo)
         else:
-            # Venta contado/crédito: SÍ emitir factura
+            tipo_venta_final = 'CONTADO'
+            genera_factura_legal = True
+        
+        print(f"📋 TIPO DE VENTA: {tipo_venta_final} | Genera factura legal: {genera_factura_legal}")
+        
+        # ================================================
+        # EMITIR FACTURA LEGAL SI CORRESPONDE
+        # ================================================
+        if genera_factura_legal:
             try:
                 # Buscar timbrado activo
                 timbrado_activo = Timbrados.objects.filter(activo=True).first()
@@ -358,13 +479,19 @@ def procesar_venta(request):
                     monto_iva_10=0
                 )
                 nro_factura = documento.id_documento
+                print(f"📄 FACTURA LEGAL generada: #{nro_factura} (Timbrado: {timbrado_activo.nro_timbrado})")
             except Exception as e:
                 return JsonResponse({
                     'success': False,
                     'error': f'Error al crear factura: {str(e)}'
                 })
+        else:
+            nro_factura = None
+            print(f"ℹ️ NO se genera factura legal (consumo con tarjeta exclusiva)")
         
-        # Crear la venta
+        # ================================================
+        # CREAR LA VENTA
+        # ================================================
         venta = Ventas.objects.create(
             nro_factura_venta=nro_factura,  # NULL si es con tarjeta, ID_Documento si es contado/crédito
             id_cliente=cliente,  # Usar el cliente obtenido (genérico o de tarjeta)
@@ -375,7 +502,10 @@ def procesar_venta(request):
             monto_total=int(total),
             estado_pago='PAGADA',
             estado='PROCESADO',
-            tipo_venta='CANTINA'
+            tipo_venta=tipo_venta_final,  # 'CONTADO' o 'CREDITO'
+            autorizado_por_id=autorizado_por_id if autorizado_por_id else None,
+            motivo_credito=motivo_credito if tipo_venta_final == 'CREDITO' else None,
+            genera_factura_legal=genera_factura_legal
         )
         
         # Crear detalles de venta
@@ -462,6 +592,102 @@ def procesar_venta(request):
             tarjeta.saldo_actual = saldo_posterior
             tarjeta.save()
             print(f"DEBUG: Saldo de tarjeta actualizado a {tarjeta.saldo_actual}")
+        
+        # ⚠️ REGISTRAR EN AUDITORÍA SI SE CONFIRMARON RESTRICCIONES ALIMENTARIAS
+        if restricciones_confirmadas and tarjeta and tarjeta.id_hijo:
+            hijo = tarjeta.id_hijo
+            descripcion = f'Venta #{venta.id_venta} procesada con RESTRICCIONES ALIMENTARIAS confirmadas'
+            if justificacion_restricciones:
+                descripcion += f' - Justificación del cajero: {justificacion_restricciones}'
+            descripcion += f' - Estudiante: {hijo.descripcions} {hijo.apellidos} (Tarjeta #{tarjeta.nro_tarjeta})'
+            descripcion += f' - Restricciones activas: {hijo.restricciones_compra[:100]}...' if len(hijo.restricciones_compra or '') > 100 else f' - Restricciones: {hijo.restricciones_compra}'
+            
+            registrar_auditoria(
+                request=request,
+                operacion='VENTA_CON_RESTRICCIONES',
+                tipo_usuario='CAJERO',
+                tabla_afectada='ventas',
+                id_registro=venta.id_venta,
+                descripcion=descripcion,
+                resultado='EXITOSO'
+            )
+            print(f"⚠️ AUDITORÍA: Venta con restricciones confirmadas registrada - Venta #{venta.id_venta}")
+        
+        # 🎉 REGISTRAR PROMOCIÓN APLICADA si hay alguna
+        if promocion_id and descuento_promocion > 0:
+            try:
+                from .promociones_utils import registrar_promocion_aplicada
+                registrar_promocion_aplicada(venta.id_venta, promocion_id, float(descuento_promocion))
+                print(f"🎉 PROMOCIÓN: Registrada promoción #{promocion_id} en venta #{venta.id_venta} - Descuento: Gs. {descuento_promocion:,.0f}")
+            except Exception as e:
+                # No fallar la venta si hay error al registrar promoción
+                print(f"⚠️ ERROR al registrar promoción aplicada: {e}")
+        
+        # 💰 REGISTRAR PAGOS MIXTOS si existen
+        if pagos_mixtos:
+            for pago_data in pagos_mixtos:
+                try:
+                    medio_id = pago_data.get('medio_id')
+                    monto_pago = Decimal(str(pago_data.get('monto', 0)))
+                    
+                    # Obtener medio de pago
+                    medio_pago = MediosPago.objects.get(id_medio_pago=medio_id)
+                    
+                    # Calcular comisión si el medio de pago la genera
+                    comision = Decimal('0')
+                    tarifa_aplicada = None
+                    if medio_pago.genera_comision:
+                        # Buscar tarifa de comisión vigente
+                        from django.utils import timezone
+                        tarifa_vigente = TarifasComision.objects.filter(
+                            id_medio_pago=medio_pago,
+                            activo=True,
+                            fecha_inicio_vigencia__lte=timezone.now(),
+                        ).filter(
+                            models.Q(fecha_fin_vigencia__gte=timezone.now()) | 
+                            models.Q(fecha_fin_vigencia__isnull=True)
+                        ).first()
+                        
+                        if tarifa_vigente:
+                            # Calcular comisión: porcentaje + monto fijo (si existe)
+                            comision_porcentual = (monto_pago * tarifa_vigente.porcentaje_comision)
+                            comision_fija = tarifa_vigente.monto_fijo_comision or Decimal('0')
+                            comision = comision_porcentual + comision_fija
+                            tarifa_aplicada = tarifa_vigente
+                            
+                            print(f"💳 Comisión calculada: {tarifa_vigente.porcentaje_comision}% + Gs. {int(comision_fija):,} = Gs. {int(comision):,}")
+                        else:
+                            print(f"⚠️ No hay tarifa de comisión vigente para {medio_pago.descripcion}")
+                    
+                    # Crear registro de pago
+                    pago_venta = PagosVenta.objects.create(
+                        id_venta=venta,
+                        id_medio_pago=medio_pago,
+                        nro_tarjeta_usada=tarjeta if (tarjeta and medio_id == 6) else None,  # Solo asociar tarjeta si es pago con tarjeta estudiantil
+                        monto_aplicado=int(monto_pago),
+                        referencia_transaccion=pago_data.get('referencia'),  # Capturar referencia de transacción si existe
+                        fecha_pago=timezone.now()
+                    )
+                    
+                    # Registrar comisión en detalle_comision_venta si hay comisión
+                    if comision > 0 and tarifa_aplicada:
+                        DetalleComisionVenta.objects.create(
+                            id_pago_venta=pago_venta,
+                            id_tarifa=tarifa_aplicada,
+                            monto_comision_calculada=comision,
+                            porcentaje_aplicado=tarifa_aplicada.porcentaje_comision
+                        )
+                        print(f"📊 Comisión registrada en detalle_comision_venta: Gs. {int(comision):,}")
+                    
+                    print(f"💰 Pago registrado: {medio_pago.descripcion} - Gs. {int(monto_pago):,} (Comisión: Gs. {int(comision):,})")
+                    
+                except MediosPago.DoesNotExist:
+                    print(f"⚠️ ERROR: Medio de pago #{medio_id} no encontrado")
+                except Exception as e:
+                    print(f"⚠️ ERROR al registrar pago: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    # No fallar la venta, solo registrar el error
         
         return JsonResponse({
             'success': True,
@@ -1253,6 +1479,9 @@ def ticket_view(request, venta_id):
         except:
             empresa = None
         
+        # 💰 Obtener pagos mixtos si existen
+        pagos_venta = PagosVenta.objects.filter(id_venta=venta).select_related('id_medio_pago')
+        
         context = {
             'venta': venta,
             'detalles': detalles,
@@ -1261,6 +1490,7 @@ def ticket_view(request, venta_id):
             'saldo_actual': saldo_actual,
             'consumo': consumo,
             'empresa': empresa,
+            'pagos_venta': pagos_venta,  # Nuevo: lista de pagos
         }
         
         return render(request, 'pos/ticket.html', context)
@@ -4819,3 +5049,467 @@ def obtener_foto_hijo(request):
             'success': False,
             'message': f'Error: {str(e)}'
         })
+
+
+# =============================================================================
+# GESTIÓN DE GRADOS Y PROMOCIONES
+# =============================================================================
+
+@login_required
+@require_http_methods(["GET"])
+def gestionar_grados_view(request):
+    """
+    Vista para gestionar grados y promociones de estudiantes
+    """
+    from gestion.models import Grado, HistorialGradoHijo
+    from django.db.models import Count
+    
+    # Filtros
+    buscar = request.GET.get('buscar', '')
+    grado_filtro = request.GET.get('grado', '')
+    
+    # Obtener todos los hijos activos
+    hijos = Hijo.objects.filter(activo=True).select_related(
+        'id_cliente_responsable',
+        'tarjeta'
+    ).order_by('grado', 'apellido', 'nombre')
+    
+    if buscar:
+        hijos = hijos.filter(
+            Q(nombre__icontains=buscar) | 
+            Q(apellido__icontains=buscar) |
+            Q(tarjeta__nro_tarjeta__icontains=buscar)
+        )
+    
+    if grado_filtro:
+        hijos = hijos.filter(grado=grado_filtro)
+    
+    # Obtener todos los grados activos
+    grados = Grado.objects.filter(activo=True).order_by('orden_visualizacion')
+    
+    # Estadísticas por grado
+    estadisticas = hijos.values('grado').annotate(
+        total=Count('id_hijo')
+    ).order_by('grado')
+    
+    # Total de estudiantes sin grado asignado
+    sin_grado = hijos.filter(Q(grado__isnull=True) | Q(grado='')).count()
+    
+    context = {
+        'hijos': hijos,
+        'grados': grados,
+        'estadisticas': estadisticas,
+        'sin_grado': sin_grado,
+        'buscar': buscar,
+        'grado_filtro': grado_filtro,
+        'anio_actual': timezone.now().year,
+    }
+    
+    return render(request, 'pos/gestionar_grados.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def asignar_grado_hijo(request, hijo_id):
+    """
+    Asignar o cambiar el grado de un hijo
+    """
+    from gestion.models import HistorialGradoHijo
+    
+    try:
+        hijo = get_object_or_404(Hijo, id_hijo=hijo_id)
+        nuevo_grado = request.POST.get('grado', '').strip()
+        observaciones = request.POST.get('observaciones', '')
+        
+        if not nuevo_grado:
+            return JsonResponse({
+                'success': False,
+                'message': 'Debe seleccionar un grado'
+            })
+        
+        grado_anterior = hijo.grado
+        hijo.grado = nuevo_grado
+        hijo.save()
+        
+        # Registrar en historial
+        HistorialGradoHijo.objects.create(
+            id_hijo=hijo,
+            grado_anterior=grado_anterior,
+            grado_nuevo=nuevo_grado,
+            anio_escolar=timezone.now().year,
+            motivo='CAMBIO_MANUAL',
+            usuario_registro=request.user.username,
+            observaciones=observaciones
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Grado actualizado: {hijo.nombre_completo} → {nuevo_grado}'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
+def promocionar_grado_masivo(request):
+    """
+    Promocionar masivamente a todos los estudiantes de un grado al siguiente
+    """
+    from gestion.models import Grado, HistorialGradoHijo
+    
+    try:
+        grado_actual_nombre = request.POST.get('grado_actual', '')
+        
+        if not grado_actual_nombre:
+            return JsonResponse({
+                'success': False,
+                'message': 'Debe seleccionar el grado a promocionar'
+            })
+        
+        # Buscar el grado actual
+        try:
+            grado_actual = Grado.objects.get(nombre_grado=grado_actual_nombre, activo=True)
+        except Grado.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': f'Grado {grado_actual_nombre} no encontrado'
+            })
+        
+        # Verificar si hay un siguiente grado
+        siguiente_grado = grado_actual.siguiente_grado()
+        
+        if not siguiente_grado:
+            return JsonResponse({
+                'success': False,
+                'message': f'{grado_actual_nombre} es el último grado. No hay siguiente nivel.'
+            })
+        
+        # Obtener todos los hijos en ese grado
+        hijos_a_promocionar = Hijo.objects.filter(
+            grado=grado_actual_nombre,
+            activo=True
+        )
+        
+        total = hijos_a_promocionar.count()
+        
+        if total == 0:
+            return JsonResponse({
+                'success': False,
+                'message': f'No hay estudiantes en {grado_actual_nombre} para promocionar'
+            })
+        
+        # Promocionar todos
+        promocionados = 0
+        anio_escolar = timezone.now().year
+        
+        with transaction.atomic():
+            for hijo in hijos_a_promocionar:
+                hijo.grado = siguiente_grado.nombre_grado
+                hijo.save()
+                
+                # Registrar en historial
+                HistorialGradoHijo.objects.create(
+                    id_hijo=hijo,
+                    grado_anterior=grado_actual_nombre,
+                    grado_nuevo=siguiente_grado.nombre_grado,
+                    anio_escolar=anio_escolar,
+                    motivo='PROMOCION',
+                    usuario_registro=request.user.username,
+                    observaciones=f'Promoción masiva de {grado_actual_nombre} a {siguiente_grado.nombre_grado}'
+                )
+                
+                promocionados += 1
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'✅ {promocionados} estudiantes promocionados de {grado_actual_nombre} a {siguiente_grado.nombre_grado}',
+            'total': promocionados
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        })
+
+
+@login_required
+@require_http_methods(["GET"])
+def historial_grados_view(request):
+    """
+    Ver historial de cambios de grados
+    """
+    from gestion.models import HistorialGradoHijo
+    from django.core.paginator import Paginator
+    
+    # Filtros
+    hijo_id = request.GET.get('hijo')
+    anio = request.GET.get('anio', '')
+    motivo = request.GET.get('motivo', '')
+    
+    historial = HistorialGradoHijo.objects.select_related('id_hijo').all()
+    
+    if hijo_id:
+        historial = historial.filter(id_hijo_id=hijo_id)
+    
+    if anio:
+        historial = historial.filter(anio_escolar=anio)
+    
+    if motivo:
+        historial = historial.filter(motivo=motivo)
+    
+    # Paginación
+    paginator = Paginator(historial, 50)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # Años disponibles para filtro
+    anios_disponibles = HistorialGradoHijo.objects.values_list(
+        'anio_escolar', flat=True
+    ).distinct().order_by('-anio_escolar')
+    
+    context = {
+        'page_obj': page_obj,
+        'anios_disponibles': anios_disponibles,
+        'hijo_id': hijo_id,
+        'anio': anio,
+        'motivo': motivo,
+    }
+    
+    return render(request, 'pos/historial_grados.html', context)
+
+
+# =============================================================================
+# ENDPOINTS PARA MATCHING DE RESTRICCIONES Y PROMOCIONES
+# =============================================================================
+
+@login_required
+@require_http_methods(["POST"])
+def analizar_restriccion_producto(request):
+    """
+    Endpoint para analizar si un producto tiene conflictos con restricciones alimentarias.
+    
+    POST params:
+        - producto_id: ID del producto
+        - restricciones: Texto de restricciones del estudiante
+    
+    Returns:
+        JSON con análisis de conflictos
+    """
+    try:
+        data = json.loads(request.body)
+        producto_id = data.get('producto_id')
+        restricciones = data.get('restricciones', '')
+        
+        if not producto_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'producto_id es requerido'
+            }, status=400)
+        
+        # Analizar producto
+        analisis = analizar_restricciones_producto(producto_id, restricciones)
+        
+        return JsonResponse({
+            'success': True,
+            'analisis': analisis
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def analizar_carrito_restricciones(request):
+    """
+    Endpoint para analizar todo el carrito contra restricciones.
+    
+    POST params:
+        - items: Array de {producto_id, cantidad, descripcion}
+        - restricciones: Texto de restricciones
+    
+    Returns:
+        JSON con análisis completo del carrito
+    """
+    try:
+        data = json.loads(request.body)
+        items = data.get('items', [])
+        restricciones = data.get('restricciones', '')
+        
+        if not items:
+            return JsonResponse({
+                'success': True,
+                'analisis': {
+                    'tiene_conflictos': False,
+                    'productos_con_conflicto': [],
+                    'productos_seguros': 0
+                }
+            })
+        
+        # Analizar carrito completo
+        analisis = analizar_carrito_completo(items, restricciones)
+        
+        return JsonResponse({
+            'success': True,
+            'analisis': analisis
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def calcular_promociones_carrito(request):
+    """
+    Endpoint para calcular promociones disponibles para el carrito actual.
+    
+    POST params:
+        - items: Array de {producto_id, cantidad, precio_unitario, categoria_id}
+        - grado_estudiante: Grado del estudiante (opcional)
+        - codigo_promocion: Código de promoción (opcional)
+    
+    Returns:
+        JSON con promociones aplicables
+    """
+    try:
+        data = json.loads(request.body)
+        items = data.get('items', [])
+        grado = data.get('grado_estudiante')
+        codigo = data.get('codigo_promocion')
+        
+        if not items:
+            return JsonResponse({
+                'success': True,
+                'resultado': {
+                    'promociones_aplicables': [],
+                    'mejor_promocion': None,
+                    'descuento_maximo': 0,
+                    'subtotal_original': 0,
+                    'total_con_descuento': 0
+                }
+            })
+        
+        # Calcular promociones
+        resultado = calcular_promociones_disponibles(items, grado, codigo)
+        
+        return JsonResponse({
+            'success': True,
+            'resultado': resultado
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def validar_supervisor(request):
+    """
+    Validar que una tarjeta corresponde a un supervisor para autorizar ventas a crédito.
+    
+    POST params:
+        - nro_tarjeta: Número de tarjeta del supervisor
+    
+    Returns:
+        - success: bool
+        - nombre: Nombre completo del supervisor
+        - id_empleado: ID del empleado supervisor
+        - error: Mensaje de error si falla
+    """
+    try:
+        data = json.loads(request.body)
+        nro_tarjeta = data.get('nro_tarjeta', '').strip()
+        
+        if not nro_tarjeta:
+            return JsonResponse({
+                'success': False,
+                'error': 'Debe escanear una tarjeta'
+            })
+        
+        # Buscar tarjeta de supervisor
+        try:
+            tarjeta = Tarjeta.objects.select_related(
+                'id_hijo',
+                'id_hijo__id_cliente_responsable'
+            ).get(
+                nro_tarjeta=nro_tarjeta,
+                tipo_autorizacion='SUPERVISOR',
+                estado='ACTIVA'
+            )
+            
+            # Obtener el empleado asociado a esta tarjeta de supervisor
+            # La tarjeta de supervisor puede estar asociada a un hijo cuyo responsable es el empleado
+            # O podemos buscar al empleado por otro criterio
+            
+            # Buscar empleado por el cliente responsable de la tarjeta
+            if tarjeta.id_hijo and tarjeta.id_hijo.id_cliente_responsable:
+                cliente = tarjeta.id_hijo.id_cliente_responsable
+                
+                # Buscar empleado que coincida con el RUC/CI del cliente
+                try:
+                    empleado = Empleado.objects.get(
+                        ci=cliente.ruc_ci,
+                        activo=True
+                    )
+                    
+                    # Verificar que el empleado tenga rol de supervisor
+                    if empleado.id_rol.nombre_rol not in ['SUPERVISOR', 'ADMINISTRADOR', 'GERENTE']:
+                        return JsonResponse({
+                            'success': False,
+                            'error': 'Esta tarjeta no pertenece a un supervisor autorizado'
+                        })
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'nombre': f'{empleado.nombre} {empleado.apellido}',
+                        'id_empleado': empleado.id_empleado,
+                        'rol': empleado.id_rol.nombre_rol
+                    })
+                    
+                except Empleado.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'No se encontró empleado asociado a esta tarjeta de supervisor'
+                    })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Tarjeta de supervisor no tiene datos asociados'
+                })
+                
+        except Tarjeta.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Tarjeta no encontrada o no es una tarjeta de supervisor activa'
+            })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Datos inválidos'
+        }, status=400)
+    except Exception as e:
+        print(f"❌ ERROR al validar supervisor: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al validar supervisor: {str(e)}'
+        }, status=500)

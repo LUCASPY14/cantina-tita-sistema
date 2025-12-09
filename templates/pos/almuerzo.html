@@ -260,92 +260,51 @@
             inputBarra.focus();
             inputBarra.select();
             
-            // Si hubo registro exitoso, imprimir ticket directamente con iframe oculto
+            // Si hubo registro exitoso, imprimir ticket automáticamente
             {% if registro_id %}
+            console.log('📄 Registro exitoso, imprimiendo ticket ID:', {{ registro_id }});
             imprimirTicketAlmuerzo({{ registro_id }});
+            {% else %}
+            console.log('ℹ️ Sin registro nuevo para imprimir');
             {% endif %}
         };
         
-        // Función para imprimir ticket de almuerzo directamente sin popup
+        // Función para imprimir ticket de almuerzo automáticamente
         function imprimirTicketAlmuerzo(registroId) {
             const ticketUrl = `/pos/almuerzo/ticket/${registroId}/`;
+            console.log('🎫 Preparando impresión de ticket:', ticketUrl);
             
-            // Crear iframe oculto para imprimir
-            const iframe = document.createElement('iframe');
-            iframe.id = 'ticket-print-iframe';
-            iframe.style.position = 'fixed';
-            iframe.style.top = '-9999px';
-            iframe.style.left = '-9999px';
-            iframe.style.width = '80mm';
-            iframe.style.height = '100%';
-            iframe.style.border = 'none';
-            iframe.style.visibility = 'hidden';
-            iframe.style.opacity = '0';
+            // Abrir en nueva ventana pequeña para imprimir
+            const ventanaTicket = window.open(
+                ticketUrl, 
+                'ticket_almuerzo',
+                'width=400,height=700,menubar=no,toolbar=no,location=no,status=no'
+            );
             
-            // Agregar al DOM
-            document.body.appendChild(iframe);
-            
-            // Al cargar el iframe, imprimir automáticamente
-            iframe.onload = function() {
-                setTimeout(() => {
-                    try {
-                        // Forzar foco en el iframe
-                        iframe.contentWindow.focus();
-                        
-                        // Imprimir inmediatamente
-                        iframe.contentWindow.print();
-                        
-                        console.log('✅ Ticket enviado a impresora automáticamente');
-                        
-                        // Limpiar después de imprimir
-                        setTimeout(() => {
-                            if (iframe.parentNode) {
-                                document.body.removeChild(iframe);
-                            }
-                        }, 1000);
-                    } catch (e) {
-                        console.error('❌ Error al imprimir:', e);
-                        // Fallback: abrir en nueva ventana
-                        window.open(ticketUrl, '_blank', 'width=400,height=700');
-                        if (iframe.parentNode) {
-                            document.body.removeChild(iframe);
+            if (ventanaTicket) {
+                console.log('✅ Ventana de ticket abierta');
+                // Cuando la ventana cargue, imprimir automáticamente
+                ventanaTicket.onload = function() {
+                    setTimeout(() => {
+                        try {
+                            ventanaTicket.print();
+                            console.log('✅ Comando de impresión enviado');
+                        } catch (e) {
+                            console.error('❌ Error al imprimir:', e);
                         }
-                    }
-                }, 500);
-            };
-            
-            iframe.onerror = function() {
-                console.error('❌ Error al cargar ticket');
-                if (iframe.parentNode) {
-                    document.body.removeChild(iframe);
-                }
-            };
-            
-            // Cargar el ticket
-            iframe.src = ticketUrl;
-        }
-                    window.open(ticketUrl, 'ticket_almuerzo', 'width=400,height=700');
-                    if (iframe.parentNode) {
-                        document.body.removeChild(iframe);
-                    }
-                }
-            };
-            
-            iframe.onerror = function() {
-                console.error('Error al cargar el ticket');
-                alert('⚠️ Error al cargar el ticket');
-                if (iframe.parentNode) {
-                    document.body.removeChild(iframe);
-                }
-            };
-            
-            iframe.src = ticketUrl;
-            document.body.appendChild(iframe);
+                    }, 500);
+                };
+            } else {
+                console.error('❌ No se pudo abrir ventana de ticket (bloqueador de popups?)');
+                alert('⚠️ Por favor permita ventanas emergentes para imprimir el ticket');
+            }
         }
         
         // Re-enfocar al hacer click en cualquier parte
         document.addEventListener('click', function() {
-            inputBarra.focus();
+            if (document.activeElement !== inputBarra) {
+                inputBarra.focus();
+            }
         });
         
         // Limpiar input después de submit

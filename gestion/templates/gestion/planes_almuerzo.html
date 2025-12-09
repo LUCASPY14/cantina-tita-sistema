@@ -305,7 +305,7 @@ function planesAlmuerzo() {
             if (this.filtros.buscar) params.append('buscar', this.filtros.buscar);
             if (this.filtros.activo) params.append('activo', this.filtros.activo);
             
-            window.location.href = '{% url "planes_almuerzo" %}?' + params.toString();
+            window.location.href = '{% url "pos:planes_almuerzo" %}?' + params.toString();
         }
     }
 }
