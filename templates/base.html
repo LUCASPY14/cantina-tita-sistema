@@ -163,7 +163,7 @@
                     <li><a href="{% url 'admin:index' %}">⚙️ Administración</a></li>
                     <li><a href="{% url 'pos:dashboard_seguridad' %}">🔒 Seguridad</a></li>
                     <li class="menu-title"><span class="text-xs text-gray-500">Portal</span></li>
-                    <li><a href="{% url 'pos:portal_login' %}" target="_blank">🌐 Portal Clientes</a></li>
+                    <li><a href="{% url 'clientes:portal_login' %}" target="_blank">🌐 Portal Clientes</a></li>
                     <li>
                         <form method="post" action="{% url 'logout' %}" style="display: inline;">
                             {% csrf_token %}

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cargar Saldo - Cantina Tita</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div class="navbar bg-primary text-primary-content">
+        <div class="flex-1">
+            <a href="{% url 'clientes:portal_dashboard' %}" class="btn btn-ghost text-xl">🏪 Cantina Tita</a>
+        </div>
+        <div class="flex-none">
+            <div class="dropdown dropdown-end">
+                <label tabindex="0" class="btn btn-ghost btn-circle avatar placeholder">
+                    <div class="bg-neutral-focus text-neutral-content rounded-full w-10">
+                        <span>{{ cliente.nombres|first|upper }}</span>
+                    </div>
+                </label>
+                <ul tabindex="0" class="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 text-neutral rounded-box w-52">
+                    <li class="menu-title">
+                        <span>{{ cliente.nombre_completo }}</span>
+                    </li>
+                    <li><a href="{% url 'clientes:portal_dashboard' %}">🏠 Inicio</a></li>
+                    <li><a href="{% url 'clientes:portal_cargar_saldo' %}" class="active">💳 Cargar Saldo</a></li>
+                    <li><a href="{% url 'clientes:portal_pagos' %}">💰 Pagos</a></li>
+                    <li><a href="{% url 'clientes:portal_cambiar_password' %}">🔐 Cambiar Contraseña</a></li>
+                    <li><a href="{% url 'clientes:portal_logout' %}">🚪 Cerrar Sesión</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">💳 Cargar Saldo</h1>
+            <p class="text-gray-600 mt-2">Agrega saldo a las tarjetas de tus hijos de forma segura</p>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}error{% elif message.tags == 'success' %}success{% else %}info{% endif %} mb-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                        {% if message.tags == 'error' %}
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        {% elif message.tags == 'success' %}
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        {% else %}
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        {% endif %}
+                    </svg>
+                    <span>{{ message }}</span>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Formulario de carga -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title text-xl mb-4">Nueva Carga de Saldo</h2>
+
+                <form method="post" class="space-y-6">
+                    {% csrf_token %}
+
+                    <!-- Seleccionar Hijo -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">Seleccionar Hijo</span>
+                        </label>
+                        <select name="hijo_id" class="select select-bordered w-full" required>
+                            <option value="">-- Seleccionar hijo --</option>
+                            {% for hijo in hijos_con_tarjetas %}
+                                <option value="{{ hijo.id_hijo }}">
+                                    {{ hijo.nombre_completo }} - Tarjeta: {{ hijo.tarjetas.nro_tarjeta }} (Saldo: Gs. {{ hijo.tarjetas.saldo_actual|floatformat:0 }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Monto -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">Monto a Cargar (Gs.)</span>
+                        </label>
+                        <input type="number" name="monto" class="input input-bordered w-full" placeholder="Ej: 50000" min="1000" step="1000" required>
+                        <label class="label">
+                            <span class="label-text-alt text-gray-500">Mínimo Gs. 1.000 - Múltiplos de Gs. 1.000</span>
+                        </label>
+                    </div>
+
+                    <!-- Método de Pago -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">Método de Pago</span>
+                        </label>
+                        <select name="metodo_pago" class="select select-bordered w-full" required>
+                            <option value="">-- Seleccionar método --</option>
+                            <option value="tarjeta_credito">💳 Tarjeta de Crédito</option>
+                            <option value="tarjeta_debito">💳 Tarjeta de Débito</option>
+                            <option value="transferencia">🏦 Transferencia Bancaria</option>
+                            <option value="efectivo">💵 Efectivo (en agencia)</option>
+                        </select>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="card-actions justify-end space-x-2">
+                        <a href="{% url 'clientes:portal_dashboard' %}" class="btn btn-ghost">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Cargar Saldo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Información de seguridad -->
+        <div class="alert alert-info mt-6">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+                <h3 class="font-bold">Información de Seguridad</h3>
+                <div class="text-xs">
+                    <p>• Todas las transacciones están protegidas con encriptación SSL</p>
+                    <p>• Los pagos se procesan a través de MetrePay, gateway de pagos seguro</p>
+                    <p>• Recibirás confirmación por email de cada carga realizada</p>
+                    <p>• El saldo se acredita inmediatamente en la tarjeta del estudiante</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagos - Cantina Tita</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        function calcularTotal() {
+            const checkboxes = document.querySelectorAll('input[name="venta_ids"]:checked');
+            let total = 0;
+            checkboxes.forEach(cb => {
+                const row = cb.closest('tr');
+                const saldoCell = row.querySelector('td:nth-child(4)');
+                if (saldoCell) {
+                    const saldo = parseFloat(saldoCell.textContent.replace(/[^\d.-]/g, ''));
+                    total += saldo;
+                }
+            });
+            document.getElementById('monto_total').value = total.toFixed(0);
+            document.getElementById('total_display').textContent = 'Gs. ' + total.toLocaleString();
+        }
+
+        function toggleAllCheckboxes() {
+            const checkboxes = document.querySelectorAll('input[name="venta_ids"]');
+            const selectAll = document.getElementById('select_all');
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+            calcularTotal();
+        }
+    </script>
+</head>
+<body>
+    <div class="navbar bg-primary text-primary-content">
+        <div class="flex-1">
+            <a href="{% url 'clientes:portal_dashboard' %}" class="btn btn-ghost text-xl">🏪 Cantina Tita</a>
+        </div>
+        <div class="flex-none">
+            <div class="dropdown dropdown-end">
+                <label tabindex="0" class="btn btn-ghost btn-circle avatar placeholder">
+                    <div class="bg-neutral-focus text-neutral-content rounded-full w-10">
+                        <span>{{ cliente.nombres|first|upper }}</span>
+                    </div>
+                </label>
+                <ul tabindex="0" class="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 text-neutral rounded-box w-52">
+                    <li class="menu-title">
+                        <span>{{ cliente.nombre_completo }}</span>
+                    </li>
+                    <li><a href="{% url 'clientes:portal_dashboard' %}">🏠 Inicio</a></li>
+                    <li><a href="{% url 'clientes:portal_cargar_saldo' %}">💳 Cargar Saldo</a></li>
+                    <li><a href="{% url 'clientes:portal_pagos' %}" class="active">💰 Pagos</a></li>
+                    <li><a href="{% url 'clientes:portal_cambiar_password' %}">🔐 Cambiar Contraseña</a></li>
+                    <li><a href="{% url 'clientes:portal_logout' %}">🚪 Cerrar Sesión</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">💰 Pagos Pendientes</h1>
+            <p class="text-gray-600 mt-2">Realiza pagos de deudas pendientes de tus hijos</p>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}error{% elif message.tags == 'success' %}success{% else %}info{% endif %} mb-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                        {% if message.tags == 'error' %}
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        {% elif message.tags == 'success' %}
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        {% else %}
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        {% endif %}
+                    </svg>
+                    <span>{{ message }}</span>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if deudas %}
+            <!-- Resumen de deuda -->
+            <div class="stats stats-vertical lg:stats-horizontal shadow mb-8 w-full">
+                <div class="stat">
+                    <div class="stat-figure text-error">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-title">Total Deuda</div>
+                    <div class="stat-value text-error">Gs. {{ total_deuda|floatformat:0 }}</div>
+                    <div class="stat-desc">{{ deudas.count }} compras pendientes</div>
+                </div>
+            </div>
+
+            <!-- Formulario de pago -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title text-xl mb-4">Seleccionar Deudas a Pagar</h2>
+
+                    <form method="post" class="space-y-6">
+                        {% csrf_token %}
+
+                        <!-- Tabla de deudas -->
+                        <div class="overflow-x-auto">
+                            <table class="table table-zebra w-full">
+                                <thead>
+                                    <tr>
+                                        <th>
+                                            <label>
+                                                <input type="checkbox" id="select_all" class="checkbox" onchange="toggleAllCheckboxes()">
+                                            </label>
+                                        </th>
+                                        <th>Fecha</th>
+                                        <th>Hijo</th>
+                                        <th>Saldo Pendiente</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for deuda in deudas %}
+                                        <tr>
+                                            <td>
+                                                <label>
+                                                    <input type="checkbox" name="venta_ids" value="{{ deuda.id_venta }}" class="checkbox" onchange="calcularTotal()">
+                                                </label>
+                                            </td>
+                                            <td>{{ deuda.fecha_venta|date:"d/m/Y H:i" }}</td>
+                                            <td>
+                                                <div class="font-semibold">{{ deuda.id_tarjeta.id_hijo.nombre_completo }}</div>
+                                                <div class="text-sm text-gray-500">Tarjeta: {{ deuda.id_tarjeta.nro_tarjeta }}</div>
+                                            </td>
+                                            <td class="font-mono font-semibold text-error">Gs. {{ deuda.saldo_pendiente|floatformat:0 }}</td>
+                                            <td>
+                                                <span class="badge badge-warning">{{ deuda.estado_pago }}</span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Resumen del pago -->
+                        <div class="bg-base-200 p-4 rounded-lg">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <span class="font-semibold">Total a Pagar:</span>
+                                    <span id="total_display" class="text-xl font-bold text-primary ml-2">Gs. 0</span>
+                                </div>
+                                <input type="hidden" name="monto_total" id="monto_total" value="0">
+                            </div>
+                        </div>
+
+                        <!-- Método de Pago -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-semibold">Método de Pago</span>
+                            </label>
+                            <select name="metodo_pago" class="select select-bordered w-full" required>
+                                <option value="">-- Seleccionar método --</option>
+                                <option value="tarjeta_credito">💳 Tarjeta de Crédito</option>
+                                <option value="tarjeta_debito">💳 Tarjeta de Débito</option>
+                                <option value="transferencia">🏦 Transferencia Bancaria</option>
+                                <option value="efectivo">💵 Efectivo (en agencia)</option>
+                            </select>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="card-actions justify-end space-x-2">
+                            <a href="{% url 'clientes:portal_dashboard' %}" class="btn btn-ghost">Cancelar</a>
+                            <button type="submit" class="btn btn-primary" id="pagar_btn" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                </svg>
+                                Realizar Pago
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <!-- No hay deudas -->
+            <div class="alert alert-success">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>¡Excelente! No tienes deudas pendientes de pago.</span>
+            </div>
+        {% endif %}
+
+        <!-- Información de seguridad -->
+        <div class="alert alert-info mt-6">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+                <h3 class="font-bold">Información de Seguridad</h3>
+                <div class="text-xs">
+                    <p>• Todas las transacciones están protegidas con encriptación SSL</p>
+                    <p>• Los pagos se procesan a través de MetrePay, gateway de pagos seguro</p>
+                    <p>• Recibirás confirmación por email de cada pago realizado</p>
+                    <p>• Las deudas se actualizan inmediatamente después del pago</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Habilitar/deshabilitar botón de pago
+        document.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('input[name="venta_ids"]:checked');
+            const pagarBtn = document.getElementById('pagar_btn');
+            pagarBtn.disabled = checkboxes.length === 0;
+        });
+    </script>
+</body>
+</html>

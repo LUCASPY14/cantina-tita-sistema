@@ -138,7 +138,9 @@
                 <div class="flex justify-center mb-4">
                     {% if hijo.foto_perfil %}
                         <img src="{{ hijo.foto_perfil.url }}" alt="{{ hijo.nombre_completo }}" 
-                             class="foto-preview">
+                             class="foto-preview lazy"
+                             loading="lazy"
+                             data-src="{{ hijo.foto_perfil.url }}">
                     {% else %}
                         <div class="sin-foto">
                             {{ hijo.nombre.0 }}{{ hijo.apellido.0 }}
@@ -380,5 +382,23 @@ function getCookie(name) {
 
 // Limpiar al cerrar ventana
 window.addEventListener('beforeunload', detenerCamara);
+
+// Lazy Loading para imágenes
+document.addEventListener('DOMContentLoaded', function() {
+    const lazyImages = document.querySelectorAll('img.lazy');
+    
+    const imageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                img.src = img.dataset.src;
+                img.classList.remove('lazy');
+                observer.unobserve(img);
+            }
+        });
+    });
+    
+    lazyImages.forEach(img => imageObserver.observe(img));
+});
 </script>
 {% endblock %}

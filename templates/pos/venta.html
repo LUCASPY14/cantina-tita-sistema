@@ -334,21 +334,12 @@
                 id="input-monto-recarga"
                 step="1000" 
                 min="1000" 
-                value="10000"
+                value=""
                 class="input input-bordered input-lg text-center text-2xl"
                 @keyup.enter="confirmarMontoRecarga()"
             >
             <label class="label">
-                <span class="label-text-alt">Mínimo: Gs. 1.000</span>
-            </label>
-        </div>
-        
-        <!-- Botones rápidos -->
-        <div class="grid grid-cols-3 gap-2 mt-4">
-            <button class="btn btn-outline btn-sm" @click="setMontoRecarga(5000)">Gs. 5.000</button>
-            <button class="btn btn-outline btn-sm" @click="setMontoRecarga(10000)">Gs. 10.000</button>
-            <button class="btn btn-outline btn-sm" @click="setMontoRecarga(20000)">Gs. 20.000</button>
-            <button class="btn btn-outline btn-sm" @click="setMontoRecarga(30000)">Gs. 30.000</button>
+                <span class="label-text-alt text-warning">💡 Para pagos con comisión (débito/QR, crédito/QR, Tigo), ingresa el monto total incluyendo la comisión mostrada arriba.</span>
             <button class="btn btn-outline btn-sm" @click="setMontoRecarga(50000)">Gs. 50.000</button>
             <button class="btn btn-outline btn-sm" @click="setMontoRecarga(100000)">Gs. 100.000</button>
         </div>
@@ -395,7 +386,13 @@
             
             <div class="flex justify-between items-center text-2xl font-bold text-primary border-t pt-2 mt-2">
                 <span>TOTAL A PAGAR:</span>
-                <span>Gs. <span x-text="Math.round(total).toLocaleString('es-PY')"></span></span>
+                <span>Gs. <span x-text="Math.round(total + pagosMixtos.reduce((sum, p) => sum + (p.id == 3 ? p.monto * 0.03 : p.id == 2 ? p.monto * 0.05 : p.id == 4 ? p.monto * 0.05 : 0), 0)).toLocaleString('es-PY')"></span>
+            </div>
+            
+            <!-- Comisión estimada -->
+            <div class="text-sm text-orange-600 mt-1">
+                <span>Comisión estimada:</span>
+                <span>Gs. <span x-text="Math.round(pagosMixtos.reduce((sum, p) => sum + ((p.id || p.medio_id) == 3 ? p.monto * 0.03 : (p.id || p.medio_id) == 2 ? p.monto * 0.05 : (p.id || p.medio_id) == 4 ? p.monto * 0.05 : 0), 0)).toLocaleString('es-PY')"></span>
             </div>
         </div>
         
@@ -428,10 +425,10 @@
                     </span>
                 </div>
                 <div class="flex justify-between text-base font-bold" 
-                     :class="{'text-error': pendientePago > 0.01, 'text-success': pendientePago <= 0.01}">
+                     :class="{'text-error': (total + pagosMixtos.reduce((sum, p) => sum + (p.id == 3 ? p.monto * 0.03 : p.id == 2 ? p.monto * 0.05 : p.id == 4 ? p.monto * 0.05 : 0), 0) - totalPagado) > 0.01, 'text-success': (total + pagosMixtos.reduce((sum, p) => sum + (p.id == 3 ? p.monto * 0.03 : p.id == 2 ? p.monto * 0.05 : p.id == 4 ? p.monto * 0.05 : 0), 0) - totalPagado) <= 0.01}">
                     <span>Pendiente:</span>
                     <span class="font-mono">
-                        Gs. <span x-text="Math.round(pendientePago).toLocaleString('es-PY')"></span>
+                        Gs. <span x-text="Math.round(total + pagosMixtos.reduce((sum, p) => sum + (p.id == 3 ? p.monto * 0.03 : p.id == 2 ? p.monto * 0.05 : p.id == 4 ? p.monto * 0.05 : 0), 0) - totalPagado).toLocaleString('es-PY')"></span>
                     </span>
                 </div>
             </div>
@@ -458,7 +455,7 @@
             </button>
             
             <!-- Transferencia -->
-            <button @click="agregarPago(2, 'Transferencia')" class="btn btn-lg btn-outline btn-info" type="button">
+            <button @click="agregarPago(5, 'Transferencia')" class="btn btn-lg btn-outline btn-info" type="button">
                 🏦 Transferencia
             </button>
             
@@ -468,12 +465,12 @@
             </button>
             
             <!-- Tarjeta Crédito/QR -->
-            <button @click="agregarPago(4, 'Crédito/QR')" class="btn btn-lg btn-outline btn-secondary" type="button">
+            <button @click="agregarPago(2, 'Crédito/QR')" class="btn btn-lg btn-outline btn-secondary" type="button">
                 💎 Crédito/QR
             </button>
             
             <!-- Giros Tigo -->
-            <button @click="agregarPago(5, 'Giros Tigo')" class="btn btn-lg btn-outline btn-warning" type="button">
+            <button @click="agregarPago(4, 'Giros Tigo')" class="btn btn-lg btn-outline btn-warning" type="button">
                 📱 Giros Tigo
             </button>
         </div>
@@ -489,6 +486,23 @@
             <div class="text-sm" x-show="selectedCard && selectedCard.saldo != null">
                 <strong>Saldo:</strong> Gs. <span x-text="selectedCard && selectedCard.saldo != null ? Math.round(selectedCard.saldo).toLocaleString('es-PY') : '0'"></span>
             </div>
+        </div>
+        
+        <!-- Código de Transacción (solo para ciertos medios) -->
+        <div class="form-control mb-4">
+            <label class="label">
+                <span class="label-text font-semibold">🔢 Código de Transacción</span>
+            </label>
+            <input 
+                type="text" 
+                x-model="codigoTransaccion"
+                placeholder="Ingrese el código de transacción..."
+                class="input input-bordered w-full"
+                maxlength="100"
+            >
+            <label class="label">
+                <span class="label-text-alt text-error">Requerido para Transferencia, Débito/QR, Crédito/QR y Giros Tigo</span>
+            </label>
         </div>
         
         <div class="modal-action">

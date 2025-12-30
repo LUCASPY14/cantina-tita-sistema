@@ -23,11 +23,13 @@
                     <li class="menu-title">
                         <span>{{ cliente.nombre_completo }}</span>
                     </li>
-                    <li><a href="{% url 'pos:portal_dashboard' %}">🏠 Inicio</a></li>
-                    <li><a href="{% url 'pos:portal_recargas' %}">💳 Recargas</a></li>
-                    <li><a href="{% url 'pos:portal_cambiar_password' %}">🔐 Cambiar Contraseña</a></li>
-                    <li><a href="{% url 'pos:configurar_2fa' %}">🔒 Configurar 2FA</a></li>
-                    <li><a href="{% url 'pos:portal_logout' %}">🚪 Cerrar Sesión</a></li>
+                    <li><a href="{% url 'clientes:portal_dashboard' %}">🏠 Inicio</a></li>
+                    <li><a href="{% url 'clientes:portal_cargar_saldo' %}">💳 Cargar Saldo</a></li>
+                    <li><a href="{% url 'clientes:portal_pagos' %}">💰 Pagos</a></li>
+                    <li><a href="{% url 'clientes:portal_recargas' %}">📊 Historial Recargas</a></li>
+                    <li><a href="{% url 'clientes:portal_cambiar_password' %}">🔐 Cambiar Contraseña</a></li>
+                    <li><a href="{% url 'clientes:configurar_2fa' %}">🔒 Configurar 2FA</a></li>
+                    <li><a href="{% url 'clientes:portal_logout' %}">🚪 Cerrar Sesión</a></li>
                 </ul>
             </div>
         </div>
@@ -122,11 +124,11 @@
                     {% endwith %}
                     
                     <div class="card-actions justify-between mt-4">
-                        <a href="{% url 'pos:portal_consumos_hijo' hijo.id_hijo %}" 
+                        <a href="{% url 'clientes:portal_consumos_hijo' hijo.id_hijo %}" 
                            class="btn btn-primary btn-sm">
                             📊 Consumos
                         </a>
-                        <a href="{% url 'pos:portal_restricciones_hijo' hijo.id_hijo %}" 
+                        <a href="{% url 'clientes:portal_restricciones_hijo' hijo.id_hijo %}" 
                            class="btn btn-warning btn-sm">
                             🚫 Restricciones
                         </a>
@@ -134,6 +136,52 @@
                 </div>
             </div>
             {% endfor %}
+        </div>
+
+        <!-- Acciones Rápidas -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">🚀 Acciones Rápidas</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <a href="{% url 'clientes:portal_cargar_saldo' %}" class="card bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg hover:shadow-xl transition-shadow">
+                    <div class="card-body items-center text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <h3 class="card-title text-lg">Cargar Saldo</h3>
+                        <p class="text-sm opacity-90">Agrega saldo a tarjetas</p>
+                    </div>
+                </a>
+
+                <a href="{% url 'clientes:portal_pagos' %}" class="card bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg hover:shadow-xl transition-shadow">
+                    <div class="card-body items-center text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                        </svg>
+                        <h3 class="card-title text-lg">Pagar Deudas</h3>
+                        <p class="text-sm opacity-90">Liquida pagos pendientes</p>
+                    </div>
+                </a>
+
+                <a href="{% url 'clientes:portal_recargas' %}" class="card bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg hover:shadow-xl transition-shadow">
+                    <div class="card-body items-center text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        <h3 class="card-title text-lg">Historial</h3>
+                        <p class="text-sm opacity-90">Ver recargas realizadas</p>
+                    </div>
+                </a>
+
+                <a href="{% url 'clientes:portal_cambiar_password' %}" class="card bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg hover:shadow-xl transition-shadow">
+                    <div class="card-body items-center text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                        <h3 class="card-title text-lg">Seguridad</h3>
+                        <p class="text-sm opacity-90">Cambiar contraseña</p>
+                    </div>
+                </a>
+            </div>
         </div>
 
         <!-- Consumos Recientes -->

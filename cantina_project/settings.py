@@ -352,7 +352,28 @@ RECAPTCHA_PRIVATE_KEY = config('RECAPTCHA_PRIVATE_KEY', default='6LeIxAcTAAAAAGG
 # Silenciar warning de claves de prueba en desarrollo
 SILENCED_SYSTEM_CHECKS = ['django_recaptcha.recaptcha_test_key_error']
 
+# =============================================================================
+# CONFIGURACIÓN DE CACHE
+# =============================================================================
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
+# Cache timeout en segundos (5 minutos para dashboard)
+CACHE_MIDDLEWARE_SECONDS = 300
+CACHE_MIDDLEWARE_KEY_PREFIX = 'cantinatita'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# =============================================================================
+# CONFIGURACIÓN DE METREPAY (PAYMENT GATEWAY)
+# =============================================================================
+METREPAY_API_TOKEN = config('METREPAY_API_TOKEN', default='')
+METREPAY_BASE_URL = config('METREPAY_BASE_URL', default='https://test.metrepay.com/api')

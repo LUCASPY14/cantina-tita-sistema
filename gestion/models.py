@@ -620,6 +620,42 @@ class CargasSaldo(models.Model):
     monto_cargado = models.DecimalField(db_column='Monto_Cargado', max_digits=10, decimal_places=2)
     referencia = models.CharField(db_column='Referencia', max_length=100, blank=True, null=True)
 
+    # Campos adicionales para integración MetrePay
+    estado = models.CharField(
+        max_length=20,
+        choices=[
+            ('PENDIENTE', 'Pendiente'),
+            ('CONFIRMADO', 'Confirmado'),
+            ('CANCELADO', 'Cancelado'),
+            ('ERROR', 'Error')
+        ],
+        default='PENDIENTE',
+        help_text='Estado de la transacción con MetrePay'
+    )
+    pay_request_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text='ID de transacción de MetrePay'
+    )
+    tx_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text='ID de transacción (txId) de MetrePay'
+    )
+    fecha_confirmacion = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text='Fecha de confirmación del pago'
+    )
+    custom_identifier = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text='Identificador único para MetrePay'
+    )
+
     class Meta:
         managed = False
         db_table = 'cargas_saldo'
@@ -1587,9 +1623,11 @@ class AuditoriaEmpleados(models.Model):
     id_auditoria = models.BigAutoField(db_column='ID_Auditoria', primary_key=True)
     id_empleado = models.ForeignKey(
         Empleado,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         db_column='ID_Empleado',
-        related_name='auditorias'
+        related_name='auditorias',
+        null=True,
+        blank=True
     )
     fecha_cambio = models.DateTimeField(db_column='Fecha_Cambio')
     campo_modificado = models.CharField(db_column='Campo_Modificado', max_length=50)
@@ -1612,9 +1650,11 @@ class AuditoriaUsuariosWeb(models.Model):
     id_auditoria = models.BigAutoField(db_column='ID_Auditoria', primary_key=True)
     id_cliente = models.ForeignKey(
         Cliente,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         db_column='ID_Cliente',
-        related_name='auditorias_web'
+        related_name='auditorias_web',
+        null=True,
+        blank=True
     )
     fecha_cambio = models.DateTimeField(db_column='Fecha_Cambio')
     campo_modificado = models.CharField(db_column='Campo_Modificado', max_length=50)
@@ -1637,8 +1677,10 @@ class AuditoriaComisiones(models.Model):
     id_auditoria = models.BigAutoField(db_column='ID_Auditoria', primary_key=True)
     id_tarifa = models.ForeignKey(
         TarifasComision,
-        on_delete=models.CASCADE,
-        db_column='ID_Tarifa'
+        on_delete=models.SET_NULL,
+        db_column='ID_Tarifa',
+        null=True,
+        blank=True
     )
     fecha_cambio = models.DateTimeField(db_column='Fecha_Cambio')
     campo_modificado = models.CharField(db_column='Campo_Modificado', max_length=50)
@@ -1646,7 +1688,7 @@ class AuditoriaComisiones(models.Model):
     valor_nuevo = models.DecimalField(db_column='Valor_Nuevo', max_digits=10, decimal_places=4, blank=True, null=True)
     id_empleado_modifico = models.ForeignKey(
         Empleado,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         db_column='ID_Empleado_Modifico',
         blank=True,
         null=True

@@ -21,6 +21,12 @@ from .api_views import (
     EmpleadoViewSet,
     ProveedorViewSet,
 )
+from django.http import JsonResponse
+
+
+def api_root_plain(request):
+    """Root público simple para `/api/v1/` (evita permisos DRF)."""
+    return JsonResponse({'message': 'Cantina Tita API v1', 'documentation': '/swagger/'})
 
 # Router principal
 router = DefaultRouter()
@@ -43,5 +49,6 @@ urlpatterns = [
     path('auth/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     
     # Endpoints de la API
+    path('', api_root_plain, name='api-root'),
     path('', include(router.urls)),
 ]

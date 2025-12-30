@@ -25,7 +25,7 @@
                 {% endfor %}
             {% endif %}
 
-            <form method="post" action="{% url 'pos:verificar_2fa' %}">
+            <form method="post" action="{% url 'clientes:verificar_2fa' %}">
                 {% csrf_token %}
                 
                 <div class="form-control">
@@ -64,7 +64,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <span>Cada código de respaldo solo se puede usar una vez. Asegúrate de guardar los restantes.</span>
                 </div>
-                <form method="post" action="{% url 'pos:verificar_2fa' %}">
+                <form method="post" action="{% url 'clientes:verificar_2fa' %}">
                     {% csrf_token %}
                     <div class="form-control">
                         <label class="label">
@@ -82,7 +82,7 @@
             </div>
 
             <div class="mt-6 text-center">
-                <a href="{% url 'pos:portal_logout' %}" class="link link-hover text-sm">
+                <a href="{% url 'clientes:portal_logout' %}" class="link link-hover text-sm">
                     ← Volver al Login
                 </a>
             </div>

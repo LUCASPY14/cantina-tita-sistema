@@ -254,9 +254,15 @@
                 <span>Descuento:</span>
                 <span>Gs. {{ venta.descuento|default:0|floatformat:0 }}</span>
             </div>
+            {% if total_comision > 0 %}
+            <div>
+                <span>Comisión:</span>
+                <span>Gs. {{ total_comision|floatformat:0 }}</span>
+            </div>
+            {% endif %}
             <div class="total-final">
-                <span>TOTAL:</span>
-                <span>Gs. {{ venta.monto_total|floatformat:0 }}</span>
+                <span>TOTAL A PAGAR:</span>
+                <span>Gs. {{ (venta.monto_total + total_comision)|floatformat:0 }}</span>
             </div>
         </div>
         

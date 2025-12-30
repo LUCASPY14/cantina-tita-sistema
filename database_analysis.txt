@@ -1,9 +1,9 @@
 ANÁLISIS COMPLETO DE LA BASE DE DATOS 'cantinatitadb'
 ================================================================================
 
-Total de tablas: 63
-Tablas regulares: 52
-Vistas: 11
+Total de tablas: 113
+Tablas regulares: 94
+Vistas: 19
 
 
 ================================================================================
@@ -20,6 +20,21 @@ Columnas:
 
 Relaciones:
   ID_Empleado_Responsable -> empleados.ID_Empleado
+
+================================================================================
+TABLA: alergenos
+================================================================================
+
+Columnas:
+  ID_Alergeno: int (NO) [PRI] auto_increment
+  Nombre: varchar(100) (NO) [UNI] 
+  Descripcion: text (YES) [] 
+  Palabras_Clave: json (NO) [] 
+  Nivel_Severidad: enum('CRITICO','ALTO','MEDIO','BAJO') (YES) [MUL] 
+  Icono: varchar(10) (YES) [] 
+  Activo: tinyint(1) (YES) [MUL] 
+  Fecha_Creacion: datetime (YES) [] DEFAULT_GENERATED
+  Usuario_Creacion: varchar(100) (YES) [] 
 
 ================================================================================
 TABLA: alertas_sistema
@@ -40,12 +55,56 @@ Relaciones:
   ID_Empleado_Resuelve -> empleados.ID_Empleado
 
 ================================================================================
+TABLA: anomalias_detectadas
+================================================================================
+
+Columnas:
+  ID_Anomalia: int (NO) [PRI] auto_increment
+  Usuario: varchar(100) (NO) [MUL] 
+  Tipo_Anomalia: enum('IP_NUEVA','HORARIO_INUSUAL','MULTIPLES_SESIONES','UBICACION_SOSPECHOSA') (NO) [MUL] 
+  IP_Address: varchar(45) (YES) [] 
+  Fecha_Deteccion: datetime (NO) [MUL] 
+  Descripcion: text (YES) [] 
+  Nivel_Riesgo: enum('BAJO','MEDIO','ALTO') (YES) [] 
+  Notificado: tinyint(1) (YES) [MUL] 
+
+================================================================================
+TABLA: aplicacion_pagos_compras
+================================================================================
+
+Columnas:
+  ID_Aplicacion: bigint (NO) [PRI] auto_increment
+  ID_Pago_Proveedor: bigint (NO) [MUL] 
+  ID_Compra: bigint (NO) [MUL] 
+  Monto_Aplicado: decimal(12,2) (NO) [] 
+  Fecha_Aplicacion: datetime (NO) [] DEFAULT_GENERATED
+
+Relaciones:
+  ID_Compra -> compras.ID_Compra
+  ID_Pago_Proveedor -> pagos_proveedores.ID_Pago_Proveedor
+
+================================================================================
+TABLA: aplicacion_pagos_ventas
+================================================================================
+
+Columnas:
+  ID_Aplicacion: bigint (NO) [PRI] auto_increment
+  ID_Pago_Venta: bigint (NO) [MUL] 
+  ID_Venta: bigint (NO) [MUL] 
+  Monto_Aplicado: bigint (NO) [] 
+  Fecha_Aplicacion: datetime (NO) [] DEFAULT_GENERATED
+
+Relaciones:
+  ID_Pago_Venta -> pagos_venta.ID_Pago_Venta
+  ID_Venta -> ventas.ID_Venta
+
+================================================================================
 TABLA: auditoria_comisiones
 ================================================================================
 
 Columnas:
   ID_Auditoria: bigint (NO) [PRI] auto_increment
-  ID_Tarifa: int (NO) [MUL] 
+  ID_Tarifa: int (YES) [MUL] 
   Fecha_Cambio: datetime (NO) [] DEFAULT_GENERATED
   Campo_Modificado: varchar(50) (NO) [] 
   Valor_Anterior: decimal(10,4) (YES) [] 
@@ -62,7 +121,7 @@ TABLA: auditoria_empleados
 
 Columnas:
   ID_Auditoria: bigint (NO) [PRI] auto_increment
-  ID_Empleado: int (NO) [MUL] 
+  ID_Empleado: int (YES) [MUL] 
   Fecha_Cambio: datetime (NO) [] DEFAULT_GENERATED
   Campo_Modificado: varchar(50) (NO) [] 
   Valor_Anterior: text (YES) [] 
@@ -73,12 +132,35 @@ Relaciones:
   ID_Empleado -> empleados.ID_Empleado
 
 ================================================================================
+TABLA: auditoria_operaciones
+================================================================================
+
+Columnas:
+  ID_Auditoria: int (NO) [PRI] auto_increment
+  Usuario: varchar(100) (NO) [MUL] 
+  Tipo_Usuario: enum('EMPLEADO','CLIENTE_WEB','ADMIN') (NO) [] 
+  ID_Usuario: int (YES) [] 
+  Operacion: varchar(100) (NO) [MUL] 
+  Tabla_Afectada: varchar(100) (YES) [MUL] 
+  ID_Registro: int (YES) [] 
+  Descripcion: text (YES) [] 
+  Datos_Anteriores: json (YES) [] 
+  Datos_Nuevos: json (YES) [] 
+  IP_Address: varchar(45) (YES) [] 
+  ciudad: varchar(100) (YES) [] 
+  pais: varchar(100) (YES) [] 
+  User_Agent: text (YES) [] 
+  Fecha_Operacion: datetime (NO) [MUL] 
+  Resultado: enum('EXITOSO','FALLIDO') (NO) [] 
+  Mensaje_Error: text (YES) [] 
+
+================================================================================
 TABLA: auditoria_usuarios_web
 ================================================================================
 
 Columnas:
   ID_Auditoria: bigint (NO) [PRI] auto_increment
-  ID_Cliente: int (NO) [MUL] 
+  ID_Cliente: int (YES) [MUL] 
   Fecha_Cambio: datetime (NO) [] DEFAULT_GENERATED
   Campo_Modificado: varchar(50) (NO) [] 
   Valor_Anterior: text (YES) [] 
@@ -86,7 +168,113 @@ Columnas:
   IP_Origen: varchar(45) (YES) [] 
 
 Relaciones:
-  ID_Cliente -> usuarios_web_clientes.ID_Cliente
+  ID_Cliente -> clientes.ID_Cliente
+
+================================================================================
+TABLA: autenticacion_2fa
+================================================================================
+
+Columnas:
+  id_2fa: int (NO) [PRI] auto_increment
+  usuario: varchar(100) (NO) [MUL] 
+  tipo_usuario: enum('ADMIN','CAJERO','CLIENTE_WEB') (NO) [] 
+  secret_key: varchar(32) (NO) [] 
+  backup_codes: text (YES) [] 
+  habilitado: tinyint(1) (YES) [MUL] 
+  fecha_activacion: datetime (YES) [] 
+  ultima_verificacion: datetime (YES) [] 
+  fecha_creacion: datetime (YES) [] DEFAULT_GENERATED
+
+================================================================================
+TABLA: auth_group
+================================================================================
+
+Columnas:
+  id: int (NO) [PRI] auto_increment
+  name: varchar(150) (NO) [UNI] 
+
+================================================================================
+TABLA: auth_group_permissions
+================================================================================
+
+Columnas:
+  id: bigint (NO) [PRI] auto_increment
+  group_id: int (NO) [MUL] 
+  permission_id: int (NO) [MUL] 
+
+Relaciones:
+  group_id -> auth_group.id
+  permission_id -> auth_permission.id
+
+================================================================================
+TABLA: auth_permission
+================================================================================
+
+Columnas:
+  id: int (NO) [PRI] auto_increment
+  name: varchar(255) (NO) [] 
+  content_type_id: int (NO) [MUL] 
+  codename: varchar(100) (NO) [] 
+
+Relaciones:
+  content_type_id -> django_content_type.id
+
+================================================================================
+TABLA: auth_user
+================================================================================
+
+Columnas:
+  id: int (NO) [PRI] auto_increment
+  password: varchar(128) (NO) [] 
+  last_login: datetime(6) (YES) [] 
+  is_superuser: tinyint(1) (NO) [] 
+  username: varchar(150) (NO) [UNI] 
+  first_name: varchar(150) (NO) [] 
+  last_name: varchar(150) (NO) [] 
+  email: varchar(254) (NO) [] 
+  is_staff: tinyint(1) (NO) [] 
+  is_active: tinyint(1) (NO) [] 
+  date_joined: datetime(6) (NO) [] 
+
+================================================================================
+TABLA: auth_user_groups
+================================================================================
+
+Columnas:
+  id: bigint (NO) [PRI] auto_increment
+  user_id: int (NO) [MUL] 
+  group_id: int (NO) [MUL] 
+
+Relaciones:
+  group_id -> auth_group.id
+  user_id -> auth_user.id
+
+================================================================================
+TABLA: auth_user_user_permissions
+================================================================================
+
+Columnas:
+  id: bigint (NO) [PRI] auto_increment
+  user_id: int (NO) [MUL] 
+  permission_id: int (NO) [MUL] 
+
+Relaciones:
+  user_id -> auth_user.id
+  permission_id -> auth_permission.id
+
+================================================================================
+TABLA: bloqueos_cuenta
+================================================================================
+
+Columnas:
+  ID_Bloqueo: int (NO) [PRI] auto_increment
+  Usuario: varchar(100) (NO) [MUL] 
+  Tipo_Usuario: enum('EMPLEADO','CLIENTE_WEB','ADMIN') (NO) [] 
+  Motivo: varchar(200) (YES) [] 
+  Fecha_Bloqueo: datetime (NO) [] 
+  Fecha_Desbloqueo: datetime (YES) [MUL] 
+  Activo: tinyint(1) (NO) [] 
+  Bloqueado_Por: varchar(100) (YES) [] 
 
 ================================================================================
 TABLA: cajas
@@ -106,7 +294,7 @@ Columnas:
   ID_Carga: bigint (NO) [PRI] auto_increment
   Nro_Tarjeta: varchar(20) (NO) [MUL] 
   ID_Cliente_Origen: int (YES) [MUL] 
-  ID_Nota_Credito_Origen: bigint (YES) [MUL] 
+  ID_Nota: bigint (YES) [MUL] 
   Fecha_Carga: datetime (NO) [] DEFAULT_GENERATED
   Monto_Cargado: decimal(10,2) (NO) [] 
   Referencia: varchar(100) (YES) [] 
@@ -114,7 +302,7 @@ Columnas:
 Relaciones:
   Nro_Tarjeta -> tarjetas.Nro_Tarjeta
   ID_Cliente_Origen -> clientes.ID_Cliente
-  ID_Nota_Credito_Origen -> notas_credito.ID_Nota
+  ID_Nota -> notas_credito_cliente.ID_Nota
 
 ================================================================================
 TABLA: categorias
@@ -128,6 +316,19 @@ Columnas:
 
 Relaciones:
   ID_Categoria_Padre -> categorias.ID_Categoria
+
+================================================================================
+TABLA: categorias_promocion
+================================================================================
+
+Columnas:
+  ID_Categoria_Promocion: int (NO) [PRI] auto_increment
+  ID_Promocion: bigint (NO) [MUL] 
+  ID_Categoria: int (NO) [MUL] 
+
+Relaciones:
+  ID_Promocion -> promociones.ID_Promocion
+  ID_Categoria -> categorias.ID_Categoria
 
 ================================================================================
 TABLA: cierres_caja
@@ -154,9 +355,9 @@ TABLA: clientes
 
 Columnas:
   ID_Cliente: int (NO) [PRI] auto_increment
-  ID_Lista_Por_Defecto: int (NO) [MUL] 
+  ID_Lista: int (YES) [MUL] 
   ID_Tipo_Cliente: int (NO) [MUL] 
-  Nombres: varchar(100) (NO) [] 
+  Nombres: varchar(100) (NO) [MUL] 
   Apellidos: varchar(100) (NO) [] 
   Razon_Social: varchar(255) (YES) [] 
   Ruc_CI: varchar(20) (NO) [UNI] 
@@ -169,8 +370,8 @@ Columnas:
   Fecha_Registro: datetime (YES) [] DEFAULT_GENERATED
 
 Relaciones:
-  ID_Lista_Por_Defecto -> listas_precios.ID_Lista
   ID_Tipo_Cliente -> tipos_cliente.ID_Tipo_Cliente
+  ID_Lista -> listas_precios.ID_Lista
 
 ================================================================================
 TABLA: compras
@@ -183,6 +384,8 @@ Columnas:
   Monto_Total: decimal(12,2) (NO) [] 
   Nro_Factura: varchar(50) (YES) [] 
   Observaciones: text (YES) [] 
+  Saldo_Pendiente: decimal(12,2) (YES) [] 
+  Estado_Pago: enum('PENDIENTE','PARCIAL','PAGADA') (YES) [] 
 
 Relaciones:
   ID_Proveedor -> proveedores.ID_Proveedor
@@ -203,6 +406,24 @@ Relaciones:
   ID_Pago_Venta -> pagos_venta.ID_Pago_Venta
 
 ================================================================================
+TABLA: consumos_tarjeta
+================================================================================
+
+Columnas:
+  ID_Consumo: bigint (NO) [PRI] auto_increment
+  Nro_Tarjeta: varchar(20) (NO) [MUL] 
+  Fecha_Consumo: datetime (NO) [MUL] 
+  Monto_Consumido: decimal(10,2) (NO) [] 
+  Detalle: varchar(200) (YES) [] 
+  Saldo_Anterior: decimal(10,2) (NO) [] 
+  Saldo_Posterior: decimal(10,2) (NO) [] 
+  ID_Empleado_Registro: int (YES) [MUL] 
+
+Relaciones:
+  Nro_Tarjeta -> tarjetas.Nro_Tarjeta
+  ID_Empleado_Registro -> empleados.ID_Empleado
+
+================================================================================
 TABLA: costos_historicos
 ================================================================================
 
@@ -218,40 +439,25 @@ Relaciones:
   ID_Compra -> compras.ID_Compra
 
 ================================================================================
-TABLA: cta_corriente
+TABLA: cuentas_almuerzo_mensual
 ================================================================================
 
 Columnas:
-  ID_Movimiento: bigint (NO) [PRI] auto_increment
-  ID_Cliente: int (NO) [MUL] 
-  ID_Venta: bigint (YES) [MUL] 
-  Fecha: datetime (NO) [] DEFAULT_GENERATED
-  Tipo_Movimiento: enum('Cargo','Abono') (NO) [] 
-  Monto: bigint (NO) [] 
-  Referencia_Doc: varchar(50) (YES) [] 
-  Saldo_Acumulado: bigint (NO) [] 
+  ID_Cuenta: bigint (NO) [PRI] auto_increment
+  ID_Hijo: int (NO) [MUL] 
+  Anio: int (NO) [MUL] 
+  Mes: tinyint (NO) [] 
+  Cantidad_Almuerzos: int (NO) [] 
+  Monto_Total: decimal(10,2) (NO) [] 
+  Forma_Cobro: enum('CONTADO_ANTICIPADO','CREDITO_MENSUAL') (NO) [] 
+  Monto_Pagado: decimal(10,2) (NO) [] 
+  Estado: enum('PENDIENTE','PARCIAL','PAGADO') (NO) [MUL] 
+  Fecha_Generacion: date (NO) [MUL] 
+  Fecha_Actualizacion: datetime (YES) [] DEFAULT_GENERATED on update CURRENT_TIMESTAMP
+  Observaciones: text (YES) [] 
 
 Relaciones:
-  ID_Cliente -> clientes.ID_Cliente
-  ID_Venta -> ventas.ID_Venta
-
-================================================================================
-TABLA: cta_corriente_prov
-================================================================================
-
-Columnas:
-  ID_MovimientoProv: bigint (NO) [PRI] auto_increment
-  ID_Proveedor: int (NO) [MUL] 
-  ID_Compra: bigint (YES) [MUL] 
-  Fecha: datetime (NO) [] DEFAULT_GENERATED
-  Tipo_Movimiento: enum('Cargo','Abono') (NO) [] 
-  Monto: decimal(12,2) (NO) [] 
-  Referencia_Doc: varchar(50) (YES) [] 
-  Saldo_Acumulado: decimal(12,2) (NO) [] 
-
-Relaciones:
-  ID_Proveedor -> proveedores.ID_Proveedor
-  ID_Compra -> compras.ID_Compra
+  ID_Hijo -> hijos.ID_Hijo
 
 ================================================================================
 TABLA: datos_empresa
@@ -356,7 +562,23 @@ Columnas:
   Subtotal: decimal(12,2) (NO) [] 
 
 Relaciones:
-  ID_Nota -> notas_credito.ID_Nota
+  ID_Nota -> notas_credito_cliente.ID_Nota
+  ID_Producto -> productos.ID_Producto
+
+================================================================================
+TABLA: detalle_nota_credito_proveedor
+================================================================================
+
+Columnas:
+  ID_Detalle_NC_Proveedor: bigint (NO) [PRI] auto_increment
+  ID_Nota_Proveedor: bigint (NO) [MUL] 
+  ID_Producto: int (NO) [MUL] 
+  Cantidad: decimal(10,3) (NO) [] 
+  Precio_Unitario: decimal(12,2) (NO) [] 
+  Subtotal: decimal(12,2) (NO) [] 
+
+Relaciones:
+  ID_Nota_Proveedor -> notas_credito_proveedor.ID_Nota_Proveedor
   ID_Producto -> productos.ID_Producto
 
 ================================================================================
@@ -368,13 +590,58 @@ Columnas:
   ID_Venta: bigint (NO) [MUL] 
   ID_Producto: int (NO) [MUL] 
   Cantidad: decimal(10,3) (NO) [] 
-  Precio_Unitario_Total: bigint (NO) [] 
+  Precio_Unitario: bigint (NO) [] 
   Subtotal_Total: bigint (NO) [] 
-  Monto_IVA: bigint (NO) [] 
 
 Relaciones:
   ID_Venta -> ventas.ID_Venta
   ID_Producto -> productos.ID_Producto
+
+================================================================================
+TABLA: django_admin_log
+================================================================================
+
+Columnas:
+  id: int (NO) [PRI] auto_increment
+  action_time: datetime(6) (NO) [] 
+  object_id: longtext (YES) [] 
+  object_repr: varchar(200) (NO) [] 
+  action_flag: smallint unsigned (NO) [] 
+  change_message: longtext (NO) [] 
+  content_type_id: int (YES) [MUL] 
+  user_id: int (NO) [MUL] 
+
+Relaciones:
+  content_type_id -> django_content_type.id
+  user_id -> auth_user.id
+
+================================================================================
+TABLA: django_content_type
+================================================================================
+
+Columnas:
+  id: int (NO) [PRI] auto_increment
+  app_label: varchar(100) (NO) [MUL] 
+  model: varchar(100) (NO) [] 
+
+================================================================================
+TABLA: django_migrations
+================================================================================
+
+Columnas:
+  id: bigint (NO) [PRI] auto_increment
+  app: varchar(255) (NO) [] 
+  name: varchar(255) (NO) [] 
+  applied: datetime(6) (NO) [] 
+
+================================================================================
+TABLA: django_session
+================================================================================
+
+Columnas:
+  session_key: varchar(40) (NO) [PRI] 
+  session_data: longtext (NO) [] 
+  expire_date: datetime(6) (NO) [MUL] 
 
 ================================================================================
 TABLA: documentos_tributarios
@@ -419,6 +686,19 @@ Relaciones:
   ID_Rol -> tipos_rol_general.ID_Rol
 
 ================================================================================
+TABLA: grados
+================================================================================
+
+Columnas:
+  ID_Grado: int (NO) [PRI] auto_increment
+  Nombre_Grado: varchar(50) (NO) [UNI] 
+  Nivel: int (NO) [MUL] 
+  Orden_Visualizacion: int (NO) [] 
+  Es_Ultimo_Grado: tinyint(1) (YES) [] 
+  Activo: tinyint(1) (YES) [MUL] 
+  Fecha_Creacion: timestamp (YES) [] DEFAULT_GENERATED
+
+================================================================================
 TABLA: hijos
 ================================================================================
 
@@ -429,9 +709,31 @@ Columnas:
   Apellido: varchar(100) (NO) [] 
   Fecha_Nacimiento: date (YES) [] 
   Activo: tinyint(1) (YES) [] 
+  Foto_Perfil: varchar(255) (YES) [] 
+  Fecha_Foto: datetime (YES) [] 
+  Grado: varchar(50) (YES) [] 
+  Restricciones_Compra: text (YES) [] 
 
 Relaciones:
   ID_Cliente_Responsable -> clientes.ID_Cliente
+
+================================================================================
+TABLA: historial_grados_hijos
+================================================================================
+
+Columnas:
+  ID_Historial: int (NO) [PRI] auto_increment
+  ID_Hijo: int (NO) [MUL] 
+  Grado_Anterior: varchar(50) (YES) [] 
+  Grado_Nuevo: varchar(50) (NO) [] 
+  Anio_Escolar: int (NO) [MUL] 
+  Fecha_Cambio: timestamp (YES) [] DEFAULT_GENERATED
+  Motivo: enum('INGRESO','PROMOCION','CAMBIO_MANUAL','REINGRESO') (YES) [] 
+  Usuario_Registro: varchar(100) (YES) [] 
+  Observaciones: text (YES) [] 
+
+Relaciones:
+  ID_Hijo -> hijos.ID_Hijo
 
 ================================================================================
 TABLA: historico_precios
@@ -464,6 +766,36 @@ Columnas:
   Activo: tinyint(1) (YES) [] 
 
 ================================================================================
+TABLA: intentos_2fa
+================================================================================
+
+Columnas:
+  id_intento: int (NO) [PRI] auto_increment
+  usuario: varchar(100) (NO) [MUL] 
+  tipo_usuario: enum('ADMIN','CAJERO','CLIENTE_WEB') (NO) [] 
+  ip_address: varchar(45) (YES) [] 
+  ciudad: varchar(100) (YES) [] 
+  pais: varchar(100) (YES) [] 
+  codigo_ingresado: varchar(10) (YES) [] 
+  exitoso: tinyint(1) (YES) [MUL] 
+  tipo_codigo: enum('TOTP','BACKUP') (YES) [] 
+  fecha_intento: datetime (YES) [MUL] DEFAULT_GENERATED
+
+================================================================================
+TABLA: intentos_login
+================================================================================
+
+Columnas:
+  ID_Intento: int (NO) [PRI] auto_increment
+  Usuario: varchar(100) (NO) [MUL] 
+  IP_Address: varchar(45) (NO) [MUL] 
+  ciudad: varchar(100) (YES) [] 
+  pais: varchar(100) (YES) [] 
+  Fecha_Intento: datetime (NO) [] 
+  Exitoso: tinyint(1) (NO) [] 
+  Motivo_Fallo: varchar(100) (YES) [] 
+
+================================================================================
 TABLA: listas_precios
 ================================================================================
 
@@ -473,6 +805,25 @@ Columnas:
   Fecha_Vigencia: date (YES) [] 
   Moneda: varchar(3) (NO) [] 
   Activo: tinyint(1) (YES) [] 
+
+================================================================================
+TABLA: log_autorizaciones
+================================================================================
+
+Columnas:
+  ID_Log: bigint (NO) [PRI] auto_increment
+  ID_Tarjeta_Autorizacion: int (NO) [MUL] 
+  Codigo_Barra: varchar(50) (NO) [] 
+  Tipo_Operacion: enum('ANULAR_ALMUERZO','ANULAR_VENTA','ANULAR_RECARGA','MODIFICAR_PRECIO','OTRO') (NO) [MUL] 
+  ID_Registro_Afectado: bigint (YES) [] 
+  Descripcion: text (YES) [] 
+  ID_Usuario: int (YES) [] 
+  Fecha_Hora: datetime (YES) [MUL] DEFAULT_GENERATED
+  IP_Origen: varchar(45) (YES) [] 
+  Resultado: enum('EXITOSO','RECHAZADO','ERROR') (YES) [] 
+
+Relaciones:
+  ID_Tarjeta_Autorizacion -> tarjetas_autorizacion.ID_Tarjeta_Autorizacion
 
 ================================================================================
 TABLA: medios_pago
@@ -495,7 +846,7 @@ Columnas:
   ID_Empleado_Autoriza: int (NO) [MUL] 
   ID_Venta: bigint (YES) [MUL] 
   ID_Compra: bigint (YES) [MUL] 
-  Fecha_Hora: datetime (NO) [] DEFAULT_GENERATED
+  Fecha_Hora: datetime (NO) [MUL] DEFAULT_GENERATED
   Tipo_Movimiento: enum('Entrada','Salida','Ajuste') (NO) [] 
   Cantidad: decimal(10,3) (NO) [] 
   Stock_Resultante: decimal(10,3) (NO) [] 
@@ -508,23 +859,42 @@ Relaciones:
   ID_Compra -> compras.ID_Compra
 
 ================================================================================
-TABLA: notas_credito
+TABLA: notas_credito_cliente
 ================================================================================
 
 Columnas:
   ID_Nota: bigint (NO) [PRI] auto_increment
-  ID_Documento: bigint (NO) [UNI] 
+  Nro_Factura_Venta: bigint (YES) [UNI] 
   ID_Cliente: int (NO) [MUL] 
   ID_Venta_Original: bigint (YES) [MUL] 
   Fecha: datetime (NO) [] DEFAULT_GENERATED
   Monto_Total: decimal(12,2) (NO) [] 
-  Motivo_Devolucion: varchar(255) (YES) [] 
+  Observacion: varchar(255) (YES) [] 
   Estado: enum('Emitida','Aplicada','Anulada') (YES) [] 
 
 Relaciones:
-  ID_Documento -> documentos_tributarios.ID_Documento
+  Nro_Factura_Venta -> documentos_tributarios.ID_Documento
   ID_Cliente -> clientes.ID_Cliente
   ID_Venta_Original -> ventas.ID_Venta
+
+================================================================================
+TABLA: notas_credito_proveedor
+================================================================================
+
+Columnas:
+  ID_Nota_Proveedor: bigint (NO) [PRI] auto_increment
+  Nro_Factura_Compra: bigint (YES) [] 
+  ID_Proveedor: int (NO) [MUL] 
+  ID_Compra_Original: bigint (YES) [MUL] 
+  Fecha: datetime (NO) [MUL] 
+  Monto_Total: decimal(12,2) (NO) [] 
+  Observacion: varchar(255) (YES) [] 
+  Estado: enum('EMITIDA','APLICADA','ANULADA') (YES) [MUL] 
+  Fecha_Creacion: datetime (YES) [] DEFAULT_GENERATED
+
+Relaciones:
+  ID_Compra_Original -> compras.ID_Compra
+  ID_Proveedor -> proveedores.ID_Proveedor
 
 ================================================================================
 TABLA: pagos_almuerzo_mensual
@@ -544,6 +914,42 @@ Relaciones:
   ID_Venta -> ventas.ID_Venta
 
 ================================================================================
+TABLA: pagos_cuentas_almuerzo
+================================================================================
+
+Columnas:
+  ID_Pago: bigint (NO) [PRI] auto_increment
+  ID_Cuenta: bigint (NO) [MUL] 
+  Fecha_Pago: datetime (NO) [MUL] DEFAULT_GENERATED
+  Medio_Pago: enum('EFECTIVO','DEBITO','CREDITO','TRANSFERENCIA','OTRO') (NO) [] 
+  Monto: decimal(10,2) (NO) [] 
+  Referencia: varchar(50) (YES) [] 
+  Observaciones: text (YES) [] 
+  ID_Empleado_Registro: int (YES) [MUL] 
+
+Relaciones:
+  ID_Cuenta -> cuentas_almuerzo_mensual.ID_Cuenta
+  ID_Empleado_Registro -> empleados.ID_Empleado
+
+================================================================================
+TABLA: pagos_proveedores
+================================================================================
+
+Columnas:
+  ID_Pago_Proveedor: bigint (NO) [PRI] auto_increment
+  ID_Proveedor: int (NO) [MUL] 
+  Numero_Comprobante: varchar(20) (NO) [UNI] 
+  Fecha: date (NO) [MUL] 
+  Monto_Total: decimal(12,2) (NO) [] 
+  ID_Medio_Pago: int (YES) [MUL] 
+  Observacion: varchar(255) (YES) [] 
+  Fecha_Creacion: datetime (NO) [] DEFAULT_GENERATED
+
+Relaciones:
+  ID_Medio_Pago -> medios_pago.ID_Medio_Pago
+  ID_Proveedor -> proveedores.ID_Proveedor
+
+================================================================================
 TABLA: pagos_venta
 ================================================================================
 
@@ -555,13 +961,31 @@ Columnas:
   Nro_Tarjeta_Usada: varchar(20) (YES) [MUL] 
   Monto_Aplicado: bigint (NO) [] 
   Referencia_Transaccion: varchar(100) (YES) [] 
-  Fecha_Pago: datetime (YES) [] DEFAULT_GENERATED
+  Fecha_Pago: datetime (YES) [MUL] DEFAULT_GENERATED
+  Estado: enum('PROCESADO','ANULADO') (YES) [] 
 
 Relaciones:
   ID_Venta -> ventas.ID_Venta
   ID_Medio_Pago -> medios_pago.ID_Medio_Pago
   ID_Cierre -> cierres_caja.ID_Cierre
   Nro_Tarjeta_Usada -> tarjetas.Nro_Tarjeta
+
+================================================================================
+TABLA: patrones_acceso
+================================================================================
+
+Columnas:
+  ID_Patron: int (NO) [PRI] auto_increment
+  Usuario: varchar(100) (NO) [MUL] 
+  Tipo_Usuario: enum('EMPLEADO','CLIENTE_WEB','ADMIN') (NO) [] 
+  IP_Address: varchar(45) (NO) [MUL] 
+  Horario_Inicio: time (YES) [] 
+  Horario_Fin: time (YES) [] 
+  Dias_Semana: varchar(50) (YES) [] 
+  Primera_Deteccion: datetime (NO) [] 
+  Ultima_Deteccion: datetime (NO) [] 
+  Frecuencia_Accesos: int (YES) [] 
+  Es_Habitual: tinyint(1) (YES) [MUL] 
 
 ================================================================================
 TABLA: planes_almuerzo
@@ -572,7 +996,7 @@ Columnas:
   Nombre_Plan: varchar(100) (NO) [UNI] 
   Descripcion: text (YES) [] 
   Precio_Mensual: decimal(10,2) (NO) [] 
-  Dias_Semana_Incluidos: set('Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo') (NO) [] 
+  Dias_Semana_Incluidos: varchar(60) (NO) [] 
   Fecha_Creacion: datetime (YES) [] DEFAULT_GENERATED
   Activo: tinyint(1) (YES) [] 
 
@@ -592,24 +1016,97 @@ Relaciones:
   ID_Lista -> listas_precios.ID_Lista
 
 ================================================================================
+TABLA: producto_alergenos
+================================================================================
+
+Columnas:
+  ID_Producto_Alergeno: int (NO) [PRI] auto_increment
+  ID_Producto: int (NO) [MUL] 
+  ID_Alergeno: int (NO) [MUL] 
+  Contiene: tinyint(1) (YES) [] 
+  Observaciones: text (YES) [] 
+  Fecha_Registro: datetime (YES) [] DEFAULT_GENERATED
+  Usuario_Registro: varchar(100) (YES) [] 
+
+Relaciones:
+  ID_Producto -> productos.ID_Producto
+  ID_Alergeno -> alergenos.ID_Alergeno
+
+================================================================================
 TABLA: productos
 ================================================================================
 
 Columnas:
   ID_Producto: int (NO) [PRI] auto_increment
   ID_Categoria: int (NO) [MUL] 
-  ID_Unidad: int (NO) [MUL] 
+  ID_Unidad_de_Medida: int (YES) [MUL] 
   ID_Impuesto: int (NO) [MUL] 
-  Codigo: varchar(50) (YES) [UNI] 
-  Descripcion: varchar(255) (NO) [] 
+  Codigo_Barra: varchar(50) (YES) [UNI] 
+  Descripcion: varchar(255) (NO) [MUL] 
   Stock_Minimo: decimal(10,3) (YES) [] 
   Activo: tinyint(1) (YES) [] 
-  Fecha_Creacion: datetime (YES) [] DEFAULT_GENERATED
+  Permite_Stock_Negativo: tinyint(1) (YES) [] 
 
 Relaciones:
   ID_Categoria -> categorias.ID_Categoria
-  ID_Unidad -> unidades_medida.ID_Unidad
+  ID_Unidad_de_Medida -> unidades_medida.ID_Unidad_de_Medida
   ID_Impuesto -> impuestos.ID_Impuesto
+
+================================================================================
+TABLA: productos_promocion
+================================================================================
+
+Columnas:
+  ID_Producto_Promocion: int (NO) [PRI] auto_increment
+  ID_Promocion: bigint (NO) [MUL] 
+  ID_Producto: int (NO) [MUL] 
+
+Relaciones:
+  ID_Promocion -> promociones.ID_Promocion
+  ID_Producto -> productos.ID_Producto
+
+================================================================================
+TABLA: promociones
+================================================================================
+
+Columnas:
+  ID_Promocion: bigint (NO) [PRI] auto_increment
+  Nombre: varchar(200) (NO) [] 
+  Descripcion: text (YES) [] 
+  Tipo_Promocion: enum('DESCUENTO_PORCENTAJE','DESCUENTO_MONTO','PRECIO_FIJO','NXM','COMBO') (NO) [MUL] 
+  Valor_Descuento: decimal(10,2) (NO) [] 
+  Fecha_Inicio: date (NO) [MUL] 
+  Fecha_Fin: date (YES) [] 
+  Hora_Inicio: time (YES) [] 
+  Hora_Fin: time (YES) [] 
+  Dias_Semana: json (YES) [] 
+  Aplica_A: enum('PRODUCTO','CATEGORIA','TOTAL_VENTA','ESTUDIANTE_GRADO') (NO) [] 
+  Min_Cantidad: int (YES) [] 
+  Monto_Minimo: decimal(10,2) (YES) [] 
+  Max_Usos_Cliente: int (YES) [] 
+  Max_Usos_Total: int (YES) [] 
+  Usos_Actuales: int (YES) [] 
+  Requiere_Codigo: tinyint(1) (YES) [] 
+  Codigo_Promocion: varchar(50) (YES) [UNI] 
+  Prioridad: int (YES) [MUL] 
+  Activo: tinyint(1) (YES) [MUL] 
+  Fecha_Creacion: datetime (YES) [] DEFAULT_GENERATED
+  Usuario_Creacion: varchar(100) (YES) [] 
+
+================================================================================
+TABLA: promociones_aplicadas
+================================================================================
+
+Columnas:
+  ID_Aplicacion: bigint (NO) [PRI] auto_increment
+  ID_Venta: bigint (NO) [MUL] 
+  ID_Promocion: bigint (NO) [MUL] 
+  Monto_Descontado: decimal(10,2) (NO) [] 
+  Fecha_Aplicacion: datetime (YES) [MUL] DEFAULT_GENERATED
+
+Relaciones:
+  ID_Venta -> ventas.ID_Venta
+  ID_Promocion -> promociones.ID_Promocion
 
 ================================================================================
 TABLA: proveedores
@@ -644,13 +1141,61 @@ TABLA: registro_consumo_almuerzo
 Columnas:
   ID_Registro_Consumo: bigint (NO) [PRI] auto_increment
   ID_Hijo: int (NO) [MUL] 
-  Fecha_Consumo: date (NO) [] DEFAULT_GENERATED
-  ID_Suscripcion: bigint (NO) [MUL] 
+  Nro_Tarjeta: varchar(20) (YES) [MUL] 
+  ID_Tipo_Almuerzo: int (YES) [MUL] 
+  Costo_Almuerzo: decimal(10,2) (YES) [] 
+  Marcado_En_Cuenta: tinyint(1) (YES) [MUL] 
+  Fecha_Consumo: date (NO) [MUL] DEFAULT_GENERATED
+  ID_Suscripcion: bigint (YES) [MUL] 
   Hora_Registro: time (YES) [] DEFAULT_GENERATED
 
 Relaciones:
+  Nro_Tarjeta -> tarjetas.Nro_Tarjeta
+  ID_Tipo_Almuerzo -> tipos_almuerzo.ID_Tipo_Almuerzo
   ID_Hijo -> hijos.ID_Hijo
   ID_Suscripcion -> suscripciones_almuerzo.ID_Suscripcion
+
+================================================================================
+TABLA: renovaciones_sesion
+================================================================================
+
+Columnas:
+  id_renovacion: int (NO) [PRI] auto_increment
+  usuario: varchar(100) (NO) [MUL] 
+  session_key_anterior: varchar(255) (YES) [] 
+  session_key_nuevo: varchar(255) (YES) [] 
+  ip_address: varchar(45) (YES) [] 
+  user_agent: text (YES) [] 
+  fecha_renovacion: datetime (YES) [MUL] DEFAULT_GENERATED
+
+================================================================================
+TABLA: restricciones_horarias
+================================================================================
+
+Columnas:
+  id_restriccion: int (NO) [PRI] auto_increment
+  usuario: varchar(100) (YES) [MUL] 
+  tipo_usuario: enum('ADMIN','CAJERO','CLIENTE_WEB') (NO) [MUL] 
+  dia_semana: enum('LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO','DOMINGO') (NO) [] 
+  hora_inicio: time (NO) [] 
+  hora_fin: time (NO) [] 
+  activo: tinyint(1) (YES) [MUL] 
+  fecha_creacion: datetime (YES) [] DEFAULT_GENERATED
+
+================================================================================
+TABLA: sesiones_activas
+================================================================================
+
+Columnas:
+  ID_Sesion: int (NO) [PRI] auto_increment
+  Usuario: varchar(100) (NO) [MUL] 
+  Tipo_Usuario: enum('EMPLEADO','CLIENTE_WEB','ADMIN') (NO) [] 
+  Session_Key: varchar(255) (NO) [UNI] 
+  IP_Address: varchar(45) (YES) [] 
+  User_Agent: text (YES) [] 
+  Fecha_Inicio: datetime (NO) [] 
+  Ultima_Actividad: datetime (NO) [] 
+  Activa: tinyint(1) (YES) [MUL] 
 
 ================================================================================
 TABLA: solicitudes_notificacion
@@ -677,7 +1222,7 @@ TABLA: stock_unico
 
 Columnas:
   ID_Producto: int (NO) [PRI] 
-  Stock_Actual: decimal(10,3) (NO) [] 
+  Stock_Actual: decimal(10,3) (NO) [MUL] 
   Fecha_Ultima_Actualizacion: datetime (YES) [] DEFAULT_GENERATED on update CURRENT_TIMESTAMP
 
 Relaciones:
@@ -727,9 +1272,31 @@ Columnas:
   Fecha_Vencimiento: date (YES) [] 
   Saldo_Alerta: decimal(10,2) (YES) [] 
   Fecha_Creacion: datetime (YES) [] DEFAULT_GENERATED
+  Tipo_Autorizacion: varchar(20) (YES) [MUL] 
 
 Relaciones:
   ID_Hijo -> hijos.ID_Hijo
+
+================================================================================
+TABLA: tarjetas_autorizacion
+================================================================================
+
+Columnas:
+  ID_Tarjeta_Autorizacion: int (NO) [PRI] auto_increment
+  Codigo_Barra: varchar(50) (NO) [UNI] 
+  ID_Empleado: int (YES) [MUL] 
+  Tipo_Autorizacion: enum('ADMIN','SUPERVISOR','CAJERO') (YES) [] 
+  Puede_Anular_Almuerzos: tinyint(1) (YES) [] 
+  Puede_Anular_Ventas: tinyint(1) (YES) [] 
+  Puede_Anular_Recargas: tinyint(1) (YES) [] 
+  Puede_Modificar_Precios: tinyint(1) (YES) [] 
+  Activo: tinyint(1) (YES) [MUL] 
+  Fecha_Creacion: datetime (YES) [] DEFAULT_GENERATED
+  Fecha_Vencimiento: date (YES) [] 
+  Observaciones: text (YES) [] 
+
+Relaciones:
+  ID_Empleado -> empleados.ID_Empleado
 
 ================================================================================
 TABLA: timbrados
@@ -748,6 +1315,21 @@ Columnas:
 
 Relaciones:
   ID_Punto -> puntos_expedicion.ID_Punto
+
+================================================================================
+TABLA: tipos_almuerzo
+================================================================================
+
+Columnas:
+  ID_Tipo_Almuerzo: int (NO) [PRI] auto_increment
+  Nombre: varchar(100) (NO) [] 
+  Descripcion: text (YES) [] 
+  Precio_Unitario: decimal(10,2) (NO) [] 
+  Incluye_Plato_Principal: tinyint(1) (YES) [] 
+  Incluye_Postre: tinyint(1) (YES) [] 
+  Incluye_Bebida: tinyint(1) (YES) [] 
+  Fecha_Creacion: datetime (YES) [] DEFAULT_GENERATED
+  Activo: tinyint(1) (YES) [MUL] 
 
 ================================================================================
 TABLA: tipos_cliente
@@ -779,11 +1361,28 @@ Columnas:
   Activo: tinyint(1) (YES) [] 
 
 ================================================================================
+TABLA: tokens_recuperacion
+================================================================================
+
+Columnas:
+  ID_Token: int (NO) [PRI] auto_increment
+  ID_Cliente: int (NO) [MUL] 
+  Token: varchar(64) (NO) [UNI] 
+  Fecha_Creacion: datetime (NO) [] 
+  Fecha_Expiracion: datetime (NO) [MUL] 
+  Usado: tinyint(1) (NO) [] 
+  Fecha_Uso: datetime (YES) [] 
+  IP_Solicitud: varchar(45) (YES) [] 
+
+Relaciones:
+  ID_Cliente -> clientes.ID_Cliente
+
+================================================================================
 TABLA: unidades_medida
 ================================================================================
 
 Columnas:
-  ID_Unidad: int (NO) [PRI] auto_increment
+  ID_Unidad_de_Medida: int (NO) [PRI] auto_increment
   Nombre: varchar(50) (NO) [] 
   Abreviatura: varchar(10) (NO) [] 
   Activo: tinyint(1) (YES) [] 
@@ -808,19 +1407,82 @@ TABLA: ventas
 
 Columnas:
   ID_Venta: bigint (NO) [PRI] auto_increment
-  ID_Documento: bigint (NO) [UNI] 
+  Nro_Factura_Venta: bigint (YES) [UNI] 
   ID_Cliente: int (NO) [MUL] 
   ID_Hijo: int (YES) [MUL] 
   ID_Tipo_Pago: int (NO) [MUL] 
   ID_Empleado_Cajero: int (NO) [MUL] 
-  Fecha: datetime (NO) [] DEFAULT_GENERATED
+  Fecha: datetime (NO) [MUL] DEFAULT_GENERATED
   Monto_Total: bigint (NO) [] 
-  Estado: enum('Completada','Anulada','Pendiente') (YES) [] 
-  Tipo_Venta: enum('Regular','Almuerzo_Plan','Almuerzo_Esporadico','Recarga_Tarjeta') (NO) [MUL] 
+  Tipo_Venta: varchar(20) (NO) [MUL] 
+  Autorizado_Por: int (YES) [MUL] 
+  Motivo_Credito: text (YES) [] 
+  Genera_Factura_Legal: tinyint(1) (YES) [MUL] 
+  Saldo_Pendiente: bigint (YES) [] 
+  Estado_Pago: enum('PENDIENTE','PARCIAL','PAGADA') (YES) [] 
+  Estado: enum('PROCESADO','ANULADO') (YES) [] 
 
 Relaciones:
-  ID_Documento -> documentos_tributarios.ID_Documento
+  Autorizado_Por -> empleados.ID_Empleado
+  Nro_Factura_Venta -> documentos_tributarios.ID_Documento
   ID_Cliente -> clientes.ID_Cliente
   ID_Hijo -> hijos.ID_Hijo
   ID_Tipo_Pago -> tipos_pago.ID_Tipo_Pago
   ID_Empleado_Cajero -> empleados.ID_Empleado
+
+================================================================================
+TABLA: vista_movimientos_cta_cte_clientes
+================================================================================
+
+Columnas:
+  ID_Movimiento: bigint (NO) [] 
+  Tipo_Movimiento: varchar(5) (NO) [] 
+  Fecha_Movimiento: datetime (NO) [] DEFAULT_GENERATED
+  ID_Cliente: int (NO) [] 
+  Cliente: varchar(201) (NO) [] 
+  Monto: bigint (NO) [] 
+  Saldo_Pendiente: bigint (YES) [] 
+  Estado: enum('PENDIENTE','PARCIAL','PAGADA') (YES) [] 
+
+================================================================================
+TABLA: vista_movimientos_cta_cte_proveedores
+================================================================================
+
+Columnas:
+  ID_Proveedor: int (NO) [] 
+  Proveedor: varchar(255) (YES) [] 
+  Fecha_Movimiento: datetime (NO) [] 
+  Referencia_ID: bigint (NO) [] 
+  Referencia: varchar(57) (YES) [] 
+  Tipo_Movimiento: varchar(6) (YES) [] 
+  Debe: decimal(12,2) (NO) [] 
+  Haber: decimal(12,2) (NO) [] 
+  Estado_Pago: varchar(9) (YES) [] 
+  Saldo_Documento: decimal(12,2) (YES) [] 
+
+================================================================================
+TABLA: vista_saldo_clientes
+================================================================================
+
+Columnas:
+  ID_Cliente: int (NO) [] 
+  Nombres: varchar(100) (NO) [] 
+  Apellidos: varchar(100) (NO) [] 
+  Documento: varchar(20) (NO) [] 
+  Total_Debe: decimal(41,0) (NO) [] 
+  Total_Haber: decimal(41,0) (NO) [] 
+  Saldo_Actual: decimal(42,0) (NO) [] 
+  Facturas_Pendientes: decimal(23,0) (YES) [] 
+
+================================================================================
+TABLA: vista_saldo_proveedores
+================================================================================
+
+Columnas:
+  ID_Proveedor: int (NO) [] 
+  Razon_Social: varchar(255) (NO) [] 
+  RUC: varchar(20) (NO) [] 
+  Total_Debe: decimal(34,2) (NO) [] 
+  Total_Haber: decimal(34,2) (NO) [] 
+  Saldo_Actual: decimal(35,2) (NO) [] 
+  Facturas_Pendientes: bigint (NO) [] 

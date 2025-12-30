@@ -133,23 +133,6 @@ urlpatterns = [
     path('clientes/crear/', cliente_views.crear_cliente_view, name='crear_cliente'),
     path('clientes/<int:cliente_id>/crear-usuario/', cliente_views.crear_usuario_web_cliente, name='crear_usuario_web_cliente'),
     
-    # Portal Web de Clientes
-    path('portal/login/', cliente_views.portal_login_view, name='portal_login'),
-    path('portal/logout/', cliente_views.portal_logout_view, name='portal_logout'),
-    path('portal/', cliente_views.portal_dashboard_view, name='portal_dashboard'),
-    path('portal/hijo/<int:hijo_id>/consumos/', cliente_views.portal_consumos_hijo_view, name='portal_consumos_hijo'),
-    path('portal/hijo/<int:hijo_id>/restricciones/', cliente_views.portal_restricciones_hijo_view, name='portal_restricciones_hijo'),
-    path('portal/recargas/', cliente_views.portal_recargas_view, name='portal_recargas'),
-    path('portal/cambiar-password/', cliente_views.portal_cambiar_password_view, name='portal_cambiar_password'),
-    path('portal/recuperar-password/', cliente_views.portal_recuperar_password_view, name='portal_recuperar_password'),
-    path('portal/reset-password/<str:token>/', cliente_views.portal_reset_password_view, name='portal_reset_password'),
-    
-    # Autenticación 2FA
-    path('portal/configurar-2fa/', cliente_views.configurar_2fa_view, name='configurar_2fa'),
-    path('portal/activar-2fa/', cliente_views.activar_2fa_view, name='activar_2fa'),
-    path('portal/verificar-2fa/', cliente_views.verificar_2fa_view, name='verificar_2fa'),
-    path('portal/deshabilitar-2fa/', cliente_views.deshabilitar_2fa_view, name='deshabilitar_2fa'),
-    
     # Dashboard de Seguridad
     path('seguridad/', seguridad_views.dashboard_seguridad_view, name='dashboard_seguridad'),
     path('seguridad/logs/', seguridad_views.logs_auditoria_view, name='logs_auditoria'),

@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from gestion import cliente_views
 from gestion.cantina_admin import cantina_admin_site
 from gestion.auth_views import CustomLoginView, CustomLogoutView, dashboard_redirect
 from rest_framework import permissions
@@ -66,6 +67,12 @@ urlpatterns = [
     
     # POS (Punto de Venta) - Nueva interfaz
     path('pos/', include('gestion.pos_urls')),
+    
+    # Portal de Clientes
+    path('clientes/', include('gestion.cliente_urls')),
+    # Aliases sin namespace para compatibilidad temporal
+    path('clientes/login/', cliente_views.portal_login_view, name='portal_login'),
+    path('clientes/recuperar-password/', cliente_views.portal_recuperar_password_view, name='portal_recuperar_password'),
     
     # API REST v1
     path('api/v1/', include('gestion.api_urls')),

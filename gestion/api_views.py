@@ -7,6 +7,8 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response as DRFResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Sum, Count, Avg
 from datetime import datetime, timedelta
@@ -68,6 +70,18 @@ class CategoriaViewSet(viewsets.ModelViewSet):
         ).select_related('id_categoria')
         serializer = ProductoListSerializer(productos, many=True)
         return Response(serializer.data)
+
+
+# API root público (no requiere autenticación) — mantiene permisos globales intactos
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def api_root(request):
+    """Raíz pública de la API v1 que devuelve información mínima."""
+    print('DEBUG: api_root called')
+    return DRFResponse({
+        'message': 'Cantina Tita API v1',
+        'documentation': '/swagger/'
+    })
     
     @swagger_auto_schema(
         operation_description="Obtiene las subcategorías hijas de una categoría",
@@ -96,9 +110,9 @@ class ProductoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['activo', 'id_categoria']
-    search_fields = ['codigo', 'descripcion']
-    ordering_fields = ['codigo', 'descripcion', 'id_categoria']
-    ordering = ['codigo']
+    search_fields = ['codigo_barra', 'descripcion']
+    ordering_fields = ['codigo_barra', 'descripcion', 'id_categoria']
+    ordering = ['descripcion']
     
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -177,7 +191,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
     - Consultar cuenta corriente y ventas pendientes
     - Ver historial de ventas y estadísticas
     """
-    queryset = Cliente.objects.prefetch_related('hijo_set').all()
+    queryset = Cliente.objects.prefetch_related('hijos').all()
     serializer_class = ClienteSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]

@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q, F, Sum, Count
-from django.db import transaction
+from django.db import transaction, models
 from django.utils import timezone
 from decimal import Decimal
 import json
@@ -280,14 +280,26 @@ def procesar_venta(request):
         
         # 💰 VALIDAR PAGOS MIXTOS si existen
         if pagos_mixtos:
+            # Calcular comisión total en base al total de productos
+            total_comision = Decimal('0')
+            for pago_data in pagos_mixtos:
+                medio_id = pago_data.get('medio_id')
+                if medio_id == 3:  # Tarjeta de Débito
+                    total_comision += total * Decimal('0.03')
+                elif medio_id == 2:  # Tarjeta de Crédito
+                    total_comision += total * Decimal('0.05')
+                elif medio_id == 4:  # Giros Tigo
+                    total_comision += total * Decimal('0.05')
+            
             suma_pagos = sum(Decimal(str(p.get('monto', 0))) for p in pagos_mixtos)
-            diferencia = abs(suma_pagos - total)
+            total_con_comision = total + total_comision
+            diferencia = abs(suma_pagos - total_con_comision)
             
             # Tolerancia de 1 guaraní por redondeo
             if diferencia > Decimal('1'):
                 return JsonResponse({
                     'success': False,
-                    'error': f'La suma de pagos (Gs. {int(suma_pagos):,}) no coincide con el total (Gs. {int(total):,}). Diferencia: Gs. {int(diferencia):,}'
+                    'error': f'La suma de pagos (Gs. {int(suma_pagos):,}) no coincide con el total + comisión (Gs. {int(total_con_comision):,}). Diferencia: Gs. {int(diferencia):,}'
                 })
         
         # Obtener empleado actual (si existe en el modelo)
@@ -545,8 +557,8 @@ def procesar_venta(request):
             except Producto.DoesNotExist:
                 continue
         
-        # Si hay tarjeta, descontar saldo (proceso simplificado)
-        if tarjeta:
+        # Si hay tarjeta Y es uso exclusivo, descontar saldo (proceso simplificado)
+        if tarjeta and tiene_tarjeta_exclusiva:
             print(f"DEBUG: Descontando saldo de tarjeta {tarjeta.nro_tarjeta}")
             print(f"DEBUG: Saldo anterior: {tarjeta.saldo_actual}, Total a descontar: {total}")
             
@@ -630,34 +642,33 @@ def procesar_venta(request):
                     medio_id = pago_data.get('medio_id')
                     monto_pago = Decimal(str(pago_data.get('monto', 0)))
                     
-                    # Obtener medio de pago
-                    medio_pago = MediosPago.objects.get(id_medio_pago=medio_id)
+                    # VALIDAR REFERENCIA DE TRANSACCIÓN para medios que la requieren
+                    requiere_referencia = medio_id in [2, 3, 4, 5]  # Débito, Crédito, Tigo, Transferencia
+                    referencia = pago_data.get('referencia', '').strip()
+                    
+                    if requiere_referencia and not referencia:
+                        return JsonResponse({
+                            'success': False,
+                            'error': f'El medio de pago {medio_pago.descripcion} requiere un código de transacción'
+                        })
                     
                     # Calcular comisión si el medio de pago la genera
                     comision = Decimal('0')
-                    tarifa_aplicada = None
+                    porcentaje_comision = Decimal('0')
                     if medio_pago.genera_comision:
-                        # Buscar tarifa de comisión vigente
-                        from django.utils import timezone
-                        tarifa_vigente = TarifasComision.objects.filter(
-                            id_medio_pago=medio_pago,
-                            activo=True,
-                            fecha_inicio_vigencia__lte=timezone.now(),
-                        ).filter(
-                            models.Q(fecha_fin_vigencia__gte=timezone.now()) | 
-                            models.Q(fecha_fin_vigencia__isnull=True)
-                        ).first()
+                        # Usar porcentajes fijos según el medio de pago
+                        if medio_id == 3:  # Tarjeta de Débito
+                            porcentaje_comision = Decimal('0.03')  # 3%
+                        elif medio_id == 2:  # Tarjeta de Crédito
+                            porcentaje_comision = Decimal('0.05')  # 5%
+                        elif medio_id == 4:  # Giros Tigo
+                            porcentaje_comision = Decimal('0.05')  # 5%
                         
-                        if tarifa_vigente:
-                            # Calcular comisión: porcentaje + monto fijo (si existe)
-                            comision_porcentual = (monto_pago * tarifa_vigente.porcentaje_comision)
-                            comision_fija = tarifa_vigente.monto_fijo_comision or Decimal('0')
-                            comision = comision_porcentual + comision_fija
-                            tarifa_aplicada = tarifa_vigente
-                            
-                            print(f"💳 Comisión calculada: {tarifa_vigente.porcentaje_comision}% + Gs. {int(comision_fija):,} = Gs. {int(comision):,}")
+                        if porcentaje_comision > 0:
+                            comision = total * porcentaje_comision  # Calcular sobre el total de productos
+                            print(f"💳 Comisión calculada: {porcentaje_comision * 100}% sobre Gs. {int(total):,} = Gs. {int(comision):,}")
                         else:
-                            print(f"⚠️ No hay tarifa de comisión vigente para {medio_pago.descripcion}")
+                            print(f"⚠️ No hay porcentaje de comisión definido para {medio_pago.descripcion}")
                     
                     # Crear registro de pago
                     pago_venta = PagosVenta.objects.create(
@@ -670,12 +681,23 @@ def procesar_venta(request):
                     )
                     
                     # Registrar comisión en detalle_comision_venta si hay comisión
-                    if comision > 0 and tarifa_aplicada:
+                    if comision > 0:
+                        # Crear o obtener tarifa de comisión con el porcentaje aplicado
+                        tarifa_aplicada, created = TarifasComision.objects.get_or_create(
+                            id_medio_pago=medio_pago,
+                            porcentaje_comision=porcentaje_comision,
+                            activo=True,
+                            defaults={
+                                'fecha_inicio_vigencia': timezone.now(),
+                                'monto_fijo_comision': Decimal('0')
+                            }
+                        )
+                        
                         DetalleComisionVenta.objects.create(
                             id_pago_venta=pago_venta,
                             id_tarifa=tarifa_aplicada,
                             monto_comision_calculada=comision,
-                            porcentaje_aplicado=tarifa_aplicada.porcentaje_comision
+                            porcentaje_aplicado=porcentaje_comision
                         )
                         print(f"📊 Comisión registrada en detalle_comision_venta: Gs. {int(comision):,}")
                     
@@ -705,48 +727,66 @@ def procesar_venta(request):
 
 @login_required
 def dashboard_view(request):
-    """Vista del dashboard con estadísticas y gráficos"""
+    """Vista del dashboard con estadísticas y gráficos - Optimizada con cache"""
     from datetime import datetime, timedelta
     from decimal import Decimal
+    from django.core.cache import cache
     import json
-    
+
+    # Cache key para dashboard
+    cache_key = f'dashboard_stats_{datetime.now().date()}'
+    cached_data = cache.get(cache_key)
+
+    if cached_data and not request.GET.get('refresh'):
+        return render(request, 'pos/dashboard.html', cached_data)
+
     today = datetime.now().date()
     week_ago = today - timedelta(days=7)
     month_start = today.replace(day=1)
-    
-    # === Estadísticas principales ===
-    
-    # Ventas de hoy
-    ventas_hoy = Ventas.objects.filter(fecha__date=today)
+
+    # === Estadísticas principales - Optimizadas ===
+
+    # Ventas de hoy con select_related para empleado
+    ventas_hoy = Ventas.objects.filter(
+        fecha__date=today
+    ).select_related('id_empleado_cajero')
+
     stats_hoy = ventas_hoy.aggregate(
         total=Sum('monto_total'),
         cantidad=Count('id_venta')
     )
-    
+
     # Ventas del mes
     ventas_mes = Ventas.objects.filter(fecha__date__gte=month_start)
     stats_mes = ventas_mes.aggregate(
         total=Sum('monto_total'),
         cantidad=Count('id_venta')
     )
-    
-    # Items vendidos hoy
+
+    # Items vendidos hoy - Optimizado con una sola query
     items_vendidos = DetalleVenta.objects.filter(
         id_venta__fecha__date=today
     ).aggregate(total=Sum('cantidad'))['total'] or 0
-    
+
+    # Ventas de ayer para comparación
+    yesterday = today - timedelta(days=1)
+    ventas_ayer = Ventas.objects.filter(fecha__date=yesterday).aggregate(
+        cantidad=Count('id_venta')
+    )['cantidad'] or 0
+
     # Promedio por venta hoy
     total_hoy = stats_hoy['total'] or Decimal('0')
     cantidad_hoy = stats_hoy['cantidad'] or 1
     promedio = total_hoy / cantidad_hoy if cantidad_hoy > 0 else Decimal('0')
-    
+
     stats = {
         'ventas_hoy': stats_hoy['cantidad'] or 0,
         'total_hoy': total_hoy,
         'ventas_mes': stats_mes['cantidad'] or 0,
         'total_mes': stats_mes['total'] or Decimal('0'),
         'items_vendidos': items_vendidos,
-        'promedio': promedio
+        'promedio': promedio,
+        'ventas_ayer': ventas_ayer  # Para comparación
     }
     
     # === Ventas por hora (hoy) ===
@@ -864,7 +904,10 @@ def dashboard_view(request):
         'ultimas_ventas': ultimas_ventas,
         'stock_bajo': stock_bajo,
     }
-    
+
+    # Cachear el contexto por 5 minutos
+    cache.set(cache_key, context, 300)
+
     return render(request, 'pos/dashboard.html', context)
 
 
@@ -1482,6 +1525,16 @@ def ticket_view(request, venta_id):
         # 💰 Obtener pagos mixtos si existen
         pagos_venta = PagosVenta.objects.filter(id_venta=venta).select_related('id_medio_pago')
         
+        # Calcular comisión total
+        total_comision = Decimal('0')
+        for pago in pagos_venta:
+            try:
+                comision_detalle = DetalleComisionVenta.objects.filter(id_pago_venta=pago).first()
+                if comision_detalle:
+                    total_comision += comision_detalle.monto_comision_calculada
+            except:
+                pass
+        
         context = {
             'venta': venta,
             'detalles': detalles,
@@ -1491,6 +1544,7 @@ def ticket_view(request, venta_id):
             'consumo': consumo,
             'empresa': empresa,
             'pagos_venta': pagos_venta,  # Nuevo: lista de pagos
+            'total_comision': total_comision,
         }
         
         return render(request, 'pos/ticket.html', context)
