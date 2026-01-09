@@ -498,6 +498,24 @@
                 <span>El monto recibido es insuficiente</span>
             </div>
             
+            <!-- Opción de Facturación Electrónica -->
+            <div class="form-control mb-4">
+                <label class="label cursor-pointer">
+                    <span class="label-text font-semibold">
+                        <svg class="w-5 h-5 inline mr-2 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Emitir Factura Electrónica
+                    </span>
+                    <input 
+                        type="checkbox" 
+                        x-model="emitirFactura"
+                        class="checkbox checkbox-primary"
+                    >
+                </label>
+                <p class="text-xs text-gray-500 mt-1">Se generará automáticamente una factura electrónica (SET/Ekuatia)</p>
+            </div>
+            
             <div class="modal-action">
                 <button 
                     @click="modalPago = false"
@@ -581,6 +599,7 @@ function posGeneral() {
         mediosPagoSeleccionados: [],
         totalRecibido: 0,
         cambio: 0,
+        emitirFactura: false,
         procesando: false,
         
         // Éxito
@@ -810,6 +829,7 @@ function posGeneral() {
             this.mediosPagoSeleccionados = [];
             this.totalRecibido = 0;
             this.cambio = 0;
+            this.emitirFactura = false;  // Reiniciar checkbox de facturación
             
             // Si usa tarjeta estudiante
             if (this.usarTarjetaEstudiante && this.estudianteActual) {
@@ -922,7 +942,8 @@ function posGeneral() {
                             monto: parseInt(pago.monto),
                             nro_tarjeta: pago.nro_tarjeta || null
                         })),
-                        tipo_venta: 'CONTADO'
+                        tipo_venta: 'CONTADO',
+                        emitir_factura: this.emitirFactura  // Nuevo parámetro para facturación
                     })
                 });
                 
