@@ -59,9 +59,10 @@ def dashboard_facturacion(request):
     # Timbrados disponibles
     timbrados = Timbrados.objects.filter(
         activo=True,
-        estado='Vigente'
-    ).values('nro_timbrado', 'fecha_inicio', 'fecha_vencimiento').annotate(
-        facturas_emitidas=Count('documentostributarios')
+        es_electronico=True
+    ).values('nro_timbrado', 'fecha_inicio', 'fecha_fin').annotate(
+        cantidad_emitidas=Count('documentostributarios'),
+        estado='VIGENTE'  # Campo calculado para la plantilla
     )
     
     context = {

@@ -115,9 +115,9 @@
                         </div>
                         <div class="space-y-2 text-sm text-gray-600">
                             <p>Facturas emitidas: <span class="font-semibold text-gray-800">{{ timbrado.cantidad_emitidas }}</span></p>
-                            <p>Vigente desde: <span class="font-semibold text-gray-800">{{ timbrado.fecha_vigencia|date:"d/m/Y" }}</span></p>
-                            {% if timbrado.fecha_vencimiento %}
-                                <p>Vence: <span class="font-semibold text-gray-800">{{ timbrado.fecha_vencimiento|date:"d/m/Y" }}</span></p>
+                            <p>Vigente desde: <span class="font-semibold text-gray-800">{{ timbrado.fecha_inicio|date:"d/m/Y" }}</span></p>
+                            {% if timbrado.fecha_fin %}
+                                <p>Vence: <span class="font-semibold text-gray-800">{{ timbrado.fecha_fin|date:"d/m/Y" }}</span></p>
                             {% endif %}
                         </div>
                     </div>
