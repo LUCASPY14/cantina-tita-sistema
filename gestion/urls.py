@@ -5,6 +5,7 @@ from . import restricciones_api
 from . import portal_views
 from . import portal_api
 from . import pos_general_views
+from . import pos_sugerencias_api
 
 app_name = 'gestion'
 
@@ -36,6 +37,8 @@ urlpatterns = [
     path('pos/general/api/verificar-tarjeta/', pos_general_views.verificar_tarjeta_api, name='pos_general_verificar_tarjeta'),
     path('pos/general/api/verificar-restricciones-carrito/', pos_general_views.verificar_restricciones_carrito_api, name='pos_general_verificar_restricciones'),
     path('pos/general/api/procesar-venta/', pos_general_views.procesar_venta_api, name='pos_general_procesar_venta'),
+    path('pos/general/api/sugerir-productos-seguros/', pos_sugerencias_api.sugerir_productos_seguros, name='pos_sugerir_productos'),
+    path('pos/general/api/detalles-restriccion/', pos_sugerencias_api.obtener_detalles_restriccion, name='pos_detalles_restriccion'),
     path('pos/general/ticket/<int:id_venta>/', pos_general_views.imprimir_ticket_venta, name='pos_general_ticket'),
     
     # URLs para módulo de almuerzos
