@@ -1,6 +1,10 @@
 from django.urls import path
 from . import views
 from . import almuerzo_views
+from . import restricciones_api
+from . import portal_views
+from . import portal_api
+from . import pos_general_views
 
 app_name = 'gestion'
 
@@ -26,6 +30,14 @@ urlpatterns = [
     path('reportes/cta-corriente-cliente/excel/', views.reporte_cta_corriente_cliente_excel, name='reporte_cta_corriente_cliente_excel'),
     path('reportes/cta-corriente-proveedor/excel/', views.reporte_cta_corriente_proveedor_excel, name='reporte_cta_corriente_proveedor_excel'),
     
+    # URLs para POS General
+    path('pos/general/', pos_general_views.pos_general, name='pos_general'),
+    path('pos/general/api/buscar-producto/', pos_general_views.buscar_producto_api, name='pos_general_buscar_producto'),
+    path('pos/general/api/verificar-tarjeta/', pos_general_views.verificar_tarjeta_api, name='pos_general_verificar_tarjeta'),
+    path('pos/general/api/verificar-restricciones-carrito/', pos_general_views.verificar_restricciones_carrito_api, name='pos_general_verificar_restricciones'),
+    path('pos/general/api/procesar-venta/', pos_general_views.procesar_venta_api, name='pos_general_procesar_venta'),
+    path('pos/general/ticket/<int:id_venta>/', pos_general_views.imprimir_ticket_venta, name='pos_general_ticket'),
+    
     # URLs para módulo de almuerzos
     path('pos/almuerzo/', almuerzo_views.pos_almuerzo, name='pos_almuerzo'),
     path('pos/almuerzo/api/', almuerzo_views.pos_almuerzo_api, name='pos_almuerzo_api'),
@@ -35,6 +47,51 @@ urlpatterns = [
     path('almuerzo/cuentas/pagar/', almuerzo_views.registrar_pago_almuerzo, name='pagar_almuerzo'),
     path('almuerzo/reportes/diario/', almuerzo_views.reporte_almuerzos_diarios, name='reporte_almuerzos'),
     path('almuerzo/reportes/mensual/', almuerzo_views.reporte_mensual_separado, name='reporte_mensual_separado'),
+    
+    # URLs para API de restricciones alimentarias (matching automático)
+    path('api/verificar-restricciones/', restricciones_api.verificar_restricciones_api, name='verificar_restricciones_api'),
+    path('api/productos-seguros/<str:tarjeta_codigo>/', restricciones_api.obtener_productos_seguros_api, name='productos_seguros_api'),
+    path('api/sugerir-alternativas/', restricciones_api.sugerir_alternativas_api, name='sugerir_alternativas_api'),
+    
+    # URLs para Portal de Padres (Web)
+    path('portal/', portal_views.login_view, name='portal_login'),
+    path('portal/registro/', portal_views.registro_view, name='portal_registro'),
+    path('portal/logout/', portal_views.logout_view, name='portal_logout'),
+    path('portal/verificar-email/<str:token>/', portal_views.verificar_email_view, name='portal_verificar_email'),
+    path('portal/recuperar-password/', portal_views.recuperar_password_view, name='portal_recuperar_password'),
+    path('portal/restablecer-password/<str:token>/', portal_views.restablecer_password_view, name='portal_restablecer_password'),
+    path('portal/dashboard/', portal_views.dashboard_view, name='portal_dashboard'),
+    path('portal/mis-hijos/', portal_views.mis_hijos_view, name='portal_mis_hijos'),
+    path('portal/perfil/', portal_views.perfil_view, name='portal_perfil'),
+    path('portal/recargar/<str:nro_tarjeta>/', portal_views.recargar_tarjeta_view, name='portal_recargar_tarjeta'),
+    path('portal/estado-recarga/<str:referencia>/', portal_views.estado_recarga_view, name='portal_estado_recarga'),
+    path('portal/pago-exitoso/', portal_views.pago_exitoso_view, name='portal_pago_exitoso'),
+    path('portal/pago-cancelado/', portal_views.pago_cancelado_view, name='portal_pago_cancelado'),
+    
+    # URLs para API REST del Portal (Consultas Móviles)
+    path('api/portal/tarjeta/<str:nro_tarjeta>/saldo/', portal_api.api_saldo_tarjeta, name='api_portal_saldo'),
+    path('api/portal/tarjeta/<str:nro_tarjeta>/movimientos/', portal_api.api_movimientos_tarjeta, name='api_portal_movimientos'),
+    path('api/portal/tarjeta/<str:nro_tarjeta>/consumos/', portal_api.api_consumos_tarjeta, name='api_portal_consumos'),
+    path('api/portal/tarjeta/<str:nro_tarjeta>/recargas/', portal_api.api_recargas_tarjeta, name='api_portal_recargas'),
+    path('api/portal/mis-tarjetas/', portal_api.api_tarjetas_usuario, name='api_portal_mis_tarjetas'),
+    path('api/portal/notificaciones/', portal_api.api_notificaciones_usuario, name='api_portal_notificaciones'),
+    path('api/portal/notificaciones/<int:id_notificacion>/marcar-leida/', portal_api.api_marcar_notificacion_leida, name='api_portal_marcar_notificacion'),
+    
+    # ==================== GESTIÓN DE PRODUCTOS ====================
+    path('productos/crear/', views.crear_producto, name='crear_producto'),
+    path('productos/<int:producto_id>/editar/', views.editar_producto, name='editar_producto'),
+    path('productos/<int:producto_id>/eliminar/', views.eliminar_producto, name='eliminar_producto'),
+    
+    # ==================== GESTIÓN DE CATEGORÍAS ====================
+    path('categorias/', views.categorias_lista, name='categorias_lista'),
+    path('categorias/crear/', views.crear_categoria, name='crear_categoria'),
+    path('categorias/<int:categoria_id>/editar/', views.editar_categoria, name='editar_categoria'),
+    path('categorias/<int:categoria_id>/eliminar/', views.eliminar_categoria, name='eliminar_categoria'),
+    
+    # ==================== IMPORTACIÓN/EXPORTACIÓN ====================
+    path('productos/importar/', views.importar_productos, name='importar_productos'),
+    path('productos/exportar/csv/', views.exportar_productos_csv, name='exportar_productos_csv'),
+    path('productos/exportar/excel/', views.exportar_productos_excel, name='exportar_productos_excel'),
 ]
 
 

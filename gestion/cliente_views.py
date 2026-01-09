@@ -1520,3 +1520,181 @@ def procesar_pago_deudas_confirmado(webhook_data, tx_id=None):
         print(f"Error procesando pago de deudas: {str(e)}")
         return JsonResponse({'error': 'Error procesando pago de deudas'}, status=500)
 
+
+# ============================================================================
+# WEBHOOKS PARA TIGO MONEY
+# ============================================================================
+
+@require_http_methods(["POST"])
+def tigo_money_webhook_view(request):
+    """
+    Endpoint para recibir notificaciones de Tigo Money
+    Procesa confirmaciones de pago exitoso
+    """
+    try:
+        # Verificar que sea una petición POST
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+        # Obtener datos del webhook
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'JSON inválido'}, status=400)
+
+        # Validar estructura del webhook
+        status = data.get('status')
+        transaction_id = data.get('transactionId')
+        
+        if not transaction_id:
+            return JsonResponse({'error': 'Transaction ID no especificado'}, status=400)
+
+        # Procesar solo pagos completados
+        if status == 'COMPLETED':
+            return procesar_webhook_tigo_money_exitoso(data)
+        elif status == 'FAILED':
+            print(f"Pago Tigo Money fallido: {transaction_id}")
+            return JsonResponse({'status': 'Pago fallido procesado'}, status=200)
+        elif status == 'CANCELLED':
+            print(f"Pago Tigo Money cancelado: {transaction_id}")
+            return JsonResponse({'status': 'Pago cancelado procesado'}, status=200)
+        else:
+            print(f"Estado no procesado: {status}")
+            return JsonResponse({'status': 'Estado no procesado'}, status=200)
+
+    except Exception as e:
+        print(f"Error procesando webhook Tigo Money: {str(e)}")
+        return JsonResponse({'error': 'Error interno del servidor'}, status=500)
+
+
+def procesar_webhook_tigo_money_exitoso(data):
+    """
+    Procesa notificación de pago exitoso desde Tigo Money
+    """
+    try:
+        # Extraer campos del webhook
+        transaction_id = data.get('transactionId')
+        amount = Decimal(str(data.get('amount', '0')))
+        phone_number = data.get('phoneNumber')
+        custom_identifier = data.get('metadata', {}).get('customer', {}).get('custom_id')
+
+        # Validar campos requeridos
+        if not all([transaction_id, amount]):
+            return JsonResponse({'error': 'Campos requeridos faltantes'}, status=400)
+
+        print(f"📱 Webhook Tigo Money: {transaction_id} - Gs. {amount}")
+
+        # Procesar según el tipo de transacción basado en customIdentifier
+        if custom_identifier and custom_identifier.startswith('CARGA-'):
+            return procesar_carga_saldo_tigo_confirmada(data)
+        elif custom_identifier and custom_identifier.startswith('PAGO-'):
+            return procesar_pago_deudas_tigo_confirmado(data)
+        else:
+            print(f"Tipo de transacción no reconocido: {custom_identifier}")
+            return JsonResponse({'status': 'Tipo de transacción no reconocido'}, status=200)
+
+    except Exception as e:
+        print(f"Error procesando pago Tigo Money exitoso: {str(e)}")
+        return JsonResponse({'error': 'Error procesando pago'}, status=500)
+
+
+def procesar_carga_saldo_tigo_confirmada(webhook_data):
+    """
+    Procesa confirmación de carga de saldo via Tigo Money
+    """
+    try:
+        transaction_id = webhook_data.get('transactionId')
+        amount = Decimal(str(webhook_data.get('amount', '0')))
+        custom_identifier = webhook_data.get('metadata', {}).get('customer', {}).get('custom_id')
+
+        # Buscar la carga de saldo pendiente
+        try:
+            carga_saldo = CargasSaldo.objects.get(
+                custom_identifier=custom_identifier,
+                estado='PENDIENTE'
+            )
+        except CargasSaldo.DoesNotExist:
+            print(f"Carga de saldo Tigo Money no encontrada: {custom_identifier}")
+            return JsonResponse({'status': 'Carga de saldo no encontrada'}, status=200)
+
+        # Actualizar estado de la carga de saldo
+        with transaction.atomic():
+            carga_saldo.estado = 'CONFIRMADO'
+            carga_saldo.fecha_confirmacion = timezone.now()
+            carga_saldo.pay_request_id = transaction_id
+            carga_saldo.save()
+
+            # Actualizar saldo de la tarjeta
+            tarjeta = carga_saldo.nro_tarjeta
+            tarjeta.saldo_actual += int(amount)
+            tarjeta.save()
+
+            # Registrar auditoría
+            registrar_auditoria_sistema(
+                operacion='CARGA_SALDO_TIGO_CONFIRMADO',
+                descripcion=f'Carga confirmada via Tigo Money: Gs. {amount} - ID: {transaction_id}',
+                tabla_afectada='cargas_saldo',
+                id_registro=carga_saldo.id_carga
+            )
+
+        print(f"✅ Carga de saldo Tigo Money confirmada: {custom_identifier} - Gs. {amount}")
+        return JsonResponse({'status': 'Carga de saldo confirmada'}, status=200)
+
+    except Exception as e:
+        print(f"Error procesando carga de saldo Tigo Money: {str(e)}")
+        return JsonResponse({'error': 'Error procesando carga de saldo'}, status=500)
+
+
+def procesar_pago_deudas_tigo_confirmado(webhook_data):
+    """
+    Procesa confirmación de pago de deudas via Tigo Money
+    """
+    try:
+        transaction_id = webhook_data.get('transactionId')
+        amount = Decimal(str(webhook_data.get('amount', '0')))
+        custom_identifier = webhook_data.get('metadata', {}).get('customer', {}).get('custom_id')
+
+        # Extraer IDs de ventas del custom_identifier
+        try:
+            venta_ids_str = custom_identifier.replace('PAGO-', '')
+            venta_ids = [int(vid) for vid in venta_ids_str.split(',') if vid.isdigit()]
+        except (ValueError, AttributeError):
+            print(f"Formato de custom_identifier inválido: {custom_identifier}")
+            return JsonResponse({'status': 'Formato inválido'}, status=200)
+
+        # Procesar cada venta
+        total_procesado = Decimal('0')
+
+        with transaction.atomic():
+            for venta_id in venta_ids:
+                try:
+                    venta = Ventas.objects.get(pk=venta_id, saldo_pendiente__gt=0)
+
+                    restante = amount - total_procesado
+                    if restante <= 0:
+                        break
+
+                    pago_esta_venta = min(restante, venta.saldo_pendiente)
+                    venta.saldo_pendiente -= pago_esta_venta
+                    venta.estado_pago = 'PAGADA' if venta.saldo_pendiente == 0 else 'PARCIAL'
+                    venta.save()
+
+                    total_procesado += pago_esta_venta
+
+                except Ventas.DoesNotExist:
+                    continue
+
+            # Registrar auditoría
+            registrar_auditoria_sistema(
+                operacion='PAGO_DEUDAS_TIGO_CONFIRMADO',
+                descripcion=f'Pago confirmado via Tigo Money: Gs. {amount} - Ventas: {venta_ids} - ID: {transaction_id}',
+                tabla_afectada='ventas'
+            )
+
+        print(f"✅ Pago de deudas Tigo Money confirmado: {custom_identifier} - Gs. {amount}")
+        return JsonResponse({'status': 'Pago de deudas confirmado'}, status=200)
+
+    except Exception as e:
+        print(f"Error procesando pago de deudas Tigo Money: {str(e)}")
+        return JsonResponse({'error': 'Error procesando pago de deudas'}, status=500)
+

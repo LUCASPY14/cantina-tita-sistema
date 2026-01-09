@@ -1,0 +1,31 @@
+# Configuración de Tigo Money API
+# Copia este archivo como parte de .env y configura las variables de entorno
+
+# Tigo Money API Configuration
+TIGO_MONEY_BASE_URL=https://api.tigo.com.py/v1
+TIGO_MONEY_API_KEY=tu_api_key_real_aqui
+TIGO_MONEY_MERCHANT_ID=tu_merchant_id_aqui
+TIGO_MONEY_MERCHANT_SECRET=tu_merchant_secret_aqui
+
+# Para sandbox/pruebas cambiar a:
+# TIGO_MONEY_BASE_URL=https://sandbox-api.tigo.com.py/v1
+# TIGO_MONEY_ENVIRONMENT=sandbox
+
+# Producción
+TIGO_MONEY_ENVIRONMENT=production
+
+# URLs de callback (configurar en Tigo Money)
+TIGO_MONEY_WEBHOOK_URL=https://tu-dominio.com/api/webhooks/tigo-money/
+
+# Información del comercio
+TIGO_MONEY_MERCHANT_NAME=Cantina Tita
+TIGO_MONEY_MERCHANT_EMAIL=admin@cantinatita.com
+
+# Números de soporte
+TIGO_MONEY_SUPPORT_PHONE=+595981123456
+
+# Códigos de prefijo Tigo válidos en Paraguay
+TIGO_PREFIJOS=981,982,983,991,992
+
+# Comisión de Tigo Money (configurar según contrato)
+TIGO_MONEY_COMISION_PORCENTAJE=1.5  # 1.5%

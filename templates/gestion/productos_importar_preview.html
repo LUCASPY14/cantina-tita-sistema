@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Preview Importación - Sistema de Gestión{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold mb-2">
+            <i class="fas fa-eye mr-2"></i>Preview de Importación
+        </h1>
+        <p class="text-base-content/70">
+            Revisa los datos antes de confirmar la importación
+        </p>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="stats shadow mb-6">
+        <div class="stat">
+            <div class="stat-title">Total de Filas</div>
+            <div class="stat-value text-primary">{{ total_filas }}</div>
+            <div class="stat-desc">{{ archivo_nombre }}</div>
+        </div>
+        
+        <div class="stat">
+            <div class="stat-title">Mostrando</div>
+            <div class="stat-value text-secondary">{{ datos_preview|length }}</div>
+            <div class="stat-desc">Primeras filas del archivo</div>
+        </div>
+    </div>
+
+    <!-- Tabla Preview -->
+    <div class="overflow-x-auto mb-6">
+        <table class="table table-zebra table-sm">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Código Barras</th>
+                    <th>Descripción</th>
+                    <th>Categoría</th>
+                    <th>Unidad</th>
+                    <th>Impuesto</th>
+                    <th>Stock Mín.</th>
+                    <th>Activo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in datos_preview %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><code class="text-xs">{{ fila.codigo_barra }}</code></td>
+                    <td>{{ fila.descripcion }}</td>
+                    <td>
+                        <span class="badge badge-sm">{{ fila.categoria }}</span>
+                    </td>
+                    <td>{{ fila.unidad_medida }}</td>
+                    <td>{{ fila.impuesto }}</td>
+                    <td>{{ fila.stock_minimo }}</td>
+                    <td>
+                        {% if fila.activo|lower in 'si,sí,yes,1,true' %}
+                            <span class="badge badge-success badge-sm">Sí</span>
+                        {% else %}
+                            <span class="badge badge-error badge-sm">No</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if total_filas > 20 %}
+    <div class="alert alert-info mb-6">
+        <i class="fas fa-info-circle"></i>
+        <span>
+            Se están mostrando solo las primeras 20 filas. Al confirmar se importarán todas las {{ total_filas }} filas.
+        </span>
+    </div>
+    {% endif %}
+
+    <!-- Acciones -->
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="confirmar" value="1">
+        <!-- Aquí necesitarías re-enviar el archivo o guardarlo en sesión -->
+        
+        <div class="flex gap-4">
+            <button type="submit" class="btn btn-success btn-lg">
+                <i class="fas fa-check mr-2"></i>
+                Confirmar Importación
+            </button>
+            
+            <a href="{% url 'importar_productos' %}" class="btn btn-outline btn-lg">
+                <i class="fas fa-times mr-2"></i>
+                Cancelar
+            </a>
+        </div>
+    </form>
+
+    <!-- Advertencia -->
+    <div class="alert alert-warning mt-6">
+        <i class="fas fa-triangle-exclamation"></i>
+        <div>
+            <h3 class="font-bold">Importante</h3>
+            <p class="text-sm">
+                Los productos con códigos de barras duplicados serán ignorados.
+                Las categorías, unidades e impuestos deben existir en el sistema.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

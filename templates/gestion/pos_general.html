@@ -1,0 +1,821 @@
+{% extends "gestion/base.html" %}
+{% load static %}
+
+{% block title %}POS General - CanTinaTita{% endblock %}
+
+{% block extra_css %}
+<style>
+    [x-cloak] { display: none !important; }
+    
+    .producto-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .carrito-item {
+        animation: fadeIn 0.3s ease-in;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .scan-input {
+        font-family: 'Courier New', monospace;
+        font-size: 1.2rem;
+    }
+    
+    .alert-restriccion {
+        animation: pulse 1s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    
+    .badge-stock-bajo {
+        background-color: #fbbf24;
+        color: #92400e;
+    }
+    
+    .badge-sin-stock {
+        background-color: #ef4444;
+        color: #fff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="posGeneral()" x-init="init()" x-cloak class="container mx-auto px-4 py-6">
+    
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-primary">🛒 POS General</h1>
+                <p class="text-sm text-gray-500">Venta de productos generales</p>
+            </div>
+            <div class="text-right">
+                <p class="text-sm text-gray-600">Fecha: <span class="font-semibold">{{ fecha_actual }}</span></p>
+                <p class="text-sm text-gray-600">Hora: <span class="font-semibold" x-text="horaActual"></span></p>
+                <p class="text-sm text-gray-600">Cajero: <span class="font-semibold" x-text="cajero"></span></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Panel Izquierdo: Búsqueda y Productos -->
+        <div class="lg:col-span-2 space-y-4">
+            
+            <!-- Búsqueda de Productos -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-bold mb-4 flex items-center">
+                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    Buscar Producto
+                </h2>
+                
+                <div class="flex gap-2 mb-4">
+                    <input 
+                        type="text" 
+                        x-model="busquedaQuery"
+                        @keyup.enter="buscarProducto()"
+                        placeholder="Escanea código de barras o escribe nombre del producto..."
+                        class="flex-1 input input-bordered scan-input"
+                        autofocus
+                    >
+                    <button 
+                        @click="buscarProducto()"
+                        :disabled="buscando"
+                        class="btn btn-primary"
+                    >
+                        <span x-show="!buscando">Buscar</span>
+                        <span x-show="buscando" class="loading loading-spinner"></span>
+                    </button>
+                </div>
+                
+                <!-- Tarjeta Estudiante (Opcional) -->
+                <div class="form-control">
+                    <label class="label cursor-pointer">
+                        <span class="label-text font-semibold">¿Pago con Tarjeta Estudiante?</span>
+                        <input type="checkbox" x-model="usarTarjetaEstudiante" class="checkbox checkbox-primary" />
+                    </label>
+                </div>
+                
+                <div x-show="usarTarjetaEstudiante" class="mt-3">
+                    <div class="flex gap-2">
+                        <input 
+                            type="text" 
+                            x-model="codigoTarjeta"
+                            @keyup.enter="verificarTarjeta()"
+                            placeholder="Escanea tarjeta estudiante..."
+                            class="flex-1 input input-bordered scan-input"
+                        >
+                        <button 
+                            @click="verificarTarjeta()"
+                            :disabled="verificandoTarjeta"
+                            class="btn btn-secondary"
+                        >
+                            <span x-show="!verificandoTarjeta">Verificar</span>
+                            <span x-show="verificandoTarjeta" class="loading loading-spinner"></span>
+                        </button>
+                    </div>
+                    
+                    <!-- Info Estudiante -->
+                    <div x-show="estudianteActual" class="alert alert-info mt-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <div>
+                            <h3 class="font-bold" x-text="estudianteActual?.nombre_completo"></h3>
+                            <div class="text-xs">
+                                Saldo: <span class="font-semibold" x-text="formatearGuaranies(estudianteActual?.saldo_actual)"></span>
+                            </div>
+                            <div class="text-xs" x-show="estudianteActual?.restricciones?.length > 0">
+                                ⚠️ Tiene <span x-text="estudianteActual?.restricciones?.length"></span> restricción(es) alimentaria(s)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Resultados de Búsqueda -->
+            <div x-show="productosEncontrados.length > 0" class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-bold mb-3">
+                    Resultados (<span x-text="productosEncontrados.length"></span>)
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <template x-for="producto in productosEncontrados" :key="producto.id">
+                        <div class="card bg-base-100 border producto-card cursor-pointer transition-all"
+                             @click="agregarAlCarrito(producto)">
+                            <div class="card-body p-4">
+                                <h4 class="card-title text-sm" x-text="producto.descripcion"></h4>
+                                <div class="text-xs text-gray-600">
+                                    <p>Código: <span x-text="producto.codigo_barra || 'Sin código'"></span></p>
+                                    <p>Categoría: <span x-text="producto.categoria"></span></p>
+                                    <p class="flex items-center gap-1">
+                                        Stock: 
+                                        <span 
+                                            :class="{
+                                                'badge-stock-bajo': producto.stock_actual > 0 && producto.stock_actual <= 10,
+                                                'badge-sin-stock': producto.stock_actual <= 0 && !producto.permite_stock_negativo
+                                            }"
+                                            class="badge badge-sm"
+                                            x-text="producto.stock_actual"
+                                        ></span>
+                                    </p>
+                                </div>
+                                <div class="flex justify-between items-center mt-2">
+                                    <span class="text-lg font-bold text-primary" x-text="formatearGuaranies(producto.precio_venta)"></span>
+                                    <button 
+                                        class="btn btn-sm btn-primary"
+                                        :disabled="producto.stock_actual <= 0 && !producto.permite_stock_negativo"
+                                    >
+                                        Agregar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            
+            <!-- Alertas de Restricciones -->
+            <div x-show="alertasRestricciones.length > 0" class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-bold mb-3 text-warning flex items-center">
+                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    Alertas de Restricciones Alimentarias
+                </h3>
+                
+                <template x-for="alerta in alertasRestricciones" :key="alerta.id_producto">
+                    <div class="alert alert-warning mb-2 alert-restriccion">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                        <div class="text-sm">
+                            <strong x-text="alerta.nombre_producto"></strong><br>
+                            Restricción: <span x-text="alerta.restriccion"></span> 
+                            (<span :class="{
+                                'text-error font-bold': alerta.severidad === 'ALTA',
+                                'text-warning': alerta.severidad === 'MEDIA'
+                            }" x-text="alerta.severidad"></span>)<br>
+                            <span class="text-xs" x-text="alerta.razon"></span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            
+        </div>
+
+        <!-- Panel Derecho: Carrito y Pago -->
+        <div class="lg:col-span-1 space-y-4">
+            
+            <!-- Carrito -->
+            <div class="bg-white rounded-lg shadow-md p-6 sticky top-4">
+                <h2 class="text-xl font-bold mb-4 flex items-center justify-between">
+                    <span>
+                        <svg class="w-6 h-6 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        Carrito
+                    </span>
+                    <span class="badge badge-primary badge-lg" x-text="carrito.length"></span>
+                </h2>
+                
+                <!-- Items del Carrito -->
+                <div class="space-y-2 mb-4 max-h-64 overflow-y-auto">
+                    <template x-for="(item, index) in carrito" :key="index">
+                        <div class="border rounded p-3 carrito-item">
+                            <div class="flex justify-between items-start mb-2">
+                                <h4 class="font-semibold text-sm flex-1" x-text="item.descripcion"></h4>
+                                <button 
+                                    @click="eliminarDelCarrito(index)"
+                                    class="btn btn-xs btn-error btn-circle"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center gap-2">
+                                    <button 
+                                        @click="cambiarCantidad(index, -1)"
+                                        class="btn btn-xs btn-outline"
+                                        :disabled="item.cantidad <= 1"
+                                    >
+                                        −
+                                    </button>
+                                    <input 
+                                        type="number" 
+                                        x-model.number="item.cantidad"
+                                        @change="recalcularTotales()"
+                                        min="1"
+                                        class="input input-xs input-bordered w-16 text-center"
+                                    >
+                                    <button 
+                                        @click="cambiarCantidad(index, 1)"
+                                        class="btn btn-xs btn-outline"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                                <span class="font-bold text-primary" x-text="formatearGuaranies(item.subtotal)"></span>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">
+                                <span x-text="formatearGuaranies(item.precio_unitario)"></span> × <span x-text="item.cantidad"></span>
+                            </div>
+                        </div>
+                    </template>
+                    
+                    <div x-show="carrito.length === 0" class="text-center text-gray-400 py-8">
+                        <svg class="w-16 h-16 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        Carrito vacío
+                    </div>
+                </div>
+                
+                <!-- Total -->
+                <div class="border-t pt-4 mb-4">
+                    <div class="flex justify-between text-2xl font-bold">
+                        <span>TOTAL:</span>
+                        <span class="text-primary" x-text="formatearGuaranies(totalCarrito)"></span>
+                    </div>
+                </div>
+                
+                <!-- Botón Pagar -->
+                <button 
+                    @click="modalPago = true; prepararPago()"
+                    :disabled="carrito.length === 0"
+                    class="btn btn-success btn-block btn-lg"
+                >
+                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    PROCESAR PAGO
+                </button>
+                
+                <button 
+                    @click="limpiarCarrito()"
+                    :disabled="carrito.length === 0"
+                    class="btn btn-outline btn-error btn-block mt-2"
+                >
+                    Limpiar Carrito
+                </button>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Modal de Pago -->
+    <div x-show="modalPago" class="modal modal-open" @click.self="modalPago = false">
+        <div class="modal-box max-w-2xl">
+            <h3 class="font-bold text-lg mb-4">Procesar Pago</h3>
+            
+            <div class="bg-base-200 p-4 rounded-lg mb-4">
+                <p class="text-sm text-gray-600">Total a pagar:</p>
+                <p class="text-3xl font-bold text-primary" x-text="formatearGuaranies(totalCarrito)"></p>
+            </div>
+            
+            <!-- Medios de Pago -->
+            <div class="space-y-3 mb-4">
+                <h4 class="font-semibold">Medios de Pago:</h4>
+                
+                <template x-for="(pago, index) in mediosPagoSeleccionados" :key="index">
+                    <div class="border rounded p-3">
+                        <div class="flex gap-3 items-center">
+                            <select 
+                                x-model="pago.id_medio_pago"
+                                class="select select-bordered flex-1"
+                            >
+                                <option value="">Seleccione medio de pago</option>
+                                <option value="1">Efectivo</option>
+                                <option value="2">Tarjeta Débito</option>
+                                <option value="3">Tarjeta Crédito</option>
+                                <option value="4">Tarjeta Estudiante</option>
+                            </select>
+                            
+                            <input 
+                                type="number" 
+                                x-model.number="pago.monto"
+                                @input="calcularCambio()"
+                                placeholder="Monto"
+                                class="input input-bordered w-40"
+                            >
+                            
+                            <button 
+                                @click="eliminarMedioPago(index)"
+                                class="btn btn-sm btn-error btn-circle"
+                                :disabled="mediosPagoSeleccionados.length === 1"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        
+                        <!-- Campo tarjeta para tarjeta estudiante -->
+                        <div x-show="pago.id_medio_pago == 4" class="mt-2">
+                            <input 
+                                type="text" 
+                                x-model="pago.nro_tarjeta"
+                                placeholder="Número de tarjeta estudiante"
+                                class="input input-bordered w-full"
+                            >
+                        </div>
+                    </div>
+                </template>
+                
+                <button 
+                    @click="agregarMedioPago()"
+                    class="btn btn-sm btn-outline btn-primary"
+                >
+                    + Agregar Medio de Pago
+                </button>
+            </div>
+            
+            <!-- Resumen -->
+            <div class="bg-base-200 p-3 rounded mb-4 text-sm">
+                <div class="flex justify-between">
+                    <span>Total a pagar:</span>
+                    <span class="font-semibold" x-text="formatearGuaranies(totalCarrito)"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Total recibido:</span>
+                    <span class="font-semibold" x-text="formatearGuaranies(totalRecibido)"></span>
+                </div>
+                <div class="divider my-1"></div>
+                <div class="flex justify-between text-lg font-bold">
+                    <span>Cambio:</span>
+                    <span 
+                        :class="cambio < 0 ? 'text-error' : 'text-success'"
+                        x-text="formatearGuaranies(cambio)"
+                    ></span>
+                </div>
+            </div>
+            
+            <div x-show="cambio < 0" class="alert alert-error mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>El monto recibido es insuficiente</span>
+            </div>
+            
+            <div class="modal-action">
+                <button 
+                    @click="modalPago = false"
+                    class="btn btn-outline"
+                >
+                    Cancelar
+                </button>
+                <button 
+                    @click="procesarVenta()"
+                    :disabled="cambio < 0 || procesando"
+                    class="btn btn-success"
+                >
+                    <span x-show="!procesando">Confirmar Venta</span>
+                    <span x-show="procesando" class="loading loading-spinner"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Éxito -->
+    <div x-show="modalExito" class="modal modal-open">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg text-success mb-4">
+                ✅ ¡Venta Procesada Exitosamente!
+            </h3>
+            
+            <div class="space-y-2 text-sm">
+                <p><strong>ID Venta:</strong> <span x-text="ventaProcesada?.id_venta"></span></p>
+                <p><strong>Total:</strong> <span x-text="formatearGuaranies(ventaProcesada?.monto_total)"></span></p>
+                <p><strong>Comisiones:</strong> <span x-text="formatearGuaranies(ventaProcesada?.comisiones_calculadas)"></span></p>
+            </div>
+            
+            <div class="modal-action">
+                <button 
+                    @click="imprimirTicket()"
+                    class="btn btn-primary"
+                >
+                    🖨️ Imprimir Ticket
+                </button>
+                <button 
+                    @click="cerrarModalExito()"
+                    class="btn btn-success"
+                >
+                    Nueva Venta
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function posGeneral() {
+    return {
+        // Estado
+        horaActual: '',
+        cajero: 'Cajero 1', // TODO: Obtener del sistema de autenticación
+        
+        // Búsqueda
+        busquedaQuery: '',
+        buscando: false,
+        productosEncontrados: [],
+        
+        // Tarjeta Estudiante
+        usarTarjetaEstudiante: false,
+        codigoTarjeta: '',
+        verificandoTarjeta: false,
+        estudianteActual: null,
+        
+        // Carrito
+        carrito: [],
+        totalCarrito: 0,
+        
+        // Restricciones
+        alertasRestricciones: [],
+        
+        // Pago
+        modalPago: false,
+        mediosPagoSeleccionados: [],
+        totalRecibido: 0,
+        cambio: 0,
+        procesando: false,
+        
+        // Éxito
+        modalExito: false,
+        ventaProcesada: null,
+        
+        // Inicialización
+        init() {
+            this.actualizarHora();
+            setInterval(() => this.actualizarHora(), 1000);
+            
+            // Configurar CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+            if (csrfToken) {
+                window.csrfToken = csrfToken;
+            }
+        },
+        
+        actualizarHora() {
+            const ahora = new Date();
+            this.horaActual = ahora.toLocaleTimeString('es-PY');
+        },
+        
+        formatearGuaranies(monto) {
+            return `Gs. ${Number(monto).toLocaleString('es-PY')}`;
+        },
+        
+        // Búsqueda de productos
+        async buscarProducto() {
+            if (!this.busquedaQuery.trim()) {
+                alert('Ingrese un criterio de búsqueda');
+                return;
+            }
+            
+            this.buscando = true;
+            this.productosEncontrados = [];
+            
+            try {
+                const response = await fetch('/gestion/pos/general/api/buscar-producto/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': window.csrfToken || ''
+                    },
+                    body: JSON.stringify({
+                        query: this.busquedaQuery,
+                        limite: 20
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.productosEncontrados = data.productos;
+                    
+                    // Si es búsqueda por código exacto, agregar automáticamente
+                    if (data.productos.length === 1 && data.productos[0].codigo_barra === this.busquedaQuery) {
+                        this.agregarAlCarrito(data.productos[0]);
+                        this.busquedaQuery = '';
+                        this.productosEncontrados = [];
+                    }
+                } else {
+                    alert(data.error || 'Error al buscar productos');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al buscar productos');
+            } finally {
+                this.buscando = false;
+            }
+        },
+        
+        // Verificar tarjeta estudiante
+        async verificarTarjeta() {
+            if (!this.codigoTarjeta.trim()) {
+                alert('Ingrese el código de tarjeta');
+                return;
+            }
+            
+            this.verificandoTarjeta = true;
+            
+            try {
+                const response = await fetch('/gestion/pos/general/api/verificar-tarjeta/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': window.csrfToken || ''
+                    },
+                    body: JSON.stringify({
+                        codigo_tarjeta: this.codigoTarjeta
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.tarjeta_valida) {
+                    this.estudianteActual = data.estudiante;
+                    
+                    // Verificar restricciones del carrito actual si hay productos
+                    if (this.carrito.length > 0) {
+                        await this.verificarRestriccionesCarrito();
+                    }
+                } else {
+                    alert(data.mensaje || 'Tarjeta no válida');
+                    this.estudianteActual = null;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al verificar tarjeta');
+            } finally {
+                this.verificandoTarjeta = false;
+            }
+        },
+        
+        // Gestión del carrito
+        agregarAlCarrito(producto) {
+            // Validar stock
+            if (producto.stock_actual <= 0 && !producto.permite_stock_negativo) {
+                alert(`${producto.descripcion} no tiene stock disponible`);
+                return;
+            }
+            
+            // Verificar si ya existe en el carrito
+            const existente = this.carrito.find(item => item.id === producto.id);
+            
+            if (existente) {
+                existente.cantidad++;
+                existente.subtotal = existente.cantidad * existente.precio_unitario;
+            } else {
+                this.carrito.push({
+                    id: producto.id,
+                    descripcion: producto.descripcion,
+                    cantidad: 1,
+                    precio_unitario: producto.precio_venta,
+                    subtotal: producto.precio_venta,
+                    stock_actual: producto.stock_actual,
+                    permite_stock_negativo: producto.permite_stock_negativo
+                });
+            }
+            
+            this.recalcularTotales();
+            
+            // Verificar restricciones si hay estudiante
+            if (this.estudianteActual) {
+                this.verificarRestriccionesCarrito();
+            }
+        },
+        
+        eliminarDelCarrito(index) {
+            this.carrito.splice(index, 1);
+            this.recalcularTotales();
+            
+            if (this.estudianteActual) {
+                this.verificarRestriccionesCarrito();
+            }
+        },
+        
+        cambiarCantidad(index, delta) {
+            this.carrito[index].cantidad += delta;
+            
+            if (this.carrito[index].cantidad < 1) {
+                this.carrito[index].cantidad = 1;
+            }
+            
+            this.carrito[index].subtotal = this.carrito[index].cantidad * this.carrito[index].precio_unitario;
+            this.recalcularTotales();
+        },
+        
+        recalcularTotales() {
+            this.totalCarrito = this.carrito.reduce((sum, item) => sum + item.subtotal, 0);
+        },
+        
+        limpiarCarrito() {
+            if (confirm('¿Está seguro de limpiar el carrito?')) {
+                this.carrito = [];
+                this.totalCarrito = 0;
+                this.alertasRestricciones = [];
+            }
+        },
+        
+        // Verificar restricciones
+        async verificarRestriccionesCarrito() {
+            if (!this.estudianteActual) return;
+            
+            try {
+                const response = await fetch('/gestion/pos/general/api/verificar-restricciones-carrito/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': window.csrfToken || ''
+                    },
+                    body: JSON.stringify({
+                        id_hijo: this.estudianteActual.id_hijo,
+                        productos: this.carrito.map(item => ({
+                            id_producto: item.id,
+                            cantidad: item.cantidad
+                        }))
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.alertasRestricciones = data.alertas || [];
+                }
+            } catch (error) {
+                console.error('Error al verificar restricciones:', error);
+            }
+        },
+        
+        // Pago
+        prepararPago() {
+            this.mediosPagoSeleccionados = [{
+                id_medio_pago: '1',  // Efectivo por defecto
+                monto: this.totalCarrito,
+                nro_tarjeta: ''
+            }];
+            
+            // Si hay tarjeta estudiante, agregar automáticamente
+            if (this.usarTarjetaEstudiante && this.estudianteActual) {
+                this.mediosPagoSeleccionados = [{
+                    id_medio_pago: '4',  // Tarjeta estudiante
+                    monto: Math.min(this.totalCarrito, this.estudianteActual.saldo_actual),
+                    nro_tarjeta: this.codigoTarjeta
+                }];
+                
+                // Si no alcanza con la tarjeta, agregar efectivo por el resto
+                if (this.estudianteActual.saldo_actual < this.totalCarrito) {
+                    this.mediosPagoSeleccionados.push({
+                        id_medio_pago: '1',
+                        monto: this.totalCarrito - this.estudianteActual.saldo_actual,
+                        nro_tarjeta: ''
+                    });
+                }
+            }
+            
+            this.calcularCambio();
+        },
+        
+        agregarMedioPago() {
+            this.mediosPagoSeleccionados.push({
+                id_medio_pago: '',
+                monto: 0,
+                nro_tarjeta: ''
+            });
+        },
+        
+        eliminarMedioPago(index) {
+            this.mediosPagoSeleccionados.splice(index, 1);
+            this.calcularCambio();
+        },
+        
+        calcularCambio() {
+            this.totalRecibido = this.mediosPagoSeleccionados.reduce((sum, pago) => sum + (Number(pago.monto) || 0), 0);
+            this.cambio = this.totalRecibido - this.totalCarrito;
+        },
+        
+        async procesarVenta() {
+            if (this.cambio < 0) {
+                alert('El monto recibido es insuficiente');
+                return;
+            }
+            
+            // Validar alertas de restricción alta
+            const alertasAltas = this.alertasRestricciones.filter(a => a.severidad === 'ALTA');
+            if (alertasAltas.length > 0) {
+                if (!confirm(`ADVERTENCIA: Hay ${alertasAltas.length} alerta(s) de restricción ALTA. ¿Desea continuar?`)) {
+                    return;
+                }
+            }
+            
+            this.procesando = true;
+            
+            try {
+                const response = await fetch('/gestion/pos/general/api/procesar-venta/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': window.csrfToken || ''
+                    },
+                    body: JSON.stringify({
+                        id_empleado_cajero: 1,  // TODO: Obtener del sistema de autenticación
+                        id_hijo: this.estudianteActual?.id_hijo || null,
+                        productos: this.carrito.map(item => ({
+                            id_producto: item.id,
+                            cantidad: item.cantidad,
+                            precio_unitario: item.precio_unitario
+                        })),
+                        pagos: this.mediosPagoSeleccionados.map(pago => ({
+                            id_medio_pago: parseInt(pago.id_medio_pago),
+                            monto: parseInt(pago.monto),
+                            nro_tarjeta: pago.nro_tarjeta || null
+                        })),
+                        tipo_venta: 'CONTADO'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.ventaProcesada = data;
+                    this.modalPago = false;
+                    this.modalExito = true;
+                } else {
+                    alert(data.error || 'Error al procesar venta');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al procesar venta');
+            } finally {
+                this.procesando = false;
+            }
+        },
+        
+        imprimirTicket() {
+            // TODO: Implementar impresión de ticket
+            window.open(`/gestion/pos/general/ticket/${this.ventaProcesada.id_venta}/`, '_blank');
+        },
+        
+        cerrarModalExito() {
+            this.modalExito = false;
+            
+            // Limpiar todo
+            this.carrito = [];
+            this.totalCarrito = 0;
+            this.busquedaQuery = '';
+            this.productosEncontrados = [];
+            this.usarTarjetaEstudiante = false;
+            this.codigoTarjeta = '';
+            this.estudianteActual = null;
+            this.alertasRestricciones = [];
+            this.ventaProcesada = null;
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -146,7 +146,7 @@ class ProductoViewSet(viewsets.ModelViewSet):
                 if producto.stock_minimo is not None and stock.stock_actual < producto.stock_minimo:
                     productos_criticos.append({
                         'id_producto': producto.id_producto,
-                        'codigo': producto.codigo,
+                        'codigo': producto.codigo_barra or 'N/A',
                         'descripcion': producto.descripcion,
                         'stock_actual': float(stock.stock_actual),
                         'stock_minimo': float(producto.stock_minimo),
@@ -167,7 +167,7 @@ class ProductoViewSet(viewsets.ModelViewSet):
             id_venta__estado='Completada'
         ).values(
             'id_producto__id_producto',
-            'id_producto__codigo',
+            'id_producto__codigo_barra',
             'id_producto__descripcion'
         ).annotate(
             cantidad_vendida=Sum('cantidad'),
@@ -563,7 +563,7 @@ class StockViewSet(viewsets.ReadOnlyModelViewSet):
                 stock.stock_actual < stock.id_producto.stock_minimo):
                 alertas.append({
                     'producto_id': stock.id_producto.id_producto,
-                    'codigo': stock.id_producto.codigo,
+                    'codigo': stock.id_producto.codigo_barra or 'N/A',
                     'descripcion': stock.id_producto.descripcion,
                     'stock_actual': float(stock.stock_actual),
                     'stock_minimo': float(stock.id_producto.stock_minimo),

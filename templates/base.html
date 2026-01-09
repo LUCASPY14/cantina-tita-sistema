@@ -277,7 +277,7 @@
                 },
                 
                 // Agregar producto al carrito
-                addToCart(product) {
+                async addToCart(product) {
                     // Verificar si es un producto de recarga (precio 0 o nombre contiene "recarga")
                     const esRecarga = product.price === 0 || product.name.toLowerCase().includes('recarga');
                     
@@ -297,6 +297,67 @@
                         
                         document.getElementById('modal-monto-recarga').showModal();
                         return;
+                    }
+                    
+                    // ⭐ VERIFICAR RESTRICCIONES ALIMENTARIAS ANTES DE AGREGAR
+                    if (this.selectedCard && this.selectedCard.id) {
+                        try {
+                            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                            const response = await fetch('/gestion/api/verificar-restricciones/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': csrftoken
+                                },
+                                body: JSON.stringify({
+                                    tarjeta_codigo: this.selectedCard.id,
+                                    items: [{
+                                        producto_id: product.id,
+                                        cantidad: 1
+                                    }]
+                                })
+                            });
+                            
+                            if (response.ok) {
+                                const data = await response.json();
+                                
+                                // Si hay alertas de restricciones
+                                if (data.tiene_alertas && data.alertas && data.alertas.length > 0) {
+                                    // Mostrar alerta visual
+                                    const alertas = data.alertas.map(a => 
+                                        `⚠️ ${a.tipo_restriccion}: ${a.mensaje} (${Math.round(a.nivel_confianza * 100)}% confianza)`
+                                    ).join('\n');
+                                    
+                                    this.showNotification(
+                                        `ADVERTENCIA: ${data.alertas.length} restricción(es) detectada(s) para ${product.name}`,
+                                        'warning'
+                                    );
+                                    
+                                    // Si requiere autorización, mostrar alerta más fuerte
+                                    if (data.requiere_autorizacion) {
+                                        playSound('error');
+                                        
+                                        // Confirmación del usuario
+                                        const confirmar = confirm(
+                                            `⚠️ RESTRICCIÓN ALIMENTARIA DETECTADA ⚠️\n\n` +
+                                            `Estudiante: ${this.selectedCard.nombre || 'N/A'}\n` +
+                                            `Producto: ${product.name}\n\n` +
+                                            `${alertas}\n\n` +
+                                            `¿Desea agregar este producto de todas formas?`
+                                        );
+                                        
+                                        if (!confirmar) {
+                                            playSound('error');
+                                            this.showNotification('Producto NO agregado por restricción', 'error');
+                                            return; // NO agregar al carrito
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error al verificar restricciones:', error);
+                            // Continuar agregando el producto aunque falle la verificación
+                        }
                     }
                     
                     const existingItem = this.cart.find(item => item.id === product.id && !item.esPorKilo && !item.esRecarga);
@@ -664,7 +725,7 @@
                 },
                 
                 // Confirmar y procesar venta con el tipo de pago seleccionado
-                confirmarCheckout() {
+                async confirmarCheckout() {
                     // Prevenir doble procesamiento
                     if (this.procesandoVenta) {
                         return;
@@ -681,50 +742,84 @@
                         return;
                     }
                     
-                    // ⚠️ VERIFICAR RESTRICCIONES ALIMENTARIAS
-                    if (this.selectedCard && this.selectedCard.tiene_restricciones) {
-                        console.log('⚠️ Tarjeta con restricciones detectada, mostrando modal...');
-                        
-                        // Cerrar modal de checkout
-                        document.getElementById('modal-checkout').close();
-                        
-                        // Preparar datos para el modal de restricciones
-                        const modalRestricciones = document.getElementById('modal-restricciones');
-                        const modalComponent = Alpine.$data(modalRestricciones);
-                        
-                        // Mostrar modal de restricciones
-                        modalComponent.mostrar({
-                            nombre: this.selectedCard.nombre_completo || this.selectedCard.nombre,
-                            tarjeta: this.selectedCard.id,
-                            restricciones: this.selectedCard.restricciones
-                        });
-                        
-                        // Esperar confirmación del cajero
-                        const confirmarRestricciones = (e) => {
-                            console.log('✅ Cajero confirmó restricciones, procediendo con venta...');
-                            this.justificacionRestricciones = e.detail.justificacion;
-                            this.restriccionesConfirmadas = true;
-                            window.removeEventListener('restriccionesConfirmadas', confirmarRestricciones);
-                            window.removeEventListener('restriccionesCanceladas', cancelarRestricciones);
-                            // Procesar venta después de confirmación
-                            this.procesarVentaFinal();
-                        };
-                        
-                        const cancelarRestricciones = () => {
-                            console.log('❌ Cajero canceló la venta por restricciones');
-                            this.procesandoVenta = false;
-                            window.removeEventListener('restriccionesConfirmadas', confirmarRestricciones);
-                            window.removeEventListener('restriccionesCanceladas', cancelarRestricciones);
-                            this.showNotification('Venta cancelada por restricciones alimentarias', 'warning');
-                        };
-                        
-                        window.addEventListener('restriccionesConfirmadas', confirmarRestricciones);
-                        window.addEventListener('restriccionesCanceladas', cancelarRestricciones);
-                        
-                        return;  // No continuar, esperar confirmación
+                    // ⭐ VERIFICAR RESTRICCIONES ALIMENTARIAS DEL CARRITO COMPLETO
+                    if (this.selectedCard && this.selectedCard.id) {
+                        try {
+                            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                            const response = await fetch('/gestion/api/verificar-restricciones/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': csrftoken
+                                },
+                                body: JSON.stringify({
+                                    tarjeta_codigo: this.selectedCard.id,
+                                    items: this.cart.map(item => ({
+                                        producto_id: item.id,
+                                        cantidad: item.esPorKilo ? (item.peso || 1) : (item.quantity || 1)
+                                    }))
+                                })
+                            });
+                            
+                            if (response.ok) {
+                                const data = await response.json();
+                                
+                                // Si hay alertas críticas de restricciones
+                                if (data.tiene_alertas && data.alertas && data.alertas.length > 0) {
+                                    const alertasCriticas = data.alertas.filter(a => a.severidad === 'Crítica' || a.severidad === 'Severa');
+                                    
+                                    if (alertasCriticas.length > 0 || data.requiere_autorizacion) {
+                                        // Mostrar modal de restricciones con información detallada
+                                        const detallesAlertas = data.alertas.map(a => 
+                                            `• ${a.producto_nombre}: ${a.tipo_restriccion} (${a.severidad})\n  ${a.mensaje}`
+                                        ).join('\n\n');
+                                        
+                                        // Cerrar modal de checkout
+                                        document.getElementById('modal-checkout').close();
+                                        
+                                        // Preparar y mostrar modal de restricciones
+                                        const modalRestricciones = document.getElementById('modal-restricciones');
+                                        const modalComponent = Alpine.$data(modalRestricciones);
+                                        
+                                        modalComponent.mostrar({
+                                            nombre: this.selectedCard.nombre_completo || this.selectedCard.nombre,
+                                            tarjeta: this.selectedCard.id,
+                                            restricciones: `ALERTAS DETECTADAS EN EL CARRITO:\n\n${detallesAlertas}`
+                                        });
+                                        
+                                        // Esperar confirmación del cajero
+                                        const confirmarRestricciones = (e) => {
+                                            console.log('✅ Cajero confirmó restricciones, procediendo con venta...');
+                                            this.justificacionRestricciones = e.detail.justificacion;
+                                            this.restriccionesConfirmadas = true;
+                                            window.removeEventListener('restriccionesConfirmadas', confirmarRestricciones);
+                                            window.removeEventListener('restriccionesCanceladas', cancelarRestricciones);
+                                            // Procesar venta después de confirmación
+                                            this.procesarVentaFinal();
+                                        };
+                                        
+                                        const cancelarRestricciones = () => {
+                                            console.log('❌ Cajero canceló la venta por restricciones');
+                                            this.procesandoVenta = false;
+                                            window.removeEventListener('restriccionesConfirmadas', confirmarRestricciones);
+                                            window.removeEventListener('restriccionesCanceladas', cancelarRestricciones);
+                                            this.showNotification('Venta cancelada por restricciones alimentarias', 'warning');
+                                        };
+                                        
+                                        window.addEventListener('restriccionesConfirmadas', confirmarRestricciones);
+                                        window.addEventListener('restriccionesCanceladas', cancelarRestricciones);
+                                        
+                                        return;  // No continuar, esperar confirmación
+                                    }
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error al verificar restricciones:', error);
+                            // Continuar con la venta aunque falle la verificación
+                        }
                     }
                     
-                    // Si no hay restricciones, procesar normalmente
+                    // Si no hay restricciones críticas, procesar normalmente
                     this.procesarVentaFinal();
                 },
                 

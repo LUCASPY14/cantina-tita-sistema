@@ -198,6 +198,65 @@ class Hijo(models.Model):
         return bool(self.foto_perfil)
 
 
+class RestriccionesHijos(models.Model):
+    '''Tabla restricciones_hijos - Restricciones alimentarias de estudiantes'''
+    SEVERIDAD_CHOICES = [
+        ('Leve', 'Leve'),
+        ('Moderada', 'Moderada'),
+        ('Severa', 'Severa'),
+        ('Crítica', 'Crítica'),
+    ]
+    
+    id_restriccion = models.AutoField(db_column='ID_Restriccion', primary_key=True)
+    id_hijo = models.ForeignKey(
+        Hijo,
+        on_delete=models.CASCADE,
+        db_column='ID_Hijo',
+        related_name='restricciones'
+    )
+    tipo_restriccion = models.CharField(
+        db_column='Tipo_Restriccion',
+        max_length=100,
+        help_text='Tipo: Celíaco, Intolerancia lactosa, Alergia maní, Vegetariano, etc.'
+    )
+    descripcion = models.TextField(
+        db_column='Descripcion',
+        blank=True,
+        null=True,
+        help_text='Descripción detallada de la restricción'
+    )
+    observaciones = models.TextField(
+        db_column='Observaciones',
+        blank=True,
+        null=True,
+        help_text='Observaciones adicionales o ingredientes específicos a evitar'
+    )
+    severidad = models.CharField(
+        db_column='Severidad',
+        max_length=20,
+        choices=SEVERIDAD_CHOICES,
+        default='Moderada'
+    )
+    requiere_autorizacion = models.BooleanField(
+        db_column='Requiere_Autorizacion',
+        default=True,
+        help_text='Si requiere autorización para consumir productos restringidos'
+    )
+    fecha_registro = models.DateTimeField(db_column='Fecha_Registro', auto_now_add=True)
+    fecha_ultima_actualizacion = models.DateTimeField(db_column='Fecha_Ultima_Actualizacion', auto_now=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'restricciones_hijos'
+        verbose_name = 'Restricción Alimentaria'
+        verbose_name_plural = 'Restricciones Alimentarias'
+        ordering = ['-severidad', 'tipo_restriccion']
+    
+    def __str__(self):
+        return f'{self.id_hijo.nombre_completo} - {self.tipo_restriccion} ({self.severidad})'
+
+
 class Tarjeta(models.Model):
     '''Tabla tarjetas - Tarjetas de estudiantes'''
     ESTADO_CHOICES = [
@@ -3115,4 +3174,210 @@ class PromocionAplicada(models.Model):
     def __str__(self):
         return f'Venta #{self.id_venta.id_venta} - {self.id_promocion.nombre} (-Gs. {self.monto_descontado:,.0f})'
 
+
+# =============================================================================
+# MODELOS PARA PORTAL DE PADRES
+# Nuevos modelos managed=True para funcionalidades del portal web
+# =============================================================================
+
+class UsuarioPortal(models.Model):
+    """
+    Usuario del portal web de padres
+    Permite a los padres acceder al portal con email/contraseña
+    """
+    id_usuario_portal = models.AutoField(db_column='ID_Usuario_Portal', primary_key=True)
+    cliente = models.OneToOneField(
+        Cliente,
+        on_delete=models.CASCADE,
+        db_column='ID_Cliente',
+        related_name='usuario_portal'
+    )
+    email = models.EmailField(db_column='Email', unique=True, max_length=255)
+    password_hash = models.CharField(db_column='Password_Hash', max_length=255)
+    email_verificado = models.BooleanField(db_column='Email_Verificado', default=False)
+    fecha_registro = models.DateTimeField(db_column='Fecha_Registro', auto_now_add=True)
+    ultimo_acceso = models.DateTimeField(db_column='Ultimo_Acceso', null=True, blank=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
+    
+    class Meta:
+        managed = True
+        db_table = 'usuarios_portal'
+        verbose_name = 'Usuario Portal'
+        verbose_name_plural = 'Usuarios Portal'
+    
+    def __str__(self):
+        return f'{self.email} - {self.cliente.nombres} {self.cliente.apellidos}'
+
+
+class TokenVerificacion(models.Model):
+    """
+    Tokens para verificación de email y recuperación de contraseña
+    """
+    TIPO_CHOICES = [
+        ('email_verification', 'Verificación de Email'),
+        ('password_reset', 'Recuperación de Contraseña'),
+    ]
+    
+    id_token = models.AutoField(db_column='ID_Token', primary_key=True)
+    usuario_portal = models.ForeignKey(
+        UsuarioPortal,
+        on_delete=models.CASCADE,
+        db_column='ID_Usuario_Portal',
+        related_name='tokens'
+    )
+    token = models.CharField(db_column='Token', max_length=100, unique=True)
+    tipo = models.CharField(db_column='Tipo', max_length=50, choices=TIPO_CHOICES)
+    expira_en = models.DateTimeField(db_column='Expira_En')
+    usado = models.BooleanField(db_column='Usado', default=False)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    fecha_uso = models.DateTimeField(db_column='Fecha_Uso', null=True, blank=True)
+    
+    class Meta:
+        managed = True
+        db_table = 'tokens_verificacion'
+        verbose_name = 'Token de Verificación'
+        verbose_name_plural = 'Tokens de Verificación'
+    
+    def __str__(self):
+        return f'{self.get_tipo_display()} - {self.usuario_portal.email}'
+    
+    def es_valido(self):
+        """Verifica si el token es válido (no usado y no expirado)"""
+        from django.utils import timezone
+        return not self.usado and self.expira_en > timezone.now()
+
+
+class TransaccionOnline(models.Model):
+    """
+    Transacciones de pago online realizadas desde el portal de padres
+    """
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('completado', 'Completado'),
+        ('fallido', 'Fallido'),
+        ('cancelado', 'Cancelado'),
+    ]
+    
+    METODO_PAGO_CHOICES = [
+        ('metrepay', 'MetrePay'),
+        ('tigo_money', 'Tigo Money'),
+    ]
+    
+    id_transaccion = models.AutoField(db_column='ID_Transaccion', primary_key=True)
+    nro_tarjeta = models.ForeignKey(
+        'Tarjeta',
+        on_delete=models.SET_NULL,
+        db_column='Nro_Tarjeta',
+        to_field='nro_tarjeta',
+        related_name='transacciones_online',
+        null=True,
+        blank=True
+    )
+    usuario_portal = models.ForeignKey(
+        UsuarioPortal,
+        on_delete=models.SET_NULL,
+        db_column='ID_Usuario_Portal',
+        related_name='transacciones',
+        null=True,
+        blank=True
+    )
+    monto = models.BigIntegerField(db_column='Monto')
+    metodo_pago = models.CharField(db_column='Metodo_Pago', max_length=20, choices=METODO_PAGO_CHOICES)
+    estado = models.CharField(db_column='Estado', max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    referencia_pago = models.CharField(db_column='Referencia_Pago', max_length=255, null=True, blank=True)
+    id_transaccion_externa = models.CharField(db_column='ID_Transaccion_Externa', max_length=255, null=True, blank=True)
+    datos_extra = models.TextField(db_column='Datos_Extra', null=True, blank=True)
+    fecha_transaccion = models.DateTimeField(db_column='Fecha_Transaccion')
+    creado_en = models.DateTimeField(db_column='Creado_En', auto_now_add=True)
+    actualizado_en = models.DateTimeField(db_column='Actualizado_En', auto_now=True)
+    
+    class Meta:
+        managed = True
+        db_table = 'transaccion_online'
+        verbose_name = 'Transacción Online'
+        verbose_name_plural = 'Transacciones Online'
+        ordering = ['-fecha_transaccion']
+    
+    def __str__(self):
+        return f'Transacción #{self.id_transaccion} - {self.get_metodo_pago_display()} - Gs. {self.monto:,.0f}'
+
+
+class Notificacion(models.Model):
+    """
+    Notificaciones para usuarios del portal de padres
+    """
+    TIPO_CHOICES = [
+        ('saldo_bajo', 'Saldo Bajo'),
+        ('recarga_exitosa', 'Recarga Exitosa'),
+        ('consumo_realizado', 'Consumo Realizado'),
+        ('tarjeta_bloqueada', 'Tarjeta Bloqueada'),
+        ('restriccion_aplicada', 'Restricción Aplicada'),
+        ('info_general', 'Información General'),
+    ]
+    
+    id_notificacion = models.AutoField(db_column='ID_Notificacion', primary_key=True)
+    usuario_portal = models.ForeignKey(
+        UsuarioPortal,
+        on_delete=models.CASCADE,
+        db_column='ID_Usuario_Portal',
+        related_name='notificaciones'
+    )
+    tipo = models.CharField(db_column='Tipo', max_length=50, choices=TIPO_CHOICES)
+    titulo = models.CharField(db_column='Titulo', max_length=255)
+    mensaje = models.TextField(db_column='Mensaje')
+    leida = models.BooleanField(db_column='Leida', default=False)
+    fecha_envio = models.DateTimeField(db_column='Fecha_Envio')
+    fecha_lectura = models.DateTimeField(db_column='Fecha_Lectura', null=True, blank=True)
+    creado_en = models.DateTimeField(db_column='Creado_En', auto_now_add=True)
+    
+    class Meta:
+        managed = True
+        db_table = 'notificacion'
+        verbose_name = 'Notificación'
+        verbose_name_plural = 'Notificaciones'
+        ordering = ['-fecha_envio']
+    
+    def __str__(self):
+        return f'{self.get_tipo_display()} - {self.usuario_portal.email} - {self.titulo}'
+    
+    def marcar_como_leida(self):
+        """Marca la notificación como leída"""
+        if not self.leida:
+            from django.utils import timezone
+            self.leida = True
+            self.fecha_lectura = timezone.now()
+            self.save()
+
+
+class PreferenciaNotificacion(models.Model):
+    """
+    Preferencias de notificación de los usuarios del portal
+    """
+    id_preferencia = models.AutoField(db_column='ID_Preferencia', primary_key=True)
+    usuario_portal = models.ForeignKey(
+        UsuarioPortal,
+        on_delete=models.CASCADE,
+        db_column='ID_Usuario_Portal',
+        related_name='preferencias_notificacion'
+    )
+    tipo_notificacion = models.CharField(db_column='Tipo_Notificacion', max_length=50)
+    email_activo = models.BooleanField(db_column='Email_Activo', default=True)
+    push_activo = models.BooleanField(db_column='Push_Activo', default=True)
+    creado_en = models.DateTimeField(db_column='Creado_En', auto_now_add=True)
+    actualizado_en = models.DateTimeField(db_column='Actualizado_En', auto_now=True)
+    
+    class Meta:
+        managed = True
+        db_table = 'preferencia_notificacion'
+        verbose_name = 'Preferencia de Notificación'
+        verbose_name_plural = 'Preferencias de Notificación'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['usuario_portal', 'tipo_notificacion'],
+                name='unique_usuario_tipo'
+            )
+        ]
+    
+    def __str__(self):
+        return f'Preferencias de {self.usuario_portal.email} - {self.tipo_notificacion}'
 
