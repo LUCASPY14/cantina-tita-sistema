@@ -6,6 +6,8 @@ from . import portal_views
 from . import portal_api
 from . import pos_general_views
 from . import pos_sugerencias_api
+from . import facturacion_views
+from . import pos_facturacion_integracion
 
 app_name = 'gestion'
 
@@ -37,9 +39,18 @@ urlpatterns = [
     path('pos/general/api/verificar-tarjeta/', pos_general_views.verificar_tarjeta_api, name='pos_general_verificar_tarjeta'),
     path('pos/general/api/verificar-restricciones-carrito/', pos_general_views.verificar_restricciones_carrito_api, name='pos_general_verificar_restricciones'),
     path('pos/general/api/procesar-venta/', pos_general_views.procesar_venta_api, name='pos_general_procesar_venta'),
+    path('pos/general/api/procesar-venta-factura/', pos_facturacion_integracion.procesar_venta_con_factura_api, name='pos_procesar_venta_factura'),
     path('pos/general/api/sugerir-productos-seguros/', pos_sugerencias_api.sugerir_productos_seguros, name='pos_sugerir_productos'),
     path('pos/general/api/detalles-restriccion/', pos_sugerencias_api.obtener_detalles_restriccion, name='pos_detalles_restriccion'),
     path('pos/general/ticket/<int:id_venta>/', pos_general_views.imprimir_ticket_venta, name='pos_general_ticket'),
+    
+    # ==================== FACTURACIÓN ELECTRÓNICA ====================
+    path('facturacion/dashboard/', facturacion_views.dashboard_facturacion, name='facturacion_dashboard'),
+    path('facturacion/api/emitir/', facturacion_views.emitir_factura_api, name='facturacion_emitir'),
+    path('facturacion/api/anular/', facturacion_views.anular_factura_api, name='facturacion_anular'),
+    path('facturacion/kude/<str:cdc>/', facturacion_views.descargar_kude, name='facturacion_kude'),
+    path('facturacion/listado/', facturacion_views.listar_facturas, name='facturacion_listado'),
+    path('facturacion/reporte-cumplimiento/', facturacion_views.reporte_cumplimiento, name='facturacion_reporte'),
     
     # URLs para módulo de almuerzos
     path('pos/almuerzo/', almuerzo_views.pos_almuerzo, name='pos_almuerzo'),

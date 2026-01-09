@@ -377,3 +377,21 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # =============================================================================
 METREPAY_API_TOKEN = config('METREPAY_API_TOKEN', default='')
 METREPAY_BASE_URL = config('METREPAY_BASE_URL', default='https://test.metrepay.com/api')
+# =============================================================================
+# CONFIGURACIÓN DE FACTURACIÓN ELECTRÓNICA (EKUATIA/SET)
+# =============================================================================
+# Modo: 'testing' (simulado) o 'produccion' (conectado a Ekuatia)
+EKUATIA_MODO = config('EKUATIA_MODO', default='testing')
+EKUATIA_API_KEY = config('EKUATIA_API_KEY', default='')
+EKUATIA_BASE_URL = config('EKUATIA_BASE_URL', default='https://sifen.set.gov.py/rest/api')
+
+# Certificados para firma digital (solo en producción)
+EKUATIA_CERT_PATH = config('EKUATIA_CERT_PATH', default='')
+EKUATIA_KEY_PATH = config('EKUATIA_KEY_PATH', default='')
+
+# =============================================================================
+# CONFIGURACIÓN DE IMPRESORA TÉRMICA
+# =============================================================================
+IMPRESORA_TIPO = config('IMPRESORA_TIPO', default='USB')  # USB, RED, BLUETOOTH
+IMPRESORA_HOST = config('IMPRESORA_HOST', default='')  # Para impresora por RED
+IMPRESORA_PUERTO = config('IMPRESORA_PUERTO', default='9100', cast=int)
