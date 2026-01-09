@@ -296,17 +296,34 @@ def verificar_restricciones_carrito_api(request):
             if not producto:
                 continue
             
-            # Usar función de matching automático
-            conflictos = verificar_restricciones_producto(hijo, producto)
+            # Usar función de matching automático para verificar restricciones
+            restricciones_hijo = RestriccionesHijos.objects.filter(
+                id_hijo=hijo,
+                activo=True
+            )
             
-            for conflicto in conflictos:
-                alertas.append({
-                    'id_producto': producto.id_producto,
-                    'nombre_producto': producto.descripcion,
-                    'restriccion': conflicto['restriccion'],
-                    'severidad': conflicto['severidad'],
-                    'razon': conflicto['razon']
-                })
+            for restriccion in restricciones_hijo:
+                tiene_conflicto, razon, confianza = ProductoRestriccionMatcher.analizar_producto(
+                    producto, restriccion
+                )
+                
+                if tiene_conflicto:
+                    # Determinar severidad (de baja a alta según confianza)
+                    if confianza >= 90:
+                        severidad = 'ALTA'
+                    elif confianza >= 70:
+                        severidad = 'MEDIA'
+                    else:
+                        severidad = 'BAJA'
+                    
+                    alertas.append({
+                        'id_producto': producto.id_producto,
+                        'nombre_producto': producto.descripcion,
+                        'restriccion': restriccion.tipo_restriccion,
+                        'severidad': severidad,
+                        'razon': razon,
+                        'confianza': confianza
+                    })
         
         return JsonResponse({
             'success': True,

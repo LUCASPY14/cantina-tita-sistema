@@ -7,42 +7,141 @@
 <style>
     [x-cloak] { display: none !important; }
     
+    /* Animaciones */
+    .producto-card {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
     .producto-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-4px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        border-color: #3B82F6;
     }
     
     .carrito-item {
-        animation: fadeIn 0.3s ease-in;
+        animation: fadeIn 0.4s ease-in;
     }
     
     @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(-10px); }
-        to { opacity: 1; transform: translateY(0); }
+        from { 
+            opacity: 0; 
+            transform: translateY(-15px);
+        }
+        to { 
+            opacity: 1; 
+            transform: translateY(0);
+        }
     }
     
     .scan-input {
         font-family: 'Courier New', monospace;
-        font-size: 1.2rem;
+        font-size: 1.1rem;
+        letter-spacing: 0.05em;
     }
     
+    .scan-input:focus {
+        border-color: #22C55E;
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+    }
+    
+    /* Alertas de restricción */
     .alert-restriccion {
-        animation: pulse 1s ease-in-out infinite;
+        animation: pulse 2s ease-in-out infinite;
+        border-left: 4px solid #F59E0B;
     }
     
     @keyframes pulse {
         0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
+        50% { opacity: 0.8; }
     }
     
+    /* Badges de stock -->
     .badge-stock-bajo {
-        background-color: #fbbf24;
-        color: #92400e;
+        background-color: #FCD34D;
+        color: #78350F;
+        font-weight: 600;
     }
     
     .badge-sin-stock {
-        background-color: #ef4444;
-        color: #fff;
+        background-color: #EF4444;
+        color: #FFF;
+        font-weight: 600;
+    }
+    
+    /* Carrito sticky -->
+    .carrito-sticky {
+        position: sticky;
+        top: 1rem;
+    }
+    
+    /* Modal mejorado -->
+    .modal-box {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    /* Totales resaltados -->
+    .total-venta {
+        background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+        color: white;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin: 1rem 0;
+        font-size: 1.5rem;
+        font-weight: bold;
+        text-align: center;
+    }
+    
+    /* Botón procesando -->
+    .btn-procesando {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+    
+    /* Tabla de medios de pago mejorada -->
+    .medio-pago-item {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 0.75rem;
+        align-items: center;
+        padding: 0.75rem;
+        border: 1px solid #E5E7EB;
+        border-radius: 0.375rem;
+        background-color: #F9FAFB;
+    }
+    
+    .medio-pago-item:hover {
+        background-color: #F3F4F6;
+    }
+    
+    /* Info de restricciones mejorada -->
+    .restriccion-item {
+        padding: 0.75rem;
+        margin: 0.5rem 0;
+        border-left: 4px solid #F59E0B;
+        background-color: #FFFBEB;
+        border-radius: 0.375rem;
+    }
+    
+    .restriccion-item.alta {
+        border-left-color: #DC2626;
+        background-color: #FEE2E2;
+    }
+    
+    .restriccion-item.media {
+        border-left-color: #F59E0B;
+        background-color: #FFFBEB;
+    }
+    
+    .restriccion-item.baja {
+        border-left-color: #10B981;
+        background-color: #ECFDF5;
+    }
+    
+    /* Transiciones suaves */
+    .transition-all {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 </style>
 {% endblock %}
@@ -664,7 +763,15 @@ function posGeneral() {
         
         // Verificar restricciones
         async verificarRestriccionesCarrito() {
-            if (!this.estudianteActual) return;
+            if (!this.estudianteActual) {
+                this.alertasRestricciones = [];
+                return;
+            }
+            
+            if (this.carrito.length === 0) {
+                this.alertasRestricciones = [];
+                return;
+            }
             
             try {
                 const response = await fetch('/gestion/pos/general/api/verificar-restricciones-carrito/', {
@@ -686,36 +793,56 @@ function posGeneral() {
                 
                 if (data.success) {
                     this.alertasRestricciones = data.alertas || [];
+                    
+                    // Mostrar notificación si hay alertas
+                    if (this.alertasRestricciones.length > 0) {
+                        console.warn(`⚠️ ${this.alertasRestricciones.length} restricción(es) detectada(s)`);
+                    }
                 }
             } catch (error) {
                 console.error('Error al verificar restricciones:', error);
             }
         },
         
-        // Pago
+        // Pago - Preparar pagos
         prepararPago() {
-            this.mediosPagoSeleccionados = [{
-                id_medio_pago: '1',  // Efectivo por defecto
-                monto: this.totalCarrito,
-                nro_tarjeta: ''
-            }];
+            // Limpiar pagos previos
+            this.mediosPagoSeleccionados = [];
+            this.totalRecibido = 0;
+            this.cambio = 0;
             
-            // Si hay tarjeta estudiante, agregar automáticamente
+            // Si usa tarjeta estudiante
             if (this.usarTarjetaEstudiante && this.estudianteActual) {
-                this.mediosPagoSeleccionados = [{
-                    id_medio_pago: '4',  // Tarjeta estudiante
-                    monto: Math.min(this.totalCarrito, this.estudianteActual.saldo_actual),
-                    nro_tarjeta: this.codigoTarjeta
-                }];
+                const saldoDisponible = this.estudianteActual.saldo_actual;
                 
-                // Si no alcanza con la tarjeta, agregar efectivo por el resto
-                if (this.estudianteActual.saldo_actual < this.totalCarrito) {
+                if (saldoDisponible >= this.totalCarrito) {
+                    // El saldo es suficiente para toda la compra
                     this.mediosPagoSeleccionados.push({
-                        id_medio_pago: '1',
-                        monto: this.totalCarrito - this.estudianteActual.saldo_actual,
+                        id_medio_pago: '4',
+                        monto: this.totalCarrito,
+                        nro_tarjeta: this.codigoTarjeta
+                    });
+                } else {
+                    // El saldo es insuficiente, usar tarjeta + efectivo
+                    this.mediosPagoSeleccionados.push({
+                        id_medio_pago: '4',
+                        monto: saldoDisponible,
+                        nro_tarjeta: this.codigoTarjeta
+                    });
+                    
+                    this.mediosPagoSeleccionados.push({
+                        id_medio_pago: '1',  // Efectivo
+                        monto: this.totalCarrito - saldoDisponible,
                         nro_tarjeta: ''
                     });
                 }
+            } else {
+                // Sin tarjeta estudiante, usar efectivo por defecto
+                this.mediosPagoSeleccionados.push({
+                    id_medio_pago: '1',
+                    monto: this.totalCarrito,
+                    nro_tarjeta: ''
+                });
             }
             
             this.calcularCambio();
@@ -740,15 +867,35 @@ function posGeneral() {
         },
         
         async procesarVenta() {
+            // Validaciones
             if (this.cambio < 0) {
-                alert('El monto recibido es insuficiente');
+                alert('❌ El monto recibido es insuficiente');
                 return;
             }
             
-            // Validar alertas de restricción alta
+            // Validar que todos los medios de pago tengan valores
+            for (let pago of this.mediosPagoSeleccionados) {
+                if (!pago.id_medio_pago) {
+                    alert('❌ Debe seleccionar un medio de pago');
+                    return;
+                }
+                if (pago.monto <= 0) {
+                    alert('❌ El monto debe ser mayor a 0');
+                    return;
+                }
+                if (pago.id_medio_pago == 4 && !pago.nro_tarjeta) {
+                    alert('❌ Debe ingresar el número de tarjeta estudiante');
+                    return;
+                }
+            }
+            
+            // Validar alertas de restricción ALTA
             const alertasAltas = this.alertasRestricciones.filter(a => a.severidad === 'ALTA');
             if (alertasAltas.length > 0) {
-                if (!confirm(`ADVERTENCIA: Hay ${alertasAltas.length} alerta(s) de restricción ALTA. ¿Desea continuar?`)) {
+                const mensaje = `⚠️ ADVERTENCIA: Hay ${alertasAltas.length} restricción(es) ALTA detectada(s):\n\n`;
+                const detalles = alertasAltas.map(a => `• ${a.nombre_producto}: ${a.restriccion}`).join('\n');
+                
+                if (!confirm(mensaje + detalles + '\n\n¿Desea continuar de todas formas?')) {
                     return;
                 }
             }
@@ -785,12 +932,18 @@ function posGeneral() {
                     this.ventaProcesada = data;
                     this.modalPago = false;
                     this.modalExito = true;
+                    
+                    // Sonido de éxito (opcional)
+                    try {
+                        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj==');
+                        audio.play().catch(() => {});
+                    } catch (e) {}
                 } else {
-                    alert(data.error || 'Error al procesar venta');
+                    alert(`❌ ${data.error || 'Error al procesar venta'}`);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error al procesar venta');
+                alert(`❌ Error al procesar venta: ${error.message}`);
             } finally {
                 this.procesando = false;
             }
