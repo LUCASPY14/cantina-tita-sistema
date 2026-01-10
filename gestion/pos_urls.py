@@ -2,26 +2,29 @@
 URLs para el módulo POS (Punto de Venta)
 """
 from django.urls import path
-from gestion import pos_views, almuerzo_views, cliente_views, seguridad_views
+from gestion import pos_views, almuerzo_views, cliente_views, seguridad_views, pos_general_views
 
 app_name = 'pos'
 
 urlpatterns = [
-    # Vista principal
-    path('', pos_views.venta_view, name='venta'),
+    # Vista principal - Nueva interfaz mejorada
+    path('', pos_general_views.pos_general, name='venta'),
     
-    # Búsqueda y filtros (HTMX)
+    # APIs de la interfaz POS mejorada (Bootstrap 5)
+    path('buscar-tarjeta/', pos_general_views.verificar_tarjeta_api, name='buscar_tarjeta'),
+    path('buscar-producto/', pos_general_views.buscar_producto_api, name='buscar_producto'),
+    path('procesar-venta/', pos_general_views.procesar_venta_api, name='procesar_venta_api'),
+    path('ticket/<int:id_venta>/', pos_general_views.imprimir_ticket_venta, name='ticket_api'),
+    
+    # Búsqueda y filtros (HTMX - Legacy)
     path('buscar-productos/', pos_views.buscar_productos, name='buscar_productos'),
     path('productos-categoria/', pos_views.productos_por_categoria, name='productos_categoria'),
     
-    # Tarjetas
-    path('buscar-tarjeta/', pos_views.buscar_tarjeta, name='buscar_tarjeta'),
+    # Procesar venta (Legacy)
+    path('procesar-venta-legacy/', pos_views.procesar_venta, name='procesar_venta_legacy'),
     
-    # Procesar venta
-    path('procesar-venta/', pos_views.procesar_venta, name='procesar_venta'),
-    
-    # Ticket
-    path('ticket/<int:venta_id>/', pos_views.ticket_view, name='ticket'),
+    # Ticket (Legacy)
+    path('ticket-legacy/<int:venta_id>/', pos_views.ticket_view, name='ticket_legacy'),
     
     # Recargas
     path('recargas/', pos_views.recargas_view, name='recargas'),

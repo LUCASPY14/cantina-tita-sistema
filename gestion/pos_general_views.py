@@ -45,14 +45,14 @@ from .restricciones_matcher import verificar_restricciones_venta
 def pos_general(request):
     """
     Vista principal del POS General
-    Renderiza la interfaz del punto de venta
+    Renderiza la interfaz del punto de venta con Bootstrap 5
     """
     context = {
-        'titulo': 'POS General',
+        'titulo': 'POS General - Cantina Tita',
         'fecha_actual': timezone.now().strftime('%Y-%m-%d'),
         'hora_actual': timezone.now().strftime('%H:%M:%S'),
     }
-    return render(request, 'gestion/pos_general.html', context)
+    return render(request, 'pos/pos_bootstrap.html', context)
 
 
 @require_http_methods(["POST"])
@@ -167,65 +167,74 @@ def verificar_tarjeta_api(request):
     """
     API: Verificar si una tarjeta existe y obtener datos del estudiante
     
-    POST /pos/general/api/verificar-tarjeta/
+    POST /pos/buscar-tarjeta/
     Body: {
-        "codigo_tarjeta": "12345678"
+        "nro_tarjeta": "12345678"  O "codigo_tarjeta": "12345678"
     }
     
     Response: {
         "success": true,
-        "tarjeta_valida": true,
         "estudiante": {
             "id_hijo": 1,
-            "nombre_completo": "Juan Pérez",
-            "saldo_actual": 50000,
+            "nombre": "Juan Pérez",
+            "saldo": 50000,
             "cliente": "María Pérez",
-            "restricciones": [
-                {"tipo": "Alergia", "detalle": "Maní"}
-            ]
+            "grado": "5to Grado",
+            "restricciones": [...]
         }
     }
     """
     try:
-        data = json.loads(request.body)
-        codigo_tarjeta = data.get('codigo_tarjeta', '').strip()
+        # Leer el cuerpo de la solicitud
+        body = request.body.decode('utf-8') if isinstance(request.body, bytes) else request.body
+        data = json.loads(body) if body else {}
         
-        if not codigo_tarjeta:
+        # Aceptar tanto 'nro_tarjeta' como 'codigo_tarjeta'
+        nro_tarjeta = (data.get('nro_tarjeta') or data.get('codigo_tarjeta') or '').strip()
+        
+        if not nro_tarjeta:
             return JsonResponse({
                 'success': False,
-                'error': 'Debe ingresar un código de tarjeta'
+                'error': 'Debe ingresar un número de tarjeta'
             }, status=400)
         
-        # Buscar tarjeta activa
-        tarjeta = Tarjeta.objects.filter(
-            nro_tarjeta=codigo_tarjeta,
+        # Buscar tarjeta activa - usar relación correcta: id_hijo__id_cliente_responsable
+        tarjeta = Tarjeta.objects.select_related(
+            'id_hijo',
+            'id_hijo__id_cliente_responsable'
+        ).filter(
+            nro_tarjeta=nro_tarjeta,
             estado='Activa'
-        ).select_related('id_hijo', 'id_hijo__id_cliente').first()
+        ).first()
         
         if not tarjeta:
             return JsonResponse({
-                'success': True,
-                'tarjeta_valida': False,
-                'mensaje': 'Tarjeta no encontrada o inactiva'
-            })
+                'success': False,
+                'error': 'Tarjeta no encontrada o inactiva'
+            }, status=404)
         
         # Obtener restricciones del hijo
-        restricciones = RestriccionesHijos.objects.filter(
+        restricciones = list(RestriccionesHijos.objects.filter(
             id_hijo=tarjeta.id_hijo,
             activo=True
-        ).values('tipo_restriccion', 'descripcion', 'severidad')
+        ).values('tipo_restriccion', 'descripcion', 'severidad'))
         
+        # Construir respuesta con toda la información necesaria
         return JsonResponse({
             'success': True,
-            'tarjeta_valida': True,
             'estudiante': {
                 'id_hijo': tarjeta.id_hijo.id_hijo,
-                'nombre_completo': f"{tarjeta.id_hijo.nombre} {tarjeta.id_hijo.apellido}",
-                'saldo_actual': int(tarjeta.saldo_actual),
-                'cliente': tarjeta.id_hijo.id_cliente.nombre_completo,
-                'restricciones': list(restricciones)
+                'nombre': f"{tarjeta.id_hijo.nombre} {tarjeta.id_hijo.apellido}",
+                'saldo': int(tarjeta.saldo_actual),
+                'grado': tarjeta.id_hijo.grado or 'N/A',
+                'cliente': tarjeta.id_hijo.id_cliente_responsable.nombre_completo if tarjeta.id_hijo.id_cliente_responsable else 'N/A',
+                'nro_tarjeta': tarjeta.nro_tarjeta,
+                'foto_perfil': tarjeta.id_hijo.foto_perfil or None,
+                'restricciones': restricciones
             }
         })
+        
+
         
     except json.JSONDecodeError:
         return JsonResponse({
