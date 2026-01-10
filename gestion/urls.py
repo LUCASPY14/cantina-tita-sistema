@@ -33,16 +33,8 @@ urlpatterns = [
     path('reportes/cta-corriente-cliente/excel/', views.reporte_cta_corriente_cliente_excel, name='reporte_cta_corriente_cliente_excel'),
     path('reportes/cta-corriente-proveedor/excel/', views.reporte_cta_corriente_proveedor_excel, name='reporte_cta_corriente_proveedor_excel'),
     
-    # URLs para POS General
-    path('pos/general/', pos_general_views.pos_general, name='pos_general'),
-    path('pos/general/api/buscar-producto/', pos_general_views.buscar_producto_api, name='pos_general_buscar_producto'),
-    path('pos/general/api/verificar-tarjeta/', pos_general_views.verificar_tarjeta_api, name='pos_general_verificar_tarjeta'),
-    path('pos/general/api/verificar-restricciones-carrito/', pos_general_views.verificar_restricciones_carrito_api, name='pos_general_verificar_restricciones'),
-    path('pos/general/api/procesar-venta/', pos_general_views.procesar_venta_api, name='pos_general_procesar_venta'),
-    path('pos/general/api/procesar-venta-factura/', pos_facturacion_integracion.procesar_venta_con_factura_api, name='pos_procesar_venta_factura'),
-    path('pos/general/api/sugerir-productos-seguros/', pos_sugerencias_api.sugerir_productos_seguros, name='pos_sugerir_productos'),
-    path('pos/general/api/detalles-restriccion/', pos_sugerencias_api.obtener_detalles_restriccion, name='pos_detalles_restriccion'),
-    path('pos/general/ticket/<int:id_venta>/', pos_general_views.imprimir_ticket_venta, name='pos_general_ticket'),
+    # URLs para POS General (ahora en /pos/)
+    # NOTA: Las rutas /pos/general/ han sido movidas a /pos/ en pos_urls.py
     
     # ==================== FACTURACIÓN ELECTRÓNICA ====================
     path('facturacion/dashboard/', facturacion_views.dashboard_facturacion, name='facturacion_dashboard'),
@@ -52,12 +44,10 @@ urlpatterns = [
     path('facturacion/listado/', facturacion_views.listar_facturas, name='facturacion_listado'),
     path('facturacion/reporte-cumplimiento/', facturacion_views.reporte_cumplimiento, name='facturacion_reporte'),
     
-    # URLs para módulo de almuerzos
-    path('pos/almuerzo/', almuerzo_views.pos_almuerzo, name='pos_almuerzo'),
-    path('pos/almuerzo/api/', almuerzo_views.pos_almuerzo_api, name='pos_almuerzo_api'),
-    path('pos/almuerzo/anular/', almuerzo_views.anular_ultimo_almuerzo, name='anular_almuerzo'),
-    path('almuerzo/cuentas/', almuerzo_views.lista_cuentas_mensuales, name='cuentas_mensuales'),
-    path('almuerzo/cuentas/generar/', almuerzo_views.generar_cuentas_mes, name='generar_cuentas'),
+    # URLs para módulo de almuerzos - MOVIDAS A pos_urls.py
+    # path('pos/almuerzo/', almuerzo_views.pos_almuerzo, name='pos_almuerzo'),
+    # path('pos/almuerzo/api/', almuerzo_views.pos_almuerzo_api, name='pos_almuerzo_api'),
+    # path('pos/almuerzo/anular/', almuerzo_views.anular_ultimo_almuerzo, name='anular_almuerzo'),
     path('almuerzo/cuentas/pagar/', almuerzo_views.registrar_pago_almuerzo, name='pagar_almuerzo'),
     path('almuerzo/reportes/diario/', almuerzo_views.reporte_almuerzos_diarios, name='reporte_almuerzos'),
     path('almuerzo/reportes/mensual/', almuerzo_views.reporte_mensual_separado, name='reporte_mensual_separado'),

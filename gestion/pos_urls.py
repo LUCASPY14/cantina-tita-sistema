@@ -2,13 +2,17 @@
 URLs para el módulo POS (Punto de Venta)
 """
 from django.urls import path
-from gestion import pos_views, almuerzo_views, cliente_views, seguridad_views, pos_general_views
+from gestion import almuerzo_views, cliente_views, seguridad_views, pos_views, pos_general_views
 
 app_name = 'pos'
 
 urlpatterns = [
+    # ==================== INTERFAZ POS PRINCIPAL ====================
     # Vista principal - Nueva interfaz mejorada
     path('', pos_general_views.pos_general, name='venta'),
+    
+    # Dashboard de ventas del día
+    path('dashboard/', pos_general_views.dashboard_ventas_dia, name='dashboard_ventas'),
     
     # APIs de la interfaz POS mejorada (Bootstrap 5)
     path('buscar-tarjeta/', pos_general_views.verificar_tarjeta_api, name='buscar_tarjeta'),
@@ -16,17 +20,7 @@ urlpatterns = [
     path('procesar-venta/', pos_general_views.procesar_venta_api, name='procesar_venta_api'),
     path('ticket/<int:id_venta>/', pos_general_views.imprimir_ticket_venta, name='ticket_api'),
     
-    # Búsqueda y filtros (HTMX - Legacy)
-    path('buscar-productos/', pos_views.buscar_productos, name='buscar_productos'),
-    path('productos-categoria/', pos_views.productos_por_categoria, name='productos_categoria'),
-    
-    # Procesar venta (Legacy)
-    path('procesar-venta-legacy/', pos_views.procesar_venta, name='procesar_venta_legacy'),
-    
-    # Ticket (Legacy)
-    path('ticket-legacy/<int:venta_id>/', pos_views.ticket_view, name='ticket_legacy'),
-    
-    # Recargas
+    # ==================== RECARGAS ====================
     path('recargas/', pos_views.recargas_view, name='recargas'),
     path('recargas/procesar/', pos_views.procesar_recarga, name='procesar_recarga'),
     path('recargas/historial/', pos_views.historial_recargas_view, name='historial_recargas'),

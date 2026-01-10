@@ -452,6 +452,10 @@
 
     <!-- Contenedor POS -->
     <div class="pos-container">
+        <!-- User info (oculto para usar en API) -->
+        <input type="hidden" id="usuarioActual" value="{{ user.username }}">
+        <input type="hidden" id="userEmail" value="{{ user.email }}">
+        
         <div class="pos-grid">
             <!-- Sección Productos -->
             <div class="productos-section">
@@ -515,6 +519,19 @@
                         <span>Total:</span>
                         <span id="total">Gs. 0</span>
                     </div>
+                </div>
+
+                <!-- Selector Medio de Pago -->
+                <div style="margin-bottom: 15px;">
+                    <label class="tarjeta-label"><i class="fas fa-credit-card"></i> Medio de Pago</label>
+                    <select id="medioPago" class="tarjeta-input" style="cursor: pointer;">
+                        <option value="1">💰 Efectivo</option>
+                        <option value="2">🏦 Transferencia Bancaria</option>
+                        <option value="3">🔵 Débito / QR</option>
+                        <option value="4">🔴 Crédito / QR</option>
+                        <option value="5">📱 Giros Tigo</option>
+                        <option value="6">🎓 Tarjeta Estudiantil</option>
+                    </select>
                 </div>
 
                 <!-- Checkbox Factura Electrónica -->
@@ -780,21 +797,102 @@
         });
 
         // Procesar venta
-        function procesarVenta() {
+        async function procesarVenta() {
             if (carrito.length === 0) {
-                alert('El carrito está vacío');
+                alert('❌ El carrito está vacío');
                 return;
             }
 
-            if (!tarjetaSeleccionada && document.getElementById('emitirFactura').checked) {
-                alert('Debe seleccionar una tarjeta para emitir factura');
+            if (!tarjetaSeleccionada) {
+                alert('❌ Debe verificar una tarjeta antes de procesar');
                 return;
             }
 
-            console.log('Carrito:', carrito);
-            console.log('Tarjeta:', tarjetaSeleccionada);
-            alert('✓ Venta procesada correctamente');
-            limpiarCarrito();
+            // Obtener datos del formulario
+            const emitirFactura = document.getElementById('emitirFactura').checked;
+            const medioPago = document.getElementById('medioPago').value || '1'; // EFECTIVO por defecto
+
+            // Validar que factura solo se emita con medios permitidos
+            if (emitirFactura && medioPago === '6') {
+                alert('❌ No se puede emitir factura con Tarjeta Estudiantil');
+                document.getElementById('emitirFactura').checked = false;
+                return;
+            }
+
+            // Preparar datos de productos
+            const productos = carrito.map(item => ({
+                id_producto: item.id,
+                cantidad: item.cantidad,
+                precio_unitario: item.precio
+            }));
+
+            // Calcular total
+            const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+
+            // Preparar datos de pago
+            const pagos = [{
+                id_medio_pago: parseInt(medioPago),
+                monto: total,
+                nro_tarjeta: tarjetaSeleccionada.nro_tarjeta || null
+            }];
+
+            // Deshabilitar botón mientras se procesa
+            document.getElementById('btnProcesar').disabled = true;
+            document.getElementById('btnProcesar').textContent = '⏳ Procesando...';
+
+            try {
+                const response = await fetch('/pos/procesar-venta/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        id_hijo: tarjetaSeleccionada.id_hijo,
+                        productos: productos,
+                        pagos: pagos,
+                        tipo_venta: 'CONTADO',
+                        emitir_factura: emitirFactura,
+                        medio_pago_id: parseInt(medioPago)
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log('✅ Venta procesada:', data);
+                    
+                    // Mostrar confirmación
+                    const mensaje = `
+✅ VENTA PROCESADA EXITOSAMENTE
+
+Venta #${data.id_venta}
+Monto: Gs. ${parseInt(data.monto_total).toLocaleString('es-PY')}
+Estudiante: ${tarjetaSeleccionada.nombre}
+
+${data.nro_factura ? `Factura: #${data.nro_factura}` : 'Ticket generado'}
+                    `;
+                    alert(mensaje);
+
+                    // Si hay ticket, ir a descargarlo
+                    if (data.id_venta) {
+                        window.open(`/pos/ticket/${data.id_venta}/`, '_blank');
+                    }
+
+                    // Limpiar
+                    limpiarCarrito();
+                } else {
+                    alert(`❌ Error al procesar venta:\n${data.error}`);
+                    console.error('Error:', data);
+                }
+            } catch (error) {
+                console.error('Error en venta:', error);
+                alert(`❌ Error al procesar venta:\n${error.message}`);
+            } finally {
+                // Re-habilitar botón
+                document.getElementById('btnProcesar').disabled = carrito.length === 0;
+                document.getElementById('btnProcesar').textContent = '✓ PROCESAR PAGO';
+            }
         }
 
         // Limpiar carrito

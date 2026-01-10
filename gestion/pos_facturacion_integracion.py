@@ -17,9 +17,23 @@ from typing import Dict, Optional, Tuple
 import socket
 import time
 
-from .models import Ventas
+from .models import Ventas, MediosPago
 from .facturacion_electronica import GeneradorXMLFactura, ClienteEkuatia
 from .pos_general_views import imprimir_ticket_venta
+
+# Métodos de pago que PERMITEN facturación electrónica
+MEDIOS_PAGO_CON_FACTURA_ELECTRONICA = [
+    'EFECTIVO',
+    'TRANSFERENCIA BANCARIA',
+    'GIROS TIGO',
+    'TARJETA DEBITO /QR',
+    'TARJETA CREDITO / QR',
+]
+
+# Métodos de pago que NO PERMITEN facturación (solo ticket)
+MEDIOS_PAGO_SIN_FACTURA = [
+    'TARJETA ESTUDIANTIL',  # Ya tiene factura desde la recarga
+]
 
 
 class GestorImpresoraTermica:
@@ -158,6 +172,7 @@ class IntegradorPOSFacturacion:
     - Emisión automática de facturas
     - Reintentos
     - Fallback a factura física
+    - Validación de métodos de pago permitidos
     """
     
     def __init__(self, impresora: Optional[GestorImpresoraTermica] = None):
@@ -170,6 +185,37 @@ class IntegradorPOSFacturacion:
         self.impresora = impresora
         self.cliente_ekuatia = ClienteEkuatia()
         self.max_reintentos = 3
+    
+    def puede_facturar_electronico(self, id_medio_pago: int) -> Tuple[bool, str]:
+        """
+        Valida si un medio de pago permite facturación electrónica
+        
+        Args:
+            id_medio_pago: ID del medio de pago
+        
+        Returns:
+            (puede_facturar, mensaje)
+        """
+        try:
+            medio = MediosPago.objects.get(id_medio_pago=id_medio_pago)
+            descripcion = medio.descripcion.strip().upper()
+            
+            # Verificar si es medio que NO permite factura (solo ticket)
+            for medio_sin_factura in MEDIOS_PAGO_SIN_FACTURA:
+                if descripcion == medio_sin_factura.upper():
+                    return False, f'Método "{medio.descripcion}" no genera factura (solo ticket). La factura se emitió en la recarga.'
+            
+            # Verificar si es medio que permite factura electrónica
+            for medio_con_factura in MEDIOS_PAGO_CON_FACTURA_ELECTRONICA:
+                if descripcion == medio_con_factura.upper():
+                    return True, ''
+            
+            # Si no es ni uno ni otro, rechazar factura electrónica
+            return False, f'Método de pago "{medio.descripcion}" no permite facturación electrónica'
+        except MediosPago.DoesNotExist:
+            return False, f'Método de pago {id_medio_pago} no encontrado'
+        except Exception as e:
+            return False, f'Error validando medio de pago: {str(e)}'
     
     @transaction.atomic
     def procesar_venta_con_factura(
@@ -213,8 +259,22 @@ class IntegradorPOSFacturacion:
         }
         
         try:
+            # Paso 0: Validar método de pago para facturación
+            if emitir_factura and hasattr(venta, 'id_tipo_pago'):
+                puede_facturar, mensaje_validacion = self.puede_facturar_electronico(venta.id_tipo_pago.id_tipo_pago)
+                
+                if not puede_facturar:
+                    if 'La factura se emitió en la recarga' in mensaje_validacion:
+                        # Es TARJETA ESTUDIANTIL - No facturar, solo ticket
+                        emitir_factura = False
+                        resultado['mensaje'] = f'✓ {mensaje_validacion}'
+                    else:
+                        # Cambiar a factura física automáticamente para otros métodos
+                        tipo_factura = 'fisica'
+                        resultado['mensaje'] = f'Método de pago no permite factura electrónica. {mensaje_validacion} - Emitiendo factura física.'
+            
             # Paso 1: Validar que puede facturarse
-            if not venta.id_timbrado:
+            if emitir_factura and not venta.id_timbrado:
                 resultado['mensaje'] = 'Venta sin timbrado asignado'
                 return resultado
             

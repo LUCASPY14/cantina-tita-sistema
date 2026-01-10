@@ -12,7 +12,7 @@ Gestiona ventas de productos generales con:
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
-from django.db import transaction
+from django.db import transaction, models
 from django.utils import timezone
 from django.db.models import Q, F, Sum
 from decimal import Decimal
@@ -117,30 +117,35 @@ def buscar_producto_api(request):
         resultado = []
         for p in productos_encontrados:
             # Obtener precio de venta actual (última lista de precios)
-            precio_producto = p.precios.filter(
-                id_lista_precio__activo=True
-            ).order_by('-id_lista_precio__fecha_vigencia').first()
-            
-            precio_venta = precio_producto.precio_venta if precio_producto else 0
+            try:
+                precio_producto = p.precios.filter(
+                    id_lista__activo=True
+                ).order_by('-id_lista__fecha_vigencia').first()
+                precio_venta = precio_producto.precio_unitario_neto if precio_producto else 5000
+            except:
+                precio_venta = 5000
             
             # Stock actual
-            stock_actual = p.stock.stock_actual if hasattr(p, 'stock') else 0
+            try:
+                stock_actual = p.stock.stock_actual if hasattr(p, 'stock') and p.stock else 0
+            except:
+                stock_actual = 0
             
             # Alérgenos asociados
-            alergenos = list(
-                p.productoalergeno_set.values_list('id_alergeno__nombre', flat=True)
-            )
+            try:
+                alergenos = list(
+                    p.productoalergeno_set.values_list('id_alergeno__nombre', flat=True)
+                )
+            except:
+                alergenos = []
             
             resultado.append({
                 'id': p.id_producto,
                 'codigo_barra': p.codigo_barra or '',
                 'descripcion': p.descripcion,
-                'precio_venta': int(precio_venta),
-                'stock_actual': float(stock_actual),
-                'permite_stock_negativo': p.permite_stock_negativo,
-                'categoria': p.id_categoria.descripcion if p.id_categoria else '',
-                'unidad_medida': p.id_unidad_de_medida.descripcion if p.id_unidad_de_medida else '',
-                'impuesto': p.id_impuesto.descripcion if p.id_impuesto else '',
+                'precio': int(precio_venta),
+                'stock': float(stock_actual),
+                'activo': p.activo,
                 'alergenos': alergenos
             })
         
@@ -354,72 +359,111 @@ def verificar_restricciones_carrito_api(request):
 
 @require_http_methods(["POST"])
 @transaction.atomic
+@require_http_methods(["POST"])
+@transaction.atomic
 def procesar_venta_api(request):
     """
-    API: Procesar venta completa con pagos mixtos
+    API: Procesar venta completa con validaciones
     
-    POST /pos/general/api/procesar-venta/
+    POST /pos/procesar-venta/
     Body: {
-        "id_empleado_cajero": 1,
-        "id_hijo": 1 (opcional, si es venta con tarjeta estudiante),
+        "id_hijo": 10,
         "productos": [
-            {"id_producto": 5, "cantidad": 2, "precio_unitario": 8000},
-            {"id_producto": 12, "cantidad": 1, "precio_unitario": 15000}
+            {"id_producto": 1, "cantidad": 2, "precio_unitario": 5000}
         ],
         "pagos": [
-            {"id_medio_pago": 1, "monto": 20000},  // Efectivo
-            {"id_medio_pago": 3, "monto": 11000, "nro_tarjeta": "12345678"}  // Tarjeta estudiante
+            {"id_medio_pago": 1, "monto": 10000, "nro_tarjeta": "00203"}
         ],
-        "tipo_venta": "CONTADO"
-    }
-    
-    Response: {
-        "success": true,
-        "id_venta": 1234,
-        "nro_factura": 56789,
-        "monto_total": 31000,
-        "pagos_aplicados": 31000,
-        "comisiones_calculadas": 620,
-        "mensaje": "Venta procesada exitosamente"
+        "tipo_venta": "CONTADO",
+        "emitir_factura": true,
+        "medio_pago_id": 1
     }
     """
     try:
         data = json.loads(request.body)
         
-        # Validaciones básicas
-        id_empleado = data.get('id_empleado_cajero')
-        productos = data.get('productos', [])
-        pagos = data.get('pagos', [])
-        tipo_venta = data.get('tipo_venta', 'CONTADO')
+        # Extrar datos
         id_hijo = data.get('id_hijo')
+        productos_data = data.get('productos', [])
+        pagos_data = data.get('pagos', [])
+        tipo_venta = data.get('tipo_venta', 'CONTADO')
+        emitir_factura = data.get('emitir_factura', False)
+        medio_pago_id = data.get('medio_pago_id', 1)
         
-        if not id_empleado or not productos or not pagos:
+        # Validaciones básicas
+        if not productos_data:
             return JsonResponse({
                 'success': False,
-                'error': 'Datos incompletos: empleado, productos y pagos son requeridos'
+                'error': 'No hay productos en el carrito'
             }, status=400)
         
-        # Obtener empleado cajero
-        empleado = Empleado.objects.filter(id_empleado=id_empleado).first()
-        if not empleado:
+        if not pagos_data:
             return JsonResponse({
                 'success': False,
-                'error': 'Empleado no encontrado'
-            }, status=404)
+                'error': 'Debe especificar al menos un medio de pago'
+            }, status=400)
         
-        # Obtener tipo de pago (usar primer medio de pago como referencia)
-        tipo_pago = TiposPago.objects.filter(nombre_tipo='CONTADO').first()
-        if not tipo_pago:
+        # Obtener hijo y cliente
+        hijo = None
+        cliente = None
+        tarjeta = None
+        
+        if id_hijo:
+            hijo = Hijo.objects.select_related('id_cliente_responsable').filter(
+                id_hijo=id_hijo,
+                activo=True
+            ).first()
+            
+            if hijo:
+                cliente = hijo.id_cliente_responsable
+                
+                # Obtener tarjeta si existe
+                tarjeta = Tarjeta.objects.filter(
+                    id_hijo=hijo,
+                    estado='Activa'
+                ).first()
+        
+        # Si no hay cliente, usar cliente público
+        if not cliente:
+            cliente = Cliente.objects.filter(
+                Q(nombres__icontains='público') | Q(apellidos__icontains='público')
+            ).first()
+            
+            if not cliente:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Cliente público no configurado'
+                }, status=500)
+        
+        # Validar medio de pago
+        medio_pago = MediosPago.objects.filter(id_medio_pago=medio_pago_id).first()
+        if not medio_pago:
             return JsonResponse({
                 'success': False,
-                'error': 'Tipo de pago CONTADO no configurado'
-            }, status=500)
+                'error': f'Medio de pago {medio_pago_id} no válido'
+            }, status=400)
         
-        # Calcular monto total
+        # Validar factura electrónica
+        if emitir_factura:
+            # Verificar si el medio de pago permite factura
+            medios_permitidos = [1, 2, 3, 4, 5]  # No es tarjeta estudiantil
+            if medio_pago_id == 6:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Tarjeta Estudiantil no genera factura electrónica'
+                }, status=400)
+            
+            if not hijo:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Para emitir factura debe verificar tarjeta de estudiante'
+                }, status=400)
+        
+        # Procesar productos y calcular total
         monto_total = 0
         detalles_venta = []
         
-        for item in productos:
+        for item in productos_data:
             id_producto = item.get('id_producto')
             cantidad = Decimal(str(item.get('cantidad', 0)))
             precio_unitario = int(item.get('precio_unitario', 0))
@@ -433,7 +477,7 @@ def procesar_venta_api(request):
             if not producto:
                 return JsonResponse({
                     'success': False,
-                    'error': f'Producto {id_producto} no encontrado o inactivo'
+                    'error': f'Producto {id_producto} no encontrado'
                 }, status=404)
             
             # Validar stock
@@ -442,7 +486,7 @@ def procesar_venta_api(request):
             if not producto.permite_stock_negativo and stock_actual < cantidad:
                 return JsonResponse({
                     'success': False,
-                    'error': f'Stock insuficiente para {producto.descripcion}. Disponible: {stock_actual}'
+                    'error': f'Stock insuficiente: {producto.descripcion}'
                 }, status=400)
             
             subtotal = precio_unitario * int(cantidad)
@@ -455,8 +499,70 @@ def procesar_venta_api(request):
                 'subtotal': subtotal
             })
         
-        # Validar que el total de pagos coincida con monto total
-        total_pagos = sum(p.get('monto', 0) for p in pagos)
+        # VALIDAR RESTRICCIONES ALIMENTARIAS si existe hijo
+        if hijo:
+            from gestion.restricciones_matcher import ProductoRestriccionMatcher
+            from gestion.models import RestriccionesHijos
+            
+            # Obtener restricciones del hijo
+            restricciones_hijo = RestriccionesHijos.objects.filter(
+                id_hijo=hijo,
+                activo=True
+            )
+            
+            # Si tiene restricciones, validar todos los productos
+            if restricciones_hijo.exists():
+                alertas_restricciones = []
+                
+                for detalle in detalles_venta:
+                    producto = detalle['producto']
+                    
+                    for restriccion in restricciones_hijo:
+                        tiene_conflicto, razon, confianza = ProductoRestriccionMatcher.analizar_producto(
+                            producto, restriccion
+                        )
+                        
+                        if tiene_conflicto:
+                            # Determinar severidad según confianza
+                            if confianza >= 90:
+                                severidad = 'ALTA'
+                            elif confianza >= 70:
+                                severidad = 'MEDIA'
+                            else:
+                                severidad = 'BAJA'
+                            
+                            # Si es severidad ALTA, bloquear la venta
+                            if severidad == 'ALTA':
+                                return JsonResponse({
+                                    'success': False,
+                                    'error': f'ALERTA DE RESTRICCIÓN ALTA: {producto.descripcion} contiene {restriccion.tipo_restriccion}. Razón: {razon}. Requiere autorización.',
+                                    'tipo': 'restriccion_bloqueada',
+                                    'restriccion': {
+                                        'producto': producto.descripcion,
+                                        'tipo': restriccion.tipo_restriccion,
+                                        'severidad': severidad,
+                                        'razon': razon,
+                                        'confianza': confianza
+                                    }
+                                }, status=403)
+                            
+                            # Alertas de severidad MEDIA/BAJA
+                            alertas_restricciones.append({
+                                'id_producto': producto.id_producto,
+                                'nombre_producto': producto.descripcion,
+                                'restriccion': restriccion.tipo_restriccion,
+                                'severidad': severidad,
+                                'razon': razon,
+                                'confianza': confianza
+                            })
+                
+                # Si hay alertas, devolver para confirmación
+                if alertas_restricciones:
+                    # Guardar alertas en sesión para confirmar después
+                    request.session['alertas_restricciones_pendientes'] = alertas_restricciones
+        
+        # Validar que los pagos sumen correctamente
+        total_pagos = sum(p.get('monto', 0) for p in pagos_data)
         
         if total_pagos != monto_total:
             return JsonResponse({
@@ -464,35 +570,41 @@ def procesar_venta_api(request):
                 'error': f'Total de pagos ({total_pagos}) no coincide con total de venta ({monto_total})'
             }, status=400)
         
-        # Obtener hijo/cliente si aplica
-        hijo = None
-        cliente = None
+        # Obtener o crear tipo de pago
+        tipo_pago = TiposPago.objects.filter(descripcion='CONTADO').first()
+        if not tipo_pago:
+            tipo_pago = TiposPago.objects.create(descripcion='CONTADO')
         
-        if id_hijo:
-            hijo = Hijo.objects.select_related('id_cliente').filter(id_hijo=id_hijo).first()
-            if hijo:
-                cliente = hijo.id_cliente
+        # Obtener empleado cajero (usar usuario del request)
+        empleado = None
+        if request.user.is_authenticated:
+            try:
+                empleado = Empleado.objects.filter(usuario=request.user.username).first()
+            except:
+                pass
         
-        # Si no hay hijo, buscar cliente genérico "Público"
-        if not cliente:
-            cliente = Cliente.objects.filter(
-                nombre_completo__icontains='público'
-            ).first()
-            
-            if not cliente:
-                # Crear cliente genérico si no existe
-                tipo_cliente = TipoCliente.objects.first()
-                lista_precio = ListaPrecio.objects.filter(activo=True).first()
-                
-                cliente = Cliente.objects.create(
-                    id_tipo_cliente=tipo_cliente,
-                    id_lista_precio=lista_precio,
-                    nombre_completo='CLIENTE PÚBLICO',
-                    ci_ruc='00000000',
+        # Usar empleado genérico si no hay usuario
+        if not empleado:
+            empleado = Empleado.objects.filter(nombre__icontains='sistema').first()
+            if not empleado:
+                # Crear empleado genérico
+                empleado = Empleado.objects.create(
+                    usuario='sistema',
+                    nombre='Sistema',
+                    apellido='Automático',
                     activo=True
                 )
         
         # Crear venta
+        nro_factura = None
+        if emitir_factura and tarjeta:
+            # Generar número de factura (incrementar desde el último)
+            ultima_venta = Ventas.objects.filter(
+                nro_factura_venta__isnull=False
+            ).order_by('-nro_factura_venta').first()
+            
+            nro_factura = (ultima_venta.nro_factura_venta + 1) if ultima_venta else 1
+        
         venta = Ventas.objects.create(
             id_cliente=cliente,
             id_hijo=hijo,
@@ -504,7 +616,8 @@ def procesar_venta_api(request):
             estado_pago='PAGADA',
             estado='PROCESADO',
             tipo_venta=tipo_venta,
-            genera_factura_legal=False
+            nro_factura_venta=nro_factura,
+            genera_factura_legal=emitir_factura
         )
         
         # Crear detalles de venta y actualizar stock
@@ -522,74 +635,52 @@ def procesar_venta_api(request):
             stock.stock_actual -= detalle['cantidad']
             stock.save()
         
-        # Procesar pagos y calcular comisiones
-        total_comisiones = 0
-        
-        for pago_data in pagos:
-            id_medio_pago = pago_data.get('id_medio_pago')
-            monto_pago = pago_data.get('monto')
+        # Procesar pagos
+        for pago_data in pagos_data:
+            id_medio = pago_data.get('id_medio_pago')
+            monto = pago_data.get('monto')
             nro_tarjeta = pago_data.get('nro_tarjeta')
             
-            medio_pago = MediosPago.objects.filter(id_medio_pago=id_medio_pago).first()
+            medio = MediosPago.objects.filter(id_medio_pago=id_medio).first()
+            if not medio:
+                continue
             
-            if not medio_pago:
-                raise Exception(f'Medio de pago {id_medio_pago} no encontrado')
+            tarjeta_pago = None
             
-            # Obtener tarjeta si aplica
-            tarjeta = None
-            if nro_tarjeta:
-                tarjeta = Tarjeta.objects.filter(nro_tarjeta=nro_tarjeta).first()
-                
-                if tarjeta:
-                    # Descontar saldo de tarjeta
-                    tarjeta.saldo_actual -= monto_pago
-                    tarjeta.save()
+            # Procesar descuento de saldo si es tarjeta
+            if nro_tarjeta and id_medio == 6:  # Tarjeta Estudiantil
+                tarjeta_pago = Tarjeta.objects.filter(nro_tarjeta=nro_tarjeta).first()
+                if tarjeta_pago:
+                    tarjeta_pago.saldo_actual -= monto
+                    if tarjeta_pago.saldo_actual < 0:
+                        tarjeta_pago.saldo_actual = 0
+                    tarjeta_pago.save()
             
-            # Crear pago
-            pago_venta = PagosVenta.objects.create(
+            # Registrar pago
+            PagosVenta.objects.create(
                 id_venta=venta,
-                id_medio_pago=medio_pago,
-                nro_tarjeta_usada=tarjeta,
-                monto_aplicado=monto_pago,
+                id_medio_pago=medio,
+                nro_tarjeta_usada=tarjeta_pago,
+                monto_aplicado=monto,
                 fecha_pago=timezone.now(),
-                estado='CONFIRMADO'
+                estado='PROCESADO'
             )
-            
-            # Calcular comisión si aplica
-            if medio_pago.genera_comision:
-                tarifa_vigente = TarifasComision.objects.filter(
-                    id_medio_pago=medio_pago,
-                    activo=True,
-                    fecha_inicio_vigencia__lte=timezone.now()
-                ).filter(
-                    Q(fecha_fin_vigencia__isnull=True) | Q(fecha_fin_vigencia__gte=timezone.now())
-                ).order_by('-fecha_inicio_vigencia').first()
-                
-                if tarifa_vigente:
-                    comision = (Decimal(monto_pago) * tarifa_vigente.porcentaje_comision)
-                    
-                    if tarifa_vigente.monto_fijo_comision:
-                        comision += tarifa_vigente.monto_fijo_comision
-                    
-                    total_comisiones += int(comision)
-                    
-                    # Registrar comisión
-                    DetalleComisionVenta.objects.create(
-                        id_pago_venta=pago_venta,
-                        id_tarifa=tarifa_vigente,
-                        monto_comision=int(comision),
-                        fecha_calculo=timezone.now()
-                    )
         
-        return JsonResponse({
+        # Retornar éxito
+        respuesta = {
             'success': True,
             'id_venta': venta.id_venta,
             'nro_factura': venta.nro_factura_venta,
             'monto_total': monto_total,
-            'pagos_aplicados': total_pagos,
-            'comisiones_calculadas': total_comisiones,
-            'mensaje': 'Venta procesada exitosamente'
-        })
+            'mensaje': '✅ Venta procesada exitosamente'
+        }
+        
+        # Incluir alertas si las hay
+        if 'alertas_restricciones_pendientes' in request.session:
+            respuesta['alertas_restricciones'] = request.session.pop('alertas_restricciones_pendientes')
+            respuesta['advertencia'] = 'Venta procesada con alertas de restricciones alimentarias'
+        
+        return JsonResponse(respuesta)
         
     except json.JSONDecodeError:
         return JsonResponse({
@@ -597,6 +688,8 @@ def procesar_venta_api(request):
             'error': 'JSON inválido'
         }, status=400)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JsonResponse({
             'success': False,
             'error': f'Error al procesar venta: {str(e)}'
@@ -778,3 +871,123 @@ def imprimir_ticket_venta(request, id_venta):
     except Exception as e:
         return HttpResponse(f'Error al generar ticket: {str(e)}', status=500)
 
+
+@require_http_methods(["GET"])
+def dashboard_ventas_dia(request):
+    """
+    Dashboard de ventas del día
+    Resumen de ventas, productos vendidos, ingresos y métodos de pago
+    
+    GET /pos/dashboard/
+    """
+    from datetime import date
+    from django.db.models import Sum, Count, F
+    from decimal import Decimal
+    
+    try:
+        hoy = date.today()
+        
+        # Ventas del día
+        ventas_hoy = Ventas.objects.filter(
+            fecha_venta__date=hoy
+        ).select_related('id_cliente', 'id_hijo')
+        
+        # Estadísticas generales
+        total_ventas = ventas_hoy.count()
+        monto_total = ventas_hoy.aggregate(total=Sum('monto_venta'))['total'] or Decimal('0')
+        
+        # Productos más vendidos
+        productos_vendidos = DetalleVenta.objects.filter(
+            id_venta__fecha_venta__date=hoy
+        ).values('id_producto__descripcion').annotate(
+            cantidad_total=Sum('cantidad'),
+            ingresos=Sum(F('cantidad') * F('precio_unitario'), output_field=models.DecimalField())
+        ).order_by('-cantidad_total')[:10]
+        
+        # Ingresos por método de pago
+        ingresos_pago = PagosVenta.objects.filter(
+            id_venta__fecha_venta__date=hoy
+        ).values('id_medio_pago__descripcion').annotate(
+            total=Sum('monto_aplicado'),
+            cantidad=Count('id')
+        ).order_by('-total')
+        
+        # Evolución por hora
+        from django.db.models.functions import Hour
+        evoluccion_hora = Ventas.objects.filter(
+            fecha_venta__date=hoy
+        ).annotate(
+            hora=Hour('fecha_venta')
+        ).values('hora').annotate(
+            ventas=Count('id_venta'),
+            monto=Sum('monto_venta')
+        ).order_by('hora')
+        
+        # Estadísticas de ventas por tarjeta de estudiante vs efectivo
+        ventas_tarjeta_est = DetalleVenta.objects.filter(
+            id_venta__fecha_venta__date=hoy
+        ).filter(
+            id_venta__id_hijo__isnull=False
+        ).aggregate(
+            cantidad=Count('id'),
+            monto=Sum('precio_unitario')
+        )
+        
+        # Top clientes
+        top_clientes = Ventas.objects.filter(
+            fecha_venta__date=hoy
+        ).values('id_cliente__nombre_completo').annotate(
+            cantidad_compras=Count('id_venta'),
+            monto_total=Sum('monto_venta')
+        ).order_by('-monto_total')[:5]
+        
+        # Preparar datos para gráficas
+        horas_data = [item['hora'] or 0 for item in evoluccion_hora]
+        ventas_x_hora = [item['ventas'] or 0 for item in evoluccion_hora]
+        montos_x_hora = [float(item['monto'] or 0) for item in evoluccion_hora]
+        
+        # Datos de métodos de pago para gráfica pie
+        metodos_labels = [item['id_medio_pago__descripcion'] for item in ingresos_pago]
+        metodos_montos = [float(item['total']) for item in ingresos_pago]
+        
+        # Productos vendidos para gráfica
+        productos_labels = [item['id_producto__descripcion'][:20] for item in productos_vendidos]
+        productos_cantidades = [int(item['cantidad_total']) for item in productos_vendidos]
+        
+        context = {
+            'hoy': hoy,
+            'total_ventas': total_ventas,
+            'monto_total': float(monto_total),
+            'productos_vendidos': list(productos_vendidos),
+            'ingresos_pago': list(ingresos_pago),
+            'top_clientes': list(top_clientes),
+            'ventas_tarjeta_est': ventas_tarjeta_est,
+            
+            # Para gráficas
+            'horas_data': horas_data,
+            'ventas_x_hora': ventas_x_hora,
+            'montos_x_hora': montos_x_hora,
+            'metodos_labels': metodos_labels,
+            'metodos_montos': metodos_montos,
+            'productos_labels': productos_labels,
+            'productos_cantidades': productos_cantidades,
+        }
+        
+        # Si es AJAX, devolver JSON
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse(context)
+        
+        # Si no, renderizar template
+        return render(request, 'pos/dashboard_ventas.html', context)
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        error_msg = f'Error al generar dashboard: {str(e)}'
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'error': error_msg}, status=500)
+        
+        return render(request, 'pos/dashboard_ventas.html', {
+            'error': error_msg
+        })

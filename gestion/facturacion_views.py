@@ -61,9 +61,12 @@ def dashboard_facturacion(request):
         activo=True,
         es_electronico=True
     ).values('nro_timbrado', 'fecha_inicio', 'fecha_fin').annotate(
-        cantidad_emitidas=Count('documentostributarios'),
-        estado='VIGENTE'  # Campo calculado para la plantilla
+        cantidad_emitidas=Count('documentostributarios')
     )
+    
+    # Agregar estado en Python (no en la BD)
+    for timbrado in timbrados:
+        timbrado['estado'] = 'VIGENTE'
     
     context = {
         'stats': stats,

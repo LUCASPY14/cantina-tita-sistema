@@ -642,6 +642,13 @@ def procesar_venta(request):
                     medio_id = pago_data.get('medio_id')
                     monto_pago = Decimal(str(pago_data.get('monto', 0)))
                     
+                    # Cargar el medio de pago
+                    try:
+                        medio_pago = MediosPago.objects.get(id_medio_pago=medio_id)
+                    except MediosPago.DoesNotExist:
+                        print(f"⚠️ ERROR: Medio de pago #{medio_id} no encontrado")
+                        continue
+                    
                     # VALIDAR REFERENCIA DE TRANSACCIÓN para medios que la requieren
                     requiere_referencia = medio_id in [2, 3, 4, 5]  # Débito, Crédito, Tigo, Transferencia
                     referencia = pago_data.get('referencia', '').strip()
@@ -711,12 +718,21 @@ def procesar_venta(request):
                     traceback.print_exc()
                     # No fallar la venta, solo registrar el error
         
-        return JsonResponse({
+        # Preparar respuesta con información actualizada
+        response_data = {
             'success': True,
             'venta_id': venta.id_venta,
             'total': float(total),
             'message': '¡Venta procesada exitosamente!'
-        })
+        }
+        
+        # Si hay tarjeta, incluir información del saldo actualizado
+        if tarjeta:
+            tarjeta.refresh_from_db()  # Refrescar desde BD para obtener el saldo actualizado
+            response_data['saldo_actual'] = float(tarjeta.saldo_actual)
+            response_data['tarjeta_nro'] = tarjeta.nro_tarjeta
+        
+        return JsonResponse(response_data)
         
     except Exception as e:
         return JsonResponse({
@@ -1535,6 +1551,9 @@ def ticket_view(request, venta_id):
             except:
                 pass
         
+        # Calcular total a pagar (monto_total + comisión)
+        total_a_pagar = venta.monto_total + total_comision
+        
         context = {
             'venta': venta,
             'detalles': detalles,
@@ -1545,6 +1564,7 @@ def ticket_view(request, venta_id):
             'empresa': empresa,
             'pagos_venta': pagos_venta,  # Nuevo: lista de pagos
             'total_comision': total_comision,
+            'total_a_pagar': total_a_pagar,  # Total a pagar incluyendo comisión
         }
         
         return render(request, 'pos/ticket.html', context)
