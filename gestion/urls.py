@@ -119,6 +119,8 @@ urlpatterns = [
     # ==================== GESTIÓN DE EMPLEADOS ====================
     path('empleado/cambiar-contrasena/', empleado_views.cambiar_contrasena_empleado, name='cambiar_contrasena_empleado'),
     path('empleado/perfil/', empleado_views.perfil_empleado, name='perfil_empleado'),
+    path('empleados/', empleado_views.gestionar_empleados_view, name='gestionar_empleados'),
+    path('empleados/crear/', empleado_views.crear_empleado_view, name='crear_empleado'),
 ]
 
 
