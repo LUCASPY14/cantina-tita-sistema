@@ -15,13 +15,15 @@ from gestion.models import (
     Ventas, Producto, StockUnico, Tarjeta, CargasSaldo,
     ConsumoTarjeta, Cliente, AlertasSistema, DetalleVenta, MovimientosStock, Categoria
 )
+from gestion.permisos import solo_gerente_o_superior
 
 
-@login_required
+@solo_gerente_o_superior
 def dashboard_unificado(request):
     """
     Dashboard principal con métricas del sistema
     Cachea datos por 60 segundos para mejorar performance
+    Acceso: Gerentes y Administradores
     """
     # Intentar obtener desde cache
     cache_key = f'dashboard_data_{request.user.id}'

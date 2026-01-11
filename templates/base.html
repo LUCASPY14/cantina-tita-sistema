@@ -140,12 +140,16 @@
                 <ul tabindex="0" class="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-white text-neutral rounded-box w-52">
                     <li class="menu-title">
                         <span class="text-primary">{{ request.user.username }}</span>
+                        {% if usuario_rol %}
+                        <span class="badge badge-sm badge-secondary">{{ usuario_rol }}</span>
+                        {% endif %}
                     </li>
                     <li><a href="{% url 'pos:venta' %}">🏪 Punto de Venta</a></li>
                     <li><a href="{% url 'pos:pos_almuerzo' %}">🍽️ POS Almuerzo</a></li>
                     <li><a href="{% url 'pos:recargas' %}">💳 Recargas</a></li>
+                    
+                    {% if puede_ver_reportes %}
                     <li><a href="{% url 'pos:cuenta_corriente' %}">📋 Cuenta Corriente</a></li>
-                    <li><a href="{% url 'pos:proveedores' %}">🏭 Proveedores</a></li>
                     <li><a href="{% url 'pos:inventario_dashboard' %}">📦 Inventario</a></li>
                     <li><a href="{% url 'pos:cajas_dashboard' %}">💰 Cajas</a></li>
                     <li><a href="{% url 'pos:compras_dashboard' %}">🛒 Compras</a></li>
@@ -156,14 +160,22 @@
                     <li><a href="{% url 'pos:dashboard' %}">📊 Dashboard</a></li>
                     <li><a href="{% url 'pos:historial' %}">📜 Historial Ventas</a></li>
                     <li><a href="{% url 'pos:reportes' %}">📈 Reportes</a></li>
+                    {% endif %}
+                    
+                    {% if puede_administrar %}
                     <li class="menu-title"><span class="text-xs text-gray-500">Administración</span></li>
                     <li><a href="{% url 'pos:gestionar_clientes' %}">👥 Clientes</a></li>
+                    <li><a href="{% url 'pos:proveedores' %}">🏭 Proveedores</a></li>
+                    {% endif %}
                     <li><a href="{% url 'pos:gestionar_fotos_hijos' %}">📸 Fotos Hijos</a></li>
                     <li><a href="{% url 'pos:gestionar_grados' %}">🎓 Grados</a></li>
                     <li><a href="{% url 'admin:index' %}">⚙️ Administración</a></li>
                     <li><a href="{% url 'pos:dashboard_seguridad' %}">🔒 Seguridad</a></li>
                     <li class="menu-title"><span class="text-xs text-gray-500">Portal</span></li>
                     <li><a href="{% url 'clientes:portal_login' %}" target="_blank">🌐 Portal Clientes</a></li>
+                    <li class="menu-title"><span class="text-xs text-gray-500">Mi Cuenta</span></li>
+                    <li><a href="/reportes/empleado/perfil/">👤 Mi Perfil</a></li>
+                    <li><a href="/reportes/empleado/cambiar-contrasena/">🔐 Cambiar Contraseña</a></li>
                     <li>
                         <form method="post" action="{% url 'logout' %}" style="display: inline;">
                             {% csrf_token %}

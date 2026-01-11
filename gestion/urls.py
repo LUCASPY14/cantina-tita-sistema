@@ -10,6 +10,7 @@ from . import facturacion_views
 from . import pos_facturacion_integracion
 from . import vistas_paginadas
 from . import pagos_admin_views
+from . import empleado_views
 from .reportes_gerenciales import ReportesGerenciales
 
 app_name = 'gestion'
@@ -114,6 +115,10 @@ urlpatterns = [
     # ==================== VALIDACIÓN DE PAGOS ====================
     path('pagos/validar/', pagos_admin_views.validar_pagos_pendientes, name='validar_pagos_pendientes'),
     path('pagos/validar/action/', pagos_admin_views.validar_pago_action, name='validar_pago_action'),
+    
+    # ==================== GESTIÓN DE EMPLEADOS ====================
+    path('empleado/cambiar-contrasena/', empleado_views.cambiar_contrasena_empleado, name='cambiar_contrasena_empleado'),
+    path('empleado/perfil/', empleado_views.perfil_empleado, name='perfil_empleado'),
 ]
 
 

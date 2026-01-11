@@ -15,13 +15,15 @@ from django.conf import settings
 import bcrypt
 import requests
 import json
+import re
 from datetime import datetime, timedelta
 from decimal import Decimal
 
 from .models import (
     Cliente, UsuariosWebClientes, UsuarioPortal, Hijo, Tarjeta, CargasSaldo,
     Ventas, DetalleVenta, SuscripcionesAlmuerzo, RegistroConsumoAlmuerzo,
-    PagosAlmuerzoMensual, ListaPrecios, TipoCliente, IntentoLogin
+    PagosAlmuerzoMensual, ListaPrecios, TipoCliente, IntentoLogin,
+    TiposPago, Empleado
 )
 from .seguridad_utils import (
     registrar_intento_login, verificar_rate_limit, registrar_auditoria,
@@ -1265,13 +1267,32 @@ def portal_pagos_view(request):
     
     cliente = get_object_or_404(Cliente, pk=cliente_id)
     
-    # Obtener deudas de cantina (ventas con saldo pendiente)
+    # Obtener pagos pendientes de validación
+    pagos_en_validacion = Ventas.objects.filter(
+        id_cliente=cliente,
+        motivo_credito__icontains='PAGO_PENDIENTE_TRANSFERENCIA:'
+    ).select_related('id_hijo').order_by('-fecha')
+    
+    # Extraer IDs de ventas y almuerzos que están en validación
+    ventas_en_validacion_ids = []
+    almuerzos_en_validacion_ids = []
+    
+    for pago in pagos_en_validacion:
+        ventas_en_validacion_ids.append(pago.id_venta)
+        # Extraer IDs de almuerzos si los hay
+        match_almuerzos = re.search(r'ALMUERZOS:([0-9,]+)', pago.motivo_credito or '')
+        if match_almuerzos:
+            almuerzos_en_validacion_ids.extend(match_almuerzos.group(1).split(','))
+    
+    # Obtener deudas de cantina (ventas con saldo pendiente, excluyendo las que están en validación)
     deudas_cantina = Ventas.objects.filter(
         id_cliente=cliente,
         saldo_pendiente__gt=0
+    ).exclude(
+        id_venta__in=ventas_en_validacion_ids
     ).select_related('id_hijo').order_by('-fecha')
     
-    # Obtener deudas de almuerzos (marcados en cuenta pendientes)
+    # Obtener deudas de almuerzos (marcados en cuenta pendientes, excluyendo los que están en validación)
     deudas_almuerzos = RegistroConsumoAlmuerzo.objects.filter(
         id_hijo__id_cliente_responsable=cliente,
         marcado_en_cuenta=True
@@ -1280,6 +1301,9 @@ def portal_pagos_view(request):
     total_deuda_cantina = deudas_cantina.aggregate(total=Sum('saldo_pendiente'))['total'] or Decimal('0')
     total_deuda_almuerzos = deudas_almuerzos.aggregate(total=Sum('costo_almuerzo'))['total'] or Decimal('0')
     total_deuda = total_deuda_cantina + total_deuda_almuerzos
+    
+    # Calcular total en validación
+    total_en_validacion = pagos_en_validacion.aggregate(total=Sum('saldo_pendiente'))['total'] or Decimal('0')
     
     if request.method == 'POST':
         venta_ids = request.POST.getlist('venta_ids')
@@ -1317,14 +1341,21 @@ def portal_pagos_view(request):
                     ).first()
                     
                     if primer_almuerzo:
+                        # Obtener tipo de pago CONTADO
+                        tipo_pago_contado = TiposPago.objects.get(pk=2)  # CONTADO
+                        # Obtener cajero predeterminado (el primero disponible)
+                        cajero = Empleado.objects.filter(activo=True).first()
+                        
                         # Crear venta ficticia para almuerzo
                         venta_ficticia = Ventas.objects.create(
                             id_cliente=cliente,
                             id_hijo=primer_almuerzo.id_hijo,
+                            id_tipo_pago=tipo_pago_contado,
+                            id_empleado_cajero=cajero,
                             fecha=timezone.now(),
                             monto_total=monto_total,
                             saldo_pendiente=monto_total,
-                            estado='PENDIENTE_VALIDACION',
+                            estado='PROCESADO',
                             estado_pago='PENDIENTE',
                             tipo_venta='CREDITO',
                             motivo_credito=f"PAGO_PENDIENTE_TRANSFERENCIA:{codigo_confirmacion}:ALMUERZOS:{','.join(almuerzo_ids)}"
@@ -1338,7 +1369,6 @@ def portal_pagos_view(request):
                         # Si no es ficticia, agregar código
                         if 'ALMUERZOS' not in (venta.motivo_credito or ''):
                             venta.motivo_credito = f"PAGO_PENDIENTE_TRANSFERENCIA:{codigo_confirmacion}"
-                            venta.estado = 'PENDIENTE_VALIDACION'
                             venta.save()
                     except Ventas.DoesNotExist:
                         continue
@@ -1412,6 +1442,8 @@ def portal_pagos_view(request):
         'total_deuda': total_deuda,
         'total_deuda_cantina': total_deuda_cantina,
         'total_deuda_almuerzos': total_deuda_almuerzos,
+        'pagos_en_validacion': pagos_en_validacion,
+        'total_en_validacion': total_en_validacion,
     }
     
     return render(request, 'portal/pagos.html', context)

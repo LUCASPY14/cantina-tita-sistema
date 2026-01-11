@@ -45,8 +45,10 @@ class CustomLoginView(auth_views.LoginView):
 class CustomLogoutView(auth_views.LogoutView):
     """
     Vista personalizada de logout
+    Permite logout tanto por POST como por GET para facilitar el uso
     """
     next_page = 'login'
+    http_method_names = ['get', 'post', 'options']
     
     def dispatch(self, request, *args, **kwargs):
         """

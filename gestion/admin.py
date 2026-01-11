@@ -166,10 +166,142 @@ class TipoRolGeneralAdmin(admin.ModelAdmin):
 
 @admin.register(Empleado)
 class EmpleadoAdmin(admin.ModelAdmin):
-    list_display = ['usuario', 'nombre', 'apellido', 'id_rol', 'email', 'activo']
+    list_display = ['usuario', 'nombre_completo_display', 'id_rol', 'email', 'activo']
     list_filter = ['id_rol', 'activo', 'ciudad']
     search_fields = ['nombre', 'apellido', 'usuario', 'email']
-    readonly_fields = ['fecha_ingreso', 'contrasena_hash']
+    readonly_fields = ['fecha_ingreso', 'contrasena_hash_display', 'campo_nueva_contrasena_empleado']
+    actions = ['resetear_contrasena_empleado', 'activar_empleados', 'desactivar_empleados']
+    
+    fieldsets = (
+        ('Información Personal', {
+            'fields': ('nombre', 'apellido', 'usuario', 'email')
+        }),
+        ('Rol y Permisos', {
+            'fields': ('id_rol', 'activo')
+        }),
+        ('Ubicación', {
+            'fields': ('direccion', 'ciudad', 'pais', 'telefono'),
+            'classes': ('collapse',)
+        }),
+        ('Seguridad', {
+            'fields': ('contrasena_hash_display', 'campo_nueva_contrasena_empleado'),
+            'description': '🔐 Gestión de contraseña de acceso al sistema'
+        }),
+        ('Fechas', {
+            'fields': ('fecha_ingreso', 'fecha_baja'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def nombre_completo_display(self, obj):
+        return obj.nombre_completo
+    nombre_completo_display.short_description = "Nombre Completo"
+    
+    def contrasena_hash_display(self, obj):
+        """Muestra estado de la contraseña (nunca el hash real)"""
+        if obj.contrasena_hash:
+            return "✓ Configurada"
+        return "⚠️ Sin contraseña"
+    contrasena_hash_display.short_description = "Estado Contraseña"
+    
+    def campo_nueva_contrasena_empleado(self, obj):
+        """Campo HTML personalizado para cambiar contraseña"""
+        html = '''
+        <div style="margin: 15px 0; padding: 15px; background: #f0f8ff; border-left: 4px solid #2196F3; border-radius: 4px;">
+            <h3 style="margin-top: 0; color: #1976D2;">🔑 Cambiar Contraseña</h3>
+            <p style="color: #555;">Ingrese una nueva contraseña para el empleado:</p>
+            <input type="password" 
+                   name="nueva_contrasena_empleado" 
+                   id="nueva_contrasena_empleado"
+                   style="padding: 8px; width: 300px; border: 2px solid #ddd; border-radius: 4px; font-size: 14px;"
+                   placeholder="Nueva contraseña (mínimo 6 caracteres)">
+            <button type="button" 
+                    onclick="document.getElementById('nueva_contrasena_empleado').type = document.getElementById('nueva_contrasena_empleado').type === 'password' ? 'text' : 'password'"
+                    style="margin-left: 10px; padding: 8px 12px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                👁️ Mostrar/Ocultar
+            </button>
+            <p style="margin-top: 10px; color: #666; font-size: 12px;">
+                💡 <strong>Nota:</strong> Si no ingresa una contraseña, se usará el usuario como contraseña temporal.
+            </p>
+        </div>
+        '''
+        from django.utils.safestring import mark_safe
+        return mark_safe(html)
+    campo_nueva_contrasena_empleado.short_description = "Nueva Contraseña"
+    
+    def save_model(self, request, obj, form, change):
+        """Procesa la contraseña al guardar empleado"""
+        import bcrypt
+        
+        # Obtener contraseña del campo HTML personalizado
+        nueva_password = request.POST.get('nueva_contrasena_empleado', '').strip()
+        
+        if nueva_password:
+            # Validar longitud mínima
+            if len(nueva_password) < 6:
+                self.message_user(
+                    request,
+                    '⚠️ La contraseña debe tener al menos 6 caracteres. No se actualizó.',
+                    level='WARNING'
+                )
+            else:
+                # Hashear con bcrypt
+                password_hash = bcrypt.hashpw(nueva_password.encode('utf-8'), bcrypt.gensalt())
+                obj.contrasena_hash = password_hash.decode('utf-8')
+                self.message_user(
+                    request,
+                    f'✓ Contraseña actualizada exitosamente para "{obj.usuario}"',
+                    level='SUCCESS'
+                )
+        elif not change or not obj.contrasena_hash:
+            # Nueva instancia o sin contraseña: usar usuario como contraseña temporal
+            password_temporal = obj.usuario
+            password_hash = bcrypt.hashpw(password_temporal.encode('utf-8'), bcrypt.gensalt())
+            obj.contrasena_hash = password_hash.decode('utf-8')
+            self.message_user(
+                request,
+                f'✓ Empleado creado. Contraseña temporal: <strong>{password_temporal}</strong> (mismo que usuario)',
+                level='WARNING'
+            )
+        
+        super().save_model(request, obj, form, change)
+    
+    @admin.action(description='🔑 Resetear contraseña = usuario')
+    def resetear_contrasena_empleado(self, request, queryset):
+        """Acción para resetear contraseña de empleados a su usuario"""
+        import bcrypt
+        
+        count = 0
+        detalles = []
+        for empleado in queryset:
+            password_temporal = empleado.usuario
+            password_hash = bcrypt.hashpw(password_temporal.encode('utf-8'), bcrypt.gensalt())
+            empleado.contrasena_hash = password_hash.decode('utf-8')
+            empleado.save(update_fields=['contrasena_hash'])
+            detalles.append(f"{empleado.usuario}")
+            count += 1
+        
+        self.message_user(
+            request,
+            f'✓ Contraseñas reseteadas para {count} empleado(s): {", ".join(detalles)}. Nueva contraseña = usuario',
+            level='SUCCESS'
+        )
+    
+    @admin.action(description='✅ Activar empleados seleccionados')
+    def activar_empleados(self, request, queryset):
+        count = queryset.update(activo=True)
+        self.message_user(request, f'✓ {count} empleado(s) activados', level='SUCCESS')
+    
+    @admin.action(description='❌ Desactivar empleados seleccionados')
+    def desactivar_empleados(self, request, queryset):
+        from django.utils import timezone
+        count = 0
+        for empleado in queryset:
+            empleado.activo = False
+            empleado.fecha_baja = timezone.now()
+            empleado.save()
+            count += 1
+        self.message_user(request, f'✓ {count} empleado(s) desactivados', level='SUCCESS')
 
 
 @admin.register(Hijo)

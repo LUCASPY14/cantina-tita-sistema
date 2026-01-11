@@ -2,7 +2,6 @@
 Vistas para validación de pagos pendientes (transferencias bancarias)
 """
 from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Sum, Q
@@ -15,19 +14,15 @@ from .models import (
     PagoCuentaAlmuerzo, UsuarioPortal
 )
 from .seguridad_utils import registrar_auditoria
+from .permisos import solo_gerente_o_superior
 
 
-def es_staff(user):
-    """Verificar que el usuario sea staff/admin"""
-    return user.is_staff
-
-
-@login_required
-@user_passes_test(es_staff)
+@solo_gerente_o_superior
 def validar_pagos_pendientes(request):
     """
     Vista para mostrar y validar pagos pendientes por transferencia bancaria.
-    Los pagos pendientes se identifican por tener observaciones con código de transferencia.
+    Los pagos pendientes se identifican por tener motivo_credito con código de transferencia.
+    Acceso: Gerentes y Administradores
     """
     
     # Buscar ventas con motivo_credito de pago pendiente
@@ -50,7 +45,7 @@ def validar_pagos_pendientes(request):
                     'cliente_nombre': venta.id_cliente.nombre_completo,
                     'cliente_ruc': venta.id_cliente.ruc_ci,
                     'cliente_email': getattr(UsuarioPortal.objects.filter(
-                        id_cliente=venta.id_cliente
+                        cliente=venta.id_cliente
                     ).first(), 'email', 'N/D'),
                     'fecha_registro': venta.fecha,
                     'monto_total': Decimal('0'),
@@ -99,11 +94,11 @@ def validar_pagos_pendientes(request):
     return render(request, 'gestion/validar_pagos.html', context)
 
 
-@login_required
-@user_passes_test(es_staff)
+@solo_gerente_o_superior
 def validar_pago_action(request):
     """
     Procesar la aprobación o rechazo de un pago pendiente
+    Acceso: Gerentes y Administradores
     """
     if request.method != 'POST':
         return redirect('gestion:validar_pagos_pendientes')
@@ -144,7 +139,7 @@ def validar_pago_action(request):
                     
                     venta.saldo_pendiente = Decimal('0')
                     venta.estado_pago = 'PAGADA'
-                    venta.estado = 'COMPLETADA'
+                    venta.estado = 'PROCESADO'
                     venta.motivo_credito = f'PAGO_APROBADO:{codigo_confirmacion}:{timezone.now().strftime("%Y%m%d%H%M")}'
                     venta.save()
                 
@@ -166,13 +161,38 @@ def validar_pago_action(request):
                 )
                 
             elif accion == 'rechazar':
-                # Rechazar: Eliminar la marca de pendiente
-                for venta in ventas:
-                    venta.motivo_credito = f'PAGO_RECHAZADO:{codigo_confirmacion}:{timezone.now().strftime("%Y%m%d%H%M")}'
-                    venta.estado = 'ACTIVA'
-                    venta.save()
+                # Rechazar: Eliminar ventas ficticias, restaurar almuerzos a pendientes
+                ventas_eliminadas = 0
+                ventas_actualizadas = 0
+                almuerzos_restaurados = 0
                 
-                messages.warning(request, f'⚠️ Pago RECHAZADO. Código: {codigo_confirmacion}. Las deudas siguen pendientes.')
+                for venta in ventas:
+                    # Extraer IDs de almuerzos si los hay
+                    match_almuerzos = re.search(r'ALMUERZOS:([0-9,]+)', venta.motivo_credito or '')
+                    
+                    if match_almuerzos:
+                        almuerzos_ids = match_almuerzos.group(1).split(',')
+                        # Restaurar almuerzos a pendientes
+                        RegistroConsumoAlmuerzo.objects.filter(
+                            id_registro_consumo__in=almuerzos_ids
+                        ).update(marcado_en_cuenta=True)
+                        almuerzos_restaurados += len(almuerzos_ids)
+                        
+                        # Si es venta ficticia (solo almuerzos), eliminarla
+                        if venta.tipo_venta == 'CREDITO' and venta.saldo_pendiente == venta.monto_total:
+                            venta.delete()
+                            ventas_eliminadas += 1
+                            continue
+                    
+                    # Venta real - marcar como rechazada
+                    venta.motivo_credito = f'PAGO_RECHAZADO:{codigo_confirmacion}:{timezone.now().strftime("%Y%m%d%H%M")}'
+                    venta.estado = 'PROCESADO'
+                    venta.save()
+                    ventas_actualizadas += 1
+                
+                mensaje_almuerzos = f" {almuerzos_restaurados} almuerzo(s) restaurados" if almuerzos_restaurados > 0 else ""
+                mensaje_detalle = f"({ventas_eliminadas} registro(s) ficticios eliminados, {ventas_actualizadas} actualizados)"
+                messages.warning(request, f'⚠️ Pago RECHAZADO. Código: {codigo_confirmacion}.{mensaje_almuerzos}. {mensaje_detalle}')
                 
                 # Auditoría
                 registrar_auditoria(

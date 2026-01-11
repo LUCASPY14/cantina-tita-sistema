@@ -70,6 +70,13 @@ INSTALLED_APPS = [
     'gestion',
 ]
 
+# Authentication backends
+# Se usa un backend personalizado para autenticar empleados contra la tabla empleados
+AUTHENTICATION_BACKENDS = [
+    'gestion.backends.EmpleadoBackend',  # Backend personalizado para empleados
+    'django.contrib.auth.backends.ModelBackend',  # Backend por defecto de Django
+]
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -94,6 +101,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'gestion.context_processors.rol_usuario',
             ],
         },
     },
