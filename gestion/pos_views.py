@@ -718,13 +718,91 @@ def procesar_venta(request):
                     traceback.print_exc()
                     # No fallar la venta, solo registrar el error
         
+        # ========================================
+        # 🖨️ IMPRIMIR TICKET EN IMPRESORA TÉRMICA
+        # ========================================
+        ticket_impreso = False
+        error_impresion = None
+        
+        try:
+            from gestion.impresora_manager import ImpresoraTermica
+            
+            impresora = ImpresoraTermica()
+            
+            # Preparar datos del ticket
+            ticket_data = {
+                'venta_id': venta.id_venta,
+                'fecha': venta.fecha.strftime('%d/%m/%Y %H:%M'),
+                'cliente': f"{cliente.nombres} {cliente.apellidos}",
+                'cajero': f"{empleado.nombre} {empleado.apellido}",
+                'items': [],
+                'subtotal': float(total),
+                'descuento': float(descuento_promocion) if descuento_promocion > 0 else 0,
+                'total': float(total),
+                'nro_factura': nro_factura,
+                'tipo_venta': tipo_venta_final
+            }
+            
+            # Agregar items
+            for item in items:
+                ticket_data['items'].append({
+                    'descripcion': item.get('name', 'Producto'),
+                    'cantidad': item.get('quantity', 1),
+                    'precio': item.get('price', 0),
+                    'subtotal': item.get('quantity', 1) * item.get('price', 0)
+                })
+            
+            # Agregar información de tarjeta si existe
+            if tarjeta:
+                ticket_data['tarjeta'] = {
+                    'nro': tarjeta.nro_tarjeta,
+                    'titular': f"{tarjeta.id_hijo.descripcions} {tarjeta.id_hijo.apellidos}" if tarjeta.id_hijo else 'N/A',
+                    'saldo_anterior': float(tarjeta.saldo_actual + total) if tiene_tarjeta_exclusiva else None,
+                    'saldo_actual': float(tarjeta.saldo_actual) if tiene_tarjeta_exclusiva else None
+                }
+            
+            # Agregar información de pagos mixtos
+            if pagos_mixtos:
+                ticket_data['pagos'] = []
+                for pago in pagos_mixtos:
+                    medio_id = pago.get('medio_id')
+                    try:
+                        medio = MediosPago.objects.get(id_medio_pago=medio_id)
+                        ticket_data['pagos'].append({
+                            'medio': medio.descripcion,
+                            'monto': float(pago.get('monto', 0)),
+                            'referencia': pago.get('referencia', '')
+                        })
+                    except:
+                        pass
+            
+            # Intentar imprimir
+            if impresora.imprimir_ticket(ticket_data):
+                ticket_impreso = True
+                print(f"✅ Ticket impreso correctamente para venta #{venta.id_venta}")
+            else:
+                error_impresion = "La impresora no respondió"
+                print(f"⚠️ No se pudo imprimir el ticket para venta #{venta.id_venta}")
+                
+        except ImportError:
+            error_impresion = "Módulo de impresora no disponible"
+            print(f"⚠️ Módulo de impresora no disponible")
+        except Exception as e:
+            error_impresion = str(e)
+            print(f"⚠️ Error al imprimir ticket: {e}")
+            # NO fallar la venta si hay error de impresión
+        
         # Preparar respuesta con información actualizada
         response_data = {
             'success': True,
             'venta_id': venta.id_venta,
             'total': float(total),
-            'message': '¡Venta procesada exitosamente!'
+            'message': '¡Venta procesada exitosamente!',
+            'ticket_impreso': ticket_impreso
         }
+        
+        if error_impresion:
+            response_data['warning'] = f'Venta exitosa pero no se pudo imprimir: {error_impresion}'
         
         # Si hay tarjeta, incluir información del saldo actualizado
         if tarjeta:
@@ -2878,38 +2956,47 @@ def marcar_alerta_vista(request):
 def enviar_notificacion_saldo(request, tarjeta_id):
     """Enviar notificación de saldo bajo al responsable"""
     try:
+        from gestion.notificaciones import notificar_saldo_bajo
+        
         tarjeta = Tarjeta.objects.select_related(
             'id_hijo',
             'id_hijo__id_cliente_responsable'
         ).get(nro_tarjeta=tarjeta_id)
         
         responsable = tarjeta.id_hijo.id_cliente_responsable
-        hijo = tarjeta.id_hijo
         
-        # Aquí se puede implementar el envío real (email, SMS, WhatsApp)
-        # Por ahora simulamos el envío
+        # Determinar canales disponibles
+        canales = []
+        if responsable.email:
+            canales.append('email')
+        if responsable.telefono:
+            canales.append('sms')  # También se puede agregar 'whatsapp'
         
-        mensaje = f"""
-        Estimado/a {responsable.nombres} {responsable.apellidos},
+        if not canales:
+            return JsonResponse({
+                'success': False,
+                'error': 'El cliente no tiene email ni teléfono configurado'
+            }, status=400)
         
-        Le informamos que la tarjeta del estudiante {hijo.nombre} {hijo.apellido}
-        tiene un saldo bajo:
+        # Enviar notificación por todos los canales disponibles
+        resultados = notificar_saldo_bajo(tarjeta, canales)
         
-        Tarjeta: {tarjeta.nro_tarjeta}
-        Saldo actual: Gs. {tarjeta.saldo_actual:,}
+        # Verificar si al menos un canal fue exitoso
+        exito = any(resultados.values())
         
-        Le recomendamos realizar una recarga para evitar inconvenientes.
-        
-        Gracias,
-        Cantina Tita
-        """
-        
-        # Simular envío exitoso
-        return JsonResponse({
-            'success': True,
-            'mensaje': f'Notificación enviada a {responsable.email or responsable.telefono}',
-            'preview': mensaje.strip()
-        })
+        if exito:
+            canales_exitosos = [canal for canal, result in resultados.items() if result]
+            return JsonResponse({
+                'success': True,
+                'mensaje': f'Notificación enviada por: {", ".join(canales_exitosos)}',
+                'resultados': resultados
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se pudo enviar la notificación por ningún canal',
+                'resultados': resultados
+            }, status=500)
         
     except Tarjeta.DoesNotExist:
         return JsonResponse({
@@ -2917,9 +3004,11 @@ def enviar_notificacion_saldo(request, tarjeta_id):
             'error': 'Tarjeta no encontrada'
         }, status=404)
     except Exception as e:
+        import traceback
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'trace': traceback.format_exc()
         }, status=500)
 
 

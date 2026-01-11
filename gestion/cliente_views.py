@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from .models import (
-    Cliente, UsuariosWebClientes, Hijo, Tarjeta, CargasSaldo,
+    Cliente, UsuariosWebClientes, UsuarioPortal, Hijo, Tarjeta, CargasSaldo,
     Ventas, DetalleVenta, SuscripcionesAlmuerzo, RegistroConsumoAlmuerzo,
     PagosAlmuerzoMensual, ListaPrecios, TipoCliente, IntentoLogin
 )
@@ -307,14 +307,53 @@ def portal_login_view(request):
                 registrar_intento_login(usuario, request, exitoso=False, motivo_fallo='Cuenta bloqueada')
                 return render(request, 'portal/login.html', {'mostrar_captcha': requiere_captcha})
 
+            # Intentar autenticación con UsuarioPortal primero (sistema nuevo)
+            usuario_obj = None
+            password_valido = False
+            
             try:
-                usuario_web = UsuariosWebClientes.objects.select_related('id_cliente').get(
-                    usuario=usuario,
+                from django.contrib.auth.hashers import check_password
+                print(f'DEBUG: Buscando usuario en UsuarioPortal: {usuario}')
+                usuario_portal = UsuarioPortal.objects.select_related('cliente').get(
+                    email=usuario.lower(),
                     activo=True
                 )
-
-                # Verificar contraseña
-                if bcrypt.checkpw(contrasena.encode('utf-8'), usuario_web.contrasena_hash.encode('utf-8')):
+                print(f'DEBUG: Usuario encontrado en UsuarioPortal: {usuario_portal.email}')
+                
+                # Verificar contraseña con Django hasher
+                password_valido = check_password(contrasena, usuario_portal.password_hash)
+                print(f'DEBUG: Password válido: {password_valido}')
+                
+                if password_valido:
+                    usuario_obj = usuario_portal
+                    usuario_web = usuario_portal  # Compatibilidad con código posterior
+                    print('DEBUG: Autenticación exitosa con UsuarioPortal')
+                    
+            except UsuarioPortal.DoesNotExist:
+                print(f'DEBUG: Usuario no encontrado en UsuarioPortal, intentando con UsuariosWebClientes')
+                # Si no está en UsuarioPortal, intentar con sistema legacy
+                try:
+                    usuario_web = UsuariosWebClientes.objects.select_related('id_cliente').get(
+                        usuario=usuario,
+                        activo=True
+                    )
+                    print(f'DEBUG: Usuario encontrado en UsuariosWebClientes')
+                    
+                    # Verificar contraseña con bcrypt
+                    password_valido = bcrypt.checkpw(contrasena.encode('utf-8'), usuario_web.contrasena_hash.encode('utf-8'))
+                    print(f'DEBUG: Password válido (bcrypt): {password_valido}')
+                    
+                    if password_valido:
+                        usuario_obj = usuario_web
+                        
+                except UsuariosWebClientes.DoesNotExist:
+                    print('DEBUG: Usuario no encontrado en ningún sistema')
+                    registrar_intento_login(usuario, request, exitoso=False, motivo_fallo='Usuario no existe')
+                    messages.error(request, 'Usuario no encontrado o inactivo')
+                    return render(request, 'portal/login.html', {'mostrar_captcha': requiere_captcha})
+            
+            # Si llegamos aquí, el usuario existe - ahora verificar password
+            if usuario_obj and password_valido:
                     # Verificar restricciones horarias PRIMERO
                     puede_acceder, mensaje_restriccion = verificar_acceso_horario(usuario, 'CLIENTE_WEB')
                     if not puede_acceder:
@@ -359,16 +398,25 @@ def portal_login_view(request):
                     # Registrar sesión activa
                     registrar_sesion_activa(usuario, 'CLIENTE_WEB', request.session.session_key, request)
 
+                    # Obtener cliente según tipo de usuario
+                    if isinstance(usuario_obj, UsuarioPortal):
+                        cliente = usuario_obj.cliente
+                    else:
+                        cliente = usuario_web.id_cliente
+                    
                     # Notificar si es una IP nueva
-                    notificar_login_nueva_ip(usuario_web.id_cliente, request)
+                    notificar_login_nueva_ip(cliente, request)
 
                     # Actualizar último acceso
-                    usuario_web.ultimo_acceso = timezone.now()
-                    usuario_web.save(update_fields=['ultimo_acceso'])
+                    usuario_obj.ultimo_acceso = timezone.now()
+                    usuario_obj.save(update_fields=['ultimo_acceso'])
 
                     # Guardar en sesión
-                    request.session['cliente_id'] = usuario_web.id_cliente.id_cliente
-                    request.session['cliente_usuario'] = usuario_web.usuario
+                    request.session['cliente_id'] = cliente.id_cliente
+                    if isinstance(usuario_obj, UsuarioPortal):
+                        request.session['cliente_usuario'] = usuario_obj.email
+                    else:
+                        request.session['cliente_usuario'] = usuario_web.usuario
 
                     # Auditoría
                     registrar_auditoria(
@@ -378,27 +426,38 @@ def portal_login_view(request):
                         descripcion=f'Login exitoso al portal de clientes'
                     )
 
-                    mensaje_bienvenida = f'¡Bienvenido {usuario_web.id_cliente.nombres}!'
+                    # Obtener cliente según tipo de usuario
+                    if isinstance(usuario_obj, UsuarioPortal):
+                        cliente = usuario_obj.cliente
+                    else:
+                        cliente = usuario_web.id_cliente
+                    
+                    mensaje_bienvenida = f'¡Bienvenido {cliente.nombres}!'
                     if tiene_anomalias:
                         mensaje_bienvenida += ' ⚠️ Se detectaron accesos inusuales.'
 
                     messages.success(request, mensaje_bienvenida)
+                    print('DEBUG: Redirigiendo a portal_dashboard')
                     return redirect('clientes:portal_dashboard')
+            else:
+                # Contraseña incorrecta
+                print('DEBUG: Contraseña incorrecta')
+                registrar_intento_login(usuario, request, exitoso=False, motivo_fallo='Contraseña incorrecta')
+                
+                # Obtener cliente para notificación
+                if isinstance(usuario_obj, UsuarioPortal):
+                    cliente = usuario_obj.cliente
+                elif hasattr(usuario_obj, 'id_cliente'):
+                    cliente = usuario_obj.id_cliente
                 else:
-                    # Contraseña incorrecta
-                    registrar_intento_login(usuario, request, exitoso=False, motivo_fallo='Contraseña incorrecta')
+                    cliente = None
 
-                    # Notificar si hay 3 o más intentos fallidos
-                    if intentos_restantes <= 2:
-                        notificar_intentos_sospechosos(usuario_web.id_cliente, request, 5 - intentos_restantes)
-                        messages.error(request, f'Contraseña incorrecta. Te quedan {intentos_restantes} intentos antes del bloqueo.')
-                    else:
-                        messages.error(request, 'Contraseña incorrecta')
-
-            except UsuariosWebClientes.DoesNotExist:
-                # Usuario no foundrado
-                registrar_intento_login(usuario, request, exitoso=False, motivo_fallo='Usuario no existe')
-                messages.error(request, 'Usuario no encontrado o inactivo')
+                # Notificar si hay 3 o más intentos fallidos
+                if intentos_restantes <= 2 and cliente:
+                    notificar_intentos_sospechosos(cliente, request, 5 - intentos_restantes)
+                    messages.error(request, f'Contraseña incorrecta. Te quedan {intentos_restantes} intentos antes del bloqueo.')
+                else:
+                    messages.error(request, 'Contraseña incorrecta')
 
         # GET request o después de error
         context = {
@@ -493,19 +552,19 @@ def portal_dashboard_view(request):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
     
     # Obtener hijos
-    hijos = Hijo.objects.filter(id_cliente_responsable=cliente).prefetch_related('tarjetas')
+    hijos = Hijo.objects.filter(id_cliente_responsable=cliente)
     
     # Calcular saldos totales
     saldo_total = Tarjeta.objects.filter(
         id_hijo__id_cliente_responsable=cliente
-    ).aggregate(total=Sum('saldo'))['total'] or Decimal('0')
+    ).aggregate(total=Sum('saldo_actual'))['total'] or Decimal('0')
     
     # Consumos recientes (últimos 30 días)
     fecha_desde = timezone.now() - timedelta(days=30)
     consumos_recientes = Ventas.objects.filter(
-        id_tarjeta__id_hijo__id_cliente_responsable=cliente,
-        fecha_venta__gte=fecha_desde
-    ).select_related('id_tarjeta__id_hijo').order_by('-fecha_venta')[:10]
+        id_hijo__id_cliente_responsable=cliente,
+        fecha__gte=fecha_desde
+    ).select_related('id_hijo').order_by('-fecha')[:10]
     
     # Almuerzos del mes actual
     mes_actual = timezone.now().month
@@ -514,8 +573,7 @@ def portal_dashboard_view(request):
     almuerzos_mes = RegistroConsumoAlmuerzo.objects.filter(
         id_hijo__id_cliente_responsable=cliente,
         fecha_consumo__month=mes_actual,
-        fecha_consumo__year=anio_actual,
-        estado='CONSUMIDO'
+        fecha_consumo__year=anio_actual
     ).count()
     
     context = {
@@ -534,7 +592,7 @@ def portal_consumos_hijo_view(request, hijo_id):
     
     cliente_id = request.session.get('cliente_id')
     if not cliente_id:
-        return redirect('pos:portal_login')
+        return redirect('clientes:portal_login')
     
     hijo = get_object_or_404(
         Hijo,
@@ -547,39 +605,51 @@ def portal_consumos_hijo_view(request, hijo_id):
     fecha_hasta = request.GET.get('hasta')
     
     # Consumos en cantina (ventas)
-    ventas = Ventas.objects.filter(
-        id_tarjeta__id_hijo=hijo
-    ).select_related('id_tarjeta', 'id_empleado')
+    ventas_query = Ventas.objects.filter(
+        id_hijo=hijo
+    ).select_related('id_hijo', 'id_empleado_cajero', 'id_tipo_pago')
     
     if fecha_desde:
-        ventas = ventas.filter(fecha_venta__gte=fecha_desde)
+        ventas_query = ventas_query.filter(fecha__gte=fecha_desde)
     if fecha_hasta:
-        ventas = ventas.filter(fecha_venta__lte=fecha_hasta)
+        ventas_query = ventas_query.filter(fecha__lte=fecha_hasta)
     
-    ventas = ventas.order_by('-fecha_venta')
+    ventas_query = ventas_query.order_by('-fecha')
     
     # Almuerzos
-    almuerzos = RegistroConsumoAlmuerzo.objects.filter(
+    almuerzos_query = RegistroConsumoAlmuerzo.objects.filter(
         id_hijo=hijo
-    )
+    ).select_related('id_tipo_almuerzo')
     
     if fecha_desde:
-        almuerzos = almuerzos.filter(fecha_consumo__gte=fecha_desde)
+        almuerzos_query = almuerzos_query.filter(fecha_consumo__gte=fecha_desde)
     if fecha_hasta:
-        almuerzos = almuerzos.filter(fecha_consumo__lte=fecha_hasta)
+        almuerzos_query = almuerzos_query.filter(fecha_consumo__lte=fecha_hasta)
     
-    almuerzos = almuerzos.order_by('-fecha_consumo')
+    almuerzos_query = almuerzos_query.order_by('-fecha_consumo')
     
-    # Paginación
-    paginator = Paginator(list(ventas) + list(almuerzos), 30)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    # Paginación separada
+    ventas_paginator = Paginator(ventas_query, 20)
+    almuerzos_paginator = Paginator(almuerzos_query, 20)
+    
+    page_ventas = request.GET.get('page_ventas', 1)
+    page_almuerzos = request.GET.get('page_almuerzos', 1)
+    
+    ventas_page = ventas_paginator.get_page(page_ventas)
+    almuerzos_page = almuerzos_paginator.get_page(page_almuerzos)
+    
+    # Tab activo (server-side)
+    active_tab = request.GET.get('tab', 'cantina')
     
     context = {
         'hijo': hijo,
-        'page_obj': page_obj,
+        'ventas': ventas_page,
+        'almuerzos': almuerzos_page,
+        'ventas_page': ventas_page,
+        'almuerzos_page': almuerzos_page,
         'fecha_desde': fecha_desde,
         'fecha_hasta': fecha_hasta,
+        'active_tab': active_tab,
     }
     
     return render(request, 'portal/consumos_hijo.html', context)
@@ -593,8 +663,8 @@ def portal_recargas_view(request):
         return redirect('clientes:portal_login')
     
     recargas = CargasSaldo.objects.filter(
-        id_tarjeta__id_hijo__id_cliente_responsable_id=cliente_id
-    ).select_related('id_tarjeta__id_hijo', 'id_empleado').order_by('-fecha_carga')
+        nro_tarjeta__id_hijo__id_cliente_responsable_id=cliente_id
+    ).select_related('nro_tarjeta__id_hijo').order_by('-fecha_carga')
     
     # Paginación
     paginator = Paginator(recargas, 30)
@@ -721,7 +791,7 @@ def portal_restricciones_hijo_view(request, hijo_id):
         )
         
         messages.success(request, 'Restricciones actualizadas exitosamente')
-        return redirect('pos:portal_dashboard')
+        return redirect('clientes:portal_dashboard')
     
     context = {
         'hijo': hijo,
@@ -1060,70 +1130,123 @@ def portal_cargar_saldo_view(request):
     hijos_con_tarjetas = Hijo.objects.filter(
         id_cliente_responsable=cliente,
         activo=True
-    ).select_related('tarjetas').filter(tarjetas__estado='Activa')
+    ).select_related('tarjeta').filter(tarjeta__estado='Activa')
     
     if request.method == 'POST':
         hijo_id = request.POST.get('hijo_id')
         monto = request.POST.get('monto')
-        metodo_pago = request.POST.get('metodo_pago')  # 'tarjeta_credito', 'tarjeta_debito', etc.
+        tipo_pago = request.POST.get('tipo_pago')  # 'metrepay' o 'transferencia'
+        metodo_pago = request.POST.get('metodo_pago')  # Para MetrePay: 'tarjeta_credito', 'tarjeta_debito', etc.
+        codigo_confirmacion = request.POST.get('codigo_confirmacion', '').strip()  # Para transferencia
         
         try:
             hijo = Hijo.objects.get(pk=hijo_id, id_cliente_responsable=cliente)
-            tarjeta = hijo.tarjetas.first()  # Asumiendo una tarjeta por hijo
+            tarjeta = hijo.tarjeta  # OneToOne relationship
             
             if not tarjeta:
                 messages.error(request, 'El hijo seleccionado no tiene una tarjeta activa')
-                return redirect('pos:portal_cargar_saldo')
+                return redirect('clientes:portal_cargar_saldo')
             
             monto_decimal = Decimal(monto)
             if monto_decimal <= 0:
                 messages.error(request, 'El monto debe ser mayor a 0')
-                return redirect('pos:portal_cargar_saldo')
+                return redirect('clientes:portal_cargar_saldo')
             
-            # Aquí integrar con MetrePay API
-            # Por ahora, simular la transacción
-            exito, referencia, payment_url, custom_id = procesar_pago_metrepay(monto_decimal, metodo_pago, request)
-            
-            if exito:
-                # Crear registro de carga de saldo
+            # Procesar según tipo de pago
+            if tipo_pago == 'transferencia':
+                # TRANSFERENCIA BANCARIA - Validar código de confirmación
+                if not codigo_confirmacion:
+                    messages.error(request, 'Debe ingresar el código de confirmación de la transferencia')
+                    return redirect('clientes:portal_cargar_saldo')
+                
+                # Crear registro pendiente de validación
+                import secrets
+                referencia = f"TRANS-{secrets.token_hex(4).upper()}"
+                
                 with transaction.atomic():
                     carga_saldo = CargasSaldo.objects.create(
                         nro_tarjeta=tarjeta,
                         id_cliente_origen=cliente,
                         fecha_carga=timezone.now(),
                         monto_cargado=monto_decimal,
-                        referencia=referencia,
-                        estado='PENDIENTE',
-                        custom_identifier=custom_id,
-                        pay_request_id=referencia  # Temporal hasta confirmación
+                        referencia=codigo_confirmacion,  # Código ingresado por el usuario
+                        estado='pendiente',  # Requiere validación manual
+                        custom_identifier=referencia,
+                        tx_id=codigo_confirmacion
                     )
-                    
-                    # Actualizar saldo de la tarjeta
-                    tarjeta.saldo_actual += int(monto_decimal)
-                    tarjeta.save()
                 
-                messages.success(request, f'Saldo cargado exitosamente. Nuevo saldo: Gs. {tarjeta.saldo_actual:,}')
+                messages.success(request, f'Transferencia registrada con referencia {referencia}. Será validada en las próximas 24 horas.')
                 
                 # Auditoría
                 registrar_auditoria(
                     request=request,
-                    operacion='CARGA_SALDO',
+                    operacion='TRANSFERENCIA_PENDIENTE',
                     tipo_usuario='CLIENTE_WEB',
-                    descripcion=f'Carga de Gs. {monto_decimal} a tarjeta {tarjeta.nro_tarjeta}'
+                    descripcion=f'Transferencia de Gs. {monto_decimal} para tarjeta {tarjeta.nro_tarjeta} - Código: {codigo_confirmacion}'
                 )
-
-                # Mostrar URL de pago si está disponible
-                if payment_url:
-                    messages.info(request, f'Complete el pago en: <a href="{payment_url}" target="_blank">{payment_url}</a>')
+                
             else:
-                messages.error(request, 'Error al procesar el pago. Intente nuevamente.')
+                # METREPAY - Validar que el cliente tenga email o celular
+                if not cliente.email and not cliente.celular:
+                    messages.error(request, 'Debe configurar su email o celular en su perfil para usar MetrePay. Contacte al administrador.')
+                    return redirect('clientes:portal_cargar_saldo')
+                
+                # Usar email del cliente o del usuario portal
+                email_pago = cliente.email
+                if not email_pago:
+                    try:
+                        usuario_portal = UsuarioPortal.objects.get(cliente=cliente)
+                        email_pago = usuario_portal.email
+                    except UsuarioPortal.DoesNotExist:
+                        pass
+                
+                if not email_pago and not cliente.celular:
+                    messages.error(request, 'No se pudo obtener email o celular para procesar el pago')
+                    return redirect('clientes:portal_cargar_saldo')
+                
+                # Procesar con MetrePay
+                exito, referencia, payment_url, custom_id = procesar_pago_metrepay(monto_decimal, metodo_pago, request)
+                
+                if exito:
+                    # Crear registro de carga de saldo
+                    with transaction.atomic():
+                        carga_saldo = CargasSaldo.objects.create(
+                            nro_tarjeta=tarjeta,
+                            id_cliente_origen=cliente,
+                            fecha_carga=timezone.now(),
+                            monto_cargado=monto_decimal,
+                            referencia=referencia,
+                            estado='PENDIENTE',
+                            custom_identifier=custom_id,
+                            pay_request_id=referencia  # Temporal hasta confirmación
+                        )
+                        
+                        # Actualizar saldo de la tarjeta
+                        tarjeta.saldo_actual += int(monto_decimal)
+                        tarjeta.save()
+                    
+                    messages.success(request, f'Saldo cargado exitosamente. Nuevo saldo: Gs. {tarjeta.saldo_actual:,}')
+                    
+                    # Auditoría
+                    registrar_auditoria(
+                        request=request,
+                        operacion='CARGA_SALDO',
+                        tipo_usuario='CLIENTE_WEB',
+                        descripcion=f'Carga de Gs. {monto_decimal} a tarjeta {tarjeta.nro_tarjeta}'
+                    )
+
+                    # Mostrar URL de pago si está disponible
+                    if payment_url:
+                        messages.info(request, f'Complete el pago en: <a href="{payment_url}" target="_blank">{payment_url}</a>')
+                else:
+                    messages.error(request, 'Error al procesar el pago. Intente nuevamente.')
                 
         except Hijo.DoesNotExist:
             messages.error(request, 'Hijo no encontrado')
         except Exception as e:
             messages.error(request, f'Error inesperado: {str(e)}')
         
-        return redirect('pos:portal_cargar_saldo')
+        return redirect('clientes:portal_cargar_saldo')
     
     context = {
         'cliente': cliente,
@@ -1142,80 +1265,163 @@ def portal_pagos_view(request):
     
     cliente = get_object_or_404(Cliente, pk=cliente_id)
     
-    # Obtener deudas pendientes (ventas con saldo pendiente)
-    deudas = Ventas.objects.filter(
+    # Obtener deudas de cantina (ventas con saldo pendiente)
+    deudas_cantina = Ventas.objects.filter(
         id_cliente=cliente,
         saldo_pendiente__gt=0
-    ).select_related('id_tarjeta__id_hijo').order_by('-fecha_venta')
+    ).select_related('id_hijo').order_by('-fecha')
     
-    total_deuda = deudas.aggregate(total=Sum('saldo_pendiente'))['total'] or Decimal('0')
+    # Obtener deudas de almuerzos (marcados en cuenta pendientes)
+    deudas_almuerzos = RegistroConsumoAlmuerzo.objects.filter(
+        id_hijo__id_cliente_responsable=cliente,
+        marcado_en_cuenta=True
+    ).select_related('id_hijo', 'id_tipo_almuerzo').order_by('-fecha_consumo')
+    
+    total_deuda_cantina = deudas_cantina.aggregate(total=Sum('saldo_pendiente'))['total'] or Decimal('0')
+    total_deuda_almuerzos = deudas_almuerzos.aggregate(total=Sum('costo_almuerzo'))['total'] or Decimal('0')
+    total_deuda = total_deuda_cantina + total_deuda_almuerzos
     
     if request.method == 'POST':
         venta_ids = request.POST.getlist('venta_ids')
+        almuerzo_ids = request.POST.getlist('almuerzo_ids')
         monto_total = Decimal(request.POST.get('monto_total', '0'))
         metodo_pago = request.POST.get('metodo_pago')
+        codigo_confirmacion = request.POST.get('codigo_confirmacion', '')
         
-        if not venta_ids:
+        if not venta_ids and not almuerzo_ids:
             messages.error(request, 'Seleccione al menos una deuda para pagar')
-            return redirect('pos:portal_pagos')
+            return redirect('clientes:portal_pagos')
+        
+        if not metodo_pago:
+            messages.error(request, 'Seleccione un método de pago')
+            return redirect('clientes:portal_pagos')
         
         # Verificar que el monto no exceda la deuda total
         if monto_total > total_deuda:
             messages.error(request, 'El monto a pagar no puede exceder la deuda total')
-            return redirect('pos:portal_pagos')
+            return redirect('clientes:portal_pagos')
         
-        # Procesar pago con MetrePay
-        exito, referencia, payment_url, custom_id = procesar_pago_metrepay(monto_total, metodo_pago, request, tipo_pago='PAGO_DEUDAS', venta_ids=venta_ids)
-        
-        if exito:
+        # Si es transferencia, validar código de confirmación
+        if metodo_pago == 'transferencia':
+            if not codigo_confirmacion or len(codigo_confirmacion.strip()) == 0:
+                messages.error(request, 'El código de confirmación es obligatorio para transferencias bancarias')
+                return redirect('clientes:portal_pagos')
+            
+            # Procesar como pago pendiente
             with transaction.atomic():
+                # Si hay almuerzos pero NO hay ventas, crear una venta ficticia para registrar el pago
+                if almuerzo_ids and not venta_ids:
+                    # Obtener el primer hijo para asociar la venta
+                    primer_almuerzo = RegistroConsumoAlmuerzo.objects.filter(
+                        pk__in=almuerzo_ids
+                    ).first()
+                    
+                    if primer_almuerzo:
+                        # Crear venta ficticia para almuerzo
+                        venta_ficticia = Ventas.objects.create(
+                            id_cliente=cliente,
+                            id_hijo=primer_almuerzo.id_hijo,
+                            fecha=timezone.now(),
+                            monto_total=monto_total,
+                            saldo_pendiente=monto_total,
+                            estado='PENDIENTE_VALIDACION',
+                            estado_pago='PENDIENTE',
+                            tipo_venta='CREDITO',
+                            motivo_credito=f"PAGO_PENDIENTE_TRANSFERENCIA:{codigo_confirmacion}:ALMUERZOS:{','.join(almuerzo_ids)}"
+                        )
+                        venta_ids = [str(venta_ficticia.id_venta)]
+                
                 # Actualizar cada venta seleccionada
                 for venta_id in venta_ids:
                     try:
                         venta = Ventas.objects.get(pk=venta_id, id_cliente=cliente, saldo_pendiente__gt=0)
-                        # Aquí lógica para distribuir el pago entre las ventas
-                        # Por simplicidad, asumir pago completo de las seleccionadas
-                        venta.saldo_pendiente = 0
-                        venta.estado_pago = 'PAGADA'
-                        venta.save()
+                        # Si no es ficticia, agregar código
+                        if 'ALMUERZOS' not in (venta.motivo_credito or ''):
+                            venta.motivo_credito = f"PAGO_PENDIENTE_TRANSFERENCIA:{codigo_confirmacion}"
+                            venta.estado = 'PENDIENTE_VALIDACION'
+                            venta.save()
                     except Ventas.DoesNotExist:
                         continue
-                
-                # Crear registro de pago (si hay un modelo para esto)
-                # PagosCliente.objects.create(...)  # Si existe
-                
-            messages.success(request, f'Pago procesado exitosamente. Total pagado: Gs. {monto_total:,}')
             
-            # Mostrar URL de pago si está disponible
-            if payment_url:
-                messages.info(request, f'Complete el pago en: <a href="{payment_url}" target="_blank">{payment_url}</a>')
+            messages.success(request, f'Pago registrado. Código: {codigo_confirmacion}. Su transferencia será validada en las próximas 24-48 horas.')
             
             # Auditoría
             registrar_auditoria(
                 request=request,
-                operacion='PAGO_DEUDAS',
+                operacion='PAGO_DEUDAS_TRANSFERENCIA',
                 tipo_usuario='CLIENTE_WEB',
-                descripcion=f'Pago de Gs. {monto_total} por {len(venta_ids)} deudas'
+                descripcion=f'Pago pendiente de Gs. {monto_total} - Código: {codigo_confirmacion} - {len(venta_ids)} ventas, {len(almuerzo_ids)} almuerzos'
             )
-        else:
-            messages.error(request, 'Error al procesar el pago. Intente nuevamente.')
+            
+        else:  # MetrePay
+            # Procesar pago con MetrePay
+            exito, referencia, payment_url, custom_id = procesar_pago_metrepay(
+                monto_total, metodo_pago, request, 
+                tipo_pago='PAGO_DEUDAS', 
+                venta_ids=venta_ids,
+                almuerzo_ids=almuerzo_ids
+            )
+            
+            if exito:
+                with transaction.atomic():
+                    # Actualizar cada venta seleccionada
+                    for venta_id in venta_ids:
+                        try:
+                            venta = Ventas.objects.get(pk=venta_id, id_cliente=cliente, saldo_pendiente__gt=0)
+                            venta.saldo_pendiente = 0
+                            venta.estado_pago = 'PAGADA'
+                            venta.save()
+                        except Ventas.DoesNotExist:
+                            continue
+                    
+                    # Actualizar cada almuerzo seleccionado
+                    for almuerzo_id in almuerzo_ids:
+                        try:
+                            almuerzo = RegistroConsumoAlmuerzo.objects.get(
+                                pk=almuerzo_id,
+                                id_hijo__id_cliente_responsable=cliente,
+                                marcado_en_cuenta=True
+                            )
+                            almuerzo.marcado_en_cuenta = False
+                            almuerzo.save()
+                        except RegistroConsumoAlmuerzo.DoesNotExist:
+                            continue
+                    
+                messages.success(request, f'Pago procesado exitosamente. Total pagado: Gs. {monto_total:,}')
+                
+                # Mostrar URL de pago si está disponible
+                if payment_url:
+                    messages.info(request, f'Complete el pago en: <a href="{payment_url}" target="_blank">{payment_url}</a>')
+                
+                # Auditoría
+                registrar_auditoria(
+                    request=request,
+                    operacion='PAGO_DEUDAS',
+                    tipo_usuario='CLIENTE_WEB',
+                    descripcion=f'Pago de Gs. {monto_total} por {len(venta_ids)} ventas + {len(almuerzo_ids)} almuerzos'
+                )
+            else:
+                messages.error(request, 'Error al procesar el pago. Intente nuevamente.')
         
-        return redirect('pos:portal_pagos')
+        return redirect('clientes:portal_pagos')
     
     context = {
         'cliente': cliente,
-        'deudas': deudas,
+        'deudas_cantina': deudas_cantina,
+        'deudas_almuerzos': deudas_almuerzos,
         'total_deuda': total_deuda,
+        'total_deuda_cantina': total_deuda_cantina,
+        'total_deuda_almuerzos': total_deuda_almuerzos,
     }
     
     return render(request, 'portal/pagos.html', context)
 
 
-def procesar_pago_metrepay(monto, metodo_pago, request, tipo_pago='CARGA_SALDO', venta_ids=None):
+def procesar_pago_metrepay(monto, metodo_pago, request, tipo_pago='CARGA_SALDO', venta_ids=None, almuerzo_ids=None):
     """
     Función para procesar pagos con MetrePay API
     Basado en colección de Postman proporcionada
-    Retorna (exito, referencia, payment_url)
+    Retorna (exito, referencia, payment_url, custom_id)
     """
     try:
         # Configuración de MetrePay (debería estar en settings)
@@ -1231,7 +1437,8 @@ def procesar_pago_metrepay(monto, metodo_pago, request, tipo_pago='CARGA_SALDO',
                 custom_id = f"CARGA-{timezone.now().strftime('%Y%m%d%H%M%S')}"
             else:
                 venta_ids_str = ','.join(map(str, venta_ids or []))
-                custom_id = f"PAGO-{venta_ids_str}"
+                almuerzo_ids_str = ','.join(map(str, almuerzo_ids or []))
+                custom_id = f"PAGO-V{venta_ids_str}-A{almuerzo_ids_str}"
             return True, referencia, payment_url, custom_id
 
         # Cliente MetrePay simplificado
@@ -1248,7 +1455,8 @@ def procesar_pago_metrepay(monto, metodo_pago, request, tipo_pago='CARGA_SALDO',
             custom_id = f"CARGA-{timezone.now().strftime('%Y%m%d%H%M%S')}"
         elif tipo_pago == 'PAGO_DEUDAS':
             venta_ids_str = ','.join(map(str, venta_ids or []))
-            custom_id = f"PAGO-{venta_ids_str}"
+            almuerzo_ids_str = ','.join(map(str, almuerzo_ids or []))
+            custom_id = f"PAGO-V{venta_ids_str}-A{almuerzo_ids_str}"
         else:
             custom_id = f"OTRO-{timezone.now().strftime('%Y%m%d%H%M%S')}"
 

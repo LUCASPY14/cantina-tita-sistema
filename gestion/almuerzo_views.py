@@ -22,6 +22,7 @@ from .models import (
     LogAutorizacion,
     Cliente
 )
+from .cache_reportes import get_reporte_cacheado, get_datos_dashboard_cacheados
 
 
 # =============================================================================
@@ -30,25 +31,43 @@ from .models import (
 
 def almuerzo_reportes(request):
     """
-    Página principal de reportes de almuerzos con estadísticas rápidas
+    Página principal de reportes de almuerzos con estadísticas rápidas (CACHEADO)
     """
     hoy = date.today()
     
-    # Estadísticas del día
-    almuerzos_hoy = RegistroConsumoAlmuerzo.objects.filter(fecha_consumo=hoy).count()
-    total_hoy = RegistroConsumoAlmuerzo.objects.filter(
-        fecha_consumo=hoy
-    ).aggregate(total=Sum('costo_almuerzo'))['total'] or Decimal('0.00')
+    # Intentar obtener datos cacheados
+    from django.core.cache import cache
+    cache_key = f'almuerzo_stats:{hoy}'
+    stats = cache.get(cache_key)
     
-    # Estadísticas del mes
-    almuerzos_mes = RegistroConsumoAlmuerzo.objects.filter(
-        fecha_consumo__month=hoy.month,
-        fecha_consumo__year=hoy.year
-    ).count()
-    total_mes = RegistroConsumoAlmuerzo.objects.filter(
-        fecha_consumo__month=hoy.month,
-        fecha_consumo__year=hoy.year
-    ).aggregate(total=Sum('costo_almuerzo'))['total'] or Decimal('0.00')
+    if stats is None:
+        # Estadísticas del día
+        almuerzos_hoy = RegistroConsumoAlmuerzo.objects.filter(fecha_consumo=hoy).count()
+        total_hoy = RegistroConsumoAlmuerzo.objects.filter(
+            fecha_consumo=hoy
+        ).aggregate(total=Sum('costo_almuerzo'))['total'] or Decimal('0.00')
+        
+        # Estadísticas del mes
+        almuerzos_mes = RegistroConsumoAlmuerzo.objects.filter(
+            fecha_consumo__month=hoy.month,
+            fecha_consumo__year=hoy.year
+        ).count()
+        total_mes = RegistroConsumoAlmuerzo.objects.filter(
+            fecha_consumo__month=hoy.month,
+            fecha_consumo__year=hoy.year
+        ).aggregate(total=Sum('costo_almuerzo'))['total'] or Decimal('0.00')
+        
+        stats = {
+            'fecha_hoy': hoy,
+            'almuerzos_hoy': almuerzos_hoy,
+            'total_hoy': total_hoy,
+            'almuerzos_mes': almuerzos_mes,
+            'total_mes': total_mes,
+            'mes_actual': hoy.strftime('%B %Y')
+        }
+        
+        # Cache por 2 minutos (almuerzos cambian frecuentemente)
+        cache.set(cache_key, stats, 120)
     
     context = {
         'stats': {
@@ -523,19 +542,35 @@ def registrar_pago_almuerzo(request):
 @require_http_methods(["GET"])
 def reporte_almuerzos_diarios(request):
     """
-    Reporte de almuerzos del día o rango de fechas
+    Reporte de almuerzos del día o rango de fechas (CACHEADO)
     """
     fecha_desde = request.GET.get('fecha_desde', timezone.now().date())
     fecha_hasta = request.GET.get('fecha_hasta', timezone.now().date())
     
-    registros = RegistroConsumoAlmuerzo.objects.filter(
-        fecha_consumo__range=[fecha_desde, fecha_hasta]
-    ).select_related('id_hijo', 'id_tipo_almuerzo', 'nro_tarjeta').order_by('-fecha_consumo', '-hora_registro')
+    # Cache por 5 minutos
+    from django.core.cache import cache
+    cache_key = f'almuerzo_diario:{fecha_desde}:{fecha_hasta}'
+    data = cache.get(cache_key)
     
-    total = registros.aggregate(
-        cantidad=Count('id_registro_consumo'),
-        monto_total=Sum('costo_almuerzo')
-    )
+    if data is None:
+        registros = RegistroConsumoAlmuerzo.objects.filter(
+            fecha_consumo__range=[fecha_desde, fecha_hasta]
+        ).select_related('id_hijo', 'id_tipo_almuerzo', 'nro_tarjeta').order_by('-fecha_consumo', '-hora_registro')
+        
+        total = registros.aggregate(
+            cantidad=Count('id_registro_consumo'),
+            monto_total=Sum('costo_almuerzo')
+        )
+        
+        data = {
+            'registros': list(registros),
+            'total': total
+        }
+        
+        cache.set(cache_key, data, 300)  # 5 minutos
+    
+    registros = data['registros']
+    total = data['total']
     
     context = {
         'registros': registros,

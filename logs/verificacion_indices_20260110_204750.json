@@ -1,0 +1,76 @@
+{
+  "fecha": "2026-01-10T20:47:50.005066",
+  "total_queries": 6,
+  "con_indice": 5,
+  "warnings": 1,
+  "errores": 4,
+  "resultados": [
+    {
+      "nombre": "Ventas del día",
+      "usa_indice": false,
+      "rows": 61,
+      "tipo_acceso": "ALL",
+      "key": null
+    },
+    {
+      "nombre": "Top productos vendidos",
+      "usa_indice": true,
+      "rows": 36,
+      "tipo_acceso": "ref",
+      "key": "idx_detalle_producto_cantidad"
+    },
+    {
+      "nombre": "Consumos tarjeta del mes",
+      "usa_indice": true,
+      "rows": 17,
+      "tipo_acceso": "ref",
+      "key": "idx_tarjeta_fecha"
+    },
+    {
+      "nombre": "Ventas por cajero",
+      "usa_indice": true,
+      "rows": 62,
+      "tipo_acceso": "eq_ref",
+      "key": "PRIMARY"
+    },
+    {
+      "nombre": "Recargas online pendientes",
+      "usa_indice": true,
+      "rows": 1,
+      "tipo_acceso": "ref",
+      "key": "idx_estado"
+    },
+    {
+      "nombre": "Clientes activos con crédito",
+      "usa_indice": true,
+      "rows": 3,
+      "tipo_acceso": "range",
+      "key": "idx_clientes_activo_credito"
+    }
+  ],
+  "warnings_detalle": [
+    {
+      "nombre": "Ventas del día",
+      "problema": "Escaneo completo sin índice",
+      "rows": 61
+    }
+  ],
+  "errores_detalle": [
+    {
+      "nombre": "Búsqueda producto por código barras",
+      "error": "unsupported format string passed to NoneType.__format__"
+    },
+    {
+      "nombre": "Búsqueda tarjeta por número",
+      "error": "unsupported format string passed to NoneType.__format__"
+    },
+    {
+      "nombre": "Productos con stock bajo",
+      "error": "(1054, \"Unknown column 'Stock_Minimo' in 'where clause'\")"
+    },
+    {
+      "nombre": "Búsqueda cliente por RUC/CI",
+      "error": "unsupported format string passed to NoneType.__format__"
+    }
+  ]
+}

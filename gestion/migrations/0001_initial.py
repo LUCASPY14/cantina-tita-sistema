@@ -311,7 +311,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='StockUnico',
             fields=[
-                ('id_producto', models.OneToOneField(db_column='ID_Producto', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='stock', serialize=False, to='gestion.productoexistente')),
+                ('id_producto', models.OneToOneField(db_column='ID_Producto', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='stock', serialize=False, to='gestion.Producto')),
                 ('stock_actual', models.DecimalField(db_column='Stock_Actual', decimal_places=3, max_digits=10)),
                 ('fecha_ultima_actualizacion', models.DateTimeField(auto_now=True, db_column='Fecha_Ultima_Actualizacion')),
             ],
@@ -333,7 +333,7 @@ class Migration(migrations.Migration):
                 ('estado', models.CharField(choices=[('pendiente', 'Pendiente'), ('recibida', 'Recibida'), ('cancelada', 'Cancelada')], default='pendiente', max_length=20)),
                 ('notas', models.TextField(blank=True, null=True)),
                 ('usuario', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='compras_realizadas', to=settings.AUTH_USER_MODEL)),
-                ('proveedor', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='compras', to='gestion.proveedor')),
+                ('proveedor', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='compras', to='gestion.Proveedor')),
             ],
             options={
                 'verbose_name': 'Compra a Proveedor',
@@ -354,7 +354,7 @@ class Migration(migrations.Migration):
                 ('activo', models.BooleanField(default=True)),
                 ('fecha_creacion', models.DateTimeField(auto_now_add=True)),
                 ('fecha_actualizacion', models.DateTimeField(auto_now=True)),
-                ('categoria', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='productos', to='gestion.categoria')),
+                ('categoria', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='productos', to='gestion.Categoria')),
             ],
             options={
                 'verbose_name': 'Producto',
@@ -369,8 +369,8 @@ class Migration(migrations.Migration):
                 ('cantidad', models.IntegerField(default=1)),
                 ('precio_unitario', models.DecimalField(decimal_places=2, max_digits=10)),
                 ('subtotal', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('compra', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='detalles', to='gestion.compraproveedor')),
-                ('producto', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='gestion.producto')),
+                ('compra', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='detalles', to='gestion.CompraProveedor')),
+                ('producto', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='gestion.Producto')),
             ],
             options={
                 'verbose_name': 'Detalle de Compra',
@@ -389,7 +389,7 @@ class Migration(migrations.Migration):
                 ('metodo_pago', models.CharField(choices=[('efectivo', 'Efectivo'), ('tarjeta', 'Tarjeta'), ('credito', 'Crédito'), ('transferencia', 'Transferencia')], default='efectivo', max_length=20)),
                 ('estado', models.CharField(choices=[('pendiente', 'Pendiente'), ('completada', 'Completada'), ('cancelada', 'Cancelada')], default='completada', max_length=20)),
                 ('notas', models.TextField(blank=True, null=True)),
-                ('cliente', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='ventas', to='gestion.cliente')),
+                ('cliente', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='ventas', to='gestion.Cliente')),
                 ('usuario', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='ventas_realizadas', to=settings.AUTH_USER_MODEL)),
             ],
             options={
@@ -405,8 +405,8 @@ class Migration(migrations.Migration):
                 ('cantidad', models.IntegerField(default=1)),
                 ('precio_unitario', models.DecimalField(decimal_places=2, max_digits=10)),
                 ('subtotal', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('producto', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='gestion.producto')),
-                ('venta', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='detalles', to='gestion.venta')),
+                ('producto', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='gestion.Producto')),
+                ('venta', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='detalles', to='gestion.Venta')),
             ],
             options={
                 'verbose_name': 'Detalle de Venta',

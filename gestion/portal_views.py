@@ -212,11 +212,18 @@ def login_view(request):
         return redirect('portal_dashboard')
     
     if request.method == 'POST':
+        print(f"[LOGIN DEBUG] POST recibido: {request.POST.dict()}")
         form = LoginForm(request.POST)
+        
+        print(f"[LOGIN DEBUG] Formulario válido: {form.is_valid()}")
+        if not form.is_valid():
+            print(f"[LOGIN DEBUG] Errores del formulario: {form.errors}")
         
         if form.is_valid():
             usuario = form.cleaned_data['usuario']
             recordarme = form.cleaned_data.get('recordarme', False)
+            
+            print(f"[LOGIN DEBUG] Usuario autenticado: {usuario.email}")
             
             # Crear sesión
             request.session['portal_usuario_id'] = usuario.id_usuario_portal
@@ -233,6 +240,7 @@ def login_view(request):
             usuario.save(update_fields=['ultimo_acceso'])
             
             messages.success(request, f'Bienvenido, {usuario.email}')
+            print(f"[LOGIN DEBUG] Redirigiendo a portal_dashboard")
             return redirect('portal_dashboard')
     else:
         form = LoginForm()

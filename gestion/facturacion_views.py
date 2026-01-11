@@ -26,53 +26,64 @@ from .models import (
     DocumentosTributarios
 )
 from .facturacion_electronica import GeneradorXMLFactura, ClienteEkuatia
+from .cache_reportes import get_reporte_cacheado
 
 
 @login_required
 @require_http_methods(["GET"])
 def dashboard_facturacion(request):
     """
-    Dashboard de facturación electrónica con estadísticas
+    Dashboard de facturación electrónica con estadísticas (CACHEADO)
     
     GET /gestion/facturacion/dashboard/
     """
-    # Estadísticas del mes actual
-    hoy = timezone.now()
-    inicio_mes = hoy.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    from django.core.cache import cache
     
-    # Facturas emitidas este mes
-    facturas_mes = DatosFacturacionElect.objects.filter(
-        fecha_envio__gte=inicio_mes
-    )
+    # Cache por 5 minutos
+    cache_key = 'dashboard_facturacion'
+    context = cache.get(cache_key)
     
-    # Estadísticas
-    stats = {
-        'facturas_emitidas': facturas_mes.count(),
-        'facturas_aceptadas': facturas_mes.filter(estado_sifen='ACEPTADA').count(),
-        'facturas_rechazadas': facturas_mes.filter(estado_sifen='RECHAZADA').count(),
-        'facturas_pendientes': facturas_mes.filter(estado_sifen__isnull=True).count(),
-        'monto_total_emitido': Ventas.objects.filter(
-            id_venta__in=facturas_mes.values_list('id_documento_id', flat=True)
-        ).aggregate(total=Sum('monto_total'))['total'] or 0,
-    }
-    
-    # Timbrados disponibles
-    timbrados = Timbrados.objects.filter(
-        activo=True,
-        es_electronico=True
-    ).values('nro_timbrado', 'fecha_inicio', 'fecha_fin').annotate(
-        cantidad_emitidas=Count('documentostributarios')
-    )
-    
-    # Agregar estado en Python (no en la BD)
-    for timbrado in timbrados:
-        timbrado['estado'] = 'VIGENTE'
-    
-    context = {
-        'stats': stats,
-        'timbrados': timbrados,
-        'titulo': 'Dashboard - Facturación Electrónica'
-    }
+    if context is None:
+        # Estadísticas del mes actual
+        hoy = timezone.now()
+        inicio_mes = hoy.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        # Facturas emitidas este mes
+        facturas_mes = DatosFacturacionElect.objects.filter(
+            fecha_envio__gte=inicio_mes
+        )
+        
+        # Estadísticas
+        stats = {
+            'facturas_emitidas': facturas_mes.count(),
+            'facturas_aceptadas': facturas_mes.filter(estado_sifen='ACEPTADA').count(),
+            'facturas_rechazadas': facturas_mes.filter(estado_sifen='RECHAZADA').count(),
+            'facturas_pendientes': facturas_mes.filter(estado_sifen__isnull=True).count(),
+            'monto_total_emitido': Ventas.objects.filter(
+                id_venta__in=facturas_mes.values_list('id_documento_id', flat=True)
+            ).aggregate(total=Sum('monto_total'))['total'] or 0,
+        }
+        
+        # Timbrados disponibles
+        timbrados = Timbrados.objects.filter(
+            activo=True,
+            es_electronico=True
+        ).values('nro_timbrado', 'fecha_inicio', 'fecha_fin').annotate(
+            cantidad_emitidas=Count('documentostributarios')
+        )
+        
+        # Agregar estado en Python (no en la BD)
+        for timbrado in timbrados:
+            timbrado['estado'] = 'VIGENTE'
+        
+        context = {
+            'stats': stats,
+            'timbrados': list(timbrados),
+            'titulo': 'Dashboard - Facturación Electrónica'
+        }
+        
+        # Cache por 5 minutos
+        cache.set(cache_key, context, 300)
     
     return render(request, 'gestion/facturacion_dashboard.html', context)
 
@@ -342,42 +353,52 @@ def listar_facturas(request):
 @require_http_methods(["GET"])
 def reporte_cumplimiento(request):
     """
-    Reporte de cumplimiento legal de facturación electrónica
+    Reporte de cumplimiento legal de facturación electrónica (CACHEADO)
     
     GET /gestion/facturacion/reporte-cumplimiento/
     """
-    hoy = timezone.now()
+    from django.core.cache import cache
     
-    # Últimos 30 días
-    hace_30_dias = hoy - timedelta(days=30)
+    # Cache por 10 minutos
+    cache_key = 'reporte_cumplimiento_facturacion'
+    context = cache.get(cache_key)
     
-    # Estadísticas de cumplimiento
-    facturas_30d = DatosFacturacionElect.objects.filter(
-        fecha_envio__gte=hace_30_dias
-    )
-    
-    stats = {
-        'total_facturadas': facturas_30d.count(),
-        'aceptadas': facturas_30d.filter(estado_sifen='ACEPTADA').count(),
-        'rechazadas': facturas_30d.filter(estado_sifen='RECHAZADA').count(),
-        'pendientes': facturas_30d.filter(estado_sifen__isnull=True).count(),
-        'porcentaje_aceptacion': (
-            (facturas_30d.filter(estado_sifen='ACEPTADA').count() / facturas_30d.count() * 100)
-            if facturas_30d.count() > 0 else 0
-        ),
-        'monto_total_sin_iva': Ventas.objects.filter(
-            id_venta__in=facturas_30d.values_list('id_documento__id_venta_id', flat=True)
-        ).aggregate(
-            total=Sum(
-                'monto_total' / Decimal('1.1')
-            )
-        )['total'] or 0,
-    }
-    
-    context = {
-        'stats': stats,
-        'periodo': f"{hace_30_dias.strftime('%d/%m/%Y')} - {hoy.strftime('%d/%m/%Y')}",
-        'titulo': 'Reporte de Cumplimiento - Facturación Electrónica'
-    }
+    if context is None:
+        hoy = timezone.now()
+        
+        # Últimos 30 días
+        hace_30_dias = hoy - timedelta(days=30)
+        
+        # Estadísticas de cumplimiento
+        facturas_30d = DatosFacturacionElect.objects.filter(
+            fecha_envio__gte=hace_30_dias
+        )
+        
+        stats = {
+            'total_facturadas': facturas_30d.count(),
+            'aceptadas': facturas_30d.filter(estado_sifen='ACEPTADA').count(),
+            'rechazadas': facturas_30d.filter(estado_sifen='RECHAZADA').count(),
+            'pendientes': facturas_30d.filter(estado_sifen__isnull=True).count(),
+            'porcentaje_aceptacion': (
+                (facturas_30d.filter(estado_sifen='ACEPTADA').count() / facturas_30d.count() * 100)
+                if facturas_30d.count() > 0 else 0
+            ),
+            'monto_total_sin_iva': Ventas.objects.filter(
+                id_venta__in=facturas_30d.values_list('id_documento__id_venta_id', flat=True)
+            ).aggregate(
+                total=Sum(
+                    'monto_total' / Decimal('1.1')
+                )
+            )['total'] or 0,
+        }
+        
+        context = {
+            'stats': stats,
+            'periodo': f"{hace_30_dias.strftime('%d/%m/%Y')} - {hoy.strftime('%d/%m/%Y')}",
+            'titulo': 'Reporte de Cumplimiento - Facturación Electrónica'
+        }
+        
+        # Cache por 10 minutos
+        cache.set(cache_key, context, 600)
     
     return render(request, 'gestion/facturacion_reporte_cumplimiento.html', context)

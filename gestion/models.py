@@ -1,6 +1,7 @@
 ﻿from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+import sys
 
 # =============================================================================
 # MODELOS DE LA BASE DE DATOS EXISTENTE
@@ -17,7 +18,7 @@ class TipoCliente(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'tipos_cliente'
         verbose_name = 'Tipo de Cliente'
         verbose_name_plural = 'Tipos de Cliente'
@@ -35,7 +36,7 @@ class ListaPrecios(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'listas_precios'
         verbose_name = 'Lista de Precios'
         verbose_name_plural = 'Listas de Precios'
@@ -59,7 +60,7 @@ class Categoria(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'categorias'
         verbose_name = 'Categoría'
         verbose_name_plural = 'Categorías'
@@ -76,7 +77,7 @@ class UnidadMedida(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'unidades_medida'
         verbose_name = 'Unidad de Medida'
         verbose_name_plural = 'Unidades de Medida'
@@ -95,7 +96,7 @@ class Impuesto(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'impuestos'
         verbose_name = 'Impuesto'
         verbose_name_plural = 'Impuestos'
@@ -112,7 +113,7 @@ class TipoRolGeneral(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'tipos_rol_general'
         verbose_name = 'Rol'
         verbose_name_plural = 'Roles'
@@ -149,7 +150,7 @@ class Cliente(models.Model):
     fecha_registro = models.DateTimeField(db_column='Fecha_Registro', auto_now_add=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'clientes'
         verbose_name = 'Cliente'
         verbose_name_plural = 'Clientes'
@@ -181,7 +182,7 @@ class Hijo(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'hijos'
         verbose_name = 'Hijo'
         verbose_name_plural = 'Hijos'
@@ -247,7 +248,7 @@ class RestriccionesHijos(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'restricciones_hijos'
         verbose_name = 'Restricción Alimentaria'
         verbose_name_plural = 'Restricciones Alimentarias'
@@ -279,7 +280,7 @@ class Tarjeta(models.Model):
     fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'tarjetas'
         verbose_name = 'Tarjeta'
         verbose_name_plural = 'Tarjetas'
@@ -316,7 +317,7 @@ class Producto(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'productos'
         verbose_name = 'Producto'
         verbose_name_plural = 'Productos'
@@ -338,7 +339,7 @@ class StockUnico(models.Model):
     fecha_ultima_actualizacion = models.DateTimeField(db_column='Fecha_Ultima_Actualizacion', auto_now=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'stock_unico'
         verbose_name = 'Stock'
         verbose_name_plural = 'Stock de Productos'
@@ -362,7 +363,7 @@ class Proveedor(models.Model):
     fecha_registro = models.DateTimeField(db_column='Fecha_Registro', auto_now_add=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'proveedores'
         verbose_name = 'Proveedor'
         verbose_name_plural = 'Proveedores'
@@ -395,7 +396,7 @@ class Empleado(models.Model):
     fecha_baja = models.DateTimeField(db_column='Fecha_Baja', blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'empleados'
         verbose_name = 'Empleado'
         verbose_name_plural = 'Empleados'
@@ -423,7 +424,7 @@ class DatosEmpresa(models.Model):
     activo = models.IntegerField(db_column='Activo', blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'datos_empresa'
         verbose_name = 'Datos de la Empresa'
         verbose_name_plural = 'Datos de la Empresa'
@@ -452,7 +453,7 @@ class PreciosPorLista(models.Model):
     fecha_vigencia = models.DateTimeField(db_column='Fecha_Vigencia', blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'precios_por_lista'
         verbose_name = 'Precio por Lista'
         verbose_name_plural = 'Precios por Lista'
@@ -482,7 +483,7 @@ class CostosHistoricos(models.Model):
     fecha_compra = models.DateTimeField(db_column='Fecha_Compra')
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'costos_historicos'
         verbose_name = 'Costo Histórico'
         verbose_name_plural = 'Costos Históricos'
@@ -513,7 +514,7 @@ class HistoricoPrecios(models.Model):
     )
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'historico_precios'
         verbose_name = 'Histórico de Precio'
         verbose_name_plural = 'Históricos de Precios'
@@ -546,7 +547,7 @@ class Compras(models.Model):
     observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'compras'
         verbose_name = 'Compra'
         verbose_name_plural = 'Compras'
@@ -575,7 +576,7 @@ class DetalleCompra(models.Model):
     monto_iva = models.DecimalField(db_column='Monto_IVA', max_digits=10, decimal_places=2, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'detalle_compra'
         verbose_name = 'Detalle de Compra'
         verbose_name_plural = 'Detalles de Compra'
@@ -615,7 +616,7 @@ class NotasCreditoProveedor(models.Model):
     fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'notas_credito_proveedor'
         verbose_name = 'Nota de Crédito Proveedor'
         verbose_name_plural = 'Notas de Crédito Proveedores'
@@ -643,7 +644,7 @@ class DetalleNotaCreditoProveedor(models.Model):
     subtotal = models.DecimalField(db_column='Subtotal', max_digits=12, decimal_places=2)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'detalle_nota_credito_proveedor'
         verbose_name = 'Detalle NC Proveedor'
         verbose_name_plural = 'Detalles NC Proveedores'
@@ -716,7 +717,7 @@ class CargasSaldo(models.Model):
     )
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'cargas_saldo'
         verbose_name = 'Carga de Saldo'
         verbose_name_plural = 'Cargas de Saldo'
@@ -737,12 +738,12 @@ class UsuariosWebClientes(models.Model):
         related_name='usuario_web'
     )
     usuario = models.CharField(db_column='Usuario', max_length=50, unique=True)
-    contrasena_hash = models.CharField(db_column='Contrasena_Hash', max_length=60)
+    contrasena_hash = models.CharField(db_column='Contrasena_Hash', max_length=128)
     ultimo_acceso = models.DateTimeField(db_column='Ultimo_Acceso', blank=True, null=True)
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'usuarios_web_clientes'
         verbose_name = 'Usuario Web Cliente'
         verbose_name_plural = 'Usuarios Web Clientes'
@@ -762,7 +763,7 @@ class PuntosExpedicion(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'puntos_expedicion'
         verbose_name = 'Punto de Expedición'
         verbose_name_plural = 'Puntos de Expedición'
@@ -796,7 +797,7 @@ class Timbrados(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'timbrados'
         verbose_name = 'Timbrado'
         verbose_name_plural = 'Timbrados'
@@ -823,7 +824,7 @@ class DocumentosTributarios(models.Model):
     monto_iva_10 = models.DecimalField(db_column='Monto_IVA_10', max_digits=10, decimal_places=2, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'documentos_tributarios'
         verbose_name = 'Documento Tributario'
         verbose_name_plural = 'Documentos Tributarios'
@@ -849,7 +850,7 @@ class DatosFacturacionElect(models.Model):
     fecha_respuesta = models.DateTimeField(db_column='Fecha_Respuesta', blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'datos_facturacion_elect'
         verbose_name = 'Datos Facturación Electrónica'
         verbose_name_plural = 'Datos Facturación Electrónica'
@@ -869,7 +870,7 @@ class DatosFacturacionFisica(models.Model):
     nro_preimpreso_interno = models.CharField(db_column='Nro_Preimpreso_Interno', max_length=20, unique=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'datos_facturacion_fisica'
         verbose_name = 'Datos Facturación Física'
         verbose_name_plural = 'Datos Facturación Física'
@@ -927,7 +928,7 @@ class MovimientosStock(models.Model):
     referencia_documento = models.CharField(db_column='Referencia_Documento', max_length=50, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'movimientos_stock'
         verbose_name = 'Movimiento de Stock'
         verbose_name_plural = 'Movimientos de Stock'
@@ -964,7 +965,7 @@ class AjustesInventario(models.Model):
     estado = models.CharField(db_column='Estado', max_length=10, choices=ESTADO_CHOICES)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'ajustes_inventario'
         verbose_name = 'Ajuste de Inventario'
         verbose_name_plural = 'Ajustes de Inventario'
@@ -995,7 +996,7 @@ class DetalleAjuste(models.Model):
     cantidad_ajustada = models.DecimalField(db_column='Cantidad_Ajustada', max_digits=8, decimal_places=3)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'detalle_ajuste'
         verbose_name = 'Detalle de Ajuste'
         verbose_name_plural = 'Detalles de Ajuste'
@@ -1014,7 +1015,7 @@ class TiposPago(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'tipos_pago'
         verbose_name = 'Tipo de Pago'
         verbose_name_plural = 'Tipos de Pago'
@@ -1032,7 +1033,7 @@ class MediosPago(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'medios_pago'
         verbose_name = 'Medio de Pago'
         verbose_name_plural = 'Medios de Pago'
@@ -1057,7 +1058,7 @@ class TarifasComision(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'tarifas_comision'
         verbose_name = 'Tarifa de Comisión'
         verbose_name_plural = 'Tarifas de Comisión'
@@ -1074,7 +1075,7 @@ class Cajas(models.Model):
     activo = models.IntegerField(db_column='Activo', blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'cajas'
         verbose_name = 'Caja'
         verbose_name_plural = 'Cajas'
@@ -1104,7 +1105,7 @@ class CierresCaja(models.Model):
     estado = models.CharField(db_column='Estado', max_length=7, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'cierres_caja'
         verbose_name = 'Cierre de Caja'
         verbose_name_plural = 'Cierres de Caja'
@@ -1207,7 +1208,7 @@ class Ventas(models.Model):
             })
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'ventas'
         verbose_name = 'Venta'
         verbose_name_plural = 'Ventas'
@@ -1235,7 +1236,7 @@ class DetalleVenta(models.Model):
     subtotal_total = models.BigIntegerField(db_column='Subtotal_Total')
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'detalle_venta'
         verbose_name = 'Detalle de Venta'
         verbose_name_plural = 'Detalles de Venta'
@@ -1284,7 +1285,7 @@ class PagosVenta(models.Model):
     )
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'pagos_venta'
         verbose_name = 'Pago de Venta'
         verbose_name_plural = 'Pagos de Venta'
@@ -1322,7 +1323,7 @@ class PagosProveedores(models.Model):
     fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'pagos_proveedores'
         verbose_name = 'Pago a Proveedor'
         verbose_name_plural = 'Pagos a Proveedores'
@@ -1347,7 +1348,7 @@ class AplicacionPagosVentas(models.Model):
     monto_aplicado = models.BigIntegerField(db_column='Monto_Aplicado')
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'aplicacion_pagos_ventas'
         verbose_name = 'Aplicación de Pago a Venta'
         verbose_name_plural = 'Aplicaciones de Pagos a Ventas'
@@ -1372,7 +1373,7 @@ class AplicacionPagosCompras(models.Model):
     monto_aplicado = models.DecimalField(db_column='Monto_Aplicado', max_digits=12, decimal_places=2)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'aplicacion_pagos_compras'
         verbose_name = 'Aplicación de Pago a Compra'
         verbose_name_plural = 'Aplicaciones de Pagos a Compras'
@@ -1399,7 +1400,7 @@ class DetalleComisionVenta(models.Model):
     porcentaje_aplicado = models.DecimalField(db_column='Porcentaje_Aplicado', max_digits=5, decimal_places=4)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'detalle_comision_venta'
         verbose_name = 'Detalle de Comisión'
         verbose_name_plural = 'Detalles de Comisión'
@@ -1422,7 +1423,7 @@ class ConciliacionPagos(models.Model):
     observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'conciliacion_pagos'
         verbose_name = 'Conciliación de Pago'
         verbose_name_plural = 'Conciliaciones de Pagos'
@@ -1462,7 +1463,7 @@ class NotasCreditoCliente(models.Model):
     estado = models.CharField(db_column='Estado', max_length=8, choices=ESTADO_CHOICES, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'notas_credito_cliente'
         verbose_name = 'Nota de Crédito Cliente'
         verbose_name_plural = 'Notas de Crédito Cliente'
@@ -1490,7 +1491,7 @@ class DetalleNota(models.Model):
     subtotal = models.DecimalField(db_column='Subtotal', max_digits=12, decimal_places=2)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'detalle_nota'
         verbose_name = 'Detalle de Nota de Crédito'
         verbose_name_plural = 'Detalles de Notas de Crédito'
@@ -1513,7 +1514,7 @@ class PlanesAlmuerzo(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'planes_almuerzo'
         verbose_name = 'Plan de Almuerzo'
         verbose_name_plural = 'Planes de Almuerzo'
@@ -1547,7 +1548,7 @@ class SuscripcionesAlmuerzo(models.Model):
     estado = models.CharField(db_column='Estado', max_length=10, choices=ESTADO_CHOICES, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'suscripciones_almuerzo'
         verbose_name = 'Suscripción de Almuerzo'
         verbose_name_plural = 'Suscripciones de Almuerzo'
@@ -1585,7 +1586,7 @@ class PagosAlmuerzoMensual(models.Model):
     estado = models.CharField(db_column='Estado', max_length=9, choices=ESTADO_CHOICES, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'pagos_almuerzo_mensual'
         verbose_name = 'Pago de Almuerzo Mensual'
         verbose_name_plural = 'Pagos de Almuerzo Mensual'
@@ -1623,7 +1624,7 @@ class AlertasSistema(models.Model):
     observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'alertas_sistema'
         verbose_name = 'Alerta del Sistema'
         verbose_name_plural = 'Alertas del Sistema'
@@ -1666,7 +1667,7 @@ class SolicitudesNotificacion(models.Model):
     fecha_envio = models.DateTimeField(db_column='Fecha_Envio', blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'solicitudes_notificacion'
         verbose_name = 'Solicitud de Notificación'
         verbose_name_plural = 'Solicitudes de Notificación'
@@ -1695,7 +1696,7 @@ class AuditoriaEmpleados(models.Model):
     ip_origen = models.CharField(db_column='IP_Origen', max_length=45, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'auditoria_empleados'
         verbose_name = 'Auditoría de Empleado'
         verbose_name_plural = 'Auditorías de Empleados'
@@ -1722,7 +1723,7 @@ class AuditoriaUsuariosWeb(models.Model):
     ip_origen = models.CharField(db_column='IP_Origen', max_length=45, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'auditoria_usuarios_web'
         verbose_name = 'Auditoría de Usuario Web'
         verbose_name_plural = 'Auditorías de Usuarios Web'
@@ -1754,7 +1755,7 @@ class AuditoriaComisiones(models.Model):
     )
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'auditoria_comisiones'
         verbose_name = 'Auditoría de Comisión'
         verbose_name_plural = 'Auditorías de Comisiones'
@@ -1780,7 +1781,7 @@ class VistaStockAlerta(models.Model):
     unidad_medida = models.CharField(db_column='Unidad_Medida', max_length=50)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_stock_alerta'
         verbose_name = 'Alerta de Stock'
         verbose_name_plural = 'Alertas de Stock'
@@ -1802,7 +1803,7 @@ class VistaSaldoClientes(models.Model):
     total_movimientos = models.BigIntegerField(db_column='total_movimientos')
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_saldo_clientes'
         verbose_name = 'Saldo de Cliente'
         verbose_name_plural = 'Saldos de Clientes'
@@ -1956,7 +1957,7 @@ class ConsumoTarjeta(models.Model):
     )
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'consumos_tarjeta'
         verbose_name = 'Consumo con Tarjeta'
         verbose_name_plural = 'Consumos con Tarjeta'
@@ -1987,7 +1988,7 @@ class VistaVentasDiaDetallado(models.Model):
     saldo_pendiente = models.DecimalField(db_column='Saldo_Pendiente', max_digits=33, decimal_places=0)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_ventas_dia_detallado'
         verbose_name = 'Vista: Ventas del Día Detallado'
         verbose_name_plural = 'Vista: Ventas del Día Detallado'
@@ -2011,7 +2012,7 @@ class VistaConsumosEstudiante(models.Model):
     total_recargado = models.DecimalField(db_column='Total_Recargado', max_digits=32, decimal_places=2)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_consumos_estudiante'
         verbose_name = 'Vista: Consumos por Estudiante'
         verbose_name_plural = 'Vista: Consumos por Estudiante'
@@ -2030,7 +2031,7 @@ class VistaStockCriticoAlertas(models.Model):
     stock_minimo = models.DecimalField(db_column='Stock_Minimo', max_digits=10, decimal_places=3)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_stock_critico_alertas'
         verbose_name = 'Vista: Stock Crítico'
         verbose_name_plural = 'Vista: Stock Crítico'
@@ -2052,7 +2053,7 @@ class VistaRecargasHistorial(models.Model):
     saldo_actual_tarjeta = models.BigIntegerField(db_column='Saldo_Actual_Tarjeta')
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_recargas_historial'
         verbose_name = 'Vista: Historial de Recargas'
         verbose_name_plural = 'Vista: Historial de Recargas'
@@ -2076,7 +2077,7 @@ class VistaResumenCajaDiario(models.Model):
     total_transferencias = models.DecimalField(db_column='Total_Transferencias', max_digits=32, decimal_places=0)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_resumen_caja_diario'
         verbose_name = 'Vista: Resumen de Caja Diario'
         verbose_name_plural = 'Vista: Resumen de Caja Diario'
@@ -2100,7 +2101,7 @@ class VistaNotasCreditoDetallado(models.Model):
     productos = models.TextField(db_column='Productos', blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_notas_credito_detallado'
         verbose_name = 'Vista: Notas de Crédito Detallado'
         verbose_name_plural = 'Vista: Notas de Crédito Detallado'
@@ -2126,7 +2127,7 @@ class TipoAlmuerzo(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'tipos_almuerzo'
         verbose_name = 'Tipo de Almuerzo'
         verbose_name_plural = 'Tipos de Almuerzo'
@@ -2180,7 +2181,7 @@ class RegistroConsumoAlmuerzo(models.Model):
     hora_registro = models.TimeField(db_column='Hora_Registro', auto_now_add=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'registro_consumo_almuerzo'
         verbose_name = 'Registro de Almuerzo'
         verbose_name_plural = 'Registros de Almuerzos'
@@ -2221,7 +2222,7 @@ class CuentaAlmuerzoMensual(models.Model):
     observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'cuentas_almuerzo_mensual'
         verbose_name = 'Cuenta Mensual de Almuerzo'
         verbose_name_plural = 'Cuentas Mensuales de Almuerzo'
@@ -2273,7 +2274,7 @@ class PagoCuentaAlmuerzo(models.Model):
     )
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'pagos_cuentas_almuerzo'
         verbose_name = 'Pago de Cuenta de Almuerzo'
         verbose_name_plural = 'Pagos de Cuentas de Almuerzo'
@@ -2305,7 +2306,7 @@ class VistaAlmuerzosDiarios(models.Model):
     id_suscripcion = models.BigIntegerField(db_column='ID_Suscripcion', blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_almuerzos_diarios'
         verbose_name = 'Vista: Almuerzos Diarios'
         verbose_name_plural = 'Vista: Almuerzos Diarios'
@@ -2335,7 +2336,7 @@ class VistaCuentasAlmuerzoDetallado(models.Model):
     cantidad_pagos = models.BigIntegerField(db_column='Cantidad_Pagos')
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_cuentas_almuerzo_detallado'
         verbose_name = 'Vista: Cuentas de Almuerzo Detallado'
         verbose_name_plural = 'Vista: Cuentas de Almuerzo Detallado'
@@ -2356,7 +2357,7 @@ class VistaReporteMensualSeparado(models.Model):
     cargas_tarjeta_mes = models.DecimalField(db_column='Cargas_Tarjeta_Mes', max_digits=32, decimal_places=2)
 
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_reporte_mensual_separado'
         verbose_name = 'Vista: Reporte Mensual Separado'
         verbose_name_plural = 'Vista: Reportes Mensuales Separados'
@@ -2402,7 +2403,7 @@ class TarjetaAutorizacion(models.Model):
     observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'tarjetas_autorizacion'
         verbose_name = 'Tarjeta de Autorización'
         verbose_name_plural = 'Tarjetas de Autorización'
@@ -2470,7 +2471,7 @@ class LogAutorizacion(models.Model):
     )
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'log_autorizaciones'
         verbose_name = 'Log de Autorización'
         verbose_name_plural = 'Logs de Autorizaciones'
@@ -2495,7 +2496,7 @@ class Grado(models.Model):
     fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'grados'
         verbose_name = 'Grado'
         verbose_name_plural = 'Grados'
@@ -2543,7 +2544,7 @@ class HistorialGradoHijo(models.Model):
     observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'historial_grados_hijos'
         verbose_name = 'Historial de Grado'
         verbose_name_plural = 'Historial de Grados'
@@ -2567,7 +2568,7 @@ class IntentoLogin(models.Model):
     motivo_fallo = models.CharField(db_column='Motivo_Fallo', max_length=100, blank=True, null=True)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'intentos_login'
         verbose_name = 'Intento de Login'
         verbose_name_plural = 'Intentos de Login'
@@ -2611,7 +2612,7 @@ class AuditoriaOperacion(models.Model):
     mensaje_error = models.TextField(db_column='Mensaje_Error', blank=True, null=True)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'auditoria_operaciones'
         verbose_name = 'Auditoría de Operación'
         verbose_name_plural = 'Auditoría de Operaciones'
@@ -2638,7 +2639,7 @@ class TokenRecuperacion(models.Model):
     ip_solicitud = models.CharField(db_column='IP_Solicitud', max_length=45, blank=True, null=True)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'tokens_recuperacion'
         verbose_name = 'Token de Recuperación'
         verbose_name_plural = 'Tokens de Recuperación'
@@ -2666,7 +2667,7 @@ class BloqueoCuenta(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'bloqueos_cuenta'
         verbose_name = 'Bloqueo de Cuenta'
         verbose_name_plural = 'Bloqueos de Cuentas'
@@ -2698,7 +2699,7 @@ class PatronAcceso(models.Model):
     es_habitual = models.BooleanField(db_column='Es_Habitual', default=False)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'patrones_acceso'
         verbose_name = 'Patrón de Acceso'
         verbose_name_plural = 'Patrones de Acceso'
@@ -2733,7 +2734,7 @@ class AnomaliaDetectada(models.Model):
     notificado = models.BooleanField(db_column='Notificado', default=False)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'anomalias_detectadas'
         verbose_name = 'Anomalía Detectada'
         verbose_name_plural = 'Anomalías Detectadas'
@@ -2762,7 +2763,7 @@ class SesionActiva(models.Model):
     activa = models.BooleanField(db_column='Activa', default=True)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'sesiones_activas'
         verbose_name = 'Sesión Activa'
         verbose_name_plural = 'Sesiones Activas'
@@ -2792,7 +2793,7 @@ class Autenticacion2Fa(models.Model):
     fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'autenticacion_2fa'
         verbose_name = 'Autenticación 2FA'
         verbose_name_plural = 'Autenticaciones 2FA'
@@ -2832,7 +2833,7 @@ class RestriccionHoraria(models.Model):
     fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'restricciones_horarias'
         verbose_name = 'Restricción Horaria'
         verbose_name_plural = 'Restricciones Horarias'
@@ -2868,7 +2869,7 @@ class Intento2Fa(models.Model):
     fecha_intento = models.DateTimeField(db_column='Fecha_Intento', auto_now_add=True)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'intentos_2fa'
         verbose_name = 'Intento 2FA'
         verbose_name_plural = 'Intentos 2FA'
@@ -2891,7 +2892,7 @@ class RenovacionSesion(models.Model):
     fecha_renovacion = models.DateTimeField(db_column='Fecha_Renovacion', auto_now_add=True)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'renovaciones_sesion'
         verbose_name = 'Renovación de Sesión'
         verbose_name_plural = 'Renovaciones de Sesión'
@@ -2939,7 +2940,7 @@ class Alergeno(models.Model):
     usuario_creacion = models.CharField(db_column='Usuario_Creacion', max_length=100, blank=True, null=True)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'alergenos'
         verbose_name = 'Alérgeno'
         verbose_name_plural = 'Alérgenos'
@@ -2975,7 +2976,7 @@ class ProductoAlergeno(models.Model):
     usuario_registro = models.CharField(db_column='Usuario_Registro', max_length=100, blank=True, null=True)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'producto_alergenos'
         verbose_name = 'Producto-Alérgeno'
         verbose_name_plural = 'Productos-Alérgenos'
@@ -3079,7 +3080,7 @@ class Promocion(models.Model):
     usuario_creacion = models.CharField(db_column='Usuario_Creacion', max_length=100, blank=True, null=True)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'promociones'
         verbose_name = 'Promoción'
         verbose_name_plural = 'Promociones'
@@ -3106,7 +3107,7 @@ class ProductoPromocion(models.Model):
     )
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'productos_promocion'
         verbose_name = 'Producto en Promoción'
         verbose_name_plural = 'Productos en Promoción'
@@ -3133,7 +3134,7 @@ class CategoriaPromocion(models.Model):
     )
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'categorias_promocion'
         verbose_name = 'Categoría en Promoción'
         verbose_name_plural = 'Categorías en Promoción'
@@ -3166,7 +3167,7 @@ class PromocionAplicada(models.Model):
     fecha_aplicacion = models.DateTimeField(db_column='Fecha_Aplicacion', auto_now_add=True)
     
     class Meta:
-        managed = False
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'promociones_aplicadas'
         verbose_name = 'Promoción Aplicada'
         verbose_name_plural = 'Promociones Aplicadas'
@@ -3326,7 +3327,7 @@ class Notificacion(models.Model):
     titulo = models.CharField(db_column='Titulo', max_length=255)
     mensaje = models.TextField(db_column='Mensaje')
     leida = models.BooleanField(db_column='Leida', default=False)
-    fecha_envio = models.DateTimeField(db_column='Fecha_Envio')
+    fecha_envio = models.DateTimeField(db_column='Fecha_Envio', default=timezone.now)
     fecha_lectura = models.DateTimeField(db_column='Fecha_Lectura', null=True, blank=True)
     creado_en = models.DateTimeField(db_column='Creado_En', auto_now_add=True)
     

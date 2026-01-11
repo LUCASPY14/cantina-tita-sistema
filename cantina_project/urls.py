@@ -21,9 +21,21 @@ from django.conf.urls.static import static
 from gestion import cliente_views
 from gestion.cantina_admin import cantina_admin_site
 from gestion.auth_views import CustomLoginView, CustomLogoutView, dashboard_redirect
+from gestion.health_views import health_check, readiness_check, liveness_check
+from gestion.dashboard_views import (
+    dashboard_unificado, dashboard_ventas_detalle, 
+    dashboard_stock_detalle, invalidar_cache_dashboard
+)
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+
+# drf-spectacular para documentación OpenAPI 3.0
+from drf_spectacular.views import (
+    SpectacularAPIView, 
+    SpectacularSwaggerView, 
+    SpectacularRedocView
+)
 
 # Configuración de Swagger/OpenAPI
 schema_view = get_schema_view(
@@ -57,6 +69,17 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    # Health Checks (monitoring)
+    path('health/', health_check, name='health_check'),
+    path('ready/', readiness_check, name='readiness_check'),
+    path('alive/', liveness_check, name='liveness_check'),
+    
+    # Dashboard Unificado
+    path('dashboard/', dashboard_unificado, name='dashboard_unificado'),
+    path('dashboard/ventas/', dashboard_ventas_detalle, name='dashboard_ventas_detalle'),
+    path('dashboard/stock/', dashboard_stock_detalle, name='dashboard_stock_detalle'),
+    path('dashboard/invalidar-cache/', invalidar_cache_dashboard, name='invalidar_cache_dashboard'),
+    
     # Autenticación
     path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', CustomLogoutView.as_view(), name='logout'),
@@ -70,14 +93,16 @@ urlpatterns = [
     
     # Portal de Clientes
     path('clientes/', include('gestion.cliente_urls')),
-    # Aliases sin namespace para compatibilidad temporal
-    path('clientes/login/', cliente_views.portal_login_view, name='portal_login'),
-    path('clientes/recuperar-password/', cliente_views.portal_recuperar_password_view, name='portal_recuperar_password'),
     
     # API REST v1
     path('api/v1/', include('gestion.api_urls')),
     
-    # Documentación de la API (Swagger/OpenAPI)
+    # Documentación OpenAPI 3.0 (drf-spectacular) - RECOMENDADO
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    
+    # Documentación de la API (Swagger/OpenAPI 2.0 - drf_yasg LEGACY)
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', 
             schema_view.without_ui(cache_timeout=0), 
             name='schema-json'),

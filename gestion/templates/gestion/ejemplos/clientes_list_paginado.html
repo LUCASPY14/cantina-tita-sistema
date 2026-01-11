@@ -1,0 +1,161 @@
+{% extends 'gestion/base.html' %}
+{% load pagination_tags %}
+
+{% block title %}Lista de Clientes - Cantina POS{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            {# Encabezado #}
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="bi bi-people-fill"></i>
+                    Clientes
+                </h2>
+                <div>
+                    <a href="{% url 'cliente_nuevo' %}" class="btn btn-primary">
+                        <i class="bi bi-person-plus"></i>
+                        Nuevo Cliente
+                    </a>
+                </div>
+            </div>
+
+            {# Filtros #}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" action="">
+                        <div class="row g-3">
+                            <div class="col-md-5">
+                                <label for="buscar" class="form-label">Buscar</label>
+                                <input type="text" class="form-control" id="buscar" name="q" 
+                                       value="{{ request.GET.q }}" 
+                                       placeholder="Nombre, apellido, documento o código...">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="tipo" class="form-label">Tipo</label>
+                                <select class="form-select" id="tipo" name="tipo">
+                                    <option value="">Todos</option>
+                                    <option value="estudiante" {% if request.GET.tipo == "estudiante" %}selected{% endif %}>Estudiantes</option>
+                                    <option value="docente" {% if request.GET.tipo == "docente" %}selected{% endif %}>Docentes</option>
+                                    <option value="padre" {% if request.GET.tipo == "padre" %}selected{% endif %}>Padres</option>
+                                    <option value="otro" {% if request.GET.tipo == "otro" %}selected{% endif %}>Otros</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="activo" class="form-label">Estado</label>
+                                <select class="form-select" id="activo" name="activo">
+                                    <option value="">Todos</option>
+                                    <option value="1" {% if request.GET.activo == "1" %}selected{% endif %}>Activos</option>
+                                    <option value="0" {% if request.GET.activo == "0" %}selected{% endif %}>Inactivos</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-search"></i> Buscar
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {# Lista de clientes #}
+            <div class="card">
+                <div class="card-body">
+                    {% if clientes %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Cliente</th>
+                                        <th>Documento</th>
+                                        <th>Tipo</th>
+                                        <th class="text-end">Saldo</th>
+                                        <th class="text-center">Estado</th>
+                                        <th class="text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for cliente in page_obj %}
+                                        <tr>
+                                            <td>
+                                                <code>{{ cliente.codigo_cliente|default:"—" }}</code>
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    <strong>{{ cliente.nombre }} {{ cliente.apellido }}</strong>
+                                                    {% if cliente.email %}
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            <i class="bi bi-envelope"></i> {{ cliente.email }}
+                                                        </small>
+                                                    {% endif %}
+                                                    {% if cliente.telefono %}
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            <i class="bi bi-phone"></i> {{ cliente.telefono }}
+                                                        </small>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                            <td>{{ cliente.documento|default:"—" }}</td>
+                                            <td>
+                                                {% if cliente.tipo_cliente == 'estudiante' %}
+                                                    <span class="badge bg-primary">Estudiante</span>
+                                                {% elif cliente.tipo_cliente == 'docente' %}
+                                                    <span class="badge bg-success">Docente</span>
+                                                {% elif cliente.tipo_cliente == 'padre' %}
+                                                    <span class="badge bg-info">Padre</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">{{ cliente.tipo_cliente|title }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end">
+                                                <strong class="{% if cliente.saldo < 0 %}text-danger{% else %}text-success{% endif %}">
+                                                    {{ cliente.saldo|floatformat:0 }} Gs.
+                                                </strong>
+                                            </td>
+                                            <td class="text-center">
+                                                {% if cliente.activo %}
+                                                    <span class="badge bg-success">Activo</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Inactivo</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{% url 'cliente_detalle' cliente.id %}" 
+                                                       class="btn btn-outline-info" 
+                                                       title="Ver detalle">
+                                                        <i class="bi bi-eye"></i>
+                                                    </a>
+                                                    <a href="{% url 'cliente_editar' cliente.id %}" 
+                                                       class="btn btn-outline-primary" 
+                                                       title="Editar">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {# Paginación #}
+                        {% render_pagination page_obj %}
+
+                    {% else %}
+                        <div class="alert alert-info mb-0">
+                            <i class="bi bi-info-circle"></i>
+                            No se encontraron clientes.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

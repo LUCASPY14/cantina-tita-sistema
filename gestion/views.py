@@ -16,6 +16,7 @@ from io import BytesIO
 from .models import Producto, Cliente, Proveedor, Categoria, StockUnico
 from .forms_productos import ProductoForm, CategoriaForm
 from .reportes import ReportesPDF, ReportesExcel
+from .cache_reportes import get_reporte_cacheado, ReporteCache, get_datos_dashboard_cacheados
 # from .models import Venta, CompraProveedor  # Estos modelos están deshabilitados por ahora
 
 
@@ -29,35 +30,35 @@ def index(request):
 
 @login_required
 def dashboard(request):
-    """Dashboard con estadísticas del sistema"""
+    """Dashboard con estadísticas del sistema (CACHEADO)"""
     
-    # Estadísticas generales
-    total_productos = Producto.objects.filter(activo=True).count()
-    # productos_bajo_stock = Producto.objects.filter(
-    #     activo=True,
-    #     stock__lte=F('stock_minimo')
-    # ).count()
-    productos_bajo_stock = 0  # Temporalmente deshabilitado
-    
-    total_clientes = Cliente.objects.filter(activo=True).count()
-    
-    # Estadísticas de ventas (temporalmente deshabilitadas)
-    # ventas_hoy = Venta.objects.filter(
-    #     fecha_venta__date=timezone.now().date(),
-    #     estado='completada'
-    # )
-    # total_ventas_hoy = ventas_hoy.aggregate(total=Sum('total'))['total'] or 0
-    # cantidad_ventas_hoy = ventas_hoy.count()
-    total_ventas_hoy = 0
-    cantidad_ventas_hoy = 0
-    
-    context = {
-        'total_productos': total_productos,
-        'productos_bajo_stock': productos_bajo_stock,
-        'total_clientes': total_clientes,
-        'total_ventas_hoy': total_ventas_hoy,
-        'cantidad_ventas_hoy': cantidad_ventas_hoy,
-    }
+    # Obtener estadísticas cacheadas (1 minuto)
+    try:
+        datos = get_datos_dashboard_cacheados()
+        context = {
+            'total_productos': datos.get('total_productos', 0),
+            'productos_bajo_stock': 0,  # Temporalmente deshabilitado
+            'total_clientes': datos.get('total_clientes', 0),
+            'total_ventas_hoy': datos.get('total_ventas_hoy', 0),
+            'cantidad_ventas_hoy': datos.get('ventas_hoy', 0),
+            'total_consumos_hoy': datos.get('total_consumos_hoy', 0),
+            'cantidad_consumos_hoy': datos.get('consumos_hoy', 0),
+            'cache_activo': True,
+            'ultima_actualizacion': datos.get('ultima_actualizacion')
+        }
+    except Exception as e:
+        # Fallback sin cache
+        total_productos = Producto.objects.filter(activo=True).count()
+        total_clientes = Cliente.objects.filter(activo=True).count()
+        
+        context = {
+            'total_productos': total_productos,
+            'productos_bajo_stock': 0,
+            'total_clientes': total_clientes,
+            'total_ventas_hoy': 0,
+            'cantidad_ventas_hoy': 0,
+            'cache_activo': False
+        }
     
     return render(request, 'gestion/dashboard.html', context)
 
@@ -68,7 +69,7 @@ def dashboard(request):
 
 @login_required
 def reporte_ventas_pdf(request):
-    """Genera reporte de ventas en PDF con filtros avanzados"""
+    """Genera reporte de ventas en PDF con filtros avanzados (CACHEADO)"""
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
     id_cliente = request.GET.get('id_cliente')
@@ -83,9 +84,15 @@ def reporte_ventas_pdf(request):
     if fecha_fin:
         fecha_fin = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
     
-    return ReportesPDF.reporte_ventas(
-        fecha_inicio, fecha_fin, id_cliente, id_cajero,
-        estado, id_tipo_pago, monto_minimo, monto_maximo
+    # Usar cache (5 minutos)
+    return get_reporte_cacheado(
+        request,
+        'ventas',
+        lambda: ReportesPDF.reporte_ventas(
+            fecha_inicio, fecha_fin, id_cliente, id_cajero,
+            estado, id_tipo_pago, monto_minimo, monto_maximo
+        ),
+        timeout=300
     )
 
 
@@ -114,7 +121,7 @@ def reporte_ventas_excel(request):
 
 @login_required
 def reporte_productos_pdf(request):
-    """Genera reporte de productos en PDF con filtro de categoría"""
+    """Genera reporte de productos en PDF con filtro de categoría (CACHEADO)"""
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
     id_categoria = request.GET.get('id_categoria')
@@ -124,7 +131,13 @@ def reporte_productos_pdf(request):
     if fecha_fin:
         fecha_fin = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
     
-    return ReportesPDF.reporte_productos_vendidos(fecha_inicio, fecha_fin, id_categoria)
+    # Usar cache (10 minutos)
+    return get_reporte_cacheado(
+        request,
+        'productos',
+        lambda: ReportesPDF.reporte_productos_vendidos(fecha_inicio, fecha_fin, id_categoria),
+        timeout=600
+    )
 
 
 @login_required
@@ -144,8 +157,14 @@ def reporte_productos_excel(request):
 
 @login_required
 def reporte_inventario_pdf(request):
-    """Genera reporte de inventario en PDF"""
-    return ReportesPDF.reporte_inventario()
+    """Genera reporte de inventario en PDF (CACHEADO)"""
+    # Usar cache (30 minutos - inventario cambia lentamente)
+    return get_reporte_cacheado(
+        request,
+        'inventario',
+        lambda: ReportesPDF.reporte_inventario(),
+        timeout=1800
+    )
 
 
 @login_required

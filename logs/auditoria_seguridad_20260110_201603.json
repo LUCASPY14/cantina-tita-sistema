@@ -1,0 +1,121 @@
+{
+  "fecha": "2026-01-10T20:16:03.964681",
+  "total": 27,
+  "correctas": 18,
+  "warnings": 7,
+  "criticos": 2,
+  "ok_detalle": [
+    {
+      "nombre": "SECRET_KEY configurada",
+      "detalle": "SECRET_KEY está configurada"
+    },
+    {
+      "nombre": "SECRET_KEY longitud adecuada",
+      "detalle": "Longitud: 66 caracteres (recomendado: 50+)"
+    },
+    {
+      "nombre": "ALLOWED_HOSTS configurado",
+      "detalle": "Hosts permitidos: localhost, 127.0.0.1, testserver"
+    },
+    {
+      "nombre": "Motor de base de datos",
+      "detalle": "Usando: django.db.backends.mysql (apropiado para producción)"
+    },
+    {
+      "nombre": "Contraseña de BD segura",
+      "detalle": "Contraseña de base de datos configurada"
+    },
+    {
+      "nombre": "Middleware de seguridad general",
+      "detalle": "✓ django.middleware.security.SecurityMiddleware"
+    },
+    {
+      "nombre": "Protección CSRF",
+      "detalle": "✓ django.middleware.csrf.CsrfViewMiddleware"
+    },
+    {
+      "nombre": "Gestión de sesiones",
+      "detalle": "✓ django.contrib.sessions.middleware.SessionMiddleware"
+    },
+    {
+      "nombre": "Autenticación",
+      "detalle": "✓ django.contrib.auth.middleware.AuthenticationMiddleware"
+    },
+    {
+      "nombre": "CSRF_TRUSTED_ORIGINS configurado",
+      "detalle": "Orígenes confiables: "
+    },
+    {
+      "nombre": "SECURE_CONTENT_TYPE_NOSNIFF",
+      "detalle": "Protección Content-Type sniffing activada"
+    },
+    {
+      "nombre": "X_FRAME_OPTIONS",
+      "detalle": "Clickjacking protegido: DENY"
+    },
+    {
+      "nombre": "Validadores de contraseña",
+      "detalle": "Configurados 4 validadores"
+    },
+    {
+      "nombre": "Validador: UserAttributeSimilarity",
+      "detalle": "✓ UserAttributeSimilarityValidator"
+    },
+    {
+      "nombre": "Validador: MinimumLength",
+      "detalle": "✓ MinimumLengthValidator"
+    },
+    {
+      "nombre": "Validador: CommonPassword",
+      "detalle": "✓ CommonPasswordValidator"
+    },
+    {
+      "nombre": "Validador: NumericPassword",
+      "detalle": "✓ NumericPasswordValidator"
+    },
+    {
+      "nombre": "MEDIA_ROOT configurado",
+      "detalle": "MEDIA_ROOT: D:\\anteproyecto20112025\\media"
+    }
+  ],
+  "warnings_detalle": [
+    {
+      "nombre": "SECURE_SSL_REDIRECT",
+      "detalle": "No redirige a HTTPS. Recomendado: SECURE_SSL_REDIRECT=True en producción"
+    },
+    {
+      "nombre": "SESSION_COOKIE_SECURE",
+      "detalle": "Cookies de sesión pueden enviarse por HTTP. Recomendado: SESSION_COOKIE_SECURE=True"
+    },
+    {
+      "nombre": "CSRF_COOKIE_SECURE",
+      "detalle": "Cookies CSRF pueden enviarse por HTTP. Recomendado: CSRF_COOKIE_SECURE=True"
+    },
+    {
+      "nombre": "SECURE_HSTS_SECONDS",
+      "detalle": "HSTS no configurado o muy corto (0s). Recomendado: 31536000 (1 año)"
+    },
+    {
+      "nombre": "SECURE_HSTS_INCLUDE_SUBDOMAINS",
+      "detalle": "HSTS no incluye subdominios. Recomendado: True"
+    },
+    {
+      "nombre": "SECURE_BROWSER_XSS_FILTER",
+      "detalle": "Filtro XSS desactivado. Recomendado: True"
+    },
+    {
+      "nombre": "STATIC_ROOT configurado",
+      "detalle": "STATIC_ROOT no configurado. Necesario para collectstatic"
+    }
+  ],
+  "criticos_detalle": [
+    {
+      "nombre": "DEBUG desactivado en producción",
+      "detalle": "DEBUG=True - PELIGRO: Nunca usar en producción. Expone información sensible."
+    },
+    {
+      "nombre": "SECRET_KEY es única y segura",
+      "detalle": "SECRET_KEY contiene valores inseguros o por defecto"
+    }
+  ]
+}

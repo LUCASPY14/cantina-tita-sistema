@@ -1,3 +1,4 @@
+{% load l10n %}
 <!DOCTYPE html>
 <html lang="es" data-theme="light">
 <head>
@@ -7,26 +8,80 @@
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        function validarBotonPago() {
+            const pagarBtn = document.getElementById('pagar_btn');
+            if (!pagarBtn) return;
+            
+            // Verificar que haya items seleccionados
+            const haySeleccionados = document.querySelectorAll('input[name="venta_ids"]:checked, input[name="almuerzo_ids"]:checked').length > 0;
+            
+            // Verificar que haya método de pago seleccionado
+            const metodoPago = document.getElementById('metodo_pago').value;
+            
+            // Si es transferencia, verificar código de confirmación
+            let codigoValido = true;
+            if (metodoPago === 'transferencia') {
+                const codigo = document.getElementById('codigo_confirmacion').value.trim();
+                codigoValido = codigo.length > 0;
+            }
+            
+            // Habilitar botón solo si todo es válido
+            pagarBtn.disabled = !(haySeleccionados && metodoPago && codigoValido);
+        }
+
         function calcularTotal() {
-            const checkboxes = document.querySelectorAll('input[name="venta_ids"]:checked');
             let total = 0;
-            checkboxes.forEach(cb => {
-                const row = cb.closest('tr');
-                const saldoCell = row.querySelector('td:nth-child(4)');
-                if (saldoCell) {
-                    const saldo = parseFloat(saldoCell.textContent.replace(/[^\d.-]/g, ''));
-                    total += saldo;
-                }
+            
+            // Sumar ventas de cantina seleccionadas
+            const checkboxesCantina = document.querySelectorAll('input[name="venta_ids"]:checked');
+            checkboxesCantina.forEach(cb => {
+                const saldo = parseFloat(cb.dataset.saldo || 0);
+                total += saldo;
             });
+            
+            // Sumar almuerzos seleccionados
+            const checkboxesAlmuerzos = document.querySelectorAll('input[name="almuerzo_ids"]:checked');
+            checkboxesAlmuerzos.forEach(cb => {
+                const costo = parseFloat(cb.dataset.costo || 0);
+                total += costo;
+            });
+            
             document.getElementById('monto_total').value = total.toFixed(0);
-            document.getElementById('total_display').textContent = 'Gs. ' + total.toLocaleString();
+            document.getElementById('total_display').textContent = 'Gs. ' + total.toLocaleString('es-PY');
+            
+            // Validar botón de pago
+            validarBotonPago();
+        }
+
+        function toggleSection(tipo, checkbox) {
+            const checkboxes = document.querySelectorAll(`.${tipo}-check`);
+            checkboxes.forEach(cb => cb.checked = checkbox.checked);
+            calcularTotal();
         }
 
         function toggleAllCheckboxes() {
-            const checkboxes = document.querySelectorAll('input[name="venta_ids"]');
             const selectAll = document.getElementById('select_all');
-            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+            const allCheckboxes = document.querySelectorAll('input[name="venta_ids"], input[name="almuerzo_ids"]');
+            allCheckboxes.forEach(cb => cb.checked = selectAll.checked);
             calcularTotal();
+        }
+
+        function toggleCodigoConfirmacion() {
+            const metodoPago = document.getElementById('metodo_pago').value;
+            const codigoGroup = document.getElementById('codigo_confirmacion_group');
+            const codigoInput = document.getElementById('codigo_confirmacion');
+            
+            if (metodoPago === 'transferencia') {
+                codigoGroup.classList.remove('hidden');
+                codigoInput.required = true;
+            } else {
+                codigoGroup.classList.add('hidden');
+                codigoInput.required = false;
+                codigoInput.value = '';
+            }
+            
+            // Validar botón después de cambiar método de pago
+            validarBotonPago();
         }
     </script>
 </head>
@@ -80,7 +135,7 @@
             {% endfor %}
         {% endif %}
 
-        {% if deudas %}
+        {% if deudas_cantina or deudas_almuerzos %}
             <!-- Resumen de deuda -->
             <div class="stats stats-vertical lg:stats-horizontal shadow mb-8 w-full">
                 <div class="stat">
@@ -91,7 +146,23 @@
                     </div>
                     <div class="stat-title">Total Deuda</div>
                     <div class="stat-value text-error">Gs. {{ total_deuda|floatformat:0 }}</div>
-                    <div class="stat-desc">{{ deudas.count }} compras pendientes</div>
+                    <div class="stat-desc">{{ deudas_cantina.count|add:deudas_almuerzos.count }} compras pendientes</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-figure text-warning">
+                        🛒
+                    </div>
+                    <div class="stat-title">Deuda Cantina</div>
+                    <div class="stat-value text-warning">Gs. {{ total_deuda_cantina|floatformat:0 }}</div>
+                    <div class="stat-desc">{{ deudas_cantina.count }} compras</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-figure text-info">
+                        🍽️
+                    </div>
+                    <div class="stat-title">Deuda Almuerzos</div>
+                    <div class="stat-value text-info">Gs. {{ total_deuda_almuerzos|floatformat:0 }}</div>
+                    <div class="stat-desc">{{ deudas_almuerzos.count }} almuerzos</div>
                 </div>
             </div>
 
@@ -103,44 +174,107 @@
                     <form method="post" class="space-y-6">
                         {% csrf_token %}
 
-                        <!-- Tabla de deudas -->
-                        <div class="overflow-x-auto">
-                            <table class="table table-zebra w-full">
-                                <thead>
-                                    <tr>
-                                        <th>
-                                            <label>
-                                                <input type="checkbox" id="select_all" class="checkbox" onchange="toggleAllCheckboxes()">
-                                            </label>
-                                        </th>
-                                        <th>Fecha</th>
-                                        <th>Hijo</th>
-                                        <th>Saldo Pendiente</th>
-                                        <th>Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for deuda in deudas %}
+                        <!-- Deudas de Cantina -->
+                        {% if deudas_cantina %}
+                        <div class="mb-8">
+                            <h3 class="text-lg font-bold mb-4 flex items-center">
+                                <span class="mr-2">🛒</span> Deudas de Cantina
+                            </h3>
+                            <div class="overflow-x-auto">
+                                <table class="table table-zebra w-full">
+                                    <thead>
                                         <tr>
-                                            <td>
+                                            <th>
                                                 <label>
-                                                    <input type="checkbox" name="venta_ids" value="{{ deuda.id_venta }}" class="checkbox" onchange="calcularTotal()">
+                                                    <input type="checkbox" class="checkbox select-all-cantina" onchange="toggleSection('cantina', this)">
                                                 </label>
-                                            </td>
-                                            <td>{{ deuda.fecha_venta|date:"d/m/Y H:i" }}</td>
-                                            <td>
-                                                <div class="font-semibold">{{ deuda.id_tarjeta.id_hijo.nombre_completo }}</div>
-                                                <div class="text-sm text-gray-500">Tarjeta: {{ deuda.id_tarjeta.nro_tarjeta }}</div>
-                                            </td>
-                                            <td class="font-mono font-semibold text-error">Gs. {{ deuda.saldo_pendiente|floatformat:0 }}</td>
-                                            <td>
-                                                <span class="badge badge-warning">{{ deuda.estado_pago }}</span>
-                                            </td>
+                                            </th>
+                                            <th>Tipo</th>
+                                            <th>Fecha</th>
+                                            <th>Hijo</th>
+                                            <th>Saldo Pendiente</th>
+                                            <th>Estado</th>
                                         </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {% for deuda in deudas_cantina %}
+                                            <tr>
+                                                <td>
+                                                    <label>
+                                                        <input type="checkbox" name="venta_ids" value="{{ deuda.id_venta }}" data-saldo="{{ deuda.saldo_pendiente|unlocalize }}" class="checkbox cantina-check" onchange="calcularTotal()">
+                                                    </label>
+                                                </td>
+                                                <td><span class="badge badge-warning gap-2">🛒 Cantina</span></td>
+                                                <td>{{ deuda.fecha|date:"d/m/Y H:i" }}</td>
+                                                <td>
+                                                    <div class="font-semibold">{{ deuda.id_hijo.nombre_completo }}</div>
+                                                    <div class="text-sm text-gray-500">Tarjeta: {{ deuda.id_hijo.tarjeta.nro_tarjeta }}</div>
+                                                </td>
+                                                <td class="font-mono font-semibold text-warning">Gs. {{ deuda.saldo_pendiente|floatformat:0 }}</td>
+                                                <td>
+                                                    <span class="badge badge-ghost">{{ deuda.estado }}</span>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
+                        {% endif %}
+
+                        <!-- Deudas de Almuerzos -->
+                        {% if deudas_almuerzos %}
+                        <div class="mb-8">
+                            <h3 class="text-lg font-bold mb-4 flex items-center">
+                                <span class="mr-2">🍽️</span> Deudas de Almuerzos
+                            </h3>
+                            <div class="overflow-x-auto">
+                                <table class="table table-zebra w-full">
+                                    <thead>
+                                        <tr>
+                                            <th>
+                                                <label>
+                                                    <input type="checkbox" class="checkbox select-all-almuerzos" onchange="toggleSection('almuerzos', this)">
+                                                </label>
+                                            </th>
+                                            <th>Tipo</th>
+                                            <th>Fecha</th>
+                                            <th>Hijo</th>
+                                            <th>Tipo Almuerzo</th>
+                                            <th>Costo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for almuerzo in deudas_almuerzos %}
+                                            <tr>
+                                                <td>
+                                                    <label>
+                                                        <input type="checkbox" name="almuerzo_ids" value="{{ almuerzo.id_registro_consumo }}" data-costo="{{ almuerzo.costo_almuerzo|unlocalize }}" class="checkbox almuerzos-check" onchange="calcularTotal()">
+                                                    </label>
+                                                </td>
+                                                <td><span class="badge badge-info gap-2">🍽️ Almuerzo</span></td>
+                                                <td>{{ almuerzo.fecha_consumo|date:"d/m/Y" }}</td>
+                                                <td>
+                                                    <div class="font-semibold">{{ almuerzo.id_hijo.nombre_completo }}</div>
+                                                    {% if almuerzo.nro_tarjeta %}
+                                                    <div class="text-sm text-gray-500">Tarjeta: {{ almuerzo.nro_tarjeta.nro_tarjeta }}</div>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if almuerzo.id_tipo_almuerzo %}
+                                                        {{ almuerzo.id_tipo_almuerzo.nombre }}
+                                                    {% else %}
+                                                        Almuerzo Completo
+                                                    {% endif %}
+                                                </td>
+                                                <td class="font-mono font-semibold text-info">Gs. {{ almuerzo.costo_almuerzo|floatformat:0 }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
 
                         <!-- Resumen del pago -->
                         <div class="bg-base-200 p-4 rounded-lg">
@@ -158,13 +292,25 @@
                             <label class="label">
                                 <span class="label-text font-semibold">Método de Pago</span>
                             </label>
-                            <select name="metodo_pago" class="select select-bordered w-full" required>
+                            <select name="metodo_pago" id="metodo_pago" class="select select-bordered w-full" required onchange="toggleCodigoConfirmacion()">
                                 <option value="">-- Seleccionar método --</option>
-                                <option value="tarjeta_credito">💳 Tarjeta de Crédito</option>
-                                <option value="tarjeta_debito">💳 Tarjeta de Débito</option>
+                                <option value="metrepay">💳 MetrePay (Pago Online)</option>
                                 <option value="transferencia">🏦 Transferencia Bancaria</option>
-                                <option value="efectivo">💵 Efectivo (en agencia)</option>
                             </select>
+                        </div>
+
+                        <!-- Campo Código de Confirmación (solo para Transferencia) -->
+                        <div class="form-control hidden" id="codigo_confirmacion_group">
+                            <label class="label">
+                                <span class="label-text font-semibold">Código de Confirmación</span>
+                                <span class="label-text-alt text-error">* Requerido para transferencias</span>
+                            </label>
+                            <input type="text" name="codigo_confirmacion" id="codigo_confirmacion" 
+                                   class="input input-bordered" placeholder="Ingrese el código de su transferencia"
+                                   oninput="validarBotonPago()">
+                            <label class="label">
+                                <span class="label-text-alt">Ejemplo: TRF-2026-001234</span>
+                            </label>
                         </div>
 
                         <!-- Botones -->
@@ -206,14 +352,5 @@
             </div>
         </div>
     </div>
-
-    <script>
-        // Habilitar/deshabilitar botón de pago
-        document.addEventListener('change', function() {
-            const checkboxes = document.querySelectorAll('input[name="venta_ids"]:checked');
-            const pagarBtn = document.getElementById('pagar_btn');
-            pagarBtn.disabled = checkboxes.length === 0;
-        });
-    </script>
 </body>
 </html>

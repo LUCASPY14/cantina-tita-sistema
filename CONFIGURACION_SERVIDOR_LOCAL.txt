@@ -1,0 +1,10 @@
+CONFIGURACIÓN DE SERVIDOR LOCAL
+================================
+Fecha: 10 de Enero de 2026
+
+IP Local: 192.168.100.10
+Gmail SMTP: Configurado
+HTTPS: Activado
+
+Para iniciar servidor:
+python manage.py runserver 0.0.0.0:8000

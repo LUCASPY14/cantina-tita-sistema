@@ -8,6 +8,9 @@ from . import pos_general_views
 from . import pos_sugerencias_api
 from . import facturacion_views
 from . import pos_facturacion_integracion
+from . import vistas_paginadas
+from . import pagos_admin_views
+from .reportes_gerenciales import ReportesGerenciales
 
 app_name = 'gestion'
 
@@ -32,6 +35,10 @@ urlpatterns = [
     path('reportes/clientes/excel/', views.reporte_clientes_excel, name='reporte_clientes_excel'),
     path('reportes/cta-corriente-cliente/excel/', views.reporte_cta_corriente_cliente_excel, name='reporte_cta_corriente_cliente_excel'),
     path('reportes/cta-corriente-proveedor/excel/', views.reporte_cta_corriente_proveedor_excel, name='reporte_cta_corriente_proveedor_excel'),
+    
+    # === NUEVOS REPORTES GERENCIALES ===
+    path('reportes/gerenciales/mensual/', lambda r: ReportesGerenciales.reporte_mensual_completo(), name='reporte_mensual_completo'),
+    path('reportes/gerenciales/conciliacion-bancaria/', lambda r: ReportesGerenciales.conciliacion_bancaria(), name='conciliacion_bancaria'),
     
     # URLs para POS General (ahora en /pos/)
     # NOTA: Las rutas /pos/general/ han sido movidas a /pos/ en pos_urls.py
@@ -82,9 +89,16 @@ urlpatterns = [
     path('api/portal/notificaciones/<int:id_notificacion>/marcar-leida/', portal_api.api_marcar_notificacion_leida, name='api_portal_marcar_notificacion'),
     
     # ==================== GESTIÓN DE PRODUCTOS ====================
+    path('productos/', vistas_paginadas.productos_lista, name='productos_lista'),
     path('productos/crear/', views.crear_producto, name='crear_producto'),
     path('productos/<int:producto_id>/editar/', views.editar_producto, name='editar_producto'),
     path('productos/<int:producto_id>/eliminar/', views.eliminar_producto, name='eliminar_producto'),
+    
+    # ==================== GESTIÓN DE CLIENTES ====================
+    path('clientes/', vistas_paginadas.clientes_lista, name='clientes_lista'),
+    
+    # ==================== GESTIÓN DE VENTAS ====================
+    path('ventas/', vistas_paginadas.ventas_lista, name='ventas_lista'),
     
     # ==================== GESTIÓN DE CATEGORÍAS ====================
     path('categorias/', views.categorias_lista, name='categorias_lista'),
@@ -96,6 +110,10 @@ urlpatterns = [
     path('productos/importar/', views.importar_productos, name='importar_productos'),
     path('productos/exportar/csv/', views.exportar_productos_csv, name='exportar_productos_csv'),
     path('productos/exportar/excel/', views.exportar_productos_excel, name='exportar_productos_excel'),
+    
+    # ==================== VALIDACIÓN DE PAGOS ====================
+    path('pagos/validar/', pagos_admin_views.validar_pagos_pendientes, name='validar_pagos_pendientes'),
+    path('pagos/validar/action/', pagos_admin_views.validar_pago_action, name='validar_pago_action'),
 ]
 
 

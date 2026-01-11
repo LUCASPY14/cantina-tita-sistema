@@ -1,0 +1,12 @@
+# Node.js dependencies
+whatsapp-server/node_modules/
+whatsapp-server/package-lock.json
+
+# WhatsApp session data (importante: mantener en .gitignore)
+whatsapp-server/whatsapp-session/
+whatsapp-server/.wwebjs_auth/
+whatsapp-server/.wwebjs_cache/
+
+# PM2 logs
+.pm2/
+whatsapp-server/*.log

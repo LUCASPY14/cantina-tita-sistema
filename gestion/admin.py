@@ -18,7 +18,7 @@ from .models import (
     # Empresa y Precios
     DatosEmpresa, PreciosPorLista, CostosHistoricos, HistoricoPrecios,
     # Usuarios Web
-    UsuariosWebClientes,
+    UsuariosWebClientes, UsuarioPortal,
     # Fiscalización
     PuntosExpedicion, Timbrados, DocumentosTributarios, DatosFacturacionElect, DatosFacturacionFisica,
     # Inventario
@@ -355,12 +355,185 @@ class CargasSaldoAdmin(admin.ModelAdmin):
 
 
 # Usuarios Web
-@admin.register(UsuariosWebClientes)
+# SISTEMA LEGACY - DESHABILITADO
+# Usar UsuarioPortal en su lugar (modelo nuevo para portal de clientes)
+# @admin.register(UsuariosWebClientes)
 class UsuariosWebClientesAdmin(admin.ModelAdmin):
     list_display = ['usuario', 'id_cliente', 'ultimo_acceso', 'activo']
     list_filter = ['activo']
-    search_fields = ['usuario']
-    readonly_fields = ['contrasena_hash']
+    search_fields = ['usuario', 'id_cliente__nombres', 'id_cliente__apellidos']
+    readonly_fields = ['ultimo_acceso', 'campo_nueva_contrasena']
+    actions = ['resetear_contrasena_a_ruc']
+    
+    fieldsets = (
+        ('Información del Usuario', {
+            'fields': ('id_cliente', 'usuario', 'activo', 'ultimo_acceso')
+        }),
+        ('Cambiar Contraseña', {
+            'fields': ('campo_nueva_contrasena',),
+            'description': 'Para cambiar la contraseña, use el campo de abajo o la acción "Resetear contraseña a RUC/CI" desde la lista.'
+        }),
+    )
+    
+    def campo_nueva_contrasena(self, obj):
+        """Renderiza un campo HTML para cambiar contraseña"""
+        if obj and obj.pk:
+            html = f'''
+            <div style="margin: 10px 0;">
+                <input type="password" name="nueva_contrasena_manual" 
+                       placeholder="Ingrese nueva contraseña" 
+                       style="width: 300px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <p style="color: #666; font-size: 12px; margin-top: 5px;">
+                    Deje vacío para mantener la contraseña actual. 
+                    RUC/CI actual del cliente: <strong>{obj.id_cliente.ruc_ci}</strong>
+                </p>
+            </div>
+            '''
+        else:
+            html = '<p>Al crear el usuario, la contraseña será el RUC/CI del cliente automáticamente.</p>'
+        
+        from django.utils.safestring import mark_safe
+        return mark_safe(html)
+    
+    campo_nueva_contrasena.short_description = "Nueva Contraseña"
+    
+    def save_model(self, request, obj, form, change):
+        """Procesa la contraseña al guardar"""
+        from django.contrib.auth.hashers import make_password
+        
+        # Obtener contraseña del campo HTML personalizado
+        nueva_password = request.POST.get('nueva_contrasena_manual', '').strip()
+        
+        if nueva_password:
+            # Se ingresó una contraseña nueva manualmente
+            obj.contrasena_hash = make_password(nueva_password)
+            self.message_user(
+                request,
+                f'✓ Contraseña actualizada exitosamente para usuario "{obj.usuario}"',
+                level='SUCCESS'
+            )
+        elif not change or not obj.contrasena_hash:
+            # Nueva instancia o sin contraseña: usar RUC/CI como contraseña temporal
+            password_temporal = obj.id_cliente.ruc_ci
+            obj.contrasena_hash = make_password(password_temporal)
+            self.message_user(
+                request,
+                f'✓ Usuario creado. Contraseña temporal: <strong>{password_temporal}</strong> (RUC/CI del cliente)',
+                level='WARNING'
+            )
+        
+        super().save_model(request, obj, form, change)
+    
+    @admin.action(description='🔑 Resetear contraseña a RUC/CI del cliente')
+    def resetear_contrasena_a_ruc(self, request, queryset):
+        """Acción para resetear contraseña de usuarios seleccionados a su RUC/CI"""
+        from django.contrib.auth.hashers import make_password
+        
+        count = 0
+        detalles = []
+        for usuario_web in queryset:
+            password_temporal = usuario_web.id_cliente.ruc_ci
+            usuario_web.contrasena_hash = make_password(password_temporal)
+            usuario_web.save()
+            detalles.append(f"{usuario_web.usuario} → {password_temporal}")
+            count += 1
+        
+        mensaje = f'✓ {count} contraseña(s) reseteada(s). Nuevas contraseñas (RUC/CI): {", ".join(detalles)}'
+        self.message_user(request, mensaje, level='SUCCESS')
+
+
+@admin.register(UsuarioPortal)
+class UsuarioPortalAdmin(admin.ModelAdmin):
+    """Admin para UsuarioPortal - Portal de Padres (sistema nuevo)"""
+    list_display = ['email', 'cliente', 'email_verificado', 'activo', 'ultimo_acceso', 'fecha_registro']
+    list_filter = ['activo', 'email_verificado', 'fecha_registro']
+    search_fields = ['email', 'cliente__nombres', 'cliente__apellidos', 'cliente__ruc_ci']
+    readonly_fields = ['fecha_registro', 'ultimo_acceso', 'campo_nueva_password']
+    actions = ['resetear_password_a_ruc', 'marcar_email_verificado']
+    
+    fieldsets = (
+        ('Información del Usuario', {
+            'fields': ('cliente', 'email', 'email_verificado', 'activo')
+        }),
+        ('Acceso', {
+            'fields': ('fecha_registro', 'ultimo_acceso')
+        }),
+        ('Cambiar Contraseña', {
+            'fields': ('campo_nueva_password',),
+            'description': 'Para cambiar la contraseña, use el campo de abajo o la acción "Resetear password a RUC/CI".'
+        }),
+    )
+    
+    def campo_nueva_password(self, obj):
+        """Renderiza campo para cambiar contraseña"""
+        if obj and obj.pk:
+            html = f'''
+            <div style="margin: 10px 0;">
+                <input type="password" name="nueva_password_portal" 
+                       placeholder="Ingrese nueva contraseña" 
+                       style="width: 300px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <p style="color: #666; font-size: 12px; margin-top: 5px;">
+                    Deje vacío para mantener la contraseña actual. 
+                    RUC/CI del cliente: <strong>{obj.cliente.ruc_ci}</strong>
+                </p>
+            </div>
+            '''
+        else:
+            html = '<p>Al crear el usuario, la contraseña será el RUC/CI del cliente automáticamente.</p>'
+        
+        from django.utils.safestring import mark_safe
+        return mark_safe(html)
+    
+    campo_nueva_password.short_description = "Nueva Contraseña"
+    
+    def save_model(self, request, obj, form, change):
+        """Procesa la contraseña al guardar"""
+        from django.contrib.auth.hashers import make_password
+        
+        # Obtener contraseña del campo HTML
+        nueva_password = request.POST.get('nueva_password_portal', '').strip()
+        
+        if nueva_password:
+            obj.password_hash = make_password(nueva_password)
+            self.message_user(
+                request,
+                f'✓ Contraseña actualizada para {obj.email}',
+                level='SUCCESS'
+            )
+        elif not change or not obj.password_hash:
+            # Usuario nuevo: usar RUC/CI
+            password_temporal = obj.cliente.ruc_ci
+            obj.password_hash = make_password(password_temporal)
+            self.message_user(
+                request,
+                f'✓ Usuario creado. Contraseña temporal: <strong>{password_temporal}</strong> (RUC/CI)',
+                level='WARNING'
+            )
+        
+        super().save_model(request, obj, form, change)
+    
+    @admin.action(description='🔑 Resetear password a RUC/CI del cliente')
+    def resetear_password_a_ruc(self, request, queryset):
+        """Resetea contraseñas al RUC/CI del cliente"""
+        from django.contrib.auth.hashers import make_password
+        
+        count = 0
+        detalles = []
+        for usuario in queryset:
+            password_temporal = usuario.cliente.ruc_ci
+            usuario.password_hash = make_password(password_temporal)
+            usuario.save()
+            detalles.append(f"{usuario.email} → {password_temporal}")
+            count += 1
+        
+        mensaje = f'✓ {count} contraseña(s) reseteada(s): {", ".join(detalles)}'
+        self.message_user(request, mensaje, level='SUCCESS')
+    
+    @admin.action(description='✅ Marcar email como verificado')
+    def marcar_email_verificado(self, request, queryset):
+        """Marca emails como verificados manualmente"""
+        count = queryset.update(email_verificado=True)
+        self.message_user(request, f'✓ {count} email(s) verificado(s)', level='SUCCESS')
 
 
 # Fiscalización
@@ -1047,7 +1220,8 @@ cantina_admin_site.register(ListaPrecios, ListaPreciosAdmin)
 cantina_admin_site.register(PreciosPorLista, PreciosPorListaAdmin)
 cantina_admin_site.register(HistoricoPrecios, HistoricoPreciosAdmin)
 cantina_admin_site.register(CostosHistoricos, CostosHistoricosAdmin)
-cantina_admin_site.register(UsuariosWebClientes, UsuariosWebClientesAdmin)
+# cantina_admin_site.register(UsuariosWebClientes, UsuariosWebClientesAdmin)  # LEGACY - DESHABILITADO
+cantina_admin_site.register(UsuarioPortal, UsuarioPortalAdmin)
 cantina_admin_site.register(PuntosExpedicion, PuntosExpedicionAdmin)
 cantina_admin_site.register(Timbrados, TimbradosAdmin)
 cantina_admin_site.register(DocumentosTributarios, DocumentosTributariosAdmin)

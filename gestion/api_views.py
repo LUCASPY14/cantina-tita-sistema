@@ -10,10 +10,14 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response as DRFResponse
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Q, Sum, Count, Avg
+from django.db.models import Q, Sum, Count, Avg, F
 from datetime import datetime, timedelta
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+
+# drf-spectacular para OpenAPI 3.0
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 
 from .models import (
     Ventas, DetalleVenta, Producto, Categoria, Cliente, Hijo,
@@ -30,11 +34,40 @@ from .serializers import (
     MovimientoStockSerializer, ProveedorSerializer
 )
 
+from .pagination import StandardPagination, LargePagination, SmallPagination, ReportPagination
+
 
 # =============================================================================
 # VIEWSETS DE PRODUCTOS
 # =============================================================================
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="Listar categorías",
+        description="Obtiene todas las categorías de productos con opción de filtrar por estado (activo/inactivo) y categoría padre.",
+        tags=['Productos']
+    ),
+    retrieve=extend_schema(
+        summary="Obtener categoría",
+        description="Obtiene el detalle de una categoría específica por ID.",
+        tags=['Productos']
+    ),
+    create=extend_schema(
+        summary="Crear categoría",
+        description="Crea una nueva categoría de productos.",
+        tags=['Productos']
+    ),
+    update=extend_schema(
+        summary="Actualizar categoría",
+        description="Actualiza una categoría existente.",
+        tags=['Productos']
+    ),
+    destroy=extend_schema(
+        summary="Eliminar categoría",
+        description="Elimina una categoría del sistema.",
+        tags=['Productos']
+    ),
+)
 class CategoriaViewSet(viewsets.ModelViewSet):
     """
     ViewSet para categorías de productos.
@@ -53,12 +86,11 @@ class CategoriaViewSet(viewsets.ModelViewSet):
     ordering_fields = ['nombre', 'id_categoria']
     ordering = ['nombre']
     
-    @swagger_auto_schema(
-        operation_description="Obtiene todos los productos activos de una categoría específica",
-        responses={
-            200: ProductoListSerializer(many=True),
-            404: "Categoría no encontrada"
-        }
+    @extend_schema(
+        summary="Obtener productos de la categoría",
+        description="Obtiene todos los productos activos que pertenecen a esta categoría.",
+        responses={200: ProductoListSerializer(many=True)},
+        tags=['Productos']
     )
     @action(detail=True, methods=['get'])
     def productos(self, request, pk=None):
@@ -83,9 +115,11 @@ def api_root(request):
         'documentation': '/swagger/'
     })
     
-    @swagger_auto_schema(
-        operation_description="Obtiene las subcategorías hijas de una categoría",
-        responses={200: CategoriaSerializer(many=True)}
+    @extend_schema(
+        summary="Obtener subcategorías",
+        description="Obtiene las categorías hijas que tienen como padre esta categoría.",
+        responses={200: CategoriaSerializer(many=True)},
+        tags=['Productos']
     )
     @action(detail=True, methods=['get'])
     def subcategorias(self, request, pk=None):
@@ -113,6 +147,7 @@ class ProductoViewSet(viewsets.ModelViewSet):
     search_fields = ['codigo_barra', 'descripcion']
     ordering_fields = ['codigo_barra', 'descripcion', 'id_categoria']
     ordering = ['descripcion']
+    pagination_class = LargePagination  # 50 items por página
     
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -135,27 +170,38 @@ class ProductoViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def stock_critico(self, request):
-        """Listar productos con stock crítico"""
-        productos_criticos = []
-        productos = Producto.objects.filter(activo=True)
+        """Listar productos con stock crítico (OPTIMIZADO - 1 query)"""
+        # Query optimizado usando join con select_related
+        productos_criticos = Producto.objects.filter(
+            activo=True,
+            stock_minimo__isnull=False
+        ).select_related('stock').exclude(
+            stock__stock_actual__gte=F('stock_minimo')
+        ).values(
+            'id_producto',
+            'codigo_barra',
+            'descripcion',
+            'stock__stock_actual',
+            'stock_minimo'
+        ).annotate(
+            stock_actual=F('stock__stock_actual'),
+            diferencia=F('stock_minimo') - F('stock__stock_actual')
+        )
         
-        for producto in productos:
-            try:
-                stock = StockUnico.objects.get(id_producto=producto)
-                # Validar que stock_minimo no sea None
-                if producto.stock_minimo is not None and stock.stock_actual < producto.stock_minimo:
-                    productos_criticos.append({
-                        'id_producto': producto.id_producto,
-                        'codigo': producto.codigo_barra or 'N/A',
-                        'descripcion': producto.descripcion,
-                        'stock_actual': float(stock.stock_actual),
-                        'stock_minimo': float(producto.stock_minimo),
-                        'diferencia': float(producto.stock_minimo - stock.stock_actual)
-                    })
-            except StockUnico.DoesNotExist:
-                pass
+        # Formatear respuesta
+        resultado = [
+            {
+                'id_producto': p['id_producto'],
+                'codigo': p['codigo_barra'] or 'N/A',
+                'descripcion': p['descripcion'],
+                'stock_actual': float(p['stock_actual'] or 0),
+                'stock_minimo': float(p['stock_minimo']),
+                'diferencia': float(p['diferencia'] or 0)
+            }
+            for p in productos_criticos
+        ]
         
-        return Response(productos_criticos)
+        return Response(resultado)
     
     @action(detail=False, methods=['get'])
     def mas_vendidos(self, request):
@@ -191,7 +237,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
     - Consultar cuenta corriente y ventas pendientes
     - Ver historial de ventas y estadísticas
     """
-    queryset = Cliente.objects.prefetch_related('hijos').all()
+    queryset = Cliente.objects.select_related('id_tipo_cliente').prefetch_related('hijos').all()
     serializer_class = ClienteSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -199,6 +245,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
     search_fields = ['nombres', 'apellidos', 'ci_ruc', 'telefono']
     ordering_fields = ['nombres', 'apellidos']
     ordering = ['apellidos', 'nombres']
+    pagination_class = StandardPagination  # 25 items por página
     
     @swagger_auto_schema(
         operation_description="Obtiene la lista de hijos asociados a un cliente",
@@ -233,19 +280,18 @@ class ClienteViewSet(viewsets.ModelViewSet):
         """Obtener estado de cuenta corriente (saldo pendiente en ventas)"""
         cliente = self.get_object()
         
-        # Obtener ventas con saldo pendiente
+        # Obtener ventas con saldo pendiente (1 query optimizado)
         ventas_pendientes = Ventas.objects.filter(
             id_cliente=cliente,
             estado_pago__in=['PENDIENTE', 'PARCIAL']
         ).select_related(
             'id_cliente', 'id_empleado_cajero', 'id_tipo_pago'
+        ).prefetch_related(
+            'detalleventa_set__id_producto'
         ).order_by('-fecha')[:50]
         
-        # Calcular saldo total pendiente
-        saldo_total = Ventas.objects.filter(
-            id_cliente=cliente,
-            estado_pago__in=['PENDIENTE', 'PARCIAL']
-        ).aggregate(total=Sum('saldo_pendiente'))['total'] or 0
+        # Calcular saldo total usando Python para evitar query duplicada
+        saldo_total = sum(v.saldo_pendiente or 0 for v in ventas_pendientes)
         
         serializer = VentaListSerializer(ventas_pendientes, many=True)
         return Response({
@@ -265,7 +311,10 @@ class ClienteViewSet(viewsets.ModelViewSet):
             id_cliente=cliente
         ).select_related(
             'id_cliente', 'id_empleado_cajero', 'id_tipo_pago'
-        ).prefetch_related('detalleventa_set').order_by('-fecha')[:50]
+        ).prefetch_related(
+            'detalleventa_set__id_producto__id_categoria',
+            'pagos__id_medio_pago'
+        ).order_by('-fecha')[:50]
         serializer = VentaListSerializer(ventas, many=True)
         return Response(serializer.data)
 
@@ -288,6 +337,7 @@ class TarjetaViewSet(viewsets.ModelViewSet):
     filterset_fields = ['estado']
     search_fields = ['nro_tarjeta', 'id_hijo__nombre', 'id_hijo__apellido']
     lookup_field = 'nro_tarjeta'
+    pagination_class = StandardPagination  # 25 items por página
     
     @swagger_auto_schema(
         operation_description="Obtiene el historial de consumos de la tarjeta (hasta 100 últimos)",
@@ -396,13 +446,22 @@ class VentaViewSet(viewsets.ModelViewSet):
     - Consultar ventas del día actual
     - Obtener estadísticas de ventas por período
     """
-    queryset = Ventas.objects.select_related('id_cliente', 'id_empleado_cajero').all()
+    queryset = Ventas.objects.select_related(
+        'id_cliente',
+        'id_empleado_cajero',
+        'id_tipo_pago',
+        'id_hijo'
+    ).prefetch_related(
+        'detalleventa_set__id_producto',
+        'pagos__id_medio_pago'
+    ).all()
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['estado', 'tipo_venta', 'id_tipo_pago']
     search_fields = ['id_cliente__nombres', 'id_cliente__apellidos']
     ordering_fields = ['fecha', 'monto_total']
     ordering = ['-fecha']
+    pagination_class = StandardPagination  # 25 items por página
     
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -427,10 +486,16 @@ class VentaViewSet(viewsets.ModelViewSet):
     )
     @action(detail=False, methods=['get'])
     def ventas_dia(self, request):
-        """Obtener ventas del día actual"""
+        """Obtener ventas del día actual (OPTIMIZADO)"""
         hoy = datetime.now().date()
         ventas = Ventas.objects.filter(
             fecha__date=hoy
+        ).select_related(
+            'id_cliente',
+            'id_empleado_cajero',
+            'id_tipo_pago'
+        ).prefetch_related(
+            'detalleventa_set__id_producto'
         ).order_by('-fecha')
         
         serializer = VentaListSerializer(ventas, many=True)

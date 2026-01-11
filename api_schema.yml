@@ -1,0 +1,3697 @@
+openapi: 3.0.3
+info:
+  title: Cantina Tita API
+  version: 1.0.0
+  description: "\n    API REST completa para el Sistema de Gestión de Cantina Tita\n
+    \   \n    ## Funcionalidades principales:\n    - \U0001F4B0 **Ventas:** Gestión
+    completa de ventas, pagos y facturación\n    - \U0001F4E6 **Inventario:** Control
+    de stock, kardex y ajustes\n    - \U0001F4B3 **Tarjetas:** Sistema de tarjetas
+    RFID, recargas y consumos\n    - \U0001F465 **Clientes:** Gestión de clientes,
+    hijos y restricciones alimentarias\n    - \U0001F3EB **Almuerzos:** Sistema de
+    almuerzos escolares y planes mensuales\n    - \U0001F4CA **Reportes:** Generación
+    de reportes PDF/Excel\n    - \U0001F510 **Seguridad:** Autenticación JWT, 2FA
+    y auditoría completa\n    - \U0001F3AF **Promociones:** Sistema de promociones
+    y descuentos\n    \n    ## Autenticación:\n    Esta API utiliza **JWT (JSON Web
+    Tokens)** para autenticación:\n    \n    1. **Obtener token:** POST /api/v1/auth/token/\n
+    \      ```json\n       {\"username\": \"usuario\", \"password\": \"contraseña\"}\n
+    \      ```\n    \n    2. **Usar token:** Incluir en todas las peticiones:\n       ```\n
+    \      Authorization: Bearer {access_token}\n       ```\n    \n    3. **Renovar
+    token:** POST /api/v1/auth/token/refresh/\n       ```json\n       {\"refresh\":
+    \"refresh_token\"}\n       ```\n    \n    ## Códigos de Respuesta:\n    - **200:**
+    OK - Operación exitosa\n    - **201:** Created - Recurso creado exitosamente\n
+    \   - **400:** Bad Request - Datos inválidos\n    - **401:** Unauthorized - No
+    autenticado\n    - **403:** Forbidden - No autorizado\n    - **404:** Not Found
+    - Recurso no encontrado\n    - **500:** Internal Server Error - Error del servidor\n
+    \   "
+  contact:
+    name: Soporte Técnico Cantina Tita
+    email: contacto@cantinatita.com
+  license:
+    name: Propietario
+paths:
+  /health/:
+    get:
+      operationId: health_retrieve
+      description: |-
+        Health check endpoint para monitoring externo
+        Retorna estado de componentes críticos del sistema
+      tags:
+      - health
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /ready/:
+    get:
+      operationId: ready_retrieve
+      description: Readiness check - verifica si el sistema puede recibir tráfico
+      tags:
+      - ready
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /alive/:
+    get:
+      operationId: alive_retrieve
+      description: Liveness check - verifica que el proceso esté vivo
+      tags:
+      - alive
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/token/:
+    post:
+      operationId: api_v1_auth_token_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/v1/auth/token/refresh/:
+    post:
+      operationId: api_v1_auth_token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/auth/token/verify/:
+    post:
+      operationId: api_v1_auth_token_verify_create
+      description: |-
+        Takes a token and indicates if it is valid.  This view provides no
+        information about a token's fitness for a particular use.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+        required: true
+      responses:
+        '200':
+          description: No response body
+  /api/v1/categorias/:
+    get:
+      operationId: api_v1_categorias_list
+      description: Obtiene todas las categorías de productos con opción de filtrar
+        por estado (activo/inactivo) y categoría padre.
+      summary: Listar categorías
+      parameters:
+      - in: query
+        name: activo
+        schema:
+          type: boolean
+      - in: query
+        name: id_categoria_padre
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Qué campo usar para ordenar los resultados.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un término de búsqueda.
+        schema:
+          type: string
+      tags:
+      - Productos
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCategoriaList'
+          description: ''
+    post:
+      operationId: api_v1_categorias_create
+      description: Crea una nueva categoría de productos.
+      summary: Crear categoría
+      tags:
+      - Productos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoriaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CategoriaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CategoriaRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Categoria'
+          description: ''
+  /api/v1/categorias/{id_categoria}/:
+    delete:
+      operationId: api_v1_categorias_destroy
+      description: Elimina una categoría del sistema.
+      summary: Eliminar categoría
+      parameters:
+      - in: path
+        name: id_categoria
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Categoría.
+        required: true
+      tags:
+      - Productos
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+    get:
+      operationId: api_v1_categorias_retrieve
+      description: Obtiene el detalle de una categoría específica por ID.
+      summary: Obtener categoría
+      parameters:
+      - in: path
+        name: id_categoria
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Categoría.
+        required: true
+      tags:
+      - Productos
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Categoria'
+          description: ''
+    put:
+      operationId: api_v1_categorias_update
+      description: Actualiza una categoría existente.
+      summary: Actualizar categoría
+      parameters:
+      - in: path
+        name: id_categoria
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Categoría.
+        required: true
+      tags:
+      - Productos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoriaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CategoriaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CategoriaRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Categoria'
+          description: ''
+    patch:
+      operationId: api_v1_categorias_partial_update
+      description: |-
+        ViewSet para categorías de productos.
+
+        Permite gestionar las categorías de productos del sistema:
+        - Listar todas las categorías con filtros y búsqueda
+        - Crear, actualizar y eliminar categorías
+        - Obtener productos por categoría
+      parameters:
+      - in: path
+        name: id_categoria
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Categoría.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCategoriaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCategoriaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCategoriaRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Categoria'
+          description: ''
+  /api/v1/categorias/{id_categoria}/productos/:
+    get:
+      operationId: api_v1_categorias_productos_list
+      description: Obtiene todos los productos activos que pertenecen a esta categoría.
+      summary: Obtener productos de la categoría
+      parameters:
+      - in: query
+        name: activo
+        schema:
+          type: boolean
+      - in: path
+        name: id_categoria
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Categoría.
+        required: true
+      - in: query
+        name: id_categoria_padre
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Qué campo usar para ordenar los resultados.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un término de búsqueda.
+        schema:
+          type: string
+      tags:
+      - Productos
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProductoListList'
+          description: ''
+  /api/v1/productos/:
+    get:
+      operationId: api_v1_productos_list
+      description: |-
+        ViewSet para productos del inventario.
+
+        Permite gestionar el catálogo de productos:
+        - Listar productos con filtros por categoría y estado
+        - Búsqueda por código o descripción
+        - Ver stock actual y movimientos
+        - Crear, actualizar y eliminar productos
+      parameters:
+      - in: query
+        name: activo
+        schema:
+          type: boolean
+      - in: query
+        name: id_categoria
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Qué campo usar para ordenar los resultados.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un término de búsqueda.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProductoListList'
+          description: ''
+    post:
+      operationId: api_v1_productos_create
+      description: |-
+        ViewSet para productos del inventario.
+
+        Permite gestionar el catálogo de productos:
+        - Listar productos con filtros por categoría y estado
+        - Búsqueda por código o descripción
+        - Ver stock actual y movimientos
+        - Crear, actualizar y eliminar productos
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductoListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProductoListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductoListRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductoList'
+          description: ''
+  /api/v1/productos/mas_vendidos/:
+    get:
+      operationId: api_v1_productos_mas_vendidos_retrieve
+      description: Productos más vendidos (últimos 30 días)
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductoList'
+          description: ''
+  /api/v1/productos/stock_critico/:
+    get:
+      operationId: api_v1_productos_stock_critico_retrieve
+      description: Listar productos con stock crítico (OPTIMIZADO - 1 query)
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductoList'
+          description: ''
+  /api/v1/productos/{id_producto}/:
+    delete:
+      operationId: api_v1_productos_destroy
+      description: |-
+        ViewSet para productos del inventario.
+
+        Permite gestionar el catálogo de productos:
+        - Listar productos con filtros por categoría y estado
+        - Búsqueda por código o descripción
+        - Ver stock actual y movimientos
+        - Crear, actualizar y eliminar productos
+      parameters:
+      - in: path
+        name: id_producto
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Producto.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+    get:
+      operationId: api_v1_productos_retrieve
+      description: |-
+        ViewSet para productos del inventario.
+
+        Permite gestionar el catálogo de productos:
+        - Listar productos con filtros por categoría y estado
+        - Búsqueda por código o descripción
+        - Ver stock actual y movimientos
+        - Crear, actualizar y eliminar productos
+      parameters:
+      - in: path
+        name: id_producto
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Producto.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductoDetail'
+          description: ''
+    put:
+      operationId: api_v1_productos_update
+      description: |-
+        ViewSet para productos del inventario.
+
+        Permite gestionar el catálogo de productos:
+        - Listar productos con filtros por categoría y estado
+        - Búsqueda por código o descripción
+        - Ver stock actual y movimientos
+        - Crear, actualizar y eliminar productos
+      parameters:
+      - in: path
+        name: id_producto
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Producto.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductoListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProductoListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductoListRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductoList'
+          description: ''
+    patch:
+      operationId: api_v1_productos_partial_update
+      description: |-
+        ViewSet para productos del inventario.
+
+        Permite gestionar el catálogo de productos:
+        - Listar productos con filtros por categoría y estado
+        - Búsqueda por código o descripción
+        - Ver stock actual y movimientos
+        - Crear, actualizar y eliminar productos
+      parameters:
+      - in: path
+        name: id_producto
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Producto.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProductoListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProductoListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProductoListRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductoList'
+          description: ''
+  /api/v1/productos/{id_producto}/stock/:
+    get:
+      operationId: api_v1_productos_stock_retrieve
+      description: Obtener stock actual del producto
+      parameters:
+      - in: path
+        name: id_producto
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Producto.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductoList'
+          description: ''
+  /api/v1/clientes/:
+    get:
+      operationId: api_v1_clientes_list
+      description: |-
+        ViewSet para clientes del sistema.
+
+        Permite gestionar clientes y sus operaciones:
+        - Listar clientes con búsqueda por nombre, CI/RUC, teléfono
+        - Ver hijos asociados a cada cliente
+        - Consultar cuenta corriente y ventas pendientes
+        - Ver historial de ventas y estadísticas
+      parameters:
+      - in: query
+        name: activo
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Qué campo usar para ordenar los resultados.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un término de búsqueda.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedClienteList'
+          description: ''
+    post:
+      operationId: api_v1_clientes_create
+      description: |-
+        ViewSet para clientes del sistema.
+
+        Permite gestionar clientes y sus operaciones:
+        - Listar clientes con búsqueda por nombre, CI/RUC, teléfono
+        - Ver hijos asociados a cada cliente
+        - Consultar cuenta corriente y ventas pendientes
+        - Ver historial de ventas y estadísticas
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClienteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClienteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClienteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cliente'
+          description: ''
+  /api/v1/clientes/{id_cliente}/:
+    delete:
+      operationId: api_v1_clientes_destroy
+      description: |-
+        ViewSet para clientes del sistema.
+
+        Permite gestionar clientes y sus operaciones:
+        - Listar clientes con búsqueda por nombre, CI/RUC, teléfono
+        - Ver hijos asociados a cada cliente
+        - Consultar cuenta corriente y ventas pendientes
+        - Ver historial de ventas y estadísticas
+      parameters:
+      - in: path
+        name: id_cliente
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Cliente.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+    get:
+      operationId: api_v1_clientes_retrieve
+      description: |-
+        ViewSet para clientes del sistema.
+
+        Permite gestionar clientes y sus operaciones:
+        - Listar clientes con búsqueda por nombre, CI/RUC, teléfono
+        - Ver hijos asociados a cada cliente
+        - Consultar cuenta corriente y ventas pendientes
+        - Ver historial de ventas y estadísticas
+      parameters:
+      - in: path
+        name: id_cliente
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Cliente.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cliente'
+          description: ''
+    put:
+      operationId: api_v1_clientes_update
+      description: |-
+        ViewSet para clientes del sistema.
+
+        Permite gestionar clientes y sus operaciones:
+        - Listar clientes con búsqueda por nombre, CI/RUC, teléfono
+        - Ver hijos asociados a cada cliente
+        - Consultar cuenta corriente y ventas pendientes
+        - Ver historial de ventas y estadísticas
+      parameters:
+      - in: path
+        name: id_cliente
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Cliente.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClienteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClienteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClienteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cliente'
+          description: ''
+    patch:
+      operationId: api_v1_clientes_partial_update
+      description: |-
+        ViewSet para clientes del sistema.
+
+        Permite gestionar clientes y sus operaciones:
+        - Listar clientes con búsqueda por nombre, CI/RUC, teléfono
+        - Ver hijos asociados a cada cliente
+        - Consultar cuenta corriente y ventas pendientes
+        - Ver historial de ventas y estadísticas
+      parameters:
+      - in: path
+        name: id_cliente
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Cliente.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedClienteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedClienteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedClienteRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cliente'
+          description: ''
+  /api/v1/clientes/{id_cliente}/cuenta_corriente/:
+    get:
+      operationId: api_v1_clientes_cuenta_corriente_retrieve
+      description: Obtener estado de cuenta corriente (saldo pendiente en ventas)
+      parameters:
+      - in: path
+        name: id_cliente
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Cliente.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cliente'
+          description: ''
+  /api/v1/clientes/{id_cliente}/hijos/:
+    get:
+      operationId: api_v1_clientes_hijos_retrieve
+      description: Obtener hijos del cliente
+      parameters:
+      - in: path
+        name: id_cliente
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Cliente.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cliente'
+          description: ''
+  /api/v1/clientes/{id_cliente}/ventas/:
+    get:
+      operationId: api_v1_clientes_ventas_retrieve
+      description: Obtener historial de ventas del cliente
+      parameters:
+      - in: path
+        name: id_cliente
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Cliente.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cliente'
+          description: ''
+  /api/v1/tarjetas/:
+    get:
+      operationId: api_v1_tarjetas_list
+      description: |-
+        ViewSet para tarjetas estudiantiles.
+
+        Gestiona las tarjetas de los estudiantes:
+        - Listar tarjetas con filtros por estado
+        - Búsqueda por número de tarjeta o nombre del hijo
+        - Ver saldo actual de la tarjeta
+        - Consultar historial de consumos y recargas
+        - Realizar recargas de saldo
+      parameters:
+      - in: query
+        name: estado
+        schema:
+          type: string
+          enum:
+          - Activa
+          - Bloqueada
+          - Vencida
+        description: |-
+          * `Activa` - Activa
+          * `Bloqueada` - Bloqueada
+          * `Vencida` - Vencida
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un término de búsqueda.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTarjetaList'
+          description: ''
+    post:
+      operationId: api_v1_tarjetas_create
+      description: |-
+        ViewSet para tarjetas estudiantiles.
+
+        Gestiona las tarjetas de los estudiantes:
+        - Listar tarjetas con filtros por estado
+        - Búsqueda por número de tarjeta o nombre del hijo
+        - Ver saldo actual de la tarjeta
+        - Consultar historial de consumos y recargas
+        - Realizar recargas de saldo
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TarjetaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TarjetaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TarjetaRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tarjeta'
+          description: ''
+  /api/v1/tarjetas/{nro_tarjeta}/:
+    delete:
+      operationId: api_v1_tarjetas_destroy
+      description: |-
+        ViewSet para tarjetas estudiantiles.
+
+        Gestiona las tarjetas de los estudiantes:
+        - Listar tarjetas con filtros por estado
+        - Búsqueda por número de tarjeta o nombre del hijo
+        - Ver saldo actual de la tarjeta
+        - Consultar historial de consumos y recargas
+        - Realizar recargas de saldo
+      parameters:
+      - in: path
+        name: nro_tarjeta
+        schema:
+          type: string
+        description: Un valor único que identifique este Tarjeta.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+    get:
+      operationId: api_v1_tarjetas_retrieve
+      description: |-
+        ViewSet para tarjetas estudiantiles.
+
+        Gestiona las tarjetas de los estudiantes:
+        - Listar tarjetas con filtros por estado
+        - Búsqueda por número de tarjeta o nombre del hijo
+        - Ver saldo actual de la tarjeta
+        - Consultar historial de consumos y recargas
+        - Realizar recargas de saldo
+      parameters:
+      - in: path
+        name: nro_tarjeta
+        schema:
+          type: string
+        description: Un valor único que identifique este Tarjeta.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tarjeta'
+          description: ''
+    put:
+      operationId: api_v1_tarjetas_update
+      description: |-
+        ViewSet para tarjetas estudiantiles.
+
+        Gestiona las tarjetas de los estudiantes:
+        - Listar tarjetas con filtros por estado
+        - Búsqueda por número de tarjeta o nombre del hijo
+        - Ver saldo actual de la tarjeta
+        - Consultar historial de consumos y recargas
+        - Realizar recargas de saldo
+      parameters:
+      - in: path
+        name: nro_tarjeta
+        schema:
+          type: string
+        description: Un valor único que identifique este Tarjeta.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TarjetaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TarjetaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TarjetaRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tarjeta'
+          description: ''
+    patch:
+      operationId: api_v1_tarjetas_partial_update
+      description: |-
+        ViewSet para tarjetas estudiantiles.
+
+        Gestiona las tarjetas de los estudiantes:
+        - Listar tarjetas con filtros por estado
+        - Búsqueda por número de tarjeta o nombre del hijo
+        - Ver saldo actual de la tarjeta
+        - Consultar historial de consumos y recargas
+        - Realizar recargas de saldo
+      parameters:
+      - in: path
+        name: nro_tarjeta
+        schema:
+          type: string
+        description: Un valor único que identifique este Tarjeta.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTarjetaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTarjetaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTarjetaRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tarjeta'
+          description: ''
+  /api/v1/tarjetas/{nro_tarjeta}/consumos/:
+    get:
+      operationId: api_v1_tarjetas_consumos_retrieve
+      description: Obtener historial de consumos de la tarjeta
+      parameters:
+      - in: path
+        name: nro_tarjeta
+        schema:
+          type: string
+        description: Un valor único que identifique este Tarjeta.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tarjeta'
+          description: ''
+  /api/v1/tarjetas/{nro_tarjeta}/recargar/:
+    post:
+      operationId: api_v1_tarjetas_recargar_create
+      description: Recargar saldo en una tarjeta
+      parameters:
+      - in: path
+        name: nro_tarjeta
+        schema:
+          type: string
+        description: Un valor único que identifique este Tarjeta.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TarjetaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TarjetaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TarjetaRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tarjeta'
+          description: ''
+  /api/v1/tarjetas/{nro_tarjeta}/recargas/:
+    get:
+      operationId: api_v1_tarjetas_recargas_retrieve
+      description: Obtener historial de recargas de la tarjeta
+      parameters:
+      - in: path
+        name: nro_tarjeta
+        schema:
+          type: string
+        description: Un valor único que identifique este Tarjeta.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tarjeta'
+          description: ''
+  /api/v1/ventas/:
+    get:
+      operationId: api_v1_ventas_list
+      description: |-
+        ViewSet para ventas del sistema.
+
+        Gestiona las operaciones de venta:
+        - Listar ventas con filtros por estado, tipo, y método de pago
+        - Ver detalles completos de cada venta
+        - Consultar ventas del día actual
+        - Obtener estadísticas de ventas por período
+      parameters:
+      - in: query
+        name: estado
+        schema:
+          type: string
+          enum:
+          - ANULADO
+          - PROCESADO
+        description: |-
+          * `PROCESADO` - Procesado
+          * `ANULADO` - Anulado
+      - in: query
+        name: id_tipo_pago
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Qué campo usar para ordenar los resultados.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un término de búsqueda.
+        schema:
+          type: string
+      - in: query
+        name: tipo_venta
+        schema:
+          type: string
+          enum:
+          - CONTADO
+          - CREDITO
+        description: |-
+          * `CONTADO` - Contado
+          * `CREDITO` - Crédito
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedVentaListList'
+          description: ''
+    post:
+      operationId: api_v1_ventas_create
+      description: |-
+        ViewSet para ventas del sistema.
+
+        Gestiona las operaciones de venta:
+        - Listar ventas con filtros por estado, tipo, y método de pago
+        - Ver detalles completos de cada venta
+        - Consultar ventas del día actual
+        - Obtener estadísticas de ventas por período
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VentaListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VentaListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VentaListRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VentaList'
+          description: ''
+  /api/v1/ventas/estadisticas/:
+    get:
+      operationId: api_v1_ventas_estadisticas_retrieve
+      description: Estadísticas de ventas
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VentaList'
+          description: ''
+  /api/v1/ventas/ventas_dia/:
+    get:
+      operationId: api_v1_ventas_ventas_dia_retrieve
+      description: Obtener ventas del día actual (OPTIMIZADO)
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VentaList'
+          description: ''
+  /api/v1/ventas/{id_venta}/:
+    delete:
+      operationId: api_v1_ventas_destroy
+      description: |-
+        ViewSet para ventas del sistema.
+
+        Gestiona las operaciones de venta:
+        - Listar ventas con filtros por estado, tipo, y método de pago
+        - Ver detalles completos de cada venta
+        - Consultar ventas del día actual
+        - Obtener estadísticas de ventas por período
+      parameters:
+      - in: path
+        name: id_venta
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Venta.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+    get:
+      operationId: api_v1_ventas_retrieve
+      description: |-
+        ViewSet para ventas del sistema.
+
+        Gestiona las operaciones de venta:
+        - Listar ventas con filtros por estado, tipo, y método de pago
+        - Ver detalles completos de cada venta
+        - Consultar ventas del día actual
+        - Obtener estadísticas de ventas por período
+      parameters:
+      - in: path
+        name: id_venta
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Venta.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VentaDetail'
+          description: ''
+    put:
+      operationId: api_v1_ventas_update
+      description: |-
+        ViewSet para ventas del sistema.
+
+        Gestiona las operaciones de venta:
+        - Listar ventas con filtros por estado, tipo, y método de pago
+        - Ver detalles completos de cada venta
+        - Consultar ventas del día actual
+        - Obtener estadísticas de ventas por período
+      parameters:
+      - in: path
+        name: id_venta
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Venta.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VentaListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VentaListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VentaListRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VentaList'
+          description: ''
+    patch:
+      operationId: api_v1_ventas_partial_update
+      description: |-
+        ViewSet para ventas del sistema.
+
+        Gestiona las operaciones de venta:
+        - Listar ventas con filtros por estado, tipo, y método de pago
+        - Ver detalles completos de cada venta
+        - Consultar ventas del día actual
+        - Obtener estadísticas de ventas por período
+      parameters:
+      - in: path
+        name: id_venta
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Venta.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedVentaListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedVentaListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedVentaListRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VentaList'
+          description: ''
+  /api/v1/stock/:
+    get:
+      operationId: api_v1_stock_list
+      description: |-
+        ViewSet de solo lectura para consultar stock.
+
+        Permite:
+        - Listar stock actual de todos los productos
+        - Búsqueda por código o descripción de producto
+        - Ver alertas de stock bajo
+        - Consultar movimientos de stock
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Qué campo usar para ordenar los resultados.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un término de búsqueda.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStockList'
+          description: ''
+  /api/v1/stock/alertas/:
+    get:
+      operationId: api_v1_stock_alertas_retrieve
+      description: Productos con stock por debajo del mínimo
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stock'
+          description: ''
+  /api/v1/stock/{id_producto}/:
+    get:
+      operationId: api_v1_stock_retrieve
+      description: |-
+        ViewSet de solo lectura para consultar stock.
+
+        Permite:
+        - Listar stock actual de todos los productos
+        - Búsqueda por código o descripción de producto
+        - Ver alertas de stock bajo
+        - Consultar movimientos de stock
+      parameters:
+      - in: path
+        name: id_producto
+        schema:
+          type: integer
+        description: Un valor único que identifique este Stock.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stock'
+          description: ''
+  /api/v1/movimientos-stock/:
+    get:
+      operationId: api_v1_movimientos_stock_list
+      description: |-
+        ViewSet para registrar movimientos de stock.
+
+        Permite:
+        - Listar movimientos de entrada y salida
+        - Filtrar por tipo de movimiento y producto
+        - Registrar nuevos ajustes de stock
+        - Ver historial de movimientos
+      parameters:
+      - in: query
+        name: id_producto
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Qué campo usar para ordenar los resultados.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: tipo_movimiento
+        schema:
+          type: string
+          enum:
+          - Ajuste
+          - Entrada
+          - Salida
+        description: |-
+          * `Entrada` - Entrada
+          * `Salida` - Salida
+          * `Ajuste` - Ajuste
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMovimientoStockList'
+          description: ''
+    post:
+      operationId: api_v1_movimientos_stock_create
+      description: |-
+        ViewSet para registrar movimientos de stock.
+
+        Permite:
+        - Listar movimientos de entrada y salida
+        - Filtrar por tipo de movimiento y producto
+        - Registrar nuevos ajustes de stock
+        - Ver historial de movimientos
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MovimientoStockRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MovimientoStockRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MovimientoStockRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovimientoStock'
+          description: ''
+  /api/v1/movimientos-stock/{id_movimientostock}/:
+    delete:
+      operationId: api_v1_movimientos_stock_destroy
+      description: |-
+        ViewSet para registrar movimientos de stock.
+
+        Permite:
+        - Listar movimientos de entrada y salida
+        - Filtrar por tipo de movimiento y producto
+        - Registrar nuevos ajustes de stock
+        - Ver historial de movimientos
+      parameters:
+      - in: path
+        name: id_movimientostock
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Movimiento de Stock.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+    get:
+      operationId: api_v1_movimientos_stock_retrieve
+      description: |-
+        ViewSet para registrar movimientos de stock.
+
+        Permite:
+        - Listar movimientos de entrada y salida
+        - Filtrar por tipo de movimiento y producto
+        - Registrar nuevos ajustes de stock
+        - Ver historial de movimientos
+      parameters:
+      - in: path
+        name: id_movimientostock
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Movimiento de Stock.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovimientoStock'
+          description: ''
+    put:
+      operationId: api_v1_movimientos_stock_update
+      description: |-
+        ViewSet para registrar movimientos de stock.
+
+        Permite:
+        - Listar movimientos de entrada y salida
+        - Filtrar por tipo de movimiento y producto
+        - Registrar nuevos ajustes de stock
+        - Ver historial de movimientos
+      parameters:
+      - in: path
+        name: id_movimientostock
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Movimiento de Stock.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MovimientoStockRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MovimientoStockRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MovimientoStockRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovimientoStock'
+          description: ''
+    patch:
+      operationId: api_v1_movimientos_stock_partial_update
+      description: |-
+        ViewSet para registrar movimientos de stock.
+
+        Permite:
+        - Listar movimientos de entrada y salida
+        - Filtrar por tipo de movimiento y producto
+        - Registrar nuevos ajustes de stock
+        - Ver historial de movimientos
+      parameters:
+      - in: path
+        name: id_movimientostock
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Movimiento de Stock.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMovimientoStockRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMovimientoStockRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMovimientoStockRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovimientoStock'
+          description: ''
+  /api/v1/empleados/:
+    get:
+      operationId: api_v1_empleados_list
+      description: |-
+        ViewSet para empleados del sistema.
+
+        Gestiona los empleados y cajeros:
+        - Listar empleados con filtros por rol y estado
+        - Ver ventas realizadas por cada empleado
+        - Gestionar usuarios y permisos
+      parameters:
+      - in: query
+        name: activo
+        schema:
+          type: boolean
+      - in: query
+        name: id_rol
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un término de búsqueda.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEmpleadoList'
+          description: ''
+    post:
+      operationId: api_v1_empleados_create
+      description: |-
+        ViewSet para empleados del sistema.
+
+        Gestiona los empleados y cajeros:
+        - Listar empleados con filtros por rol y estado
+        - Ver ventas realizadas por cada empleado
+        - Gestionar usuarios y permisos
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmpleadoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmpleadoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmpleadoRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Empleado'
+          description: ''
+  /api/v1/empleados/{id_empleado}/:
+    delete:
+      operationId: api_v1_empleados_destroy
+      description: |-
+        ViewSet para empleados del sistema.
+
+        Gestiona los empleados y cajeros:
+        - Listar empleados con filtros por rol y estado
+        - Ver ventas realizadas por cada empleado
+        - Gestionar usuarios y permisos
+      parameters:
+      - in: path
+        name: id_empleado
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Empleado.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+    get:
+      operationId: api_v1_empleados_retrieve
+      description: |-
+        ViewSet para empleados del sistema.
+
+        Gestiona los empleados y cajeros:
+        - Listar empleados con filtros por rol y estado
+        - Ver ventas realizadas por cada empleado
+        - Gestionar usuarios y permisos
+      parameters:
+      - in: path
+        name: id_empleado
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Empleado.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Empleado'
+          description: ''
+    put:
+      operationId: api_v1_empleados_update
+      description: |-
+        ViewSet para empleados del sistema.
+
+        Gestiona los empleados y cajeros:
+        - Listar empleados con filtros por rol y estado
+        - Ver ventas realizadas por cada empleado
+        - Gestionar usuarios y permisos
+      parameters:
+      - in: path
+        name: id_empleado
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Empleado.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmpleadoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmpleadoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmpleadoRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Empleado'
+          description: ''
+    patch:
+      operationId: api_v1_empleados_partial_update
+      description: |-
+        ViewSet para empleados del sistema.
+
+        Gestiona los empleados y cajeros:
+        - Listar empleados con filtros por rol y estado
+        - Ver ventas realizadas por cada empleado
+        - Gestionar usuarios y permisos
+      parameters:
+      - in: path
+        name: id_empleado
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Empleado.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEmpleadoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedEmpleadoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEmpleadoRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Empleado'
+          description: ''
+  /api/v1/empleados/{id_empleado}/ventas/:
+    get:
+      operationId: api_v1_empleados_ventas_retrieve
+      description: Ventas realizadas por el empleado
+      parameters:
+      - in: path
+        name: id_empleado
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Empleado.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Empleado'
+          description: ''
+  /api/v1/proveedores/:
+    get:
+      operationId: api_v1_proveedores_list
+      description: |-
+        ViewSet para proveedores.
+
+        Gestiona los proveedores del sistema:
+        - Listar proveedores activos
+        - Búsqueda por razón social, RUC o teléfono
+        - Ver compras realizadas a cada proveedor
+      parameters:
+      - in: query
+        name: activo
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Qué campo usar para ordenar los resultados.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un término de búsqueda.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProveedorList'
+          description: ''
+    post:
+      operationId: api_v1_proveedores_create
+      description: |-
+        ViewSet para proveedores.
+
+        Gestiona los proveedores del sistema:
+        - Listar proveedores activos
+        - Búsqueda por razón social, RUC o teléfono
+        - Ver compras realizadas a cada proveedor
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProveedorRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProveedorRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProveedorRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proveedor'
+          description: ''
+  /api/v1/proveedores/{id_proveedor}/:
+    delete:
+      operationId: api_v1_proveedores_destroy
+      description: |-
+        ViewSet para proveedores.
+
+        Gestiona los proveedores del sistema:
+        - Listar proveedores activos
+        - Búsqueda por razón social, RUC o teléfono
+        - Ver compras realizadas a cada proveedor
+      parameters:
+      - in: path
+        name: id_proveedor
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Proveedor.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+    get:
+      operationId: api_v1_proveedores_retrieve
+      description: |-
+        ViewSet para proveedores.
+
+        Gestiona los proveedores del sistema:
+        - Listar proveedores activos
+        - Búsqueda por razón social, RUC o teléfono
+        - Ver compras realizadas a cada proveedor
+      parameters:
+      - in: path
+        name: id_proveedor
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Proveedor.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proveedor'
+          description: ''
+    put:
+      operationId: api_v1_proveedores_update
+      description: |-
+        ViewSet para proveedores.
+
+        Gestiona los proveedores del sistema:
+        - Listar proveedores activos
+        - Búsqueda por razón social, RUC o teléfono
+        - Ver compras realizadas a cada proveedor
+      parameters:
+      - in: path
+        name: id_proveedor
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Proveedor.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProveedorRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProveedorRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProveedorRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proveedor'
+          description: ''
+    patch:
+      operationId: api_v1_proveedores_partial_update
+      description: |-
+        ViewSet para proveedores.
+
+        Gestiona los proveedores del sistema:
+        - Listar proveedores activos
+        - Búsqueda por razón social, RUC o teléfono
+        - Ver compras realizadas a cada proveedor
+      parameters:
+      - in: path
+        name: id_proveedor
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este Proveedor.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProveedorRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProveedorRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProveedorRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proveedor'
+          description: ''
+  /reportes/api/portal/tarjeta/{nro_tarjeta}/saldo/:
+    get:
+      operationId: reportes_api_portal_tarjeta_saldo_retrieve
+      description: |-
+        GET /api/portal/tarjeta/<nro_tarjeta>/saldo/
+
+        Consultar saldo actual de una tarjeta
+
+        Response:
+        {
+            "nro_tarjeta": "1234567890",
+            "hijo": {...},
+            "saldo_actual": 50000,
+            "saldo_formateado": "₲ 50.000",
+            "estado": "Activa",
+            "saldo_alerta": 5000,
+            "alerta_saldo_bajo": true
+        }
+      parameters:
+      - in: path
+        name: nro_tarjeta
+        schema:
+          type: string
+        required: true
+      tags:
+      - reportes
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /reportes/api/portal/tarjeta/{nro_tarjeta}/movimientos/:
+    get:
+      operationId: reportes_api_portal_tarjeta_movimientos_retrieve
+      description: |-
+        GET /api/portal/tarjeta/<nro_tarjeta>/movimientos/
+
+        Obtener movimientos de una tarjeta (consumos + recargas)
+
+        Query params:
+        - desde: fecha desde (YYYY-MM-DD)
+        - hasta: fecha hasta (YYYY-MM-DD)
+        - limit: número de resultados (default: 50)
+
+        Response:
+        {
+            "tarjeta": {...},
+            "periodo": {"desde": "2025-01-01", "hasta": "2025-01-08"},
+            "resumen": {
+                "total_consumos": 15,
+                "monto_consumos": 75000,
+                "total_recargas": 3,
+                "monto_recargas": 100000
+            },
+            "movimientos": [
+                {
+                    "tipo": "consumo",
+                    "fecha": "2025-01-08 14:30:00",
+                    "monto": -5000,
+                    "descripcion": "Consumo cantina",
+                    "saldo_resultante": 45000
+                },
+                ...
+            ]
+        }
+      parameters:
+      - in: path
+        name: nro_tarjeta
+        schema:
+          type: string
+        required: true
+      tags:
+      - reportes
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /reportes/api/portal/tarjeta/{nro_tarjeta}/consumos/:
+    get:
+      operationId: reportes_api_portal_tarjeta_consumos_retrieve
+      description: |-
+        GET /api/portal/tarjeta/<nro_tarjeta>/consumos/
+
+        Obtener solo los consumos de una tarjeta
+
+        Query params:
+        - desde: fecha desde (YYYY-MM-DD)
+        - hasta: fecha hasta (YYYY-MM-DD)
+        - limit: número de resultados (default: 50)
+      parameters:
+      - in: path
+        name: nro_tarjeta
+        schema:
+          type: string
+        required: true
+      tags:
+      - reportes
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /reportes/api/portal/tarjeta/{nro_tarjeta}/recargas/:
+    get:
+      operationId: reportes_api_portal_tarjeta_recargas_retrieve
+      description: |-
+        GET /api/portal/tarjeta/<nro_tarjeta>/recargas/
+
+        Obtener historial de recargas de una tarjeta
+      parameters:
+      - in: path
+        name: nro_tarjeta
+        schema:
+          type: string
+        required: true
+      tags:
+      - reportes
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /reportes/api/portal/mis-tarjetas/:
+    get:
+      operationId: reportes_api_portal_mis_tarjetas_retrieve
+      description: |-
+        GET /api/portal/mis-tarjetas/
+
+        Obtener todas las tarjetas del usuario autenticado
+      tags:
+      - reportes
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /reportes/api/portal/notificaciones/:
+    get:
+      operationId: reportes_api_portal_notificaciones_retrieve
+      description: |-
+        GET /api/portal/notificaciones/
+
+        Obtener notificaciones del usuario
+
+        Query params:
+        - solo_no_leidas: true/false (default: false)
+        - limit: número de resultados (default: 20)
+      tags:
+      - reportes
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /reportes/api/portal/notificaciones/{id_notificacion}/marcar-leida/:
+    post:
+      operationId: reportes_api_portal_notificaciones_marcar_leida_create
+      description: |-
+        POST /api/portal/notificaciones/<id>/marcar-leida/
+
+        Marcar una notificación como leída
+      parameters:
+      - in: path
+        name: id_notificacion
+        schema:
+          type: integer
+        required: true
+      tags:
+      - reportes
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+components:
+  schemas:
+    Categoria:
+      type: object
+      description: Serializer para categorías de productos
+      properties:
+        id_categoria:
+          type: integer
+          readOnly: true
+        nombre:
+          type: string
+          maxLength: 100
+        activo:
+          type: boolean
+        id_categoria_padre:
+          type: integer
+          nullable: true
+        subcategorias:
+          type: string
+          readOnly: true
+        total_productos:
+          type: string
+          readOnly: true
+      required:
+      - id_categoria
+      - nombre
+      - subcategorias
+      - total_productos
+    CategoriaRequest:
+      type: object
+      description: Serializer para categorías de productos
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 100
+        activo:
+          type: boolean
+        id_categoria_padre:
+          type: integer
+          nullable: true
+      required:
+      - nombre
+    Cliente:
+      type: object
+      description: Serializer para clientes
+      properties:
+        id_cliente:
+          type: integer
+          readOnly: true
+        nombres:
+          type: string
+          maxLength: 100
+        apellidos:
+          type: string
+          maxLength: 100
+        nombre_completo:
+          type: string
+          readOnly: true
+        ruc_ci:
+          type: string
+          maxLength: 20
+        telefono:
+          type: string
+          nullable: true
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        direccion:
+          type: string
+          nullable: true
+          maxLength: 255
+        activo:
+          type: boolean
+        total_hijos:
+          type: string
+          readOnly: true
+      required:
+      - apellidos
+      - id_cliente
+      - nombre_completo
+      - nombres
+      - ruc_ci
+      - total_hijos
+    ClienteRequest:
+      type: object
+      description: Serializer para clientes
+      properties:
+        nombres:
+          type: string
+          minLength: 1
+          maxLength: 100
+        apellidos:
+          type: string
+          minLength: 1
+          maxLength: 100
+        ruc_ci:
+          type: string
+          minLength: 1
+          maxLength: 20
+        telefono:
+          type: string
+          nullable: true
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        direccion:
+          type: string
+          nullable: true
+          maxLength: 255
+        activo:
+          type: boolean
+      required:
+      - apellidos
+      - nombres
+      - ruc_ci
+    DetalleVenta:
+      type: object
+      description: Serializer para detalle de venta
+      properties:
+        id_detalle:
+          type: integer
+          readOnly: true
+        id_producto:
+          type: integer
+        producto_codigo:
+          type: string
+          readOnly: true
+        producto_descripcion:
+          type: string
+          readOnly: true
+        cantidad:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+        precio_unitario:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        subtotal_total:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+      required:
+      - cantidad
+      - id_detalle
+      - id_producto
+      - precio_unitario
+      - producto_codigo
+      - producto_descripcion
+      - subtotal_total
+    Empleado:
+      type: object
+      description: Serializer para empleados
+      properties:
+        id_empleado:
+          type: integer
+          readOnly: true
+        nombre:
+          type: string
+          maxLength: 100
+        apellido:
+          type: string
+          maxLength: 100
+        nombre_completo:
+          type: string
+          readOnly: true
+        usuario:
+          type: string
+          maxLength: 50
+        id_rol:
+          type: integer
+        rol_nombre:
+          type: string
+          readOnly: true
+        telefono:
+          type: string
+          nullable: true
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        activo:
+          type: boolean
+      required:
+      - apellido
+      - id_empleado
+      - id_rol
+      - nombre
+      - nombre_completo
+      - rol_nombre
+      - usuario
+    EmpleadoRequest:
+      type: object
+      description: Serializer para empleados
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 100
+        apellido:
+          type: string
+          minLength: 1
+          maxLength: 100
+        usuario:
+          type: string
+          minLength: 1
+          maxLength: 50
+        id_rol:
+          type: integer
+        telefono:
+          type: string
+          nullable: true
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        activo:
+          type: boolean
+      required:
+      - apellido
+      - id_rol
+      - nombre
+      - usuario
+    EstadoB91Enum:
+      enum:
+      - PROCESADO
+      - ANULADO
+      type: string
+      description: |-
+        * `PROCESADO` - Procesado
+        * `ANULADO` - Anulado
+    EstadoPagoEnum:
+      enum:
+      - PENDIENTE
+      - PARCIAL
+      - PAGADA
+      type: string
+      description: |-
+        * `PENDIENTE` - Pendiente
+        * `PARCIAL` - Parcial
+        * `PAGADA` - Pagada
+    MovimientoStock:
+      type: object
+      description: Serializer para movimientos de stock
+      properties:
+        id_movimientostock:
+          type: integer
+          readOnly: true
+        id_producto:
+          type: integer
+        producto_descripcion:
+          type: string
+          readOnly: true
+        tipo_movimiento:
+          $ref: '#/components/schemas/TipoMovimientoEnum'
+        cantidad:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+        stock_resultante:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          description: Se calcula automáticamente por el trigger trg_stock_unico_after_movement
+        fecha_hora:
+          type: string
+          format: date-time
+          readOnly: true
+        id_empleado_autoriza:
+          type: integer
+        empleado_nombre:
+          type: string
+          readOnly: true
+        referencia_documento:
+          type: string
+          nullable: true
+          maxLength: 50
+      required:
+      - cantidad
+      - empleado_nombre
+      - fecha_hora
+      - id_empleado_autoriza
+      - id_movimientostock
+      - id_producto
+      - producto_descripcion
+      - tipo_movimiento
+    MovimientoStockRequest:
+      type: object
+      description: Serializer para movimientos de stock
+      properties:
+        id_producto:
+          type: integer
+        tipo_movimiento:
+          $ref: '#/components/schemas/TipoMovimientoEnum'
+        cantidad:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+        stock_resultante:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          description: Se calcula automáticamente por el trigger trg_stock_unico_after_movement
+        id_empleado_autoriza:
+          type: integer
+        referencia_documento:
+          type: string
+          nullable: true
+          maxLength: 50
+      required:
+      - cantidad
+      - id_empleado_autoriza
+      - id_producto
+      - tipo_movimiento
+    PaginatedCategoriaList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Categoria'
+    PaginatedClienteList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Cliente'
+    PaginatedEmpleadoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Empleado'
+    PaginatedMovimientoStockList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MovimientoStock'
+    PaginatedProductoListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductoList'
+    PaginatedProveedorList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Proveedor'
+    PaginatedStockList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Stock'
+    PaginatedTarjetaList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tarjeta'
+    PaginatedVentaListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/VentaList'
+    PatchedCategoriaRequest:
+      type: object
+      description: Serializer para categorías de productos
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 100
+        activo:
+          type: boolean
+        id_categoria_padre:
+          type: integer
+          nullable: true
+    PatchedClienteRequest:
+      type: object
+      description: Serializer para clientes
+      properties:
+        nombres:
+          type: string
+          minLength: 1
+          maxLength: 100
+        apellidos:
+          type: string
+          minLength: 1
+          maxLength: 100
+        ruc_ci:
+          type: string
+          minLength: 1
+          maxLength: 20
+        telefono:
+          type: string
+          nullable: true
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        direccion:
+          type: string
+          nullable: true
+          maxLength: 255
+        activo:
+          type: boolean
+    PatchedEmpleadoRequest:
+      type: object
+      description: Serializer para empleados
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 100
+        apellido:
+          type: string
+          minLength: 1
+          maxLength: 100
+        usuario:
+          type: string
+          minLength: 1
+          maxLength: 50
+        id_rol:
+          type: integer
+        telefono:
+          type: string
+          nullable: true
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        activo:
+          type: boolean
+    PatchedMovimientoStockRequest:
+      type: object
+      description: Serializer para movimientos de stock
+      properties:
+        id_producto:
+          type: integer
+        tipo_movimiento:
+          $ref: '#/components/schemas/TipoMovimientoEnum'
+        cantidad:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+        stock_resultante:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          description: Se calcula automáticamente por el trigger trg_stock_unico_after_movement
+        id_empleado_autoriza:
+          type: integer
+        referencia_documento:
+          type: string
+          nullable: true
+          maxLength: 50
+    PatchedProductoListRequest:
+      type: object
+      description: Serializer ligero para listados de productos
+      properties:
+        codigo_barra:
+          type: string
+          nullable: true
+          maxLength: 50
+        descripcion:
+          type: string
+          minLength: 1
+          maxLength: 255
+        stock_minimo:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          nullable: true
+        activo:
+          type: boolean
+    PatchedProveedorRequest:
+      type: object
+      description: Serializer para proveedores
+      properties:
+        razon_social:
+          type: string
+          minLength: 1
+          maxLength: 255
+        ruc:
+          type: string
+          minLength: 1
+          maxLength: 20
+        telefono:
+          type: string
+          nullable: true
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        direccion:
+          type: string
+          nullable: true
+          maxLength: 255
+        activo:
+          type: boolean
+    PatchedTarjetaRequest:
+      type: object
+      description: Serializer para tarjetas
+      properties:
+        id_hijo:
+          type: integer
+        estado:
+          $ref: '#/components/schemas/TarjetaEstadoEnum'
+        fecha_vencimiento:
+          type: string
+          format: date
+          nullable: true
+    PatchedVentaListRequest:
+      type: object
+      description: Serializer ligero para listados de ventas
+      properties:
+        fecha:
+          type: string
+          format: date-time
+        tipo_venta:
+          $ref: '#/components/schemas/TipoVentaEnum'
+        monto_total:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        estado:
+          $ref: '#/components/schemas/EstadoB91Enum'
+    ProductoDetail:
+      type: object
+      description: Serializer detallado para un producto específico
+      properties:
+        id_producto:
+          type: integer
+          readOnly: true
+        categoria:
+          allOf:
+          - $ref: '#/components/schemas/Categoria'
+          readOnly: true
+        stock_info:
+          type: string
+          readOnly: true
+        precios:
+          type: string
+          readOnly: true
+        codigo_barra:
+          type: string
+          nullable: true
+          maxLength: 50
+        descripcion:
+          type: string
+          maxLength: 255
+        stock_minimo:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          nullable: true
+        permite_stock_negativo:
+          type: boolean
+          description: 'Permite que el producto tenga stock negativo (ej: almuerzos
+            preparados bajo demanda)'
+        activo:
+          type: boolean
+        id_categoria:
+          type: integer
+        id_unidad_de_medida:
+          type: integer
+        id_impuesto:
+          type: integer
+      required:
+      - categoria
+      - descripcion
+      - id_categoria
+      - id_impuesto
+      - id_producto
+      - id_unidad_de_medida
+      - precios
+      - stock_info
+    ProductoList:
+      type: object
+      description: Serializer ligero para listados de productos
+      properties:
+        id_producto:
+          type: integer
+          readOnly: true
+        codigo_barra:
+          type: string
+          nullable: true
+          maxLength: 50
+        descripcion:
+          type: string
+          maxLength: 255
+        categoria_nombre:
+          type: string
+          readOnly: true
+        stock_minimo:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          nullable: true
+        stock_actual:
+          type: string
+          readOnly: true
+        precio_actual:
+          type: string
+          readOnly: true
+        activo:
+          type: boolean
+      required:
+      - categoria_nombre
+      - descripcion
+      - id_producto
+      - precio_actual
+      - stock_actual
+    ProductoListRequest:
+      type: object
+      description: Serializer ligero para listados de productos
+      properties:
+        codigo_barra:
+          type: string
+          nullable: true
+          maxLength: 50
+        descripcion:
+          type: string
+          minLength: 1
+          maxLength: 255
+        stock_minimo:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          nullable: true
+        activo:
+          type: boolean
+      required:
+      - descripcion
+    Proveedor:
+      type: object
+      description: Serializer para proveedores
+      properties:
+        id_proveedor:
+          type: integer
+          readOnly: true
+        razon_social:
+          type: string
+          maxLength: 255
+        nombre_proveedor:
+          type: string
+          readOnly: true
+        ruc:
+          type: string
+          maxLength: 20
+        telefono:
+          type: string
+          nullable: true
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        direccion:
+          type: string
+          nullable: true
+          maxLength: 255
+        activo:
+          type: boolean
+        total_compras:
+          type: string
+          readOnly: true
+      required:
+      - id_proveedor
+      - nombre_proveedor
+      - razon_social
+      - ruc
+      - total_compras
+    ProveedorRequest:
+      type: object
+      description: Serializer para proveedores
+      properties:
+        razon_social:
+          type: string
+          minLength: 1
+          maxLength: 255
+        ruc:
+          type: string
+          minLength: 1
+          maxLength: 20
+        telefono:
+          type: string
+          nullable: true
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        direccion:
+          type: string
+          nullable: true
+          maxLength: 255
+        activo:
+          type: boolean
+      required:
+      - razon_social
+      - ruc
+    Stock:
+      type: object
+      description: Serializer para stock de productos
+      properties:
+        id_producto:
+          type: integer
+        producto_codigo:
+          type: string
+          readOnly: true
+        producto_descripcion:
+          type: string
+          readOnly: true
+        stock_actual:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+        stock_minimo:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          readOnly: true
+        fecha_ultima_actualizacion:
+          type: string
+          format: date-time
+          readOnly: true
+        alerta_stock_bajo:
+          type: string
+          readOnly: true
+      required:
+      - alerta_stock_bajo
+      - fecha_ultima_actualizacion
+      - id_producto
+      - producto_codigo
+      - producto_descripcion
+      - stock_actual
+      - stock_minimo
+    Tarjeta:
+      type: object
+      description: Serializer para tarjetas
+      properties:
+        nro_tarjeta:
+          type: string
+          readOnly: true
+        id_tarjeta:
+          type: integer
+          readOnly: true
+        codigo_tarjeta:
+          type: string
+          readOnly: true
+        id_hijo:
+          type: integer
+        estudiante_nombre:
+          type: string
+          readOnly: true
+        responsable_nombre:
+          type: string
+          readOnly: true
+        saldo_actual:
+          type: integer
+          readOnly: true
+        estado:
+          $ref: '#/components/schemas/TarjetaEstadoEnum'
+        fecha_creacion:
+          type: string
+          format: date-time
+          readOnly: true
+        fecha_vencimiento:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - codigo_tarjeta
+      - estudiante_nombre
+      - fecha_creacion
+      - id_hijo
+      - id_tarjeta
+      - nro_tarjeta
+      - responsable_nombre
+      - saldo_actual
+    TarjetaEstadoEnum:
+      enum:
+      - Activa
+      - Bloqueada
+      - Vencida
+      type: string
+      description: |-
+        * `Activa` - Activa
+        * `Bloqueada` - Bloqueada
+        * `Vencida` - Vencida
+    TarjetaRequest:
+      type: object
+      description: Serializer para tarjetas
+      properties:
+        id_hijo:
+          type: integer
+        estado:
+          $ref: '#/components/schemas/TarjetaEstadoEnum'
+        fecha_vencimiento:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - id_hijo
+    TipoMovimientoEnum:
+      enum:
+      - Entrada
+      - Salida
+      - Ajuste
+      type: string
+      description: |-
+        * `Entrada` - Entrada
+        * `Salida` - Salida
+        * `Ajuste` - Ajuste
+    TipoVentaEnum:
+      enum:
+      - CONTADO
+      - CREDITO
+      type: string
+      description: |-
+        * `CONTADO` - Contado
+        * `CREDITO` - Crédito
+    TokenObtainPair:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - refresh
+    TokenObtainPairRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
+      - username
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+    TokenVerifyRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - token
+    VentaDetail:
+      type: object
+      description: Serializer detallado para una venta específica
+      properties:
+        id_venta:
+          type: integer
+          readOnly: true
+        cliente:
+          allOf:
+          - $ref: '#/components/schemas/Cliente'
+          readOnly: true
+        detalles:
+          type: array
+          items:
+            $ref: '#/components/schemas/DetalleVenta'
+          readOnly: true
+        total_items:
+          type: string
+          readOnly: true
+        nro_factura_venta:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        fecha:
+          type: string
+          format: date-time
+        monto_total:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        saldo_pendiente:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        estado_pago:
+          $ref: '#/components/schemas/EstadoPagoEnum'
+        estado:
+          $ref: '#/components/schemas/EstadoB91Enum'
+        tipo_venta:
+          $ref: '#/components/schemas/TipoVentaEnum'
+        motivo_credito:
+          type: string
+          nullable: true
+          description: Justificación de la venta a crédito
+        genera_factura_legal:
+          type: boolean
+          description: True si la venta genera factura contable (solo pagos con medios
+            externos)
+        id_cliente:
+          type: integer
+        id_hijo:
+          type: integer
+          nullable: true
+        id_tipo_pago:
+          type: integer
+        id_empleado_cajero:
+          type: integer
+        autorizado_por:
+          type: integer
+          nullable: true
+          description: Supervisor que autorizó la venta (para ventas a crédito con
+            saldo insuficiente)
+      required:
+      - cliente
+      - detalles
+      - fecha
+      - id_cliente
+      - id_empleado_cajero
+      - id_tipo_pago
+      - id_venta
+      - monto_total
+      - tipo_venta
+      - total_items
+    VentaList:
+      type: object
+      description: Serializer ligero para listados de ventas
+      properties:
+        id_venta:
+          type: integer
+          readOnly: true
+        fecha:
+          type: string
+          format: date-time
+        cliente_nombre:
+          type: string
+          readOnly: true
+        cajero_nombre:
+          type: string
+          readOnly: true
+        tipo_venta:
+          $ref: '#/components/schemas/TipoVentaEnum'
+        tipo_pago_descripcion:
+          type: string
+          readOnly: true
+        monto_total:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        estado:
+          $ref: '#/components/schemas/EstadoB91Enum'
+      required:
+      - cajero_nombre
+      - cliente_nombre
+      - fecha
+      - id_venta
+      - monto_total
+      - tipo_pago_descripcion
+      - tipo_venta
+    VentaListRequest:
+      type: object
+      description: Serializer ligero para listados de ventas
+      properties:
+        fecha:
+          type: string
+          format: date-time
+        tipo_venta:
+          $ref: '#/components/schemas/TipoVentaEnum'
+        monto_total:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        estado:
+          $ref: '#/components/schemas/EstadoB91Enum'
+      required:
+      - fecha
+      - monto_total
+      - tipo_venta
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+tags:
+- name: Productos
+  description: Gestión de productos y categorías
+- name: Ventas
+  description: Operaciones de ventas y facturación
+- name: Tarjetas
+  description: Sistema de tarjetas RFID
+- name: Clientes
+  description: Gestión de clientes y estudiantes
+- name: Inventario
+  description: Control de stock y movimientos
+- name: Almuerzos
+  description: Sistema de almuerzos escolares
+- name: Reportes
+  description: Generación de reportes
+- name: Portal
+  description: Portal de padres y consultas online
+- name: Seguridad
+  description: Autenticación y auditoría

@@ -1,0 +1,67 @@
+{
+  "fecha": "2026-01-10T20:09:34.441235",
+  "total_queries": 3,
+  "con_indice": 2,
+  "warnings": 1,
+  "errores": 7,
+  "resultados": [
+    {
+      "nombre": "Ventas del día",
+      "usa_indice": false,
+      "rows": 61,
+      "tipo_acceso": "ALL",
+      "key": null
+    },
+    {
+      "nombre": "Top productos vendidos",
+      "usa_indice": true,
+      "rows": 36,
+      "tipo_acceso": "ref",
+      "key": "idx_detalle_producto_cantidad"
+    },
+    {
+      "nombre": "Ventas por cajero",
+      "usa_indice": true,
+      "rows": 62,
+      "tipo_acceso": "eq_ref",
+      "key": "PRIMARY"
+    }
+  ],
+  "warnings_detalle": [
+    {
+      "nombre": "Ventas del día",
+      "problema": "Escaneo completo sin índice",
+      "rows": 61
+    }
+  ],
+  "errores_detalle": [
+    {
+      "nombre": "Búsqueda producto por código barras",
+      "error": "(1054, \"Unknown column 'cod_barras' in 'where clause'\")"
+    },
+    {
+      "nombre": "Búsqueda tarjeta por número",
+      "error": "unsupported format string passed to NoneType.__format__"
+    },
+    {
+      "nombre": "Productos con stock bajo",
+      "error": "(1054, \"Unknown column 'stock_minimo' in 'where clause'\")"
+    },
+    {
+      "nombre": "Consumos tarjeta del mes",
+      "error": "(1146, \"Table 'cantinatitadb.consumo_tarjeta' doesn't exist\")"
+    },
+    {
+      "nombre": "Recargas online pendientes",
+      "error": "(1054, \"Unknown column 'estado_procesamiento' in 'where clause'\")"
+    },
+    {
+      "nombre": "Clientes con saldo a favor",
+      "error": "(1054, \"Unknown column 'saldo_a_favor' in 'where clause'\")"
+    },
+    {
+      "nombre": "Búsqueda cliente por RUC/CI",
+      "error": "unsupported format string passed to NoneType.__format__"
+    }
+  ]
+}

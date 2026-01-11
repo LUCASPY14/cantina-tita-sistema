@@ -27,12 +27,23 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-)!g6f^48yj^#%45t2bx6$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver', '192.168.100.10']
+
+# CSRF Trusted Origins (para requests POST desde frontend)
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://192.168.100.10:8000',
+    'https://localhost:8000',
+    'https://127.0.0.1:8000',
+    'https://192.168.100.10:8000',
+]
 
 # Django Debug Toolbar
 INTERNAL_IPS = [
     '127.0.0.1',
     'localhost',
+    '192.168.100.10',
 ]
 
 
@@ -50,6 +61,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'drf_yasg',
+    'drf_spectacular',  # Documentación OpenAPI 3.0
     'django_filters',
     'corsheaders',
     'debug_toolbar',
@@ -202,6 +214,84 @@ REST_FRAMEWORK = {
     'DATETIME_FORMAT': '%d/%m/%Y %H:%M:%S',
     'DATE_FORMAT': '%d/%m/%Y',
     'TIME_FORMAT': '%H:%M:%S',
+    # Schema configurado con drf-spectacular
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# =============================================================================
+# DRF-SPECTACULAR CONFIGURATION (OpenAPI 3.0)
+# =============================================================================
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Cantina Tita API',
+    'DESCRIPTION': '''
+    API REST completa para el Sistema de Gestión de Cantina Tita
+    
+    ## Funcionalidades principales:
+    - 💰 **Ventas:** Gestión completa de ventas, pagos y facturación
+    - 📦 **Inventario:** Control de stock, kardex y ajustes
+    - 💳 **Tarjetas:** Sistema de tarjetas RFID, recargas y consumos
+    - 👥 **Clientes:** Gestión de clientes, hijos y restricciones alimentarias
+    - 🏫 **Almuerzos:** Sistema de almuerzos escolares y planes mensuales
+    - 📊 **Reportes:** Generación de reportes PDF/Excel
+    - 🔐 **Seguridad:** Autenticación JWT, 2FA y auditoría completa
+    - 🎯 **Promociones:** Sistema de promociones y descuentos
+    
+    ## Autenticación:
+    Esta API utiliza **JWT (JSON Web Tokens)** para autenticación:
+    
+    1. **Obtener token:** POST /api/v1/auth/token/
+       ```json
+       {"username": "usuario", "password": "contraseña"}
+       ```
+    
+    2. **Usar token:** Incluir en todas las peticiones:
+       ```
+       Authorization: Bearer {access_token}
+       ```
+    
+    3. **Renovar token:** POST /api/v1/auth/token/refresh/
+       ```json
+       {"refresh": "refresh_token"}
+       ```
+    
+    ## Códigos de Respuesta:
+    - **200:** OK - Operación exitosa
+    - **201:** Created - Recurso creado exitosamente
+    - **400:** Bad Request - Datos inválidos
+    - **401:** Unauthorized - No autenticado
+    - **403:** Forbidden - No autorizado
+    - **404:** Not Found - Recurso no encontrado
+    - **500:** Internal Server Error - Error del servidor
+    ''',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': True,
+        'filter': True,
+    },
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SORT_OPERATIONS': False,
+    'CONTACT': {
+        'name': 'Soporte Técnico Cantina Tita',
+        'email': 'contacto@cantinatita.com'
+    },
+    'LICENSE': {
+        'name': 'Propietario',
+    },
+    'TAGS': [
+        {'name': 'Productos', 'description': 'Gestión de productos y categorías'},
+        {'name': 'Ventas', 'description': 'Operaciones de ventas y facturación'},
+        {'name': 'Tarjetas', 'description': 'Sistema de tarjetas RFID'},
+        {'name': 'Clientes', 'description': 'Gestión de clientes y estudiantes'},
+        {'name': 'Inventario', 'description': 'Control de stock y movimientos'},
+        {'name': 'Almuerzos', 'description': 'Sistema de almuerzos escolares'},
+        {'name': 'Reportes', 'description': 'Generación de reportes'},
+        {'name': 'Portal', 'description': 'Portal de padres y consultas online'},
+        {'name': 'Seguridad', 'description': 'Autenticación y auditoría'},
+    ],
 }
 
 # =============================================================================
@@ -323,8 +413,9 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 # =============================================================================
 
 # Backend de email (SMTP para producción, console para desarrollo)
-# Para desarrollo local, puedes cambiar a 'console.EmailBackend'
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+# TEMPORAL: Usando console para evitar errores SMTP durante pruebas
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
 
 # Configuración SMTP (Gmail, SendGrid, Amazon SES, etc.)
 EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
@@ -335,6 +426,39 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 
 DEFAULT_FROM_EMAIL = 'noreply@cantinatita.com'
 SERVER_EMAIL = 'server@cantinatita.com'
+
+# =============================================================================
+# CONFIGURACIÓN DE SMS
+# =============================================================================
+
+# Proveedor de SMS: 'tigo', 'personal'
+SMS_PROVIDER = config('SMS_PROVIDER', default='tigo')
+
+# Tigo Paraguay SMS
+TIGO_SMS_API_KEY = config('TIGO_SMS_API_KEY', default='')
+TIGO_SMS_API_URL = config('TIGO_SMS_API_URL', default='https://api.tigo.com.py/sms/send')
+
+# Personal Paraguay SMS
+PERSONAL_SMS_API_KEY = config('PERSONAL_SMS_API_KEY', default='')
+PERSONAL_SMS_API_URL = config('PERSONAL_SMS_API_URL', default='https://api.personal.com.py/sms')
+
+# =============================================================================
+# CONFIGURACIÓN DE WHATSAPP
+# =============================================================================
+
+# Proveedor de WhatsApp: 'whatsapp-web-js' (GRATIS), 'business_api' (pago)
+WHATSAPP_PROVIDER = config('WHATSAPP_PROVIDER', default='whatsapp-web-js')
+
+# WhatsApp Web JS (servidor local Node.js - GRATIS)
+# ⚠️ NO OFICIAL - Solo usar con número secundario
+WHATSAPP_SERVER_URL = config('WHATSAPP_SERVER_URL', default='http://localhost:3000')
+
+# WhatsApp Business API (Meta - Oficial, pago ~$0.006/msg)
+WHATSAPP_ACCESS_TOKEN = config('WHATSAPP_ACCESS_TOKEN', default='')
+WHATSAPP_PHONE_NUMBER_ID = config('WHATSAPP_PHONE_NUMBER_ID', default='')
+
+# Número de contacto de la cantina (para links wa.me)
+CANTITA_WHATSAPP_CONTACTO = config('CANTITA_WHATSAPP_CONTACTO', default='+595981234567')
 
 # =============================================================================
 # GOOGLE reCAPTCHA
@@ -356,12 +480,65 @@ SILENCED_SYSTEM_CHECKS = ['django_recaptcha.recaptcha_test_key_error']
 # CONFIGURACIÓN DE CACHE
 # =============================================================================
 
+# =============================================================================
+# CONFIGURACIÓN DE CACHE (REDIS)
+# =============================================================================
+
+# TEMPORAL: Usando LocMem cache para evitar problemas de compatibilidad con Redis
+# Para producción: instalar Redis y configurar correctamente
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
+        'LOCATION': 'cantina-cache',
+        'TIMEOUT': 300,  # 5 minutos
     }
 }
+
+# Comentado temporalmente - problema de compatibilidad redis-py
+# try:
+#     import redis
+#     # Redis está disponible
+#     CACHES = {
+#         'default': {
+#             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+#             'LOCATION': 'redis://127.0.0.1:6379/1',
+#             'OPTIONS': {
+#                 'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#                 'CONNECTION_POOL_KWARGS': {
+#                     'max_connections': 50,
+#                     'retry_on_timeout': True,
+#                 },
+#                 'SOCKET_CONNECT_TIMEOUT': 5,
+#                 'SOCKET_TIMEOUT': 5,
+#                 'IGNORE_EXCEPTIONS': True,  # No fallar si Redis no está disponible
+#             },
+#             'KEY_PREFIX': 'cantina',
+#             'TIMEOUT': 300,  # 5 minutos por defecto
+#         },
+#         # Cache separado para sesiones
+#         'sessions': {
+#             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+#             'LOCATION': 'redis://127.0.0.1:6379/2',
+#             'OPTIONS': {
+#                 'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#             },
+#             'KEY_PREFIX': 'session',
+#             'TIMEOUT': 86400,  # 24 horas
+#         },
+#     }
+#     
+#     # Usar Redis para sesiones
+#     SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+#     SESSION_CACHE_ALIAS = 'sessions'
+#     
+# except ImportError:
+#     # Redis no disponible, usar LocMem como fallback
+#     CACHES = {
+#         'default': {
+#             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+#             'LOCATION': 'unique-snowflake',
+#         }
+#     }
 
 # Cache timeout en segundos (5 minutos para dashboard)
 CACHE_MIDDLEWARE_SECONDS = 300
@@ -395,3 +572,113 @@ EKUATIA_KEY_PATH = config('EKUATIA_KEY_PATH', default='')
 IMPRESORA_TIPO = config('IMPRESORA_TIPO', default='USB')  # USB, RED, BLUETOOTH
 IMPRESORA_HOST = config('IMPRESORA_HOST', default='')  # Para impresora por RED
 IMPRESORA_PUERTO = config('IMPRESORA_PUERTO', default='9100', cast=int)
+
+# =============================================================================
+# LOGGING MEJORADO
+# =============================================================================
+
+# Crear directorio de logs si no existe
+LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+if not os.path.exists(LOGS_DIR):
+    os.makedirs(LOGS_DIR)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {asctime} {message}',
+            'style': '{',
+        },
+    },
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'cantina.log'),
+            'maxBytes': 10485760,  # 10MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        'error_file': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'errors.log'),
+            'maxBytes': 10485760,
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        'security_file': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'security.log'),
+            'maxBytes': 10485760,
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        'mail_admins': {
+            'level': 'ERROR',
+            'class': 'django.utils.log.AdminEmailHandler',
+            'filters': ['require_debug_false'],
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['error_file', 'mail_admins'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.security': {
+            'handlers': ['security_file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'gestion': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+    'root': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+    },
+}
+
+# Configuración de seguridad HTTPS
+# NOTA: Comentadas temporalmente para pruebas con HTTP
+# DESCOMENTAR cuando tengas certificado SSL instalado
+# SECURE_SSL_REDIRECT = True
+# SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True
+# SECURE_HSTS_SECONDS = 31536000  # 1 año
+# SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+# SECURE_BROWSER_XSS_FILTER = True
+# SECURE_CONTENT_TYPE_NOSNIFF = True  # Ya está activado
+# X_FRAME_OPTIONS = 'DENY'  # Ya está configurado
+
+
+# Archivos estáticos para producción
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')

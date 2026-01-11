@@ -99,45 +99,45 @@ def buscar_producto_api(request):
         productos = Producto.objects.filter(activo=True)
         
         # Intenta buscar por código de barras exacto primero
-        producto_exacto = productos.filter(codigo_barra__iexact=query).first()
+        producto_exacto = productos.filter(codigo_barra__iexact=query).select_related(
+            'id_categoria', 'id_unidad_de_medida', 'id_impuesto'
+        ).prefetch_related(
+            'precios__id_lista',
+            'productoalergeno_set__id_alergeno'
+        ).first()
         
         if producto_exacto:
             # Si encuentra código exacto, devuelve solo ese producto
             productos_encontrados = [producto_exacto]
         else:
-            # Búsqueda por texto en descripción o código parcial
+            # Búsqueda por texto en descripción o código parcial (OPTIMIZADO)
             productos_encontrados = productos.filter(
                 Q(descripcion__icontains=query) |
                 Q(codigo_barra__icontains=query)
             ).select_related(
                 'id_categoria', 'id_unidad_de_medida', 'id_impuesto', 'stock'
+            ).prefetch_related(
+                'precios__id_lista',
+                'productoalergeno_set__id_alergeno'
             )[:limite]
         
-        # Serializar productos
+        # Serializar productos (sin queries adicionales)
         resultado = []
         for p in productos_encontrados:
-            # Obtener precio de venta actual (última lista de precios)
-            try:
-                precio_producto = p.precios.filter(
-                    id_lista__activo=True
-                ).order_by('-id_lista__fecha_vigencia').first()
-                precio_venta = precio_producto.precio_unitario_neto if precio_producto else 5000
-            except:
-                precio_venta = 5000
+            # Obtener precio de venta actual (ya prefetched)
+            precio_producto = None
+            for precio in p.precios.all():
+                if precio.id_lista and precio.id_lista.activo:
+                    if not precio_producto or precio.id_lista.fecha_vigencia > precio_producto.id_lista.fecha_vigencia:
+                        precio_producto = precio
             
-            # Stock actual
-            try:
-                stock_actual = p.stock.stock_actual if hasattr(p, 'stock') and p.stock else 0
-            except:
-                stock_actual = 0
+            precio_venta = precio_producto.precio_unitario_neto if precio_producto else 5000
             
-            # Alérgenos asociados
-            try:
-                alergenos = list(
-                    p.productoalergeno_set.values_list('id_alergeno__nombre', flat=True)
-                )
-            except:
-                alergenos = []
+            # Stock actual (ya en select_related)
+            stock_actual = p.stock.stock_actual if hasattr(p, 'stock') and p.stock else 0
+            
+            # Alérgenos asociados (ya prefetched)
+            alergenos = [pa.id_alergeno.nombre for pa in p.productoalergeno_set.all() if pa.id_alergeno]
             
             resultado.append({
                 'id': p.id_producto,
