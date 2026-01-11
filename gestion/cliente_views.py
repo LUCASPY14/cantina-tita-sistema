@@ -99,7 +99,7 @@ def gestionar_clientes_view(request):
         'solo_sin_usuario': solo_sin_usuario,
     }
     
-    return render(request, 'clientes/gestionar_clientes.html', context)
+    return render(request, 'pos/gestionar_clientes.html', context)
 
 
 @login_required

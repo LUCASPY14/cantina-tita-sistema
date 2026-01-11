@@ -880,25 +880,26 @@ def dashboard_ventas_dia(request):
     
     GET /pos/dashboard/
     """
-    from datetime import date
+    from datetime import datetime
     from django.db.models import Sum, Count, F
     from decimal import Decimal
     
     try:
-        hoy = date.today()
+        hoy = datetime.now().date()
+        hoy_dt = datetime.now()  # Para el template con formato de fecha completo
         
         # Ventas del día
         ventas_hoy = Ventas.objects.filter(
-            fecha_venta__date=hoy
+            fecha__date=hoy
         ).select_related('id_cliente', 'id_hijo')
         
         # Estadísticas generales
         total_ventas = ventas_hoy.count()
-        monto_total = ventas_hoy.aggregate(total=Sum('monto_venta'))['total'] or Decimal('0')
+        monto_total = ventas_hoy.aggregate(total=Sum('monto_total'))['total'] or Decimal('0')
         
         # Productos más vendidos
         productos_vendidos = DetalleVenta.objects.filter(
-            id_venta__fecha_venta__date=hoy
+            id_venta__fecha__date=hoy
         ).values('id_producto__descripcion').annotate(
             cantidad_total=Sum('cantidad'),
             ingresos=Sum(F('cantidad') * F('precio_unitario'), output_field=models.DecimalField())
@@ -906,40 +907,40 @@ def dashboard_ventas_dia(request):
         
         # Ingresos por método de pago
         ingresos_pago = PagosVenta.objects.filter(
-            id_venta__fecha_venta__date=hoy
+            id_venta__fecha__date=hoy
         ).values('id_medio_pago__descripcion').annotate(
             total=Sum('monto_aplicado'),
-            cantidad=Count('id')
+            cantidad=Count('id_pago_venta')
         ).order_by('-total')
         
         # Evolución por hora
-        from django.db.models.functions import Hour
+        from django.db.models.functions import ExtractHour
         evoluccion_hora = Ventas.objects.filter(
-            fecha_venta__date=hoy
+            fecha__date=hoy
         ).annotate(
-            hora=Hour('fecha_venta')
+            hora=ExtractHour('fecha')
         ).values('hora').annotate(
             ventas=Count('id_venta'),
-            monto=Sum('monto_venta')
+            monto=Sum('monto_total')
         ).order_by('hora')
         
         # Estadísticas de ventas por tarjeta de estudiante vs efectivo
         ventas_tarjeta_est = DetalleVenta.objects.filter(
-            id_venta__fecha_venta__date=hoy
+            id_venta__fecha__date=hoy
         ).filter(
             id_venta__id_hijo__isnull=False
         ).aggregate(
-            cantidad=Count('id'),
+            cantidad=Count('id_detalle'),
             monto=Sum('precio_unitario')
         )
         
         # Top clientes
         top_clientes = Ventas.objects.filter(
-            fecha_venta__date=hoy
-        ).values('id_cliente__nombre_completo').annotate(
+            fecha__date=hoy
+        ).values('id_cliente__nombres', 'id_cliente__apellidos').annotate(
             cantidad_compras=Count('id_venta'),
-            monto_total=Sum('monto_venta')
-        ).order_by('-monto_total')[:5]
+            monto_total_calc=Sum('monto_total')
+        ).order_by('-monto_total_calc')[:5]
         
         # Preparar datos para gráficas
         horas_data = [item['hora'] or 0 for item in evoluccion_hora]
@@ -955,7 +956,7 @@ def dashboard_ventas_dia(request):
         productos_cantidades = [int(item['cantidad_total']) for item in productos_vendidos]
         
         context = {
-            'hoy': hoy,
+            'hoy': hoy_dt,
             'total_ventas': total_ventas,
             'monto_total': float(monto_total),
             'productos_vendidos': list(productos_vendidos),

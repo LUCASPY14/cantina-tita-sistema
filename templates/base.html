@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es" data-theme="light">
 <head>
@@ -124,7 +125,10 @@
     
     <!-- Navbar -->
     <div class="navbar bg-primary text-white shadow-lg">
-        <div class="flex-1">
+        <div class="flex-1 flex items-center gap-3">
+            <img src="{% static 'img/logo.png' %}" alt="Cantina Tita" 
+                 style="height: 40px; width: auto;" 
+                 onerror="this.onerror=null; this.style.display='none';">
             <a href="{% url 'pos:venta' %}" class="btn btn-ghost text-xl font-bold">
                 🍕 Cantina Tita POS
             </a>
@@ -191,6 +195,9 @@
             <div class="text-sm" x-data="clock()" x-text="time"></div>
         </div>
     </div>
+    
+    <!-- Línea divisoria con gradiente -->
+    <div style="height: 3px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
     
     <!-- Contenido principal -->
     <main class="container mx-auto p-4">

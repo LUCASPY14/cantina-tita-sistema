@@ -324,27 +324,29 @@
         /* Tarjeta */
         .tarjeta-section {
             background: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
             border: 2px solid #e0e0e0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
 
         .tarjeta-label {
-            font-weight: 600;
+            font-weight: 700;
             color: #333;
-            font-size: 0.9rem;
-            margin-bottom: 8px;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
             display: block;
         }
 
         .tarjeta-input {
             width: 100%;
             border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 10px 12px;
-            font-size: 0.9rem;
+            border-radius: 10px;
+            padding: 14px 16px;
+            font-size: 1.1rem;
             transition: all 0.3s ease;
+            font-weight: 600;
         }
 
         .tarjeta-input:focus {
@@ -354,13 +356,20 @@
         }
 
         .tarjeta-info {
-            background: #f0f7ff;
-            border: 2px solid #667eea;
-            border-radius: 8px;
-            padding: 12px;
-            margin-top: 10px;
+            background: linear-gradient(135deg, #f0f7ff 0%, #e8f0ff 100%);
+            border: 3px solid #667eea;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 12px;
             color: #333;
-            font-size: 0.85rem;
+            font-size: 1rem;
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .tarjeta-info:hover {
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            transform: translateY(-2px);
         }
 
         .tarjeta-info strong {
@@ -750,29 +759,72 @@
                         let restriccionesHtml = '';
                         if (est.restricciones && est.restricciones.length > 0) {
                             restriccionesHtml = `
-                                <div style="margin-top: 8px; padding: 8px; background: #fff3cd; border-radius: 5px; font-size: 0.75rem;">
-                                    <strong>⚠️ Restricciones:</strong><br/>
-                                    ${est.restricciones.map(r => `• ${r.tipo_restriccion} (${r.severidad})`).join('<br/>')}
+                                <div style="margin-top: 12px; padding: 15px; background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%); border-left: 5px solid #ffc107; border-radius: 10px; font-size: 0.95rem; box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);">
+                                    <div style="font-weight: 700; color: #856404; margin-bottom: 8px; font-size: 1.05rem;">
+                                        ⚠️ Restricciones Alimentarias
+                                    </div>
+                                    <div style="color: #856404;">
+                                        ${est.restricciones.map(r => `
+                                            <div style="margin-bottom: 4px; padding: 4px 0;">
+                                                • <strong>${r.tipo_restriccion}</strong> 
+                                                <span style="background: #dc3545; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-left: 5px;">
+                                                    ${r.severidad}
+                                                </span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
                                 </div>
                             `;
                         }
                         
                         tarjetaInfo.innerHTML = `
                             <div class="tarjeta-info">
-                                <div style="display: flex; justify-content: space-between; align-items: start;">
-                                    <div>
-                                        <strong><i class="fas fa-check-circle" style="color: #28a745;"></i> ${est.nombre}</strong><br/>
-                                        <small style="color: #666;">Grado: ${est.grado}</small><br/>
-                                        <small style="color: #666;">Responsable: ${est.cliente}</small>
+                                <!-- Foto del estudiante centrada -->
+                                <div style="text-align: center; margin-bottom: 15px;">
+                                    ${est.foto_perfil ? `
+                                        <img src="${est.foto_perfil}" 
+                                             alt="${est.nombre}" 
+                                             style="width: 120px; height: 120px; border-radius: 15px; object-fit: cover; border: 4px solid #667eea; box-shadow: 0 6px 15px rgba(0,0,0,0.2);"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+                                        <div style="display: none; width: 120px; height: 120px; border-radius: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); align-items: center; justify-content: center; color: white; font-size: 3.5rem; border: 4px solid #667eea; box-shadow: 0 6px 15px rgba(0,0,0,0.2);">
+                                            👤
+                                        </div>
+                                    ` : `
+                                        <div style="width: 120px; height: 120px; border-radius: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 3.5rem; border: 4px solid #667eea; box-shadow: 0 6px 15px rgba(0,0,0,0.2);">
+                                            👤
+                                        </div>
+                                    `}
+                                </div>
+                                
+                                <!-- Información del estudiante -->
+                                <div style="text-align: center;">
+                                    <!-- Nombre -->
+                                    <div style="font-size: 1.3rem; font-weight: 700; color: #333; margin-bottom: 12px;">
+                                        <i class="fas fa-check-circle" style="color: #28a745;"></i> ${est.nombre}
                                     </div>
-                                    <div style="text-align: right;">
-                                        <div style="font-weight: 700; color: #667eea; font-size: 1.1rem;">
+                                    
+                                    <!-- Saldo destacado -->
+                                    <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); margin-bottom: 15px;">
+                                        <div style="font-weight: 700; color: #28a745; font-size: 1.8rem; line-height: 1.2;">
                                             Gs. ${parseInt(est.saldo).toLocaleString('es-PY')}
                                         </div>
-                                        <small style="color: #999;">Saldo disponible</small>
+                                        <div style="color: #999; font-size: 0.9rem; margin-top: 5px;">Saldo disponible</div>
                                     </div>
+                                    
+                                    <!-- Grado y Responsable -->
+                                    <div style="text-align: left; background: #f8f9fa; padding: 12px; border-radius: 10px; margin-bottom: 10px;">
+                                        <div style="font-size: 1rem; color: #666; margin-bottom: 8px;">
+                                            <i class="fas fa-graduation-cap" style="color: #667eea; width: 20px;"></i> 
+                                            <strong>Grado:</strong> ${est.grado}
+                                        </div>
+                                        <div style="font-size: 1rem; color: #666;">
+                                            <i class="fas fa-user" style="color: #667eea; width: 20px;"></i> 
+                                            <strong>Responsable:</strong> ${est.cliente}
+                                        </div>
+                                    </div>
+                                    
+                                    ${restriccionesHtml}
                                 </div>
-                                ${restriccionesHtml}
                             </div>
                         `;
                         this.disabled = true;

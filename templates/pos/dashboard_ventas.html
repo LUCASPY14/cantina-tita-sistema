@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load humanize %}
 
 {% block title %}Dashboard - Ventas del Día{% endblock %}
 
@@ -67,25 +68,33 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1 class="h2">
-                📊 Dashboard de Ventas
-                <small class="text-muted">{{ hoy|date:"d 'de' F 'de' Y" }}</small>
-            </h1>
+    <!-- Header con Logo -->
+    <div class="row mb-4 align-items-center">
+        <div class="col-auto">
+            <img src="{% static 'img/logo.png' %}" alt="Cantina Tita Logo" 
+                 style="height: 60px; width: auto;" 
+                 onerror="this.onerror=null; this.style.display='none';">
         </div>
-        <div class="col-md-4 text-end">
+        <div class="col">
+            <h1 class="h2 mb-0">
+                📊 Dashboard de Ventas
+            </h1>
+            <small class="text-muted">{{ hoy|date:"d 'de' F 'de' Y" }}</small>
+        </div>
+        <div class="col-auto">
             <button class="btn btn-outline-primary refresh-btn" onclick="location.reload()">
                 🔄 Actualizar
             </button>
-            <a href="{% url 'pos_general' %}" class="btn btn-outline-secondary">
+            <a href="{% url 'pos:venta' %}" class="btn btn-outline-secondary">
                 ← Volver al POS
             </a>
         </div>
     </div>
 
-    <!-- Estadísticas principales -->
+    <!-- Línea divisoria con gradiente -->
+    <div class="mb-4" style="height: 3px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 2px;"></div>
+
+    <!-- Header de estadísticas -->
     <div class="row mb-4">
         <div class="col-lg-3 col-md-6 mb-3">
             <div class="card dashboard-card success">
@@ -266,12 +275,12 @@
                             <tbody>
                                 {% for cliente in top_clientes %}
                                 <tr>
-                                    <td>{{ cliente.id_cliente__nombre_completo }}</td>
+                                    <td>{{ cliente.id_cliente__nombres }} {{ cliente.id_cliente__apellidos }}</td>
                                     <td class="text-center">
                                         <span class="badge bg-secondary">{{ cliente.cantidad_compras }}</span>
                                     </td>
                                     <td class="text-right">
-                                        <strong>₲{{ cliente.monto_total|floatformat:0|intcomma }}</strong>
+                                        <strong>₲{{ cliente.monto_total_calc|floatformat:0|intcomma }}</strong>
                                     </td>
                                 </tr>
                                 {% endfor %}
