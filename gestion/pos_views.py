@@ -32,6 +32,7 @@ from gestion.promociones_utils import (
     calcular_promociones_disponibles,
     registrar_promocion_aplicada
 )
+from gestion.permisos import acceso_cajero, solo_administrador, solo_gerente_o_superior
 
 
 import os
@@ -40,7 +41,7 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 
 
-@login_required
+@acceso_cajero
 def venta_view(request):
     """Vista principal del POS"""
     # Obtener lista de precios por defecto (ID 1 o la primera)
@@ -87,6 +88,7 @@ def venta_view(request):
     return render(request, 'pos/venta.html', context)
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def buscar_productos(request):
@@ -130,6 +132,7 @@ def buscar_productos(request):
     })
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["GET"])
 @csrf_exempt
@@ -171,6 +174,7 @@ def productos_por_categoria(request):
     })
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 @csrf_exempt
@@ -249,6 +253,7 @@ def buscar_tarjeta(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 @transaction.atomic
+@acceso_cajero
 def procesar_venta(request):
     """Procesar una venta desde el POS"""
     try:
@@ -819,6 +824,7 @@ def procesar_venta(request):
         }, status=500)
 
 
+@acceso_cajero
 @login_required
 def dashboard_view(request):
     """Vista del dashboard con estadísticas y gráficos - Optimizada con cache"""
@@ -1035,6 +1041,7 @@ def dashboard_view(request):
     return render(request, 'pos/dashboard.html', context)
 
 
+@acceso_cajero
 @login_required
 def historial_view(request):
     """Historial de ventas"""
@@ -1053,6 +1060,7 @@ def historial_view(request):
     return render(request, 'pos/historial.html', context)
 
 
+@solo_gerente_o_superior
 @login_required
 def reportes_view(request):
     """Reportes y estadísticas"""
@@ -1275,6 +1283,7 @@ def reportes_view(request):
     return render(request, 'pos/reportes.html', context)
 
 
+@solo_gerente_o_superior
 @login_required
 def exportar_reporte(request):
     """Exportar reporte a Excel o PDF"""
@@ -1595,6 +1604,7 @@ def exportar_pdf(datos, columnas, titulo, fecha_desde, fecha_hasta):
 
 
 
+@acceso_cajero
 @login_required
 def ticket_view(request, venta_id):
     """Vista para imprimir ticket de venta"""
@@ -1681,6 +1691,7 @@ def ticket_view(request, venta_id):
         return JsonResponse({'error': 'Venta no encontrada'}, status=404)
 
 
+@acceso_cajero
 @login_required
 def recargas_view(request):
     """Vista principal del módulo de recargas"""
@@ -1718,6 +1729,7 @@ def recargas_view(request):
     return render(request, 'pos/recargas.html', context)
 
 
+@acceso_cajero
 @login_required
 def procesar_recarga(request):
     """Procesar recarga de tarjeta"""
@@ -1827,6 +1839,7 @@ def procesar_recarga(request):
         }, status=500)
 
 
+@acceso_cajero
 @login_required
 def historial_recargas_view(request):
     """Vista del historial de recargas"""
@@ -1910,6 +1923,7 @@ def historial_recargas_view(request):
     return render(request, 'pos/historial_recargas.html', context)
 
 
+@acceso_cajero
 @login_required
 def comprobante_recarga_view(request, recarga_id):
     """Vista para imprimir comprobante de recarga"""
@@ -1932,6 +1946,7 @@ def comprobante_recarga_view(request, recarga_id):
 
 # ==================== CUENTA CORRIENTE ====================
 
+@acceso_cajero
 @login_required
 def cuenta_corriente_view(request):
     """Vista principal de cuenta corriente"""
@@ -1983,6 +1998,7 @@ def cuenta_corriente_view(request):
     return render(request, 'pos/cuenta_corriente.html', context)
 
 
+@acceso_cajero
 @login_required
 def cc_detalle_view(request, cliente_id):
     """Vista de detalle de cuenta corriente de un cliente"""
@@ -2023,6 +2039,7 @@ def cc_detalle_view(request, cliente_id):
         return JsonResponse({'error': 'Cliente no encontrado'}, status=404)
 
 
+@acceso_cajero
 @login_required
 def cuenta_corriente_unificada(request, cliente_id):
     """Vista unificada de cuenta corriente con timeline, tabla y gráficos"""
@@ -2192,6 +2209,7 @@ def cuenta_corriente_unificada(request, cliente_id):
         return JsonResponse({'error': 'Cliente no encontrado'}, status=404)
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def cc_registrar_pago(request):
@@ -2265,6 +2283,7 @@ def cc_registrar_pago(request):
         }, status=500)
 
 
+@acceso_cajero
 @login_required
 def cc_estado_cuenta(request, cliente_id):
     """Vista de estado de cuenta imprimible"""
@@ -2342,6 +2361,7 @@ def cc_estado_cuenta(request, cliente_id):
 
 # ==================== PROVEEDORES ====================
 
+@solo_administrador
 @login_required
 def proveedores_view(request):
     """Vista principal de gestión de proveedores"""
@@ -2379,6 +2399,7 @@ def proveedores_view(request):
     return render(request, 'pos/proveedores.html', context)
 
 
+@solo_administrador
 @login_required
 def proveedor_detalle_view(request, proveedor_id):
     """Vista de detalle de un proveedor"""
@@ -2395,6 +2416,7 @@ def proveedor_detalle_view(request, proveedor_id):
         return JsonResponse({'error': 'Proveedor no encontrado'}, status=404)
 
 
+@solo_administrador
 @login_required
 @require_http_methods(["POST"])
 def proveedor_crear(request):
@@ -2442,6 +2464,7 @@ def proveedor_crear(request):
         }, status=500)
 
 
+@solo_administrador
 @login_required
 @require_http_methods(["POST"])
 def proveedor_editar(request, proveedor_id):
@@ -2483,6 +2506,7 @@ def proveedor_editar(request, proveedor_id):
         }, status=500)
 
 
+@solo_administrador
 @login_required
 @require_http_methods(["POST"])
 def proveedor_eliminar(request, proveedor_id):
@@ -2511,6 +2535,7 @@ def proveedor_eliminar(request, proveedor_id):
 
 # ==================== INVENTARIO AVANZADO ====================
 
+@solo_administrador
 @login_required
 def inventario_dashboard(request):
     """Dashboard principal de inventario con alertas y estadísticas"""
@@ -2568,6 +2593,7 @@ def inventario_dashboard(request):
     return render(request, 'pos/inventario_dashboard.html', context)
 
 
+@solo_administrador
 @login_required
 def inventario_productos(request):
     """Vista de listado de productos con stock"""
@@ -2620,6 +2646,7 @@ def inventario_productos(request):
     return render(request, 'pos/inventario_productos.html', context)
 
 
+@solo_administrador
 @login_required
 def kardex_producto(request, producto_id):
     """Kardex completo de un producto (historial de movimientos)"""
@@ -2680,6 +2707,7 @@ def kardex_producto(request, producto_id):
         return JsonResponse({'error': 'Producto no encontrado'}, status=404)
 
 
+@solo_administrador
 @login_required
 @require_http_methods(["GET", "POST"])
 def ajuste_inventario_view(request):
@@ -2755,6 +2783,7 @@ def ajuste_inventario_view(request):
     return render(request, 'pos/ajuste_inventario.html', context)
 
 
+@acceso_cajero
 @login_required
 def alertas_inventario(request):
     """Vista de alertas de inventario"""
@@ -2798,6 +2827,7 @@ def alertas_inventario(request):
     return render(request, 'pos/alertas_inventario.html', context)
 
 
+@solo_administrador
 @login_required
 @require_http_methods(["POST"])
 def actualizar_stock_masivo(request):
@@ -2844,6 +2874,7 @@ def actualizar_stock_masivo(request):
 
 # ==================== SISTEMA DE ALERTAS ====================
 
+@acceso_cajero
 @login_required
 def alertas_sistema_view(request):
     """Dashboard de alertas del sistema"""
@@ -2908,6 +2939,7 @@ def alertas_sistema_view(request):
     return render(request, 'pos/alertas_sistema.html', context)
 
 
+@acceso_cajero
 @login_required
 def alertas_tarjetas_saldo_view(request):
     """Vista específica para alertas de saldo bajo en tarjetas"""
@@ -2958,6 +2990,7 @@ def alertas_tarjetas_saldo_view(request):
     return render(request, 'pos/alertas_tarjetas_saldo.html', context)
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def marcar_alerta_vista(request):
@@ -2982,6 +3015,7 @@ def marcar_alerta_vista(request):
         }, status=500)
 
 
+@acceso_cajero
 @login_required
 def enviar_notificacion_saldo(request, tarjeta_id):
     """Enviar notificación de saldo bajo al responsable"""
@@ -3044,6 +3078,7 @@ def enviar_notificacion_saldo(request, tarjeta_id):
 
 # ==================== SISTEMA DE CAJAS ====================
 
+@acceso_cajero
 @login_required
 def cajas_dashboard_view(request):
     """Dashboard principal de cajas"""
@@ -3081,6 +3116,7 @@ def cajas_dashboard_view(request):
     return render(request, 'pos/cajas_dashboard.html', context)
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["GET", "POST"])
 def apertura_caja_view(request):
@@ -3148,6 +3184,7 @@ def apertura_caja_view(request):
     })
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["GET", "POST"])
 def cierre_caja_view(request):
@@ -3226,6 +3263,7 @@ def cierre_caja_view(request):
         })
 
 
+@acceso_cajero
 @login_required
 def arqueo_caja_view(request):
     """Arqueo de caja - conteo de efectivo"""
@@ -3268,6 +3306,7 @@ def arqueo_caja_view(request):
         })
 
 
+@acceso_cajero
 @login_required
 def conciliacion_pagos_view(request):
     """Conciliación de pagos por medio de pago"""
@@ -3308,6 +3347,7 @@ def conciliacion_pagos_view(request):
 
 # ==================== SISTEMA DE COMPRAS ====================
 
+@solo_administrador
 @login_required
 def compras_dashboard_view(request):
     """Dashboard de compras"""
@@ -3345,6 +3385,7 @@ def compras_dashboard_view(request):
     return render(request, 'pos/compras_dashboard.html', context)
 
 
+@solo_administrador
 @login_required
 @require_http_methods(["GET", "POST"])
 def nueva_compra_view(request):
@@ -3430,6 +3471,7 @@ def nueva_compra_view(request):
     return render(request, 'pos/nueva_compra.html', context)
 
 
+@solo_administrador
 @login_required
 @require_http_methods(["GET", "POST"])
 def recepcion_mercaderia_view(request, id_compra):
@@ -3527,6 +3569,7 @@ def recepcion_mercaderia_view(request, id_compra):
         })
 
 
+@solo_administrador
 @login_required
 def deuda_proveedores_view(request):
     """Reporte de deuda con proveedores"""
@@ -3556,7 +3599,7 @@ def deuda_proveedores_view(request):
 
 # ==================== SISTEMA DE COMISIONES ====================
 
-@login_required
+@solo_gerente_o_superior
 def comisiones_dashboard_view(request):
     """Dashboard de comisiones"""
     # Obtener tarifas activas
@@ -3608,6 +3651,7 @@ def comisiones_dashboard_view(request):
     return render(request, 'pos/comisiones_dashboard.html', context)
 
 
+@solo_gerente_o_superior
 @login_required
 @require_http_methods(["GET", "POST"])
 def configurar_tarifas_view(request):
@@ -3759,6 +3803,7 @@ def configurar_tarifas_view(request):
     return render(request, 'pos/configurar_tarifas.html', context)
 
 
+@solo_gerente_o_superior
 @login_required
 def reporte_comisiones_view(request):
     """Reporte de comisiones por período"""
@@ -3844,6 +3889,7 @@ def calcular_comision_recarga(monto, id_medio_pago):
 
 # ==================== SISTEMA DE ALMUERZOS ====================
 
+@acceso_cajero
 @login_required
 def almuerzos_dashboard_view(request):
     """Dashboard principal del sistema de almuerzos"""
@@ -3934,6 +3980,7 @@ def almuerzos_dashboard_view(request):
     return render(request, 'gestion/almuerzos_dashboard.html', context)
 
 
+@acceso_cajero
 @login_required
 def planes_almuerzo_view(request):
     """Gestión de planes de almuerzo"""
@@ -3951,6 +3998,7 @@ def planes_almuerzo_view(request):
     return render(request, 'gestion/planes_almuerzo.html', context)
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def crear_plan_almuerzo(request):
@@ -3982,6 +4030,7 @@ def crear_plan_almuerzo(request):
         }, status=500)
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def editar_plan_almuerzo(request, plan_id):
@@ -4022,6 +4071,7 @@ def editar_plan_almuerzo(request, plan_id):
         }, status=500)
 
 
+@acceso_cajero
 @login_required
 def suscripciones_almuerzo_view(request):
     """Gestión de suscripciones de almuerzos"""
@@ -4099,6 +4149,7 @@ def suscripciones_almuerzo_view(request):
     return render(request, 'gestion/suscripciones_almuerzo.html', context)
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def crear_suscripcion_almuerzo(request):
@@ -4165,6 +4216,7 @@ def crear_suscripcion_almuerzo(request):
         }, status=500)
 
 
+@acceso_cajero
 @login_required
 def registro_consumo_almuerzo_view(request):
     """Registro diario de consumo de almuerzos"""
@@ -4203,6 +4255,7 @@ def registro_consumo_almuerzo_view(request):
     return render(request, 'gestion/registro_consumo_almuerzo.html', context)
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def registrar_consumo_almuerzo(request):
@@ -4275,6 +4328,7 @@ def registrar_consumo_almuerzo(request):
         }, status=500)
 
 
+@acceso_cajero
 @login_required
 def menu_diario_view(request):
     """Gestión de menús diarios"""
@@ -4316,6 +4370,7 @@ def menu_diario_view(request):
     return render(request, 'gestion/menu_diario.html', context)
 
 
+@acceso_cajero
 @login_required
 def facturacion_mensual_almuerzos_view(request):
     """Facturación mensual de almuerzos"""
@@ -4415,6 +4470,7 @@ def facturacion_mensual_almuerzos_view(request):
     return render(request, 'gestion/facturacion_mensual_almuerzos.html', context)
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def generar_facturacion_mensual(request):
@@ -4499,6 +4555,7 @@ def generar_facturacion_mensual(request):
         }, status=500)
 
 
+@acceso_cajero
 @login_required
 def reportes_almuerzos_view(request):
     """Reportes del sistema de almuerzos"""
@@ -4593,6 +4650,7 @@ def reportes_almuerzos_view(request):
 # SISTEMA DE AUTORIZACIONES PARA ANULAR VENTAS Y RECARGAS
 # =============================================================================
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def anular_venta(request, venta_id):
@@ -4707,6 +4765,7 @@ def anular_venta(request, venta_id):
         })
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def anular_recarga(request, recarga_id):
@@ -4810,6 +4869,7 @@ def anular_recarga(request, recarga_id):
 # ADMINISTRACIÓN DE TARJETAS DE AUTORIZACIÓN
 # =============================================================================
 
+@acceso_cajero
 @login_required
 @require_http_methods(["GET"])
 def admin_tarjetas_autorizacion(request):
@@ -4842,6 +4902,7 @@ def admin_tarjetas_autorizacion(request):
     return render(request, 'pos/admin_autorizaciones.html', context)
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def crear_tarjeta_autorizacion(request):
@@ -4910,6 +4971,7 @@ def crear_tarjeta_autorizacion(request):
         })
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def editar_tarjeta_autorizacion(request, tarjeta_id):
@@ -4956,6 +5018,7 @@ def editar_tarjeta_autorizacion(request, tarjeta_id):
         })
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def toggle_tarjeta_autorizacion(request, tarjeta_id):
@@ -4982,6 +5045,7 @@ def toggle_tarjeta_autorizacion(request, tarjeta_id):
         })
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["GET"])
 def ver_logs_autorizacion(request):
@@ -5045,6 +5109,7 @@ def ver_logs_autorizacion(request):
 # GESTIÓN DE FOTOS DE HIJOS PARA IDENTIFICACIÓN EN POS
 # =============================================================================
 
+@acceso_cajero
 @login_required
 @require_http_methods(["GET"])
 def gestionar_fotos_hijos(request):
@@ -5089,6 +5154,7 @@ def gestionar_fotos_hijos(request):
     return render(request, 'pos/gestionar_fotos.html', context)
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 @csrf_exempt
@@ -5161,6 +5227,7 @@ def capturar_foto_hijo(request, hijo_id):
         })
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def eliminar_foto_hijo(request, hijo_id):
@@ -5201,6 +5268,7 @@ def eliminar_foto_hijo(request, hijo_id):
         })
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["GET"])
 def obtener_foto_hijo(request):
@@ -5248,6 +5316,7 @@ def obtener_foto_hijo(request):
 # GESTIÓN DE GRADOS Y PROMOCIONES
 # =============================================================================
 
+@acceso_cajero
 @login_required
 @require_http_methods(["GET"])
 def gestionar_grados_view(request):
@@ -5301,6 +5370,7 @@ def gestionar_grados_view(request):
     return render(request, 'pos/gestionar_grados.html', context)
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def asignar_grado_hijo(request, hijo_id):
@@ -5347,6 +5417,7 @@ def asignar_grado_hijo(request, hijo_id):
         })
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def promocionar_grado_masivo(request):
@@ -5431,6 +5502,7 @@ def promocionar_grado_masivo(request):
         })
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["GET"])
 def historial_grados_view(request):
@@ -5481,6 +5553,7 @@ def historial_grados_view(request):
 # ENDPOINTS PARA MATCHING DE RESTRICCIONES Y PROMOCIONES
 # =============================================================================
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def analizar_restriccion_producto(request):
@@ -5520,6 +5593,7 @@ def analizar_restriccion_producto(request):
         }, status=500)
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def analizar_carrito_restricciones(request):
@@ -5563,6 +5637,7 @@ def analizar_carrito_restricciones(request):
         }, status=500)
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["POST"])
 def calcular_promociones_carrito(request):
@@ -5610,6 +5685,7 @@ def calcular_promociones_carrito(request):
         }, status=500)
 
 
+@acceso_cajero
 @login_required
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -5712,6 +5788,7 @@ def validar_supervisor(request):
 # ENDPOINTS DE VALIDACIÓN PARA ADMINISTRADORES
 # =============================================================================
 
+@acceso_cajero
 @login_required
 @require_http_methods(["GET", "POST"])
 def validar_carga_saldo(request, id_carga):
@@ -5761,6 +5838,7 @@ def validar_carga_saldo(request, id_carga):
         return redirect('pos:lista_cargas_pendientes')
 
 
+@acceso_cajero
 @login_required
 @require_http_methods(["GET", "POST"])
 def validar_pago(request, id_venta):
@@ -5824,6 +5902,7 @@ def validar_pago(request, id_venta):
         return redirect('pos:lista_pagos_pendientes')
 
 
+@acceso_cajero
 @login_required
 def lista_cargas_pendientes(request):
     """
@@ -5883,6 +5962,7 @@ def lista_cargas_pendientes(request):
     return render(request, 'pos/lista_cargas_pendientes.html', context)
 
 
+@acceso_cajero
 @login_required
 def lista_pagos_pendientes(request):
     """

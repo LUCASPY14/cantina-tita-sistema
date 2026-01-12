@@ -11,6 +11,8 @@ from django.db import transaction
 from datetime import date, datetime
 from decimal import Decimal
 
+from gestion.permisos import acceso_cajero, solo_administrador, solo_gerente_o_superior
+
 from .models import (
     TipoAlmuerzo, 
     RegistroConsumoAlmuerzo, 
@@ -29,6 +31,7 @@ from .cache_reportes import get_reporte_cacheado, get_datos_dashboard_cacheados
 # PÁGINA PRINCIPAL DE REPORTES
 # =============================================================================
 
+@acceso_cajero
 def almuerzo_reportes(request):
     """
     Página principal de reportes de almuerzos con estadísticas rápidas (CACHEADO)
@@ -87,6 +90,7 @@ def almuerzo_reportes(request):
 # POS DE ALMUERZO - Registro rápido con código de barras
 # =============================================================================
 
+@acceso_cajero
 @require_http_methods(["GET", "POST"])
 def pos_almuerzo(request):
     """
@@ -213,6 +217,7 @@ def pos_almuerzo(request):
     return render(request, 'pos/almuerzo.html', context)
 
 
+@acceso_cajero
 @require_http_methods(["POST"])
 def pos_almuerzo_api(request):
     """
@@ -299,6 +304,7 @@ def pos_almuerzo_api(request):
         }, status=500)
 
 
+@acceso_cajero
 @require_http_methods(["POST"])
 def anular_ultimo_almuerzo(request):
     """
@@ -342,6 +348,7 @@ def anular_ultimo_almuerzo(request):
 # GESTIÓN DE CUENTAS MENSUALES
 # =============================================================================
 
+@acceso_cajero
 @require_http_methods(["GET"])
 def lista_cuentas_mensuales(request):
     """
@@ -373,6 +380,7 @@ def lista_cuentas_mensuales(request):
     return render(request, 'pos/almuerzo_cuentas_mensuales.html', context)
 
 
+@acceso_cajero
 @require_http_methods(["GET", "POST"])
 def generar_cuentas_mes(request):
     """
@@ -467,6 +475,7 @@ def generar_cuentas_mes(request):
         return redirect('pos:cuentas_mensuales')
 
 
+@acceso_cajero
 @require_http_methods(["GET", "POST"])
 def registrar_pago_almuerzo(request):
     """
@@ -539,6 +548,7 @@ def registrar_pago_almuerzo(request):
 # REPORTES
 # =============================================================================
 
+@acceso_cajero
 @require_http_methods(["GET"])
 def reporte_almuerzos_diarios(request):
     """
@@ -582,6 +592,7 @@ def reporte_almuerzos_diarios(request):
     return render(request, 'pos/almuerzo_reporte_diario.html', context)
 
 
+@acceso_cajero
 @require_http_methods(["GET"])
 def reporte_mensual_separado(request):
     """
@@ -605,6 +616,7 @@ def reporte_mensual_separado(request):
     return render(request, 'pos/almuerzo_reporte_mensual.html', context)
 
 
+@acceso_cajero
 @require_http_methods(["GET"])
 def reporte_por_estudiante(request):
     """
@@ -612,6 +624,7 @@ def reporte_por_estudiante(request):
     Muestra historial completo con estadísticas y totales
     """
     from django.db.models import Sum, Count, Avg
+
     from datetime import datetime, timedelta
     import calendar
     
@@ -710,6 +723,7 @@ def reporte_por_estudiante(request):
 # TICKET DE CONTROL DE ALMUERZO
 # =============================================================================
 
+@acceso_cajero
 @require_http_methods(["GET"])
 def ticket_almuerzo(request, registro_id):
     """
@@ -758,6 +772,7 @@ def ticket_almuerzo(request, registro_id):
 # CONFIGURACIÓN DE PRECIO DE ALMUERZO
 # =============================================================================
 
+@acceso_cajero
 @require_http_methods(["GET", "POST"])
 def configurar_precio_almuerzo(request):
     """
@@ -811,6 +826,7 @@ def configurar_precio_almuerzo(request):
 # SISTEMA DE AUTORIZACIONES PARA ANULACIONES
 # =============================================================================
 
+@acceso_cajero
 @require_http_methods(["POST"])
 def validar_autorizacion(request):
     """
@@ -885,6 +901,7 @@ def validar_autorizacion(request):
         })
 
 
+@acceso_cajero
 @require_http_methods(["POST"])
 def anular_almuerzo(request, registro_id):
     """

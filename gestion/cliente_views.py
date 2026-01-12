@@ -19,6 +19,8 @@ import re
 from datetime import datetime, timedelta
 from decimal import Decimal
 
+from gestion.permisos import acceso_cajero, solo_administrador, solo_gerente_o_superior
+
 from .models import (
     Cliente, UsuariosWebClientes, UsuarioPortal, Hijo, Tarjeta, CargasSaldo,
     Ventas, DetalleVenta, SuscripcionesAlmuerzo, RegistroConsumoAlmuerzo,
@@ -66,6 +68,7 @@ def registrar_auditoria_sistema(operacion, descripcion, tabla_afectada=None, id_
 # GESTIÓN DE CLIENTES (Admin)
 # ============================================================================
 
+@solo_administrador
 @login_required
 def gestionar_clientes_view(request):
     """Vista para listar y gestionar clientes"""
@@ -102,6 +105,7 @@ def gestionar_clientes_view(request):
     return render(request, 'pos/gestionar_clientes.html', context)
 
 
+@solo_administrador
 @login_required
 @require_http_methods(["GET", "POST"])
 def crear_cliente_view(request):
@@ -169,6 +173,7 @@ def crear_cliente_view(request):
     return render(request, 'clientes/crear_cliente.html', context)
 
 
+@solo_administrador
 @login_required
 @require_http_methods(["POST"])
 def crear_usuario_web_cliente(request, cliente_id):
@@ -230,6 +235,7 @@ def crear_usuario_web_cliente(request, cliente_id):
 # PORTAL WEB DE CLIENTES
 # ============================================================================
 
+@solo_administrador
 def portal_login_view(request):
     """Vista de login para clientes con rate limiting, CAPTCHA y auditoría"""
     print('DEBUG: enter portal_login_view, method=', request.method)
@@ -316,6 +322,7 @@ def portal_login_view(request):
             
             try:
                 from django.contrib.auth.hashers import check_password
+
                 print(f'DEBUG: Buscando usuario en UsuarioPortal: {usuario}')
                 usuario_portal = UsuarioPortal.objects.select_related('cliente').get(
                     email=usuario.lower(),
@@ -501,6 +508,7 @@ def portal_login_view(request):
     # (return handled inside try or in except fallback)
 
 
+@solo_administrador
 def portal_logout_view(request):
     """Cerrar sesión del portal de clientes"""
     cliente_usuario = request.session.get('cliente_usuario', 'Desconocido')
@@ -523,6 +531,7 @@ def portal_logout_view(request):
     return redirect('clientes:portal_login')
 
 
+@solo_administrador
 def portal_dashboard_view(request):
     """Dashboard del portal de clientes"""
     
@@ -590,6 +599,7 @@ def portal_dashboard_view(request):
     return render(request, 'portal/dashboard.html', context)
 
 
+@solo_administrador
 def portal_consumos_hijo_view(request, hijo_id):
     """Ver consumos detallados de un hijo"""
     
@@ -658,6 +668,7 @@ def portal_consumos_hijo_view(request, hijo_id):
     return render(request, 'portal/consumos_hijo.html', context)
 
 
+@solo_administrador
 def portal_recargas_view(request):
     """Ver historial de recargas"""
     
@@ -681,6 +692,7 @@ def portal_recargas_view(request):
     return render(request, 'portal/recargas.html', context)
 
 
+@solo_administrador
 def portal_cambiar_password_view(request):
     """Cambiar contraseña del cliente con auditoría"""
     
@@ -762,6 +774,7 @@ def portal_cambiar_password_view(request):
     return render(request, 'portal/cambiar_password.html')
 
 
+@solo_administrador
 def portal_restricciones_hijo_view(request, hijo_id):
     """Gestionar restricciones de compra para un hijo"""
     
@@ -803,6 +816,7 @@ def portal_restricciones_hijo_view(request, hijo_id):
     return render(request, 'portal/restricciones_hijo.html', context)
 
 
+@solo_administrador
 def portal_recuperar_password_view(request):
     """Solicitar recuperación de contraseña"""
     
@@ -869,6 +883,7 @@ Equipo Cantina Tita''',
     return render(request, 'portal/recuperar_password.html')
 
 
+@solo_administrador
 def portal_reset_password_view(request, token):
     """Restablecer contraseña con token"""
     
@@ -950,6 +965,7 @@ def portal_reset_password_view(request, token):
 # AUTENTICACIÓN 2FA (Two-Factor Authentication)
 # ============================================================================
 
+@solo_administrador
 def configurar_2fa_view(request):
     """Vista para configurar 2FA para el cliente"""
     if 'cliente_id' not in request.session:
@@ -984,6 +1000,7 @@ def configurar_2fa_view(request):
     return render(request, 'portal/configurar_2fa.html', context)
 
 
+@solo_administrador
 def activar_2fa_view(request):
     """Activar 2FA después de verificar el primer código"""
     if request.method != 'POST':
@@ -1015,6 +1032,7 @@ def activar_2fa_view(request):
         return redirect('pos:configurar_2fa')
 
 
+@solo_administrador
 def verificar_2fa_view(request):
     """Vista para verificar código 2FA después del login"""
     if request.method != 'POST':
@@ -1091,6 +1109,7 @@ def verificar_2fa_view(request):
         return render(request, 'portal/verificar_2fa.html')
 
 
+@solo_administrador
 def deshabilitar_2fa_view(request):
     """Deshabilitar 2FA para el usuario actual"""
     if request.method != 'POST':
@@ -1120,6 +1139,7 @@ def deshabilitar_2fa_view(request):
 # FUNCIONALIDADES DE CARGA DE SALDO Y PAGOS CON METREPAY
 # ============================================================================
 
+@solo_administrador
 def portal_cargar_saldo_view(request):
     """Vista para cargar saldo a tarjetas de hijos usando MetrePay"""
     
@@ -1259,6 +1279,7 @@ def portal_cargar_saldo_view(request):
     return render(request, 'portal/cargar_saldo.html', context)
 
 
+@solo_administrador
 def portal_pagos_view(request):
     """Vista para realizar pagos de deudas pendientes usando MetrePay"""
     
@@ -1533,6 +1554,7 @@ def procesar_pago_metrepay(monto, metodo_pago, request, tipo_pago='CARGA_SALDO',
 # VISTAS DE CALLBACK PARA METREPAY
 # ============================================================================
 
+@solo_administrador
 def portal_pago_exitoso_view(request):
     """Vista para mostrar confirmación de pago exitoso"""
     cliente_id = request.session.get('cliente_id')
@@ -1555,6 +1577,7 @@ def portal_pago_exitoso_view(request):
     return render(request, 'portal/pago_exitoso.html', context)
 
 
+@solo_administrador
 def portal_pago_cancelado_view(request):
     """Vista para mostrar cancelación de pago"""
     cliente_id = request.session.get('cliente_id')
@@ -1575,6 +1598,7 @@ def portal_pago_cancelado_view(request):
 # WEBHOOKS PARA RECIBIR NOTIFICACIONES DE METREPAY
 # ============================================================================
 
+@solo_administrador
 @require_http_methods(["POST"])
 def metrepay_webhook_view(request):
     """
@@ -1766,6 +1790,7 @@ def procesar_pago_deudas_confirmado(webhook_data, tx_id=None):
 # WEBHOOKS PARA TIGO MONEY
 # ============================================================================
 
+@solo_administrador
 @require_http_methods(["POST"])
 def tigo_money_webhook_view(request):
     """
