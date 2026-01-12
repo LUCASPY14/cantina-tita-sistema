@@ -6,6 +6,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
 from django.core.paginator import Paginator
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
 import bcrypt
 
 from .models import Empleado, Cajas
@@ -250,3 +252,207 @@ def crear_empleado_view(request):
         messages.error(request, f'Error al crear empleado: {str(e)}')
     
     return redirect('gestionar_empleados')
+
+
+# ==================== ENDPOINTS AJAX PARA GESTIÓN DE EMPLEADOS ====================
+
+@solo_administrador
+@require_http_methods(['POST'])
+def editar_empleado_ajax(request, empleado_id):
+    """
+    Endpoint AJAX para editar un empleado existente
+    """
+    try:
+        empleado = Empleado.objects.get(id_empleado=empleado_id)
+        
+        # Obtener datos del request
+        nombre_usuario = request.POST.get('nombre_usuario', '').strip()
+        id_rol = request.POST.get('id_rol')
+        id_caja = request.POST.get('id_caja')
+        
+        # Validaciones
+        if not nombre_usuario or not id_rol:
+            return JsonResponse({
+                'success': False,
+                'message': 'Nombre de usuario y rol son obligatorios'
+            }, status=400)
+        
+        # Verificar si el nombre de usuario ya existe (excepto el actual)
+        if Empleado.objects.filter(nombre_usuario=nombre_usuario).exclude(id_empleado=empleado_id).exists():
+            return JsonResponse({
+                'success': False,
+                'message': f'El usuario "{nombre_usuario}" ya existe'
+            }, status=400)
+        
+        # Actualizar datos
+        empleado.nombre_usuario = nombre_usuario
+        empleado.id_rol_id = id_rol
+        empleado.id_caja_id = id_caja if id_caja else None
+        empleado.save()
+        
+        # Registrar auditoría
+        registrar_auditoria(
+            usuario=request.user.username,
+            accion=f'Empleado editado: {nombre_usuario}',
+            detalles=f'ID: {empleado_id}, Rol: {empleado.id_rol.descripcion}',
+            ip=request.META.get('REMOTE_ADDR')
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Empleado "{nombre_usuario}" actualizado exitosamente',
+            'empleado': {
+                'id': empleado.id_empleado,
+                'nombre_usuario': empleado.nombre_usuario,
+                'rol': empleado.id_rol.descripcion,
+                'caja': empleado.id_caja.nombre_caja if empleado.id_caja else 'Sin asignar',
+                'activo': empleado.activo
+            }
+        })
+        
+    except Empleado.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Empleado no encontrado'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al editar empleado: {str(e)}'
+        }, status=500)
+
+
+@solo_administrador
+@require_http_methods(['POST'])
+def resetear_password_empleado_ajax(request, empleado_id):
+    """
+    Endpoint AJAX para resetear la contraseña de un empleado
+    """
+    try:
+        empleado = Empleado.objects.get(id_empleado=empleado_id)
+        
+        nueva_password = request.POST.get('nueva_password', '').strip()
+        confirmar_password = request.POST.get('confirmar_password', '').strip()
+        
+        # Validaciones
+        if not nueva_password:
+            return JsonResponse({
+                'success': False,
+                'message': 'La nueva contraseña no puede estar vacía'
+            }, status=400)
+        
+        if nueva_password != confirmar_password:
+            return JsonResponse({
+                'success': False,
+                'message': 'Las contraseñas no coinciden'
+            }, status=400)
+        
+        if len(nueva_password) < 4:
+            return JsonResponse({
+                'success': False,
+                'message': 'La contraseña debe tener al menos 4 caracteres'
+            }, status=400)
+        
+        # Hash de la nueva contraseña
+        password_hash = bcrypt.hashpw(nueva_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        empleado.contrasena_hash = password_hash
+        empleado.save()
+        
+        # Registrar auditoría
+        registrar_auditoria(
+            usuario=request.user.username,
+            accion=f'Contraseña reseteada para: {empleado.nombre_usuario}',
+            detalles=f'ID Empleado: {empleado_id}',
+            ip=request.META.get('REMOTE_ADDR')
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Contraseña de "{empleado.nombre_usuario}" actualizada exitosamente'
+        })
+        
+    except Empleado.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Empleado no encontrado'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al resetear contraseña: {str(e)}'
+        }, status=500)
+
+
+@solo_administrador
+@require_http_methods(['POST'])
+def toggle_estado_empleado_ajax(request, empleado_id):
+    """
+    Endpoint AJAX para activar/desactivar un empleado
+    """
+    try:
+        empleado = Empleado.objects.get(id_empleado=empleado_id)
+        
+        # Cambiar estado
+        empleado.activo = not empleado.activo
+        empleado.save()
+        
+        estado_texto = 'activado' if empleado.activo else 'desactivado'
+        
+        # Registrar auditoría
+        registrar_auditoria(
+            usuario=request.user.username,
+            accion=f'Empleado {estado_texto}: {empleado.nombre_usuario}',
+            detalles=f'ID: {empleado_id}, Estado: {empleado.activo}',
+            ip=request.META.get('REMOTE_ADDR')
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Empleado "{empleado.nombre_usuario}" {estado_texto} exitosamente',
+            'nuevo_estado': empleado.activo
+        })
+        
+    except Empleado.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Empleado no encontrado'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al cambiar estado: {str(e)}'
+        }, status=500)
+
+
+@solo_administrador
+def obtener_empleado_ajax(request, empleado_id):
+    """
+    Endpoint AJAX para obtener datos de un empleado (para edición)
+    """
+    try:
+        empleado = Empleado.objects.select_related('id_rol', 'id_caja').get(id_empleado=empleado_id)
+        
+        return JsonResponse({
+            'success': True,
+            'empleado': {
+                'id': empleado.id_empleado,
+                'nombre_usuario': empleado.nombre_usuario,
+                'id_rol': empleado.id_rol.id_rol,
+                'rol_descripcion': empleado.id_rol.descripcion,
+                'id_caja': empleado.id_caja.id_caja if empleado.id_caja else None,
+                'caja_nombre': empleado.id_caja.nombre_caja if empleado.id_caja else None,
+                'activo': empleado.activo
+            }
+        })
+        
+    except Empleado.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Empleado no encontrado'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al obtener empleado: {str(e)}'
+        }, status=500)
+

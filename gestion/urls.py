@@ -121,6 +121,12 @@ urlpatterns = [
     path('empleado/perfil/', empleado_views.perfil_empleado, name='perfil_empleado'),
     path('empleados/', empleado_views.gestionar_empleados_view, name='gestionar_empleados'),
     path('empleados/crear/', empleado_views.crear_empleado_view, name='crear_empleado'),
+    
+    # Endpoints AJAX para gestión de empleados
+    path('empleados/<int:empleado_id>/ajax/', empleado_views.obtener_empleado_ajax, name='obtener_empleado_ajax'),
+    path('empleados/<int:empleado_id>/editar/', empleado_views.editar_empleado_ajax, name='editar_empleado_ajax'),
+    path('empleados/<int:empleado_id>/resetear-password/', empleado_views.resetear_password_empleado_ajax, name='resetear_password_ajax'),
+    path('empleados/<int:empleado_id>/toggle-estado/', empleado_views.toggle_estado_empleado_ajax, name='toggle_estado_ajax'),
 ]
 
 

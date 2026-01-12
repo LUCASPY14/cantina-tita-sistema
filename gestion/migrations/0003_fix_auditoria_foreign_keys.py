@@ -3,6 +3,84 @@
 from django.db import migrations
 
 
+def check_and_fix_foreign_keys(apps, schema_editor):
+    """
+    Función que verifica si las tablas existen antes de alterar las foreign keys.
+    Esto evita errores en tests donde las tablas pueden no existir.
+    """
+    from django.db import connection
+    
+    with connection.cursor() as cursor:
+        # Verificar si la tabla auditoria_empleados existe
+        cursor.execute(
+            "SELECT COUNT(*) FROM information_schema.tables "
+            "WHERE table_schema = DATABASE() AND table_name = 'auditoria_empleados'"
+        )
+        if cursor.fetchone()[0] > 0:
+            # Corregir foreign keys en auditoria_empleados
+            try:
+                cursor.execute("ALTER TABLE auditoria_empleados DROP FOREIGN KEY auditoria_empleados_ibfk_1")
+            except:
+                pass  # Si no existe el constraint, continuar
+            
+            cursor.execute("ALTER TABLE auditoria_empleados MODIFY COLUMN ID_Empleado INT NULL")
+            cursor.execute(
+                "ALTER TABLE auditoria_empleados ADD CONSTRAINT auditoria_empleados_ibfk_1 "
+                "FOREIGN KEY (ID_Empleado) REFERENCES empleados(ID_Empleado) ON DELETE SET NULL"
+            )
+        
+        # Verificar si la tabla auditoria_usuarios_web existe
+        cursor.execute(
+            "SELECT COUNT(*) FROM information_schema.tables "
+            "WHERE table_schema = DATABASE() AND table_name = 'auditoria_usuarios_web'"
+        )
+        if cursor.fetchone()[0] > 0:
+            # Corregir foreign keys en auditoria_usuarios_web
+            try:
+                cursor.execute("ALTER TABLE auditoria_usuarios_web DROP FOREIGN KEY auditoria_usuarios_web_ibfk_1")
+            except:
+                pass
+            
+            cursor.execute("ALTER TABLE auditoria_usuarios_web MODIFY COLUMN ID_Cliente INT NULL")
+            cursor.execute(
+                "ALTER TABLE auditoria_usuarios_web ADD CONSTRAINT auditoria_usuarios_web_ibfk_1 "
+                "FOREIGN KEY (ID_Cliente) REFERENCES clientes(ID_Cliente) ON DELETE SET NULL"
+            )
+        
+        # Verificar si la tabla auditoria_comisiones existe
+        cursor.execute(
+            "SELECT COUNT(*) FROM information_schema.tables "
+            "WHERE table_schema = DATABASE() AND table_name = 'auditoria_comisiones'"
+        )
+        if cursor.fetchone()[0] > 0:
+            # Corregir foreign keys en auditoria_comisiones
+            try:
+                cursor.execute("ALTER TABLE auditoria_comisiones DROP FOREIGN KEY auditoria_comisiones_ibfk_1")
+            except:
+                pass
+            
+            cursor.execute("ALTER TABLE auditoria_comisiones MODIFY COLUMN ID_Tarifa INT NULL")
+            cursor.execute(
+                "ALTER TABLE auditoria_comisiones ADD CONSTRAINT auditoria_comisiones_ibfk_1 "
+                "FOREIGN KEY (ID_Tarifa) REFERENCES tarifas_comision(ID_Tarifa) ON DELETE SET NULL"
+            )
+            
+            try:
+                cursor.execute("ALTER TABLE auditoria_comisiones DROP FOREIGN KEY auditoria_comisiones_ibfk_2")
+            except:
+                pass
+            
+            cursor.execute(
+                "ALTER TABLE auditoria_comisiones ADD CONSTRAINT auditoria_comisiones_ibfk_2 "
+                "FOREIGN KEY (ID_Empleado_Modifico) REFERENCES empleados(ID_Empleado) ON DELETE SET NULL"
+            )
+
+
+def reverse_foreign_keys(apps, schema_editor):
+    """Función de reversión (no hace nada en tests)"""
+    pass
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,55 +88,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Corregir foreign keys en auditoria_empleados
-        migrations.RunSQL(
-            "ALTER TABLE auditoria_empleados DROP FOREIGN KEY auditoria_empleados_ibfk_1;",
-            reverse_sql="ALTER TABLE auditoria_empleados ADD CONSTRAINT auditoria_empleados_ibfk_1 FOREIGN KEY (ID_Empleado) REFERENCES empleados(ID_Empleado) ON DELETE CASCADE;"
-        ),
-        migrations.RunSQL(
-            "ALTER TABLE auditoria_empleados MODIFY COLUMN ID_Empleado INT NULL;",
-            reverse_sql="ALTER TABLE auditoria_empleados MODIFY COLUMN ID_Empleado INT NOT NULL;"
-        ),
-        migrations.RunSQL(
-            "ALTER TABLE auditoria_empleados ADD CONSTRAINT auditoria_empleados_ibfk_1 FOREIGN KEY (ID_Empleado) REFERENCES empleados(ID_Empleado) ON DELETE SET NULL;",
-            reverse_sql="ALTER TABLE auditoria_empleados DROP FOREIGN KEY auditoria_empleados_ibfk_1;"
-        ),
-
-        # Corregir foreign keys en auditoria_usuarios_web
-        migrations.RunSQL(
-            "ALTER TABLE auditoria_usuarios_web DROP FOREIGN KEY auditoria_usuarios_web_ibfk_1;",
-            reverse_sql="ALTER TABLE auditoria_usuarios_web ADD CONSTRAINT auditoria_usuarios_web_ibfk_1 FOREIGN KEY (ID_Cliente) REFERENCES clientes(ID_Cliente) ON DELETE CASCADE;"
-        ),
-        migrations.RunSQL(
-            "ALTER TABLE auditoria_usuarios_web MODIFY COLUMN ID_Cliente INT NULL;",
-            reverse_sql="ALTER TABLE auditoria_usuarios_web MODIFY COLUMN ID_Cliente INT NOT NULL;"
-        ),
-        migrations.RunSQL(
-            "ALTER TABLE auditoria_usuarios_web ADD CONSTRAINT auditoria_usuarios_web_ibfk_1 FOREIGN KEY (ID_Cliente) REFERENCES clientes(ID_Cliente) ON DELETE SET NULL;",
-            reverse_sql="ALTER TABLE auditoria_usuarios_web DROP FOREIGN KEY auditoria_usuarios_web_ibfk_1;"
-        ),
-
-        # Corregir foreign keys en auditoria_comisiones
-        migrations.RunSQL(
-            "ALTER TABLE auditoria_comisiones DROP FOREIGN KEY auditoria_comisiones_ibfk_1;",
-            reverse_sql="ALTER TABLE auditoria_comisiones ADD CONSTRAINT auditoria_comisiones_ibfk_1 FOREIGN KEY (ID_Tarifa) REFERENCES tarifas_comision(ID_Tarifa) ON DELETE CASCADE;"
-        ),
-        migrations.RunSQL(
-            "ALTER TABLE auditoria_comisiones MODIFY COLUMN ID_Tarifa INT NULL;",
-            reverse_sql="ALTER TABLE auditoria_comisiones MODIFY COLUMN ID_Tarifa INT NOT NULL;"
-        ),
-        migrations.RunSQL(
-            "ALTER TABLE auditoria_comisiones ADD CONSTRAINT auditoria_comisiones_ibfk_1 FOREIGN KEY (ID_Tarifa) REFERENCES tarifas_comision(ID_Tarifa) ON DELETE SET NULL;",
-            reverse_sql="ALTER TABLE auditoria_comisiones DROP FOREIGN KEY auditoria_comisiones_ibfk_1;"
-        ),
-
-        # La foreign key de ID_Empleado_Modifico ya permite NULL, solo cambiar CASCADE por SET NULL
-        migrations.RunSQL(
-            "ALTER TABLE auditoria_comisiones DROP FOREIGN KEY auditoria_comisiones_ibfk_2;",
-            reverse_sql="ALTER TABLE auditoria_comisiones ADD CONSTRAINT auditoria_comisiones_ibfk_2 FOREIGN KEY (ID_Empleado_Modifico) REFERENCES empleados(ID_Empleado) ON DELETE CASCADE;"
-        ),
-        migrations.RunSQL(
-            "ALTER TABLE auditoria_comisiones ADD CONSTRAINT auditoria_comisiones_ibfk_2 FOREIGN KEY (ID_Empleado_Modifico) REFERENCES empleados(ID_Empleado) ON DELETE SET NULL;",
-            reverse_sql="ALTER TABLE auditoria_comisiones DROP FOREIGN KEY auditoria_comisiones_ibfk_2;"
-        ),
+        migrations.RunPython(check_and_fix_foreign_keys, reverse_foreign_keys),
     ]

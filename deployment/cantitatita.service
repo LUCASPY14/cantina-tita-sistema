@@ -1,0 +1,32 @@
+[Unit]
+Description=Cantina Tita - Gunicorn Daemon
+After=network.target mysql.service
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/cantinatita
+Environment="PATH=/var/www/cantitatita/.venv/bin"
+Environment="DJANGO_SETTINGS_MODULE=cantinatita.settings"
+Environment="SECRET_KEY=tu-secret-key-super-segura-cambiar-en-produccion"
+Environment="DATABASE_NAME=cantinatitadb"
+Environment="DATABASE_USER=root"
+Environment="DATABASE_PASSWORD=tu-password-mysql"
+Environment="DATABASE_HOST=localhost"
+Environment="DATABASE_PORT=3306"
+
+ExecStart=/var/www/cantitatita/.venv/bin/gunicorn \
+    --config /var/www/cantitatita/gunicorn_config.py \
+    cantitatita.wsgi:application
+
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

@@ -5706,3 +5706,236 @@ def validar_supervisor(request):
             'success': False,
             'error': f'Error al validar supervisor: {str(e)}'
         }, status=500)
+
+
+# =============================================================================
+# ENDPOINTS DE VALIDACIÓN PARA ADMINISTRADORES
+# =============================================================================
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def validar_carga_saldo(request, id_carga):
+    """
+    Validar una carga de saldo pendiente (cambiar estado a CONFIRMADO)
+    GET: Muestra formulario de validación
+    POST: Procesa la validación
+    """
+    try:
+        carga = get_object_or_404(CargasSaldo, id_carga=id_carga)
+        
+        if request.method == 'POST':
+            # Verificar que esté pendiente
+            if carga.estado != 'PENDIENTE':
+                messages.error(request, f'Esta carga ya fue {carga.estado.lower()}')
+                return redirect('pos:lista_cargas_pendientes')
+            
+            # Registrar auditoría
+            registrar_auditoria(
+                request=request,
+                operacion='VALIDAR_CARGA_SALDO',
+                tipo_usuario='EMPLEADO',
+                descripcion=f'Validación de carga #{carga.id_carga} - Tarjeta {carga.nro_tarjeta.nro_tarjeta} - Monto: Gs. {carga.monto_cargado}',
+                tabla_afectada='cargas_saldo',
+                id_registro=carga.id_carga
+            )
+            
+            # Cambiar estado
+            carga.estado = 'CONFIRMADO'
+            carga.fecha_validacion = timezone.now()
+            carga.validado_por = request.user.empleado if hasattr(request.user, 'empleado') else None
+            carga.save()
+            
+            messages.success(request, f'✅ Carga validada exitosamente. Saldo actualizado: Gs. {carga.nro_tarjeta.saldo_actual:,.0f}')
+            return redirect('pos:lista_cargas_pendientes')
+        
+        # GET: Mostrar detalles
+        context = {
+            'carga': carga,
+            'tarjeta': carga.nro_tarjeta,
+            'estudiante': carga.nro_tarjeta.id_hijo,
+        }
+        return render(request, 'pos/validar_carga.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'Error al validar carga: {str(e)}')
+        return redirect('pos:lista_cargas_pendientes')
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def validar_pago(request, id_venta):
+    """
+    Validar un pago pendiente de transferencia bancaria
+    Remueve el marcador PAGO_PENDIENTE_TRANSFERENCIA del motivo_credito
+    """
+    try:
+        venta = get_object_or_404(Ventas, id_venta=id_venta)
+        
+        if request.method == 'POST':
+            # Verificar que tenga pago pendiente
+            if 'PAGO_PENDIENTE_TRANSFERENCIA' not in (venta.motivo_credito or ''):
+                messages.error(request, 'Esta venta no tiene pagos pendientes de validación')
+                return redirect('pos:lista_pagos_pendientes')
+            
+            # Obtener datos del formulario
+            comprobante = request.POST.get('comprobante', '').strip()
+            observaciones = request.POST.get('observaciones', '').strip()
+            
+            # Registrar auditoría
+            registrar_auditoria(
+                request=request,
+                operacion='VALIDAR_PAGO_TRANSFERENCIA',
+                tipo_usuario='EMPLEADO',
+                descripcion=f'Validación de pago Venta #{venta.id_venta} - Cliente {venta.id_cliente.nombre_completo} - Monto: Gs. {venta.monto_total} - Comprobante: {comprobante}',
+                tabla_afectada='ventas',
+                id_registro=venta.id_venta
+            )
+            
+            # Actualizar venta
+            motivo_nuevo = (venta.motivo_credito or '').replace('PAGO_PENDIENTE_TRANSFERENCIA', '').strip()
+            if not motivo_nuevo:
+                motivo_nuevo = f'TRANSFERENCIA_VALIDADA - Comprobante: {comprobante}'
+            else:
+                motivo_nuevo = f'{motivo_nuevo} - VALIDADO - Comprobante: {comprobante}'
+            
+            if observaciones:
+                motivo_nuevo += f' - Obs: {observaciones}'
+            
+            venta.motivo_credito = motivo_nuevo
+            venta.save()
+            
+            messages.success(request, f'✅ Pago validado exitosamente. Venta #{venta.id_venta}')
+            return redirect('pos:lista_pagos_pendientes')
+        
+        # GET: Mostrar detalles
+        detalles = DetalleVenta.objects.filter(id_venta=venta).select_related('id_producto')
+        pagos = PagosVenta.objects.filter(id_venta=venta).select_related('id_medio_pago')
+        
+        context = {
+            'venta': venta,
+            'detalles': detalles,
+            'pagos': pagos,
+            'cliente': venta.id_cliente,
+        }
+        return render(request, 'pos/validar_pago.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'Error al validar pago: {str(e)}')
+        return redirect('pos:lista_pagos_pendientes')
+
+
+@login_required
+def lista_cargas_pendientes(request):
+    """
+    Lista completa de cargas de saldo pendientes de validación
+    Con filtros y paginación
+    """
+    from django.core.paginator import Paginator
+    
+    # Filtros
+    buscar = request.GET.get('buscar', '').strip()
+    fecha_desde = request.GET.get('fecha_desde')
+    fecha_hasta = request.GET.get('fecha_hasta')
+    
+    # Query base
+    cargas = CargasSaldo.objects.filter(
+        estado='PENDIENTE'
+    ).select_related(
+        'nro_tarjeta',
+        'nro_tarjeta__id_hijo',
+        'nro_tarjeta__id_hijo__id_cliente_responsable',
+        'id_cliente_origen'
+    ).order_by('-fecha_carga')
+    
+    # Aplicar filtros
+    if buscar:
+        cargas = cargas.filter(
+            Q(nro_tarjeta__nro_tarjeta__icontains=buscar) |
+            Q(nro_tarjeta__id_hijo__nombre__icontains=buscar) |
+            Q(nro_tarjeta__id_hijo__apellido__icontains=buscar) |
+            Q(referencia__icontains=buscar)
+        )
+    
+    if fecha_desde:
+        cargas = cargas.filter(fecha_carga__gte=fecha_desde)
+    
+    if fecha_hasta:
+        cargas = cargas.filter(fecha_carga__lte=fecha_hasta)
+    
+    # Estadísticas
+    total_pendiente = cargas.count()
+    monto_total_pendiente = cargas.aggregate(total=Sum('monto_cargado'))['total'] or 0
+    
+    # Paginación
+    paginator = Paginator(cargas, 50)  # 50 por página
+    page = request.GET.get('page', 1)
+    cargas_page = paginator.get_page(page)
+    
+    context = {
+        'cargas': cargas_page,
+        'total_pendiente': total_pendiente,
+        'monto_total_pendiente': monto_total_pendiente,
+        'buscar': buscar,
+        'fecha_desde': fecha_desde,
+        'fecha_hasta': fecha_hasta,
+    }
+    
+    return render(request, 'pos/lista_cargas_pendientes.html', context)
+
+
+@login_required
+def lista_pagos_pendientes(request):
+    """
+    Lista completa de pagos pendientes de validación (transferencias bancarias)
+    Con filtros y paginación
+    """
+    from django.core.paginator import Paginator
+    
+    # Filtros
+    buscar = request.GET.get('buscar', '').strip()
+    fecha_desde = request.GET.get('fecha_desde')
+    fecha_hasta = request.GET.get('fecha_hasta')
+    
+    # Query base
+    pagos = Ventas.objects.filter(
+        motivo_credito__icontains='PAGO_PENDIENTE_TRANSFERENCIA'
+    ).select_related(
+        'id_cliente',
+        'id_empleado_cajero',
+        'id_tipo_pago'
+    ).order_by('-fecha')
+    
+    # Aplicar filtros
+    if buscar:
+        pagos = pagos.filter(
+            Q(id_cliente__nombres__icontains=buscar) |
+            Q(id_cliente__apellidos__icontains=buscar) |
+            Q(id_cliente__ruc_ci__icontains=buscar) |
+            Q(motivo_credito__icontains=buscar)
+        )
+    
+    if fecha_desde:
+        pagos = pagos.filter(fecha__gte=fecha_desde)
+    
+    if fecha_hasta:
+        pagos = pagos.filter(fecha__lte=fecha_hasta)
+    
+    # Estadísticas
+    total_pendiente = pagos.count()
+    monto_total_pendiente = pagos.aggregate(total=Sum('monto_total'))['total'] or 0
+    
+    # Paginación
+    paginator = Paginator(pagos, 50)  # 50 por página
+    page = request.GET.get('page', 1)
+    pagos_page = paginator.get_page(page)
+    
+    context = {
+        'pagos': pagos_page,
+        'total_pendiente': total_pendiente,
+        'monto_total_pendiente': monto_total_pendiente,
+        'buscar': buscar,
+        'fecha_desde': fecha_desde,
+        'fecha_hasta': fecha_hasta,
+    }
+    
+    return render(request, 'pos/lista_pagos_pendientes.html', context)

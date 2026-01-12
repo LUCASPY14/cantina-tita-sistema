@@ -100,6 +100,12 @@ urlpatterns = [
     path('almuerzo/cuentas/pagar/', almuerzo_views.registrar_pago_almuerzo, name='pagar_almuerzo'),
     path('almuerzo/configurar-precio/', almuerzo_views.configurar_precio_almuerzo, name='configurar_precio_almuerzo'),
     
+    # ==================== VALIDACIONES PARA ADMINISTRADORES ====================
+    path('validaciones/carga-saldo/<int:id_carga>/', pos_views.validar_carga_saldo, name='validar_carga_saldo'),
+    path('validaciones/pago/<int:id_venta>/', pos_views.validar_pago, name='validar_pago'),
+    path('validaciones/cargas-pendientes/', pos_views.lista_cargas_pendientes, name='lista_cargas_pendientes'),
+    path('validaciones/pagos-pendientes/', pos_views.lista_pagos_pendientes, name='lista_pagos_pendientes'),
+    
     # Sistema de Autorizaciones
     path('autorizacion/validar/', almuerzo_views.validar_autorizacion, name='validar_autorizacion'),
     path('almuerzo/anular/<int:registro_id>/', almuerzo_views.anular_almuerzo, name='anular_almuerzo_id'),
