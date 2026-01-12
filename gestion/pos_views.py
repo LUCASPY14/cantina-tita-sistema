@@ -989,6 +989,31 @@ def dashboard_view(request):
         stock_actual=F('stock__stock_actual')
     ).order_by('stock__stock_actual')[:10]
     
+    # === NOTIFICACIONES DE VALIDACIÓN (ADMINISTRADOR) ===
+    
+    # Cargas de saldo pendientes de validación
+    cargas_pendientes = CargasSaldo.objects.filter(
+        estado='PENDIENTE'
+    ).select_related(
+        'nro_tarjeta',
+        'nro_tarjeta__id_hijo',
+        'id_cliente_origen'
+    ).order_by('-fecha_carga')[:20]
+    
+    # Pagos pendientes de validación (transferencias bancarias)
+    pagos_pendientes = Ventas.objects.filter(
+        motivo_credito__icontains='PAGO_PENDIENTE_TRANSFERENCIA'
+    ).select_related(
+        'id_cliente',
+        'id_empleado_cajero'
+    ).order_by('-fecha')[:20]
+    
+    # Contadores para notificaciones
+    total_cargas_pendientes = CargasSaldo.objects.filter(estado='PENDIENTE').count()
+    total_pagos_pendientes = Ventas.objects.filter(
+        motivo_credito__icontains='PAGO_PENDIENTE_TRANSFERENCIA'
+    ).count()
+    
     context = {
         'stats': stats,
         'ventas_por_hora': json.dumps(ventas_por_hora),
@@ -997,6 +1022,11 @@ def dashboard_view(request):
         'ventas_por_categoria': json.dumps(ventas_por_categoria),
         'ultimas_ventas': ultimas_ventas,
         'stock_bajo': stock_bajo,
+        # Notificaciones de validación
+        'cargas_pendientes': cargas_pendientes,
+        'pagos_pendientes': pagos_pendientes,
+        'total_cargas_pendientes': total_cargas_pendientes,
+        'total_pagos_pendientes': total_pagos_pendientes,
     }
 
     # Cachear el contexto por 5 minutos

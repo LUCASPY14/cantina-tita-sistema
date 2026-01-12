@@ -252,8 +252,9 @@ def portal_login_view(request):
                 mostrar_captcha = intentos_recientes >= 2
 
         if request.method == 'POST':
-            usuario = request.POST.get('usuario', '').strip()
-            contrasena = request.POST.get('contrasena', '')
+            # Aceptar tanto 'email'/'password' (nuevo) como 'usuario'/'contrasena' (legacy)
+            usuario = request.POST.get('email', '').strip() or request.POST.get('usuario', '').strip()
+            contrasena = request.POST.get('password', '') or request.POST.get('contrasena', '')
 
             if not usuario or not contrasena:
                 messages.error(request, 'Usuario y contraseña son requeridos')
@@ -469,7 +470,7 @@ def portal_login_view(request):
         # Determinar si mostrar CAPTCHA para GET o POST (se comparte la lógica)
         usuario_para_context = ''
         if request.method == 'POST':
-            usuario_para_context = request.POST.get('usuario', '').strip()
+            usuario_para_context = request.POST.get('email', '').strip() or request.POST.get('usuario', '').strip()
         else:
             usuario_para_context = request.GET.get('u', '')
 
@@ -685,7 +686,7 @@ def portal_cambiar_password_view(request):
     
     cliente_id = request.session.get('cliente_id')
     if not cliente_id:
-        return redirect('pos:portal_login')
+        return redirect('portal_login')
     
     if request.method == 'POST':
         password_actual = request.POST.get('password_actual')
@@ -756,7 +757,7 @@ def portal_cambiar_password_view(request):
             
         except UsuariosWebClientes.DoesNotExist:
             messages.error(request, 'Usuario no encontrado')
-            return redirect('pos:portal_login')
+            return redirect('portal_login')
     
     return render(request, 'portal/cambiar_password.html')
 
@@ -766,7 +767,7 @@ def portal_restricciones_hijo_view(request, hijo_id):
     
     cliente_id = request.session.get('cliente_id')
     if not cliente_id:
-        return redirect('pos:portal_login')
+        return redirect('portal_login')
     
     hijo = get_object_or_404(
         Hijo,
@@ -863,7 +864,7 @@ Equipo Cantina Tita''',
             # No revelar si el email existe o no (seguridad)
             messages.success(request, f'Si el email {email} está registrado, recibirás un enlace de recuperación')
         
-        return redirect('pos:portal_login')
+        return redirect('portal_login')
     
     return render(request, 'portal/recuperar_password.html')
 
@@ -876,7 +877,7 @@ def portal_reset_password_view(request, token):
     
     if not valido:
         messages.error(request, mensaje_error)
-        return redirect('pos:portal_login')
+        return redirect('portal_login')
     
     if request.method == 'POST':
         password_nueva = request.POST.get('password_nueva')
@@ -931,11 +932,11 @@ def portal_reset_password_view(request, token):
             )
             
             messages.success(request, '¡Contraseña actualizada! Ya puedes iniciar sesión')
-            return redirect('pos:portal_login')
+            return redirect('portal_login')
             
         except UsuariosWebClientes.DoesNotExist:
             messages.error(request, 'Usuario no encontrado')
-            return redirect('pos:portal_login')
+            return redirect('portal_login')
     
     context = {
         'token': token,
@@ -952,7 +953,7 @@ def portal_reset_password_view(request, token):
 def configurar_2fa_view(request):
     """Vista para configurar 2FA para el cliente"""
     if 'cliente_id' not in request.session:
-        return redirect('pos:portal_login')
+        return redirect('portal_login')
     
     cliente_usuario = request.session.get('cliente_usuario')
     
@@ -989,7 +990,7 @@ def activar_2fa_view(request):
         return redirect('pos:configurar_2fa')
     
     if 'cliente_id' not in request.session:
-        return redirect('pos:portal_login')
+        return redirect('portal_login')
     
     cliente_usuario = request.session.get('cliente_usuario')
     codigo = request.POST.get('codigo', '').strip()
@@ -1022,7 +1023,7 @@ def verificar_2fa_view(request):
     # Verificar que hay una sesión pendiente de 2FA
     if '2fa_pendiente' not in request.session:
         messages.error(request, 'Sesión expirada. Por favor inicia sesión nuevamente')
-        return redirect('pos:portal_login')
+        return redirect('portal_login')
     
     cliente_usuario = request.session.get('2fa_usuario')
     codigo = request.POST.get('codigo', '').strip()
@@ -1096,7 +1097,7 @@ def deshabilitar_2fa_view(request):
         return redirect('pos:portal_dashboard')
     
     if 'cliente_id' not in request.session:
-        return redirect('pos:portal_login')
+        return redirect('portal_login')
     
     cliente_usuario = request.session.get('cliente_usuario')
     
@@ -1124,7 +1125,7 @@ def portal_cargar_saldo_view(request):
     
     cliente_id = request.session.get('cliente_id')
     if not cliente_id:
-        return redirect('pos:portal_login')
+        return redirect('portal_login')
     
     cliente = get_object_or_404(Cliente, pk=cliente_id)
     
@@ -1263,7 +1264,7 @@ def portal_pagos_view(request):
     
     cliente_id = request.session.get('cliente_id')
     if not cliente_id:
-        return redirect('pos:portal_login')
+        return redirect('portal_login')
     
     cliente = get_object_or_404(Cliente, pk=cliente_id)
     
@@ -1536,7 +1537,7 @@ def portal_pago_exitoso_view(request):
     """Vista para mostrar confirmación de pago exitoso"""
     cliente_id = request.session.get('cliente_id')
     if not cliente_id:
-        return redirect('pos:portal_login')
+        return redirect('portal_login')
 
     cliente = get_object_or_404(Cliente, pk=cliente_id)
 
@@ -1558,7 +1559,7 @@ def portal_pago_cancelado_view(request):
     """Vista para mostrar cancelación de pago"""
     cliente_id = request.session.get('cliente_id')
     if not cliente_id:
-        return redirect('pos:portal_login')
+        return redirect('portal_login')
 
     cliente = get_object_or_404(Cliente, pk=cliente_id)
 

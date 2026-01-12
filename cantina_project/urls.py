@@ -91,6 +91,9 @@ urlpatterns = [
     # POS (Punto de Venta) - Nueva interfaz
     path('pos/', include('gestion.pos_urls')),
     
+    # Portal de Padres
+    path('portal/', include('gestion.portal_urls')),
+    
     # Portal de Clientes
     path('clientes/', include('gestion.cliente_urls')),
     

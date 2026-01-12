@@ -32,11 +32,11 @@
                     
                     <div class="form-control">
                         <label class="label">
-                            <span class="label-text">Usuario</span>
+                            <span class="label-text">Correo Electrónico</span>
                         </label>
-                        <input type="text" name="usuario" required 
+                        <input type="email" name="email" required 
                                class="input input-bordered" 
-                               placeholder="Tu usuario"
+                               placeholder="correo@ejemplo.com"
                                autofocus>
                     </div>
                     
@@ -44,9 +44,16 @@
                         <label class="label">
                             <span class="label-text">Contraseña</span>
                         </label>
-                        <input type="password" name="contrasena" required 
+                        <input type="password" name="password" required 
                                class="input input-bordered" 
                                placeholder="Tu contraseña">
+                    </div>
+                    
+                    <div class="form-control mt-2">
+                        <label class="label cursor-pointer justify-start gap-2">
+                            <input type="checkbox" name="recordarme" class="checkbox checkbox-sm">
+                            <span class="label-text">Recordarme</span>
+                        </label>
                     </div>
                     
                     {% if mostrar_captcha %}

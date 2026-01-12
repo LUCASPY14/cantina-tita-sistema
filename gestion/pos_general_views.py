@@ -955,6 +955,32 @@ def dashboard_ventas_dia(request):
         productos_labels = [item['id_producto__descripcion'][:20] for item in productos_vendidos]
         productos_cantidades = [int(item['cantidad_total']) for item in productos_vendidos]
         
+        # === NOTIFICACIONES DE VALIDACIÓN (ADMINISTRADOR) ===
+        from .models import CargasSaldo
+        
+        # Cargas de saldo pendientes de validación
+        cargas_pendientes = CargasSaldo.objects.filter(
+            estado='PENDIENTE'
+        ).select_related(
+            'nro_tarjeta',
+            'nro_tarjeta__id_hijo',
+            'id_cliente_origen'
+        ).order_by('-fecha_carga')[:20]
+        
+        # Pagos pendientes de validación (transferencias bancarias)
+        pagos_pendientes = Ventas.objects.filter(
+            motivo_credito__icontains='PAGO_PENDIENTE_TRANSFERENCIA'
+        ).select_related(
+            'id_cliente',
+            'id_empleado_cajero'
+        ).order_by('-fecha')[:20]
+        
+        # Contadores para notificaciones
+        total_cargas_pendientes = CargasSaldo.objects.filter(estado='PENDIENTE').count()
+        total_pagos_pendientes = Ventas.objects.filter(
+            motivo_credito__icontains='PAGO_PENDIENTE_TRANSFERENCIA'
+        ).count()
+        
         context = {
             'hoy': hoy_dt,
             'total_ventas': total_ventas,
@@ -972,6 +998,12 @@ def dashboard_ventas_dia(request):
             'metodos_montos': metodos_montos,
             'productos_labels': productos_labels,
             'productos_cantidades': productos_cantidades,
+            
+            # Notificaciones de validación
+            'cargas_pendientes': cargas_pendientes,
+            'pagos_pendientes': pagos_pendientes,
+            'total_cargas_pendientes': total_cargas_pendientes,
+            'total_pagos_pendientes': total_pagos_pendientes,
         }
         
         # Si es AJAX, devolver JSON

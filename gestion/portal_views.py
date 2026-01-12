@@ -369,7 +369,7 @@ def dashboard_view(request):
     
     # Obtener todas las tarjetas del cliente
     tarjetas = Tarjeta.objects.filter(
-        id_hijo__id_cliente=cliente
+        id_hijo__id_cliente_responsable=cliente
     ).select_related('id_hijo').order_by('-saldo_actual')
     
     # Calcular totales
@@ -403,7 +403,7 @@ def mis_hijos_view(request):
     
     # Obtener hijos con sus tarjetas
     from .models import Hijo
-    hijos = Hijo.objects.filter(id_cliente=cliente).prefetch_related('tarjetas')
+    hijos = Hijo.objects.filter(id_cliente_responsable=cliente).prefetch_related('tarjetas')
     
     context = {
         'usuario': usuario,

@@ -143,6 +143,32 @@
         </div>
     </div>
 
+    <!-- NOTIFICACIONES DE VALIDACIÓN -->
+    {% if total_cargas_pendientes > 0 or total_pagos_pendientes > 0 %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-warning shadow-sm">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h5 class="alert-heading mb-2">⚠️ ¡Validaciones Pendientes!</h5>
+                        <p class="mb-0">
+                            {% if total_cargas_pendientes > 0 %}
+                            <span class="badge bg-warning text-dark me-2">{{ total_cargas_pendientes }}</span> Cargas de saldo pendientes
+                            {% endif %}
+                            {% if total_pagos_pendientes > 0 %}
+                            <span class="badge bg-warning text-dark me-2">{{ total_pagos_pendientes }}</span> Pagos pendientes
+                            {% endif %}
+                        </p>
+                    </div>
+                    <button class="btn btn-primary" onclick="document.getElementById('validaciones').scrollIntoView({behavior: 'smooth'})">
+                        Ver Validaciones
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Gráficas -->
     <div class="row mb-4">
         <!-- Evolución por hora -->
@@ -292,6 +318,123 @@
         </div>
     </div>
     {% endif %}
+
+    <!-- SECCIÓN DE VALIDACIONES PENDIENTES -->
+    <div id="validaciones">
+        {% if cargas_pendientes or pagos_pendientes %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <h3 class="text-center mb-4">🔔 Validaciones Pendientes</h3>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <!-- Cargas de Saldo Pendientes -->
+            {% if cargas_pendientes %}
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            💳 Cargas de Saldo Pendientes
+                            <span class="badge bg-dark float-end">{{ total_cargas_pendientes }}</span>
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Tarjeta</th>
+                                        <th>Estudiante</th>
+                                        <th class="text-end">Monto</th>
+                                        <th>Ref.</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for carga in cargas_pendientes %}
+                                    <tr>
+                                        <td><small>{{ carga.fecha_carga|date:"d/m/Y H:i" }}</small></td>
+                                        <td><code>{{ carga.nro_tarjeta.nro_tarjeta }}</code></td>
+                                        <td>{{ carga.nro_tarjeta.id_hijo.nombre }} {{ carga.nro_tarjeta.id_hijo.apellido }}</td>
+                                        <td class="text-end"><strong class="text-success">₲{{ carga.monto_cargado|floatformat:0|intcomma }}</strong></td>
+                                        <td><small>{{ carga.referencia|default:"N/A" }}</small></td>
+                                        <td>
+                                            <a href="{% url 'validar_carga_saldo' carga.id_carga %}" class="btn btn-sm btn-primary">
+                                                ✓ Validar
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% if total_cargas_pendientes > 20 %}
+                    <div class="card-footer text-center">
+                        <a href="{% url 'lista_cargas_pendientes' %}" class="btn btn-sm btn-outline-primary">
+                            Ver todas las {{ total_cargas_pendientes }} cargas
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Pagos Pendientes de Validación -->
+            {% if pagos_pendientes %}
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            🏦 Pagos Pendientes de Validación
+                            <span class="badge bg-dark float-end">{{ total_pagos_pendientes }}</span>
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Cliente</th>
+                                        <th class="text-end">Monto</th>
+                                        <th>Motivo</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for pago in pagos_pendientes %}
+                                    <tr>
+                                        <td><small>{{ pago.fecha|date:"d/m/Y H:i" }}</small></td>
+                                        <td>{{ pago.id_cliente.nombres }} {{ pago.id_cliente.apellidos }}</td>
+                                        <td class="text-end"><strong class="text-success">₲{{ pago.monto_total|floatformat:0|intcomma }}</strong></td>
+                                        <td><small>{{ pago.motivo_credito|truncatechars:30 }}</small></td>
+                                        <td>
+                                            <a href="{% url 'validar_pago' pago.id_venta %}" class="btn btn-sm btn-primary">
+                                                ✓ Validar
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% if total_pagos_pendientes > 20 %}
+                    <div class="card-footer text-center">
+                        <a href="{% url 'lista_pagos_pendientes' %}" class="btn btn-sm btn-outline-primary">
+                            Ver todos los {{ total_pagos_pendientes }} pagos
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
 
     <!-- Error si hay -->
     {% if error %}
