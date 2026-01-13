@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border: 1px solid #ddd; }
+        .alert { background: #ffe6e6; border-left: 4px solid #dc3545; padding: 15px; margin: 20px 0; }
+        .button { display: inline-block; background: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        .footer { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
+        .deuda { font-size: 32px; color: #dc3545; font-weight: bold; }
+        .urgente { background: #dc3545; color: white; padding: 10px; text-align: center; font-weight: bold; font-size: 18px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="urgente">
+            ⚠️ URGENTE: SALDO PENDIENTE
+        </div>
+        
+        <div class="header">
+            <h1>⚠️ Recordatorio Urgente</h1>
+        </div>
+        
+        <div class="content">
+            <p><strong>Estimado/a padre/madre,</strong></p>
+            
+            <p style="color: #dc3545; font-weight: bold;">El saldo de la tarjeta de su hijo/a lleva {{ dias_deuda }} días pendiente de regularización.</p>
+            
+            <div class="alert">
+                <strong>💳 Tarjeta:</strong> {{ tarjeta }}<br>
+                <strong>👨‍🎓 Estudiante:</strong> {{ estudiante }}<br>
+                <strong>📅 Autorización:</strong> {{ fecha_autorizacion|date:"d/m/Y" }}<br>
+                <strong>⏰ Días en deuda:</strong> <span style="color: #dc3545; font-weight: bold;">{{ dias_deuda }} días</span><br>
+                <strong>💰 Monto adeudado:</strong> 
+                <div class="deuda">Gs. {{ monto_deuda|floatformat:0 }}</div>
+            </div>
+            
+            <p><strong>⚠️ ATENCIÓN:</strong> Si la deuda alcanza los 15 días, la tarjeta será bloqueada automáticamente hasta regularizar el pago.</p>
+            
+            <p>Por favor, regularice el saldo <strong>CON URGENCIA</strong> para evitar inconvenientes.</p>
+            
+            <div style="text-align: center;">
+                <a href="{{ url_recarga }}" class="button">💳 RECARGAR AHORA - URGENTE</a>
+            </div>
+            
+            <p><strong>Formas de recarga inmediata:</strong></p>
+            <ul>
+                <li>🌐 Portal web (las 24 horas): <a href="{{ url_recarga }}">Ingresar aquí</a></li>
+                <li>🏪 En caja de la cantina: 07:00 - 16:00 horas</li>
+                <li>💸 Transferencia express (consultar datos en el portal)</li>
+            </ul>
+            
+            <p>Agradecemos su pronta atención a este asunto.</p>
+            
+            <p><strong>Cantina Tita</strong><br>
+            Sistema de Gestión Escolar</p>
+        </div>
+        
+        <div class="footer">
+            <p>Este es un mensaje automático urgente. Por favor actúe de inmediato.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -871,6 +871,58 @@
                 return;
             }
 
+            // Calcular total
+            const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+
+            // VERIFICAR SALDO SI ES PAGO CON TARJETA ESTUDIANTIL
+            if (medioPago === '6') {
+                try {
+                    const responseSaldo = await fetch('/pos/verificar-saldo-venta/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            nro_tarjeta: tarjetaSeleccionada.nro_tarjeta,
+                            total: total
+                        })
+                    });
+
+                    const dataSaldo = await responseSaldo.json();
+
+                    if (dataSaldo.success && !dataSaldo.tiene_saldo) {
+                        // Saldo insuficiente - Mostrar modal de autorización
+                        window.abrirModalAutorizacion({
+                            nro_tarjeta: tarjetaSeleccionada.nro_tarjeta,
+                            estudiante_nombre: tarjetaSeleccionada.nombre,
+                            saldo_actual: dataSaldo.saldo_actual,
+                            total_venta: total,
+                            faltante: dataSaldo.faltante,
+                            permite_saldo_negativo: dataSaldo.permite_saldo_negativo,
+                            puede_autorizar: dataSaldo.puede_autorizar,
+                            mensaje_limite: dataSaldo.mensaje
+                        });
+                        
+                        // Esperar autorización antes de continuar
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Error al verificar saldo:', error);
+                    // Continuar con venta normal si hay error
+                }
+            }
+
+            // Continuar con proceso normal de venta
+            await ejecutarVenta(null);
+        }
+
+        // Función para ejecutar la venta (con o sin autorización)
+        window.procesarVentaConAutorizacion = async function(datosAutorizacion) {
+            await ejecutarVenta(datosAutorizacion);
+        };
+
+        async function ejecutarVenta(datosAutorizacion) {
             // Preparar datos de productos
             const productos = carrito.map(item => ({
                 id_producto: item.id,
@@ -881,12 +933,32 @@
             // Calcular total
             const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
+            // Obtener datos del formulario
+            const emitirFactura = document.getElementById('emitirFactura').checked;
+            const medioPago = document.getElementById('medioPago').value || '1';
+
             // Preparar datos de pago
             const pagos = [{
                 id_medio_pago: parseInt(medioPago),
                 monto: total,
                 nro_tarjeta: tarjetaSeleccionada.nro_tarjeta || null
             }];
+
+            // Preparar datos de venta
+            const datosVenta = {
+                id_hijo: tarjetaSeleccionada.id_hijo,
+                productos: productos,
+                pagos: pagos,
+                tipo_venta: 'CONTADO',
+                emitir_factura: emitirFactura,
+                medio_pago_id: parseInt(medioPago)
+            };
+
+            // Agregar datos de autorización si existen
+            if (datosAutorizacion) {
+                datosVenta.autorizado_por_id = datosAutorizacion.id_supervisor;
+                datosVenta.motivo_credito = datosAutorizacion.motivo;
+            }
 
             // Deshabilitar botón mientras se procesa
             document.getElementById('btnProcesar').disabled = true;
@@ -899,14 +971,7 @@
                         'Content-Type': 'application/json',
                         'X-CSRFToken': getCookie('csrftoken')
                     },
-                    body: JSON.stringify({
-                        id_hijo: tarjetaSeleccionada.id_hijo,
-                        productos: productos,
-                        pagos: pagos,
-                        tipo_venta: 'CONTADO',
-                        emitir_factura: emitirFactura,
-                        medio_pago_id: parseInt(medioPago)
-                    })
+                    body: JSON.stringify(datosVenta)
                 });
 
                 const data = await response.json();
@@ -915,15 +980,18 @@
                     console.log('✅ Venta procesada:', data);
                     
                     // Mostrar confirmación
-                    const mensaje = `
-✅ VENTA PROCESADA EXITOSAMENTE
-
-Venta #${data.id_venta}
-Monto: Gs. ${parseInt(data.monto_total).toLocaleString('es-PY')}
-Estudiante: ${tarjetaSeleccionada.nombre}
-
-${data.nro_factura ? `Factura: #${data.nro_factura}` : 'Ticket generado'}
-                    `;
+                    let mensaje = `✅ VENTA PROCESADA EXITOSAMENTE\n\n`;
+                    mensaje += `Venta #${data.id_venta}\n`;
+                    mensaje += `Monto: Gs. ${parseInt(data.monto_total).toLocaleString('es-PY')}\n`;
+                    mensaje += `Estudiante: ${tarjetaSeleccionada.nombre}\n\n`;
+                    
+                    if (datosAutorizacion) {
+                        mensaje += `⚠️ VENTA AUTORIZADA CON SALDO NEGATIVO\n`;
+                        mensaje += `Supervisor: ${datosAutorizacion.supervisor_nombre || 'Autorizado'}\n\n`;
+                    }
+                    
+                    mensaje += data.nro_factura ? `Factura: #${data.nro_factura}` : 'Ticket generado';
+                    
                     alert(mensaje);
 
                     // Si hay ticket, ir a descargarlo
@@ -933,6 +1001,22 @@ ${data.nro_factura ? `Factura: #${data.nro_factura}` : 'Ticket generado'}
 
                     // Limpiar
                     limpiarCarrito();
+                    
+                    // Limpiar datos de autorización
+                    window.datosAutorizacion = null;
+                    
+                } else if (data.requiere_autorizacion_supervisor) {
+                    // Si el backend pide autorización, mostrar modal
+                    window.abrirModalAutorizacion({
+                        nro_tarjeta: tarjetaSeleccionada.nro_tarjeta,
+                        estudiante_nombre: tarjetaSeleccionada.nombre,
+                        saldo_actual: data.saldo_actual || 0,
+                        total_venta: total,
+                        faltante: data.monto_faltante || 0,
+                        permite_saldo_negativo: data.permite_saldo_negativo || false,
+                        puede_autorizar: data.puede_autorizar_negativo || false,
+                        mensaje_limite: data.mensaje_limite || data.error
+                    });
                 } else {
                     alert(`❌ Error al procesar venta:\n${data.error}`);
                     console.error('Error:', data);
@@ -976,5 +1060,8 @@ ${data.nro_factura ? `Factura: #${data.nro_factura}` : 'Ticket generado'}
         // Inicializar
         document.addEventListener('DOMContentLoaded', cargarProductos);
     </script>
+
+    <!-- Incluir Modal de Autorización de Saldo Negativo -->
+    {% include 'pos/modales/autorizar_saldo_negativo.html' %}
 </body>
 </html>

@@ -2,7 +2,12 @@
 URLs para el módulo POS (Punto de Venta)
 """
 from django.urls import path
-from gestion import almuerzo_views, cliente_views, seguridad_views, pos_views, pos_general_views
+from gestion import (
+    almuerzo_views, cliente_views, seguridad_views, pos_views, 
+    pos_general_views, autorizacion_saldo_views,
+    reporte_autorizaciones_views, dashboard_saldos_views,
+    admin_configuracion_views
+)
 
 app_name = 'pos'
 
@@ -162,6 +167,37 @@ urlpatterns = [
     
     # Autorización de Supervisor (Saldo Insuficiente)
     path('validar-supervisor/', pos_views.validar_supervisor, name='validar_supervisor'),
+    
+    # =============================================================================
+    # SISTEMA DE AUTORIZACIONES DE SALDO NEGATIVO (Diciembre 2025)
+    # =============================================================================
+    
+    # Verificación de saldo antes de venta
+    path('verificar-saldo-venta/', autorizacion_saldo_views.verificar_saldo_venta, name='verificar_saldo_venta'),
+    
+    # Autorización de venta con saldo negativo
+    path('autorizar-saldo-negativo/', autorizacion_saldo_views.autorizar_venta_saldo_negativo_ajax, name='autorizar_saldo_negativo'),
+    path('autorizar-saldo-negativo/modal/', autorizacion_saldo_views.modal_autorizar_saldo_negativo, name='modal_autorizar_saldo_negativo'),
+    
+    # Listado de autorizaciones
+    path('autorizaciones-saldo-negativo/', autorizacion_saldo_views.listar_autorizaciones_saldo_negativo, name='listar_autorizaciones_saldo_negativo'),
+    
+    # =============================================================================
+    # NUEVAS FEATURES DE ALTA PRIORIDAD (Enero 2026)
+    # =============================================================================
+    
+    # Reportes de Autorizaciones con Chart.js
+    path('reportes/autorizaciones-saldo-negativo/', reporte_autorizaciones_views.reporte_autorizaciones_saldo_negativo, name='reporte_autorizaciones_saldo_negativo'),
+    path('reportes/autorizaciones/exportar-excel/', reporte_autorizaciones_views.exportar_autorizaciones_excel, name='exportar_autorizaciones_excel'),
+    
+    # Dashboard Tiempo Real de Saldos
+    path('dashboard-saldos-tiempo-real/', dashboard_saldos_views.dashboard_saldos_tiempo_real, name='dashboard_saldos_tiempo_real'),
+    path('api/saldos-tiempo-real/', dashboard_saldos_views.api_saldos_tiempo_real, name='api_saldos_tiempo_real'),
+    
+    # Panel Admin Configuración Masiva
+    path('admin/configurar-limites-masivo/', admin_configuracion_views.configurar_limites_masivo_view, name='configurar_limites_masivo'),
+    path('admin/aplicar-configuracion-masiva/', admin_configuracion_views.aplicar_configuracion_masiva, name='aplicar_configuracion_masiva'),
+    path('admin/historial-configuraciones/', admin_configuracion_views.historial_configuraciones_masivas, name='historial_configuraciones'),
 ]
 
 

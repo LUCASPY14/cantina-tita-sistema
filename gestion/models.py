@@ -278,6 +278,29 @@ class Tarjeta(models.Model):
     fecha_vencimiento = models.DateField(db_column='Fecha_Vencimiento', blank=True, null=True)
     saldo_alerta = models.DecimalField(db_column='Saldo_Alerta', max_digits=10, decimal_places=2, blank=True, null=True)
     fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    
+    # Campos para autorización de saldo negativo
+    permite_saldo_negativo = models.BooleanField(
+        db_column='permite_saldo_negativo',
+        default=False,
+        help_text='Indica si la tarjeta puede tener saldo negativo con autorización'
+    )
+    limite_credito = models.BigIntegerField(
+        db_column='limite_credito',
+        default=0,
+        help_text='Monto máximo de crédito (saldo negativo) permitido en guaraníes'
+    )
+    notificar_saldo_bajo = models.BooleanField(
+        db_column='notificar_saldo_bajo',
+        default=True,
+        help_text='Enviar notificaciones cuando el saldo está bajo o negativo'
+    )
+    ultima_notificacion_saldo = models.DateTimeField(
+        db_column='ultima_notificacion_saldo',
+        blank=True,
+        null=True,
+        help_text='Fecha de la última notificación de saldo enviada'
+    )
 
     class Meta:
         managed = 'test' not in sys.argv  # True para tests, False para producción
@@ -3382,3 +3405,113 @@ class PreferenciaNotificacion(models.Model):
     def __str__(self):
         return f'Preferencias de {self.usuario_portal.email} - {self.tipo_notificacion}'
 
+
+# ==================== AUTORIZACIÓN DE SALDO NEGATIVO ====================
+
+class AutorizacionSaldoNegativo(models.Model):
+    """
+    Registro de autorizaciones de ventas con saldo negativo
+    """
+    id_autorizacion = models.BigAutoField(db_column='id_autorizacion', primary_key=True)
+    id_venta = models.ForeignKey(
+        Ventas,
+        on_delete=models.RESTRICT,
+        db_column='id_venta',
+        related_name='autorizaciones_saldo'
+    )
+    nro_tarjeta = models.ForeignKey(
+        Tarjeta,
+        on_delete=models.CASCADE,
+        db_column='nro_tarjeta',
+        related_name='autorizaciones'
+    )
+    id_empleado_autoriza = models.ForeignKey(
+        Empleado,
+        on_delete=models.RESTRICT,
+        db_column='id_empleado_autoriza',
+        related_name='autorizaciones_realizadas'
+    )
+    saldo_anterior = models.BigIntegerField(db_column='saldo_anterior', help_text='Saldo antes de la venta')
+    monto_venta = models.BigIntegerField(db_column='monto_venta', help_text='Monto de la venta')
+    saldo_resultante = models.BigIntegerField(db_column='saldo_resultante', help_text='Saldo después de la venta (negativo)')
+    motivo = models.CharField(db_column='motivo', max_length=255, help_text='Justificación de la autorización')
+    fecha_autorizacion = models.DateTimeField(db_column='fecha_autorizacion', auto_now_add=True)
+    fecha_regularizacion = models.DateTimeField(db_column='fecha_regularizacion', blank=True, null=True)
+    id_carga_regularizacion = models.ForeignKey(
+        CargasSaldo,
+        on_delete=models.SET_NULL,
+        db_column='id_carga_regularizacion',
+        related_name='regularizaciones',
+        blank=True,
+        null=True
+    )
+    regularizado = models.BooleanField(db_column='regularizado', default=False)
+    
+    class Meta:
+        managed = 'test' not in sys.argv
+        db_table = 'autorizacion_saldo_negativo'
+        verbose_name = 'Autorización de Saldo Negativo'
+        verbose_name_plural = 'Autorizaciones de Saldo Negativo'
+        indexes = [
+            models.Index(fields=['nro_tarjeta', 'fecha_autorizacion'], name='idx_tarjeta_fecha_auth'),
+            models.Index(fields=['regularizado'], name='idx_regularizado'),
+            models.Index(fields=['id_empleado_autoriza'], name='idx_empleado_auth'),
+        ]
+    
+    def __str__(self):
+        return f'Autorización #{self.id_autorizacion} - {self.nro_tarjeta} - Gs. {self.saldo_resultante:,}'
+
+
+class NotificacionSaldo(models.Model):
+    """
+    Registro de notificaciones de saldo enviadas a padres
+    """
+    TIPO_NOTIFICACION_CHOICES = [
+        ('SALDO_BAJO', 'Saldo Bajo'),
+        ('SALDO_NEGATIVO', 'Saldo Negativo'),
+        ('SALDO_CRITICO', 'Saldo Crítico'),
+        ('REGULARIZADO', 'Saldo Regularizado'),
+    ]
+    
+    id_notificacion = models.BigAutoField(db_column='id_notificacion', primary_key=True)
+    nro_tarjeta = models.ForeignKey(
+        Tarjeta,
+        on_delete=models.CASCADE,
+        db_column='nro_tarjeta',
+        related_name='notificaciones_saldo'
+    )
+    tipo_notificacion = models.CharField(
+        db_column='tipo_notificacion',
+        max_length=50,
+        choices=TIPO_NOTIFICACION_CHOICES
+    )
+    saldo_actual = models.BigIntegerField(db_column='saldo_actual')
+    mensaje = models.TextField(db_column='mensaje')
+    enviada_email = models.BooleanField(db_column='enviada_email', default=False)
+    enviada_sms = models.BooleanField(db_column='enviada_sms', default=False)
+    leida = models.BooleanField(db_column='leida', default=False)
+    email_destinatario = models.EmailField(db_column='email_destinatario', blank=True, null=True)
+    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
+    fecha_envio = models.DateTimeField(db_column='fecha_envio', blank=True, null=True)
+    
+    class Meta:
+        managed = 'test' not in sys.argv
+        db_table = 'notificacion_saldo'
+        verbose_name = 'Notificación de Saldo'
+        verbose_name_plural = 'Notificaciones de Saldo'
+        indexes = [
+            models.Index(fields=['nro_tarjeta', 'tipo_notificacion'], name='idx_tarjeta_tipo_not'),
+            models.Index(fields=['leida'], name='idx_leida_not'),
+            models.Index(fields=['fecha_creacion'], name='idx_fecha_creacion_not'),
+        ]
+    
+    def __str__(self):
+        return f'{self.get_tipo_notificacion_display()} - {self.nro_tarjeta} - {self.fecha_creacion.strftime("%d/%m/%Y %H:%M")}'
+
+
+# =============================================================================
+# IMPORTAR MODELOS ADICIONALES DE OTROS ARCHIVOS
+# =============================================================================
+
+# Modelo de Términos Legales
+from gestion.terminos_legales_model import AceptacionTerminosSaldoNegativo

@@ -690,3 +690,29 @@ LOGGING = {
 
 # Archivos estáticos para producción
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+
+# =============================================================================
+# CONFIGURACIÓN DE CELERY (ENERO 2026)
+# =============================================================================
+
+# URL del broker Redis para Celery
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+# Configuración adicional de Celery
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'America/Asuncion'
+
+
+# =============================================================================
+# CONFIGURACIÓN DE EMAILS PARA GERENCIA
+# =============================================================================
+
+# Email de gerencia para reportes diarios y notificaciones importantes
+GERENCIA_EMAIL = config('GERENCIA_EMAIL', default='gerencia@cantina.edu.py')
+
+# URL del sitio para enlaces en emails
+SITE_URL = config('SITE_URL', default='http://localhost:8000')

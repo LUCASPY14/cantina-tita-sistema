@@ -47,10 +47,18 @@ def pos_general(request):
     Vista principal del POS General
     Renderiza la interfaz del punto de venta con Bootstrap 5
     """
+    # Obtener supervisores activos (GERENTE y ADMINISTRADOR) para autorizaciones
+    from gestion.models import Empleado
+    supervisores = Empleado.objects.filter(
+        activo=True,
+        id_rol__nombre_rol__in=['ADMINISTRADOR', 'GERENTE']
+    ).select_related('id_rol').order_by('nombre', 'apellido')
+    
     context = {
         'titulo': 'POS General - Cantina Tita',
         'fecha_actual': timezone.now().strftime('%Y-%m-%d'),
         'hora_actual': timezone.now().strftime('%H:%M:%S'),
+        'supervisores': supervisores,
     }
     return render(request, 'pos/pos_bootstrap.html', context)
 

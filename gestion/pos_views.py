@@ -399,12 +399,21 @@ def procesar_venta(request):
                 if usa_solo_tarjeta:
                     tiene_tarjeta_exclusiva = True
                     # Validar saldo solo si es consumo exclusivo de tarjeta
-                    if tarjeta.saldo_actual < total:
+                    autorizado_por_id = data.get('autorizado_por_id')  # ID del supervisor que autoriza
+                    
+                    if tarjeta.saldo_actual < total and not autorizado_por_id:
+                        # Verificar si puede usar saldo negativo
+                        from gestion.autorizacion_saldo_utils import validar_limite_credito
+                        puede_negativo, mensaje_limite = validar_limite_credito(tarjeta, total)
+                        
                         return JsonResponse({
                             'success': False,
                             'error': f'Saldo insuficiente. Disponible: Gs. {tarjeta.saldo_actual:,.0f}',
-                            'requiere_autorizacion_supervisor': True,  # Indicar que puede autorizarse
-                            'monto_faltante': int(total - tarjeta.saldo_actual)
+                            'requiere_autorizacion_supervisor': True,
+                            'monto_faltante': int(total - tarjeta.saldo_actual),
+                            'permite_saldo_negativo': tarjeta.permite_saldo_negativo,
+                            'puede_autorizar_negativo': puede_negativo,
+                            'mensaje_limite': mensaje_limite
                         })
                     
             except Tarjeta.DoesNotExist:
@@ -575,6 +584,24 @@ def procesar_venta(request):
             
             print(f"DEBUG: Saldo posterior calculado: {saldo_posterior}")
             
+            # Si hay autorización de supervisor y quedará en negativo, registrar autorización
+            if autorizado_por_id and saldo_posterior < 0:
+                try:
+                    from gestion.autorizacion_saldo_utils import autorizar_venta_saldo_negativo
+                    from gestion.models import Empleado
+                    
+                    supervisor = Empleado.objects.get(id_empleado=autorizado_por_id)
+                    motivo_credito = data.get('motivo_credito', 'Autorización de venta con saldo negativo')
+                    
+                    # Primero guardar venta para tener ID
+                    venta.save()
+                    
+                    # Registrar autorización
+                    autorizar_venta_saldo_negativo(venta, tarjeta, supervisor, motivo_credito)
+                    print(f"✅ AUTORIZACIÓN: Venta #{venta.id_venta} autorizada con saldo negativo por {supervisor.nombre} {supervisor.apellido}")
+                except Exception as e:
+                    print(f"❌ ERROR al registrar autorización: {e}")
+            
             # Registrar consumo PRIMERO, antes de actualizar la tarjeta
             try:
                 saldo_ant_int = int(saldo_anterior)
@@ -609,6 +636,15 @@ def procesar_venta(request):
             tarjeta.saldo_actual = saldo_posterior
             tarjeta.save()
             print(f"DEBUG: Saldo de tarjeta actualizado a {tarjeta.saldo_actual}")
+            
+            # Si el saldo quedó bajo o negativo, enviar notificación
+            if saldo_posterior <= (tarjeta.saldo_alerta or 0):
+                try:
+                    from gestion.notificaciones_saldo import verificar_saldo_y_notificar
+                    verificar_saldo_y_notificar(tarjeta)
+                    print(f"📧 NOTIFICACIÓN: Notificación de saldo enviada para tarjeta {tarjeta.nro_tarjeta}")
+                except Exception as e:
+                    print(f"⚠️ ERROR al enviar notificación de saldo: {e}")
         
         # ⚠️ REGISTRAR EN AUDITORÍA SI SE CONFIRMARON RESTRICCIONES ALIMENTARIAS
         if restricciones_confirmadas and tarjeta and tarjeta.id_hijo:
@@ -1792,6 +1828,12 @@ def procesar_recarga(request):
         
         # Guardar saldo anterior
         saldo_anterior = tarjeta.saldo_actual
+        
+        # Verificar si hay deuda pendiente (saldo negativo)
+        tiene_deuda = saldo_anterior < 0
+        deuda_anterior = abs(saldo_anterior) if tiene_deuda else Decimal('0')
+        
+        # Calcular saldo posterior
         saldo_posterior = saldo_anterior + monto
         
         # Registrar recarga
@@ -1815,6 +1857,23 @@ def procesar_recarga(request):
         # Refrescar tarjeta para obtener nuevo saldo
         tarjeta.refresh_from_db()
         
+        # Si había deuda, regularizar
+        regularizacion_info = None
+        if tiene_deuda:
+            try:
+                from gestion.autorizacion_saldo_utils import regularizar_saldo_negativo
+                regularizacion_info = regularizar_saldo_negativo(tarjeta, recarga)
+                print(f"✅ REGULARIZACIÓN: Deuda de Gs. {int(deuda_anterior):,} aplicada a recarga")
+            except Exception as e:
+                print(f"⚠️ ERROR al regularizar saldo negativo: {e}")
+        
+        # Verificar y enviar notificación de saldo si corresponde
+        try:
+            from gestion.notificaciones_saldo import verificar_saldo_y_notificar
+            verificar_saldo_y_notificar(tarjeta)
+        except Exception as e:
+            print(f"⚠️ ERROR al enviar notificación de saldo: {e}")
+        
         # Si hay comisión, registrarla (esto sería en DetalleComisionVenta pero para recargas)
         # Por ahora solo la calculamos y mostramos
         
@@ -1825,6 +1884,16 @@ def procesar_recarga(request):
             'nuevo_saldo': float(tarjeta.saldo_actual),
             'monto': float(monto)
         }
+        
+        # Agregar información de regularización si hubo
+        if regularizacion_info:
+            response_data['regularizacion'] = {
+                'deuda_anterior': float(regularizacion_info['deuda_anterior']),
+                'monto_aplicado_deuda': float(regularizacion_info['monto_aplicado_deuda']),
+                'saldo_disponible': float(regularizacion_info['saldo_final'])
+            }
+            if regularizacion_info['deuda_anterior'] > 0:
+                response_data['message'] += f' | Deuda regularizada: Gs. {int(regularizacion_info["monto_aplicado_deuda"]):,}'
         
         if comision > 0:
             response_data['comision'] = float(comision)

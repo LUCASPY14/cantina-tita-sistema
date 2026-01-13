@@ -364,23 +364,36 @@ def restablecer_password_view(request, token):
 @login_required_portal
 def dashboard_view(request):
     """Vista principal del dashboard"""
+    from gestion.models import NotificacionSaldo
+    
     usuario = request.usuario_portal
-    cliente = usuario.cliente
+    cliente = usuario.id_cliente
     
     # Obtener todas las tarjetas del cliente
     tarjetas = Tarjeta.objects.filter(
-        id_hijo__id_cliente_responsable=cliente
+        id_hijo__id_cliente=cliente
     ).select_related('id_hijo').order_by('-saldo_actual')
     
     # Calcular totales
     total_tarjetas = tarjetas.count()
     saldo_total = sum(t.saldo_actual for t in tarjetas)
     
-    # Obtener notificaciones no leídas
-    notificaciones = usuario.notificaciones.filter(leida=False).order_by('-fecha_envio')[:5]
+    # Obtener notificaciones de saldo recientes (últimas 5)
+    notificaciones_recientes = NotificacionSaldo.objects.filter(
+        nro_tarjeta__in=tarjetas
+    ).select_related('nro_tarjeta__id_hijo').order_by('-fecha_creacion')[:5]
+    
+    # Contar notificaciones pendientes (no leídas)
+    notificaciones_pendientes_count = NotificacionSaldo.objects.filter(
+        nro_tarjeta__in=tarjetas,
+        leida=False
+    ).count()
+    
+    # Obtener notificaciones generales no leídas (del sistema anterior)
+    notificaciones = usuario.notificaciones.filter(leida=False).order_by('-fecha_envio')[:5] if hasattr(usuario, 'notificaciones') else []
     
     # Obtener últimas transacciones
-    ultimas_transacciones = usuario.transacciones.all().order_by('-fecha_transaccion')[:10]
+    ultimas_transacciones = usuario.transacciones.all().order_by('-fecha_transaccion')[:10] if hasattr(usuario, 'transacciones') else []
     
     context = {
         'usuario': usuario,
@@ -390,6 +403,8 @@ def dashboard_view(request):
         'saldo_total': saldo_total,
         'notificaciones': notificaciones,
         'ultimas_transacciones': ultimas_transacciones,
+        'notificaciones_recientes': notificaciones_recientes,
+        'notificaciones_pendientes_count': notificaciones_pendientes_count,
     }
     
     return render(request, 'portal/dashboard.html', context)
@@ -639,3 +654,65 @@ def pago_cancelado_view(request):
         return redirect('portal_dashboard')
     else:
         return redirect('portal_login')
+
+
+@login_required_portal
+def notificaciones_saldo_view(request):
+    """Vista de notificaciones de saldo para padres"""
+    from django.core.paginator import Paginator
+    from gestion.models import NotificacionSaldo
+    
+    usuario = request.usuario_portal
+    cliente = usuario.id_cliente
+    
+    # Obtener todas las tarjetas de los hijos del cliente
+    tarjetas_hijos = Tarjeta.objects.filter(
+        id_hijo__id_cliente=cliente
+    ).select_related('id_hijo')
+    
+    # Obtener notificaciones de todas las tarjetas
+    notificaciones_query = NotificacionSaldo.objects.filter(
+        nro_tarjeta__in=tarjetas_hijos
+    ).select_related('nro_tarjeta__id_hijo').order_by('-fecha_creacion')
+    
+    # Aplicar filtros
+    filtro_tipo = request.GET.get('tipo')
+    if filtro_tipo:
+        notificaciones_query = notificaciones_query.filter(tipo_notificacion=filtro_tipo)
+    
+    filtro_tarjeta = request.GET.get('tarjeta')
+    if filtro_tarjeta:
+        notificaciones_query = notificaciones_query.filter(nro_tarjeta__nro_tarjeta=filtro_tarjeta)
+    
+    filtro_leida = request.GET.get('leida')
+    if filtro_leida == '0':
+        notificaciones_query = notificaciones_query.filter(leida=False)
+    elif filtro_leida == '1':
+        notificaciones_query = notificaciones_query.filter(leida=True)
+    
+    # Estadísticas
+    total_notificaciones = notificaciones_query.count()
+    no_leidas = notificaciones_query.filter(leida=False).count()
+    saldo_bajo_count = notificaciones_query.filter(tipo_notificacion='SALDO_BAJO').count()
+    saldo_negativo_count = notificaciones_query.filter(tipo_notificacion__in=['SALDO_NEGATIVO', 'SALDO_CRITICO']).count()
+    
+    # Paginación
+    paginator = Paginator(notificaciones_query, 20)
+    page_number = request.GET.get('page')
+    notificaciones = paginator.get_page(page_number)
+    
+    context = {
+        'notificaciones': notificaciones,
+        'tarjetas_hijos': tarjetas_hijos,
+        'total_notificaciones': total_notificaciones,
+        'no_leidas': no_leidas,
+        'saldo_bajo_count': saldo_bajo_count,
+        'saldo_negativo_count': saldo_negativo_count,
+        'filtro_tipo': filtro_tipo,
+        'filtro_tarjeta': filtro_tarjeta,
+        'filtro_leida': filtro_leida,
+        'is_paginated': notificaciones.has_other_pages(),
+        'page_obj': notificaciones,
+    }
+    
+    return render(request, 'portal/notificaciones_saldo.html', context)

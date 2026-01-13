@@ -1,0 +1,122 @@
+<!-- Widget de Notificaciones de Saldo para Dashboard del Portal -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-gradient-warning text-dark d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="fas fa-bell me-2"></i>
+            Notificaciones de Saldo
+        </h5>
+        {% if notificaciones_pendientes_count > 0 %}
+        <span class="badge bg-danger rounded-pill">{{ notificaciones_pendientes_count }}</span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if notificaciones_recientes %}
+            <div class="list-group list-group-flush">
+                {% for notif in notificaciones_recientes %}
+                <div class="list-group-item px-0 {% if not notif.leida %}border-start border-primary border-4{% endif %}">
+                    <div class="d-flex align-items-start">
+                        <div class="me-3">
+                            {% if notif.tipo_notificacion == 'SALDO_BAJO' %}
+                                <i class="fas fa-exclamation-circle fa-2x text-warning"></i>
+                            {% elif notif.tipo_notificacion == 'SALDO_NEGATIVO' %}
+                                <i class="fas fa-times-circle fa-2x text-danger"></i>
+                            {% elif notif.tipo_notificacion == 'SALDO_CRITICO' %}
+                                <i class="fas fa-radiation fa-2x text-danger"></i>
+                            {% else %}
+                                <i class="fas fa-check-circle fa-2x text-success"></i>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <h6 class="mb-0">
+                                    {{ notif.nro_tarjeta.id_hijo.nombre_completo }}
+                                    {% if not notif.leida %}
+                                    <span class="badge bg-primary ms-2">NUEVA</span>
+                                    {% endif %}
+                                </h6>
+                                <small class="text-muted">{{ notif.fecha_creacion|timesince }} atrás</small>
+                            </div>
+                            <p class="mb-1 small">
+                                <strong>Tarjeta:</strong> {{ notif.nro_tarjeta.nro_tarjeta }} | 
+                                <strong>Saldo:</strong> 
+                                <span class="{% if notif.saldo_actual < 0 %}text-danger fw-bold{% elif notif.saldo_actual < notif.nro_tarjeta.saldo_alerta %}text-warning fw-bold{% else %}text-success{% endif %}">
+                                    {% if notif.saldo_actual < 0 %}-{% endif %}Gs. {{ notif.saldo_actual|abs|floatformat:0|stringformat:"d"|intcomma:"." }}
+                                </span>
+                            </p>
+                            <p class="mb-2 text-muted small">{{ notif.mensaje|truncatewords:15 }}</p>
+                            <div class="d-flex gap-2">
+                                {% if notif.saldo_actual < 0 or notif.saldo_actual < notif.nro_tarjeta.saldo_alerta %}
+                                <a href="{% url 'gestion:portal_recargar_tarjeta' notif.nro_tarjeta.nro_tarjeta %}" class="btn btn-sm btn-success">
+                                    <i class="fas fa-plus me-1"></i>
+                                    Recargar
+                                </a>
+                                {% endif %}
+                                {% if not notif.leida %}
+                                <button class="btn btn-sm btn-outline-primary" onclick="marcarNotifLeida({{ notif.id_notificacion }})">
+                                    <i class="fas fa-check me-1"></i>
+                                    Marcar leída
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="text-center mt-3">
+                <a href="{% url 'gestion:portal_notificaciones_saldo' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-list me-2"></i>
+                    Ver Todas las Notificaciones
+                    {% if notificaciones_pendientes_count > 0 %}
+                    <span class="badge bg-danger ms-2">{{ notificaciones_pendientes_count }}</span>
+                    {% endif %}
+                </a>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <h5 class="text-success">No hay notificaciones pendientes</h5>
+                <p class="text-muted mb-0">Todos los saldos están correctos</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+async function marcarNotifLeida(idNotificacion) {
+    try {
+        const response = await fetch(`/api/portal/notificaciones/${idNotificacion}/marcar-leida/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            location.reload();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al marcar notificación como leída');
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>

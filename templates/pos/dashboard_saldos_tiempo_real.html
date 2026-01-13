@@ -1,0 +1,375 @@
+{% extends 'pos/pos_bootstrap.html' %}
+{% load static %}
+
+{% block title %}Dashboard de Saldos en Tiempo Real{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-saldos {
+        padding: 20px;
+    }
+    
+    .tarjeta-saldo {
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    
+    .tarjeta-saldo:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+    
+    .tarjeta-saldo.critico {
+        background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+        border-left: 5px solid #d32f2f;
+    }
+    
+    .tarjeta-saldo.negativo {
+        background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+        border-left: 5px solid #f57c00;
+    }
+    
+    .tarjeta-saldo.bajo {
+        background: linear-gradient(135deg, #fff9e6 0%, #fff4cc 100%);
+        border-left: 5px solid #ffc107;
+    }
+    
+    .tarjeta-saldo.ok {
+        background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+        border-left: 5px solid #4caf50;
+    }
+    
+    .saldo-monto {
+        font-size: 24px;
+        font-weight: bold;
+        margin: 10px 0;
+    }
+    
+    .saldo-monto.negativo {
+        color: #d32f2f;
+    }
+    
+    .saldo-monto.bajo {
+        color: #f57c00;
+    }
+    
+    .saldo-monto.ok {
+        color: #4caf50;
+    }
+    
+    .ultimo-update {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #fff;
+        padding: 10px 20px;
+        border-radius: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        font-size: 12px;
+    }
+    
+    .filtros-saldos {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-saldos">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-gauge-high"></i> Dashboard de Saldos en Tiempo Real</h2>
+        <div>
+            <button class="btn btn-primary" onclick="actualizarDashboard()">
+                <i class="fas fa-sync-alt" id="icono-refresh"></i> Actualizar
+            </button>
+            <button class="btn btn-secondary" onclick="toggleAutoRefresh()">
+                <i class="fas fa-clock" id="icono-auto"></i> <span id="text-auto">Auto: OFF</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Estadísticas Rápidas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-danger">
+                <div class="card-body text-center">
+                    <h3 id="stat-critico">0</h3>
+                    <p>Saldos Negativos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body text-center">
+                    <h3 id="stat-bajo">0</h3>
+                    <p>Saldos Bajos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body text-center">
+                    <h3 id="stat-ok">0</h3>
+                    <p>Saldos OK</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body text-center">
+                    <h3 id="stat-total">0</h3>
+                    <p>Total Tarjetas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="filtros-saldos">
+        <div class="row">
+            <div class="col-md-3">
+                <label>Estado</label>
+                <select class="form-select" id="filtro-estado" onchange="aplicarFiltros()">
+                    <option value="todos">Todos</option>
+                    <option value="negativo">Solo Negativos</option>
+                    <option value="bajo">Solo Bajos</option>
+                    <option value="critico">Solo Críticos</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label>Buscar Tarjeta</label>
+                <input type="text" class="form-control" id="filtro-tarjeta" placeholder="Número de tarjeta..." oninput="aplicarFiltros()">
+            </div>
+            <div class="col-md-3">
+                <label>Buscar Estudiante</label>
+                <input type="text" class="form-control" id="filtro-estudiante" placeholder="Nombre..." oninput="aplicarFiltros()">
+            </div>
+            <div class="col-md-3">
+                <label>Ordenar por</label>
+                <select class="form-select" id="filtro-orden" onchange="aplicarFiltros()">
+                    <option value="saldo-asc">Saldo (Menor a Mayor)</option>
+                    <option value="saldo-desc">Saldo (Mayor a Menor)</option>
+                    <option value="tarjeta">Número de Tarjeta</option>
+                    <option value="estudiante">Nombre Estudiante</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Lista de Tarjetas -->
+    <div id="lista-saldos" class="row">
+        <!-- Se llena dinámicamente con JavaScript -->
+    </div>
+    
+    <!-- Último Update -->
+    <div class="ultimo-update">
+        <i class="fas fa-clock"></i> Última actualización: <span id="ultimo-update">-</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let autoRefreshInterval = null;
+let datosOriginales = [];
+
+async function actualizarDashboard() {
+    const iconoRefresh = document.getElementById('icono-refresh');
+    iconoRefresh.classList.add('fa-spin');
+    
+    try {
+        const response = await fetch('/pos/api/saldos-tiempo-real/');
+        const data = await response.json();
+        
+        if (data.success) {
+            datosOriginales = data.tarjetas;
+            actualizarEstadisticas(data.stats);
+            aplicarFiltros();
+            
+            // Actualizar timestamp
+            document.getElementById('ultimo-update').textContent = new Date().toLocaleTimeString('es-PY');
+        }
+    } catch (error) {
+        console.error('Error actualizando dashboard:', error);
+        alert('Error al actualizar datos');
+    } finally {
+        iconoRefresh.classList.remove('fa-spin');
+    }
+}
+
+function actualizarEstadisticas(stats) {
+    document.getElementById('stat-critico').textContent = stats.negativos;
+    document.getElementById('stat-bajo').textContent = stats.bajos;
+    document.getElementById('stat-ok').textContent = stats.ok;
+    document.getElementById('stat-total').textContent = stats.total;
+}
+
+function aplicarFiltros() {
+    const filtroEstado = document.getElementById('filtro-estado').value;
+    const filtroTarjeta = document.getElementById('filtro-tarjeta').value.toLowerCase();
+    const filtroEstudiante = document.getElementById('filtro-estudiante').value.toLowerCase();
+    const filtroOrden = document.getElementById('filtro-orden').value;
+    
+    // Filtrar
+    let datosFiltrados = datosOriginales.filter(tarjeta => {
+        // Filtro por estado
+        if (filtroEstado !== 'todos' && tarjeta.estado !== filtroEstado) {
+            return false;
+        }
+        
+        // Filtro por número de tarjeta
+        if (filtroTarjeta && !tarjeta.nro_tarjeta.toLowerCase().includes(filtroTarjeta)) {
+            return false;
+        }
+        
+        // Filtro por estudiante
+        if (filtroEstudiante && !tarjeta.estudiante.toLowerCase().includes(filtroEstudiante)) {
+            return false;
+        }
+        
+        return true;
+    });
+    
+    // Ordenar
+    datosFiltrados.sort((a, b) => {
+        switch(filtroOrden) {
+            case 'saldo-asc':
+                return a.saldo - b.saldo;
+            case 'saldo-desc':
+                return b.saldo - a.saldo;
+            case 'tarjeta':
+                return a.nro_tarjeta.localeCompare(b.nro_tarjeta);
+            case 'estudiante':
+                return a.estudiante.localeCompare(b.estudiante);
+            default:
+                return 0;
+        }
+    });
+    
+    // Renderizar
+    renderizarTarjetas(datosFiltrados);
+}
+
+function renderizarTarjetas(tarjetas) {
+    const container = document.getElementById('lista-saldos');
+    
+    if (tarjetas.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No se encontraron tarjetas con los filtros aplicados</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = tarjetas.map(tarjeta => `
+        <div class="col-md-4">
+            <div class="tarjeta-saldo ${tarjeta.estado}">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="mb-0">
+                        <i class="fas fa-credit-card"></i> ${tarjeta.nro_tarjeta}
+                    </h5>
+                    <span class="badge ${getBadgeClass(tarjeta.estado)}">
+                        ${getEstadoLabel(tarjeta.estado)}
+                    </span>
+                </div>
+                
+                <p class="mb-1">
+                    <i class="fas fa-user"></i> <strong>${tarjeta.estudiante}</strong>
+                </p>
+                
+                <div class="saldo-monto ${tarjeta.saldo < 0 ? 'negativo' : tarjeta.saldo < 10000 ? 'bajo' : 'ok'}">
+                    Gs. ${formatearGuaranies(tarjeta.saldo)}
+                </div>
+                
+                ${tarjeta.saldo < 0 ? `
+                    <div class="alert alert-danger py-1 px-2 mb-2" style="font-size: 12px;">
+                        <i class="fas fa-exclamation-triangle"></i> Deuda: Gs. ${formatearGuaranies(Math.abs(tarjeta.saldo))}
+                    </div>
+                ` : ''}
+                
+                <div class="d-flex gap-1 mt-2">
+                    <button class="btn btn-sm btn-primary" onclick="verMovimientos('${tarjeta.nro_tarjeta}')">
+                        <i class="fas fa-list"></i> Movimientos
+                    </button>
+                    <button class="btn btn-sm btn-success" onclick="recargar('${tarjeta.nro_tarjeta}')">
+                        <i class="fas fa-plus"></i> Recargar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getBadgeClass(estado) {
+    switch(estado) {
+        case 'critico':
+        case 'negativo':
+            return 'bg-danger';
+        case 'bajo':
+            return 'bg-warning';
+        case 'ok':
+            return 'bg-success';
+        default:
+            return 'bg-secondary';
+    }
+}
+
+function getEstadoLabel(estado) {
+    switch(estado) {
+        case 'critico':
+            return 'CRÍTICO';
+        case 'negativo':
+            return 'NEGATIVO';
+        case 'bajo':
+            return 'BAJO';
+        case 'ok':
+            return 'OK';
+        default:
+            return 'DESCONOCIDO';
+    }
+}
+
+function formatearGuaranies(numero) {
+    return new Intl.NumberFormat('es-PY').format(numero);
+}
+
+function toggleAutoRefresh() {
+    const textAuto = document.getElementById('text-auto');
+    const iconoAuto = document.getElementById('icono-auto');
+    
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+        textAuto.textContent = 'Auto: OFF';
+        iconoAuto.classList.remove('fa-clock-rotate-left');
+        iconoAuto.classList.add('fa-clock');
+    } else {
+        autoRefreshInterval = setInterval(actualizarDashboard, 30000); // 30 segundos
+        textAuto.textContent = 'Auto: ON (30s)';
+        iconoAuto.classList.remove('fa-clock');
+        iconoAuto.classList.add('fa-clock-rotate-left');
+    }
+}
+
+function verMovimientos(nroTarjeta) {
+    window.location.href = `/pos/tarjeta/${nroTarjeta}/movimientos/`;
+}
+
+function recargar(nroTarjeta) {
+    window.location.href = `/pos/recargas/?tarjeta=${nroTarjeta}`;
+}
+
+// Cargar al iniciar
+document.addEventListener('DOMContentLoaded', function() {
+    actualizarDashboard();
+});
+</script>
+{% endblock %}

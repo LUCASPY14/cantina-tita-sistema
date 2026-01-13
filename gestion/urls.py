@@ -11,6 +11,7 @@ from . import pos_facturacion_integracion
 from . import vistas_paginadas
 from . import pagos_admin_views
 from . import empleado_views
+from . import terminos_views
 from .reportes_gerenciales import ReportesGerenciales
 
 app_name = 'gestion'
@@ -79,6 +80,12 @@ urlpatterns = [
     path('portal/estado-recarga/<str:referencia>/', portal_views.estado_recarga_view, name='portal_estado_recarga'),
     path('portal/pago-exitoso/', portal_views.pago_exitoso_view, name='portal_pago_exitoso'),
     path('portal/pago-cancelado/', portal_views.pago_cancelado_view, name='portal_pago_cancelado'),
+    path('portal/notificaciones-saldo/', portal_views.notificaciones_saldo_view, name='portal_notificaciones_saldo'),
+    
+    # Términos Legales de Saldo Negativo
+    path('portal/terminos-saldo-negativo/', terminos_views.terminos_saldo_negativo, name='portal_terminos_saldo_negativo'),
+    path('portal/aceptar-terminos/', terminos_views.aceptar_terminos, name='portal_aceptar_terminos'),
+    path('portal/revocar-terminos/', terminos_views.revocar_terminos, name='portal_revocar_terminos'),
     
     # URLs para API REST del Portal (Consultas Móviles)
     path('api/portal/tarjeta/<str:nro_tarjeta>/saldo/', portal_api.api_saldo_tarjeta, name='api_portal_saldo'),
