@@ -1,0 +1,30 @@
+﻿[SIGNALS] Sistema de invalidaci�n autom�tica de cache CARGADO
+[SIGNALS] Modelos conectados: Producto, Cliente, Stock, Ventas, Almuerzos, Facturaci�n
+
+====================================================================================================
+D:/anteproyecto20112025/.venv/Scripts/python.exe : Traceback (most 
+recent call last):
+En línea: 1 Carácter: 107
++ ... ing]::UTF8; D:/anteproyecto20112025/.venv/Scripts/python.exe 
+verifica ...
++                 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent  
+   call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "D:\anteproyecto20112025\verificar_navegabilidad.py", line 
+368, in <module>
+    verificar_navegabilidad()
+    ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\anteproyecto20112025\verificar_navegabilidad.py", line 
+19, in verificar_navegabilidad
+    print("\U0001f50d VERIFICACI�N COMPLETA DE NAVEGABILIDAD DEL 
+SISTEMA")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Lucas1\AppData\Local\Programs\Python\Python313\Lib\e
+ncodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character 
+'\U0001f50d' in position 0: character maps to <undefined>

@@ -446,13 +446,24 @@
                 </div>
                 <div class="dropdown">
                     <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-user-circle"></i> lucas1
+                        <i class="fas fa-user-circle"></i> {{ request.user.username|upper }}
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
+                        <li class="dropdown-header">
+                            <small class="text-muted">{{ request.user.username }}</small>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="/pos/dashboard/"><i class="fas fa-chart-bar"></i> Dashboard</a></li>
                         <li><a class="dropdown-item" href="/pos/almuerzo/"><i class="fas fa-utensils"></i> Almuerzos</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger" href="/logout/"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a></li>
+                        <li>
+                            <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item text-danger" style="border: none; background: none; width: 100%; text-align: left;">
+                                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                                </button>
+                            </form>
+                        </li>
                     </ul>
                 </div>
             </div>

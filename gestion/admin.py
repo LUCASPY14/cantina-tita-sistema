@@ -1,4 +1,4 @@
-﻿from django.contrib import admin
+from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Sum, Count
 from datetime import date
@@ -581,7 +581,7 @@ class UsuarioPortalAdmin(admin.ModelAdmin):
     list_filter = ['activo', 'email_verificado', 'fecha_registro']
     search_fields = ['email', 'cliente__nombres', 'cliente__apellidos', 'cliente__ruc_ci']
     readonly_fields = ['fecha_registro', 'ultimo_acceso', 'campo_nueva_password']
-    actions = ['resetear_password_a_ruc', 'marcar_email_verificado']
+    actions = ['resetear_password_a_ruc', 'marcar_email_verificado', 'reenviar_email_verificacion']
     
     fieldsets = (
         ('Información del Usuario', {
@@ -666,6 +666,44 @@ class UsuarioPortalAdmin(admin.ModelAdmin):
         """Marca emails como verificados manualmente"""
         count = queryset.update(email_verificado=True)
         self.message_user(request, f'✓ {count} email(s) verificado(s)', level='SUCCESS')
+    
+    @admin.action(description='📧 Reenviar email de verificación')
+    def reenviar_email_verificacion(self, request, queryset):
+        """Reenvía el email de verificación a los usuarios seleccionados"""
+        from gestion.portal_views import enviar_email_verificacion
+        
+        enviados = 0
+        errores = []
+        
+        for usuario in queryset:
+            # Solo enviar si no está verificado
+            if usuario.email_verificado:
+                errores.append(f"{usuario.email} ya está verificado")
+                continue
+            
+            try:
+                if enviar_email_verificacion(usuario):
+                    enviados += 1
+                else:
+                    errores.append(f"{usuario.email} - error al enviar")
+            except Exception as e:
+                errores.append(f"{usuario.email} - {str(e)}")
+        
+        # Mensajes de resultado
+        if enviados > 0:
+            self.message_user(
+                request, 
+                f'✓ {enviados} email(s) de verificación enviado(s) correctamente', 
+                level='SUCCESS'
+            )
+        
+        if errores:
+            self.message_user(
+                request,
+                f'⚠ Errores: {"; ".join(errores[:5])}{"..." if len(errores) > 5 else ""}',
+                level='WARNING'
+            )
+
 
 
 # Fiscalización

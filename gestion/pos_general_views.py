@@ -883,13 +883,13 @@ def imprimir_ticket_venta(request, id_venta):
 @require_http_methods(["GET"])
 def dashboard_ventas_dia(request):
     """
-    Dashboard de ventas del día
-    Resumen de ventas, productos vendidos, ingresos y métodos de pago
+    Dashboard administrativo completo
+    Resumen de ventas, productos vendidos, ingresos, métodos de pago, almuerzos, stock bajo, etc.
     
     GET /pos/dashboard/
     """
     from datetime import datetime
-    from django.db.models import Sum, Count, F
+    from django.db.models import Sum, Count, F, Q
     from decimal import Decimal
     
     try:
@@ -901,9 +901,17 @@ def dashboard_ventas_dia(request):
             fecha__date=hoy
         ).select_related('id_cliente', 'id_hijo')
         
+        # Últimas ventas para tabla
+        ultimas_ventas = ventas_hoy.order_by('-fecha')[:10]
+        
         # Estadísticas generales
         total_ventas = ventas_hoy.count()
         monto_total = ventas_hoy.aggregate(total=Sum('monto_total'))['total'] or Decimal('0')
+        promedio_venta = (monto_total / total_ventas) if total_ventas > 0 else Decimal('0')
+        
+        # Clientes únicos del día
+        clientes_unicos = ventas_hoy.values('id_cliente').distinct().count() + \
+                         ventas_hoy.values('id_hijo').distinct().count()
         
         # Productos más vendidos
         productos_vendidos = DetalleVenta.objects.filter(
@@ -911,7 +919,15 @@ def dashboard_ventas_dia(request):
         ).values('id_producto__descripcion').annotate(
             cantidad_total=Sum('cantidad'),
             ingresos=Sum(F('cantidad') * F('precio_unitario'), output_field=models.DecimalField())
-        ).order_by('-cantidad_total')[:10]
+        ).order_by('-cantidad_total')
+        
+        # Total de productos vendidos (suma de todas las cantidades)
+        total_productos_vendidos = productos_vendidos.aggregate(
+            total=Sum('cantidad_total')
+        )['total'] or 0
+        
+        # Productos diferentes vendidos
+        productos_diferentes = productos_vendidos.count()
         
         # Ingresos por método de pago
         ingresos_pago = PagosVenta.objects.filter(
@@ -923,7 +939,7 @@ def dashboard_ventas_dia(request):
         
         # Evolución por hora
         from django.db.models.functions import ExtractHour
-        evoluccion_hora = Ventas.objects.filter(
+        evolucion_hora = Ventas.objects.filter(
             fecha__date=hoy
         ).annotate(
             hora=ExtractHour('fecha')
@@ -932,39 +948,34 @@ def dashboard_ventas_dia(request):
             monto=Sum('monto_total')
         ).order_by('hora')
         
-        # Estadísticas de ventas por tarjeta de estudiante vs efectivo
-        ventas_tarjeta_est = DetalleVenta.objects.filter(
-            id_venta__fecha__date=hoy
-        ).filter(
-            id_venta__id_hijo__isnull=False
-        ).aggregate(
-            cantidad=Count('id_detalle'),
-            monto=Sum('precio_unitario')
-        )
+        # Almuerzos del día
+        from .models import RegistroAlmuerzo
+        total_almuerzos = RegistroAlmuerzo.objects.filter(
+            fecha=hoy
+        ).count()
         
-        # Top clientes
-        top_clientes = Ventas.objects.filter(
-            fecha__date=hoy
-        ).values('id_cliente__nombres', 'id_cliente__apellidos').annotate(
-            cantidad_compras=Count('id_venta'),
-            monto_total_calc=Sum('monto_total')
-        ).order_by('-monto_total_calc')[:5]
+        almuerzos_activos = RegistroAlmuerzo.objects.filter(
+            fecha=hoy,
+            activo=True
+        ).count()
         
-        # Preparar datos para gráficas
-        horas_data = [item['hora'] or 0 for item in evoluccion_hora]
-        ventas_x_hora = [item['ventas'] or 0 for item in evoluccion_hora]
-        montos_x_hora = [float(item['monto'] or 0) for item in evoluccion_hora]
-        
-        # Datos de métodos de pago para gráfica pie
-        metodos_labels = [item['id_medio_pago__descripcion'] for item in ingresos_pago]
-        metodos_montos = [float(item['total']) for item in ingresos_pago]
-        
-        # Productos vendidos para gráfica
-        productos_labels = [item['id_producto__descripcion'][:20] for item in productos_vendidos]
-        productos_cantidades = [int(item['cantidad_total']) for item in productos_vendidos]
-        
-        # === NOTIFICACIONES DE VALIDACIÓN (ADMINISTRADOR) ===
+        # Cargas de saldo del día
         from .models import CargasSaldo
+        total_cargas = CargasSaldo.objects.filter(
+            fecha_carga__date=hoy
+        ).count()
+        
+        monto_cargas = CargasSaldo.objects.filter(
+            fecha_carga__date=hoy,
+            estado='VALIDADO'
+        ).aggregate(total=Sum('monto'))['total'] or Decimal('0')
+        
+        # Productos con stock bajo (menos de 10 unidades)
+        from .models import Productos
+        productos_bajo_stock = Productos.objects.filter(
+            stock__lt=10,
+            activo=True
+        ).count()
         
         # Cargas de saldo pendientes de validación
         cargas_pendientes = CargasSaldo.objects.filter(
@@ -976,7 +987,7 @@ def dashboard_ventas_dia(request):
         ).order_by('-fecha_carga')[:20]
         
         # Pagos pendientes de validación (transferencias bancarias)
-        pagos_pendientes = Ventas.objects.filter(
+        pagos_pendientes_qs = Ventas.objects.filter(
             motivo_credito__icontains='PAGO_PENDIENTE_TRANSFERENCIA'
         ).select_related(
             'id_cliente',
@@ -989,14 +1000,74 @@ def dashboard_ventas_dia(request):
             motivo_credito__icontains='PAGO_PENDIENTE_TRANSFERENCIA'
         ).count()
         
+        # Monto total pendiente de validación
+        monto_pendiente = Ventas.objects.filter(
+            motivo_credito__icontains='PAGO_PENDIENTE_TRANSFERENCIA'
+        ).aggregate(total=Sum('monto_total'))['total'] or Decimal('0')
+        
+        # Top clientes
+        top_clientes = Ventas.objects.filter(
+            fecha__date=hoy
+        ).values('id_cliente__nombres', 'id_cliente__apellidos').annotate(
+            cantidad_compras=Count('id_venta'),
+            monto_total_calc=Sum('monto_total')
+        ).order_by('-monto_total_calc')[:5]
+        
+        # Preparar datos para gráficas
+        horas_data = [item['hora'] or 0 for item in evolucion_hora]
+        ventas_x_hora = [item['ventas'] or 0 for item in evolucion_hora]
+        montos_x_hora = [float(item['monto'] or 0) for item in evolucion_hora]
+        
+        # Datos de métodos de pago para gráfica pie
+        metodos_labels = [item['id_medio_pago__descripcion'] for item in ingresos_pago]
+        metodos_montos = [float(item['total']) for item in ingresos_pago]
+        
+        # Productos vendidos para gráfica
+        productos_labels = [item['id_producto__descripcion'][:20] for item in productos_vendidos[:10]]
+        productos_cantidades = [int(item['cantidad_total']) for item in productos_vendidos[:10]]
+        
         context = {
             'hoy': hoy_dt,
+            
+            # Estadísticas principales
             'total_ventas': total_ventas,
             'monto_total': float(monto_total),
+            'promedio_venta': float(promedio_venta),
+            'clientes_unicos': clientes_unicos,
+            
+            # Productos
             'productos_vendidos': list(productos_vendidos),
+            'total_productos_vendidos': total_productos_vendidos,
+            'productos_diferentes': productos_diferentes,
+            'productos_bajo_stock': productos_bajo_stock,
+            
+            # Almuerzos
+            'total_almuerzos': total_almuerzos,
+            'almuerzos_activos': almuerzos_activos,
+            
+            # Cargas de saldo
+            'total_cargas': total_cargas,
+            'monto_cargas': float(monto_cargas),
+            
+            # Medios de pago
             'ingresos_pago': list(ingresos_pago),
+            
+            # Evolución temporal
+            'evolucion_hora': list(evolucion_hora),
+            
+            # Clientes
             'top_clientes': list(top_clientes),
-            'ventas_tarjeta_est': ventas_tarjeta_est,
+            
+            # Últimas ventas
+            'ultimas_ventas': ultimas_ventas,
+            
+            # Validaciones pendientes
+            'cargas_pendientes': cargas_pendientes,
+            'pagos_pendientes': pagos_pendientes_qs,
+            'total_cargas_pendientes': total_cargas_pendientes,
+            'total_pagos_pendientes': total_pagos_pendientes,
+            'pagos_pendientes': total_pagos_pendientes,
+            'monto_pendiente': float(monto_pendiente),
             
             # Para gráficas
             'horas_data': horas_data,
@@ -1006,12 +1077,6 @@ def dashboard_ventas_dia(request):
             'metodos_montos': metodos_montos,
             'productos_labels': productos_labels,
             'productos_cantidades': productos_cantidades,
-            
-            # Notificaciones de validación
-            'cargas_pendientes': cargas_pendientes,
-            'pagos_pendientes': pagos_pendientes,
-            'total_cargas_pendientes': total_cargas_pendientes,
-            'total_pagos_pendientes': total_pagos_pendientes,
         }
         
         # Si es AJAX, devolver JSON

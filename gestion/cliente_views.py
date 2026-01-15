@@ -235,7 +235,6 @@ def crear_usuario_web_cliente(request, cliente_id):
 # PORTAL WEB DE CLIENTES
 # ============================================================================
 
-@solo_administrador
 def portal_login_view(request):
     """Vista de login para clientes con rate limiting, CAPTCHA y auditoría"""
     print('DEBUG: enter portal_login_view, method=', request.method)
@@ -508,7 +507,6 @@ def portal_login_view(request):
     # (return handled inside try or in except fallback)
 
 
-@solo_administrador
 def portal_logout_view(request):
     """Cerrar sesión del portal de clientes"""
     cliente_usuario = request.session.get('cliente_usuario', 'Desconocido')
@@ -531,7 +529,6 @@ def portal_logout_view(request):
     return redirect('clientes:portal_login')
 
 
-@solo_administrador
 def portal_dashboard_view(request):
     """Dashboard del portal de clientes"""
     
@@ -599,7 +596,6 @@ def portal_dashboard_view(request):
     return render(request, 'portal/dashboard.html', context)
 
 
-@solo_administrador
 def portal_consumos_hijo_view(request, hijo_id):
     """Ver consumos detallados de un hijo"""
     
@@ -668,7 +664,6 @@ def portal_consumos_hijo_view(request, hijo_id):
     return render(request, 'portal/consumos_hijo.html', context)
 
 
-@solo_administrador
 def portal_recargas_view(request):
     """Ver historial de recargas"""
     
@@ -692,13 +687,12 @@ def portal_recargas_view(request):
     return render(request, 'portal/recargas.html', context)
 
 
-@solo_administrador
 def portal_cambiar_password_view(request):
     """Cambiar contraseña del cliente con auditoría"""
     
     cliente_id = request.session.get('cliente_id')
     if not cliente_id:
-        return redirect('portal_login')
+        return redirect('clientes:portal_login')
     
     if request.method == 'POST':
         password_actual = request.POST.get('password_actual')
@@ -769,18 +763,17 @@ def portal_cambiar_password_view(request):
             
         except UsuariosWebClientes.DoesNotExist:
             messages.error(request, 'Usuario no encontrado')
-            return redirect('portal_login')
+            return redirect('clientes:portal_login')
     
     return render(request, 'portal/cambiar_password.html')
 
 
-@solo_administrador
 def portal_restricciones_hijo_view(request, hijo_id):
     """Gestionar restricciones de compra para un hijo"""
     
     cliente_id = request.session.get('cliente_id')
     if not cliente_id:
-        return redirect('portal_login')
+        return redirect('clientes:portal_login')
     
     hijo = get_object_or_404(
         Hijo,
@@ -816,7 +809,6 @@ def portal_restricciones_hijo_view(request, hijo_id):
     return render(request, 'portal/restricciones_hijo.html', context)
 
 
-@solo_administrador
 def portal_recuperar_password_view(request):
     """Solicitar recuperación de contraseña"""
     
@@ -878,12 +870,11 @@ Equipo Cantina Tita''',
             # No revelar si el email existe o no (seguridad)
             messages.success(request, f'Si el email {email} está registrado, recibirás un enlace de recuperación')
         
-        return redirect('portal_login')
+        return redirect('clientes:portal_login')
     
     return render(request, 'portal/recuperar_password.html')
 
 
-@solo_administrador
 def portal_reset_password_view(request, token):
     """Restablecer contraseña con token"""
     
@@ -892,7 +883,7 @@ def portal_reset_password_view(request, token):
     
     if not valido:
         messages.error(request, mensaje_error)
-        return redirect('portal_login')
+        return redirect('clientes:portal_login')
     
     if request.method == 'POST':
         password_nueva = request.POST.get('password_nueva')
@@ -947,11 +938,11 @@ def portal_reset_password_view(request, token):
             )
             
             messages.success(request, '¡Contraseña actualizada! Ya puedes iniciar sesión')
-            return redirect('portal_login')
+            return redirect('clientes:portal_login')
             
         except UsuariosWebClientes.DoesNotExist:
             messages.error(request, 'Usuario no encontrado')
-            return redirect('portal_login')
+            return redirect('clientes:portal_login')
     
     context = {
         'token': token,
@@ -969,7 +960,7 @@ def portal_reset_password_view(request, token):
 def configurar_2fa_view(request):
     """Vista para configurar 2FA para el cliente"""
     if 'cliente_id' not in request.session:
-        return redirect('portal_login')
+        return redirect('clientes:portal_login')
     
     cliente_usuario = request.session.get('cliente_usuario')
     
@@ -1007,7 +998,7 @@ def activar_2fa_view(request):
         return redirect('pos:configurar_2fa')
     
     if 'cliente_id' not in request.session:
-        return redirect('portal_login')
+        return redirect('clientes:portal_login')
     
     cliente_usuario = request.session.get('cliente_usuario')
     codigo = request.POST.get('codigo', '').strip()
@@ -1041,7 +1032,7 @@ def verificar_2fa_view(request):
     # Verificar que hay una sesión pendiente de 2FA
     if '2fa_pendiente' not in request.session:
         messages.error(request, 'Sesión expirada. Por favor inicia sesión nuevamente')
-        return redirect('portal_login')
+        return redirect('clientes:portal_login')
     
     cliente_usuario = request.session.get('2fa_usuario')
     codigo = request.POST.get('codigo', '').strip()
@@ -1116,7 +1107,7 @@ def deshabilitar_2fa_view(request):
         return redirect('pos:portal_dashboard')
     
     if 'cliente_id' not in request.session:
-        return redirect('portal_login')
+        return redirect('clientes:portal_login')
     
     cliente_usuario = request.session.get('cliente_usuario')
     
@@ -1139,13 +1130,12 @@ def deshabilitar_2fa_view(request):
 # FUNCIONALIDADES DE CARGA DE SALDO Y PAGOS CON METREPAY
 # ============================================================================
 
-@solo_administrador
 def portal_cargar_saldo_view(request):
     """Vista para cargar saldo a tarjetas de hijos usando MetrePay"""
     
     cliente_id = request.session.get('cliente_id')
     if not cliente_id:
-        return redirect('portal_login')
+        return redirect('clientes:portal_login')
     
     cliente = get_object_or_404(Cliente, pk=cliente_id)
     
@@ -1279,13 +1269,12 @@ def portal_cargar_saldo_view(request):
     return render(request, 'portal/cargar_saldo.html', context)
 
 
-@solo_administrador
 def portal_pagos_view(request):
     """Vista para realizar pagos de deudas pendientes usando MetrePay"""
     
     cliente_id = request.session.get('cliente_id')
     if not cliente_id:
-        return redirect('portal_login')
+        return redirect('clientes:portal_login')
     
     cliente = get_object_or_404(Cliente, pk=cliente_id)
     
@@ -1554,12 +1543,11 @@ def procesar_pago_metrepay(monto, metodo_pago, request, tipo_pago='CARGA_SALDO',
 # VISTAS DE CALLBACK PARA METREPAY
 # ============================================================================
 
-@solo_administrador
 def portal_pago_exitoso_view(request):
     """Vista para mostrar confirmación de pago exitoso"""
     cliente_id = request.session.get('cliente_id')
     if not cliente_id:
-        return redirect('portal_login')
+        return redirect('clientes:portal_login')
 
     cliente = get_object_or_404(Cliente, pk=cliente_id)
 
@@ -1577,12 +1565,11 @@ def portal_pago_exitoso_view(request):
     return render(request, 'portal/pago_exitoso.html', context)
 
 
-@solo_administrador
 def portal_pago_cancelado_view(request):
     """Vista para mostrar cancelación de pago"""
     cliente_id = request.session.get('cliente_id')
     if not cliente_id:
-        return redirect('portal_login')
+        return redirect('clientes:portal_login')
 
     cliente = get_object_or_404(Cliente, pk=cliente_id)
 

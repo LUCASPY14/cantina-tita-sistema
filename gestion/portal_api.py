@@ -327,7 +327,7 @@ def api_tarjetas_usuario(request):
     
     # Obtener todas las tarjetas de los hijos del cliente
     tarjetas = Tarjeta.objects.filter(
-        id_hijo__id_cliente=usuario.cliente
+        id_hijo__id_cliente_responsable=usuario.cliente
     ).select_related('id_hijo').order_by('-saldo_actual')
     
     serializer = TarjetaSerializer(tarjetas, many=True)

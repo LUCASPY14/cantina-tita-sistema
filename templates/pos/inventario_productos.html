@@ -16,10 +16,10 @@
             <a href="{% url 'pos:inventario_dashboard' %}" class="btn btn-ghost">
                 ← Dashboard
             </a>
-            <a href="{% url 'crear_producto' %}" class="btn btn-success">
+            <a href="{% url 'gestion:crear_producto' %}" class="btn btn-success">
                 <i class="fas fa-plus mr-1"></i> Nuevo Producto
             </a>
-            <a href="{% url 'importar_productos' %}" class="btn btn-info">
+            <a href="{% url 'gestion:importar_productos' %}" class="btn btn-info">
                 <i class="fas fa-file-import mr-1"></i> Importar
             </a>
             <button onclick="mostrarMenuExportar()" class="btn btn-outline">
@@ -157,7 +157,7 @@
                             </td>
                             <td>
                                 <div class="flex gap-1">
-                                    <a href="{% url 'editar_producto' producto.id_producto %}" 
+                                    <a href="{% url 'gestion:editar_producto' producto.id_producto %}" 
                                        class="btn btn-xs btn-primary"
                                        title="Editar Producto">
                                         <i class="fas fa-edit"></i>
@@ -201,12 +201,12 @@
         </h3>
         <p class="mb-4">Selecciona el formato de exportación:</p>
         <div class="flex flex-col gap-3">
-            <a href="{% url 'exportar_productos_csv' %}?{{ request.GET.urlencode }}" 
+            <a href="{% url 'gestion:exportar_productos_csv' %}?{{ request.GET.urlencode }}" 
                class="btn btn-outline btn-block justify-start">
                 <i class="fas fa-file-csv mr-2"></i>
                 Exportar a CSV
             </a>
-            <a href="{% url 'exportar_productos_excel' %}?{{ request.GET.urlencode }}" 
+            <a href="{% url 'gestion:exportar_productos_excel' %}?{{ request.GET.urlencode }}" 
                class="btn btn-outline btn-block justify-start">
                 <i class="fas fa-file-excel mr-2"></i>
                 Exportar a Excel

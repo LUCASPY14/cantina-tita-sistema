@@ -367,11 +367,11 @@ def dashboard_view(request):
     from gestion.models import NotificacionSaldo
     
     usuario = request.usuario_portal
-    cliente = usuario.id_cliente
+    cliente = usuario.cliente
     
     # Obtener todas las tarjetas del cliente
     tarjetas = Tarjeta.objects.filter(
-        id_hijo__id_cliente=cliente
+        id_hijo__id_cliente_responsable=cliente
     ).select_related('id_hijo').order_by('-saldo_actual')
     
     # Calcular totales
@@ -462,11 +462,11 @@ def recargar_tarjeta_view(request, nro_tarjeta):
     
     # Verificar que la tarjeta pertenece al usuario
     try:
-        tarjeta = Tarjeta.objects.select_related('id_hijo__id_cliente').get(
+        tarjeta = Tarjeta.objects.select_related('id_hijo__id_cliente_responsable').get(
             nro_tarjeta=nro_tarjeta
         )
         
-        if tarjeta.id_hijo.id_cliente != usuario.cliente:
+        if tarjeta.id_hijo.id_cliente_responsable != usuario.cliente:
             messages.error(request, 'No tiene permiso para recargar esta tarjeta')
             return redirect('portal_mis_hijos')
     except Tarjeta.DoesNotExist:
@@ -663,11 +663,11 @@ def notificaciones_saldo_view(request):
     from gestion.models import NotificacionSaldo
     
     usuario = request.usuario_portal
-    cliente = usuario.id_cliente
+    cliente = usuario.cliente
     
     # Obtener todas las tarjetas de los hijos del cliente
     tarjetas_hijos = Tarjeta.objects.filter(
-        id_hijo__id_cliente=cliente
+        id_hijo__id_cliente_responsable=cliente
     ).select_related('id_hijo')
     
     # Obtener notificaciones de todas las tarjetas

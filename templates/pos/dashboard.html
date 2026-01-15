@@ -170,7 +170,7 @@
                 </div>
                 <div class="divider my-2"></div>
                 <p class="text-sm">
-                    Gs. <span x-text="formatCurrency(stats.total_hoy || {{ stats.total_hoy|default:0 }})">0</span>
+                    Gs. <span x-text="formatCurrency(stats.total_hoy || {{ stats.total_hoy|default:"0" }})">0</span>
                 </p>
                 <!-- Indicador de cambio -->
                 <div class="flex items-center gap-1 mt-2" x-show="stats.ventas_ayer">
@@ -199,7 +199,7 @@
                 </div>
                 <div class="divider my-2"></div>
                 <p class="text-sm">
-                    Gs. <span x-text="formatCurrency(stats.total_mes || {{ stats.total_mes|default:0 }})">0</span>
+                    Gs. <span x-text="formatCurrency(stats.total_mes || {{ stats.total_mes|default:"0" }})">0</span>
                 </p>
                 <!-- Meta del mes -->
                 <div class="mt-2">
@@ -414,7 +414,7 @@
                                     <td class="text-right font-bold text-success">Gs. {{ carga.monto_cargado|floatformat:0 }}</td>
                                     <td class="text-xs">{{ carga.referencia|default:"N/A" }}</td>
                                     <td>
-                                        <a href="{% url 'validar_carga_saldo' carga.id_carga %}" 
+                                        <a href="{% url 'pos:validar_carga_saldo' carga.id_carga %}" 
                                            class="btn btn-xs btn-primary">
                                             ✓ Validar
                                         </a>
@@ -426,7 +426,7 @@
                     </div>
                     {% if total_cargas_pendientes > 20 %}
                     <div class="text-center mt-4">
-                        <a href="{% url 'lista_cargas_pendientes' %}" class="btn btn-sm btn-outline">
+                        <a href="{% url 'pos:lista_cargas_pendientes' %}" class="btn btn-sm btn-outline">
                             Ver todas las {{ total_cargas_pendientes }} cargas
                         </a>
                     </div>
@@ -462,7 +462,7 @@
                                     <td class="text-right font-bold text-success">Gs. {{ pago.monto_total|floatformat:0 }}</td>
                                     <td class="text-xs">{{ pago.motivo_credito|truncatechars:30 }}</td>
                                     <td>
-                                        <a href="{% url 'validar_pago' pago.id_venta %}" 
+                                        <a href="{% url 'pos:validar_pago' pago.id_venta %}" 
                                            class="btn btn-xs btn-primary">
                                             ✓ Validar
                                         </a>
@@ -474,7 +474,7 @@
                     </div>
                     {% if total_pagos_pendientes > 20 %}
                     <div class="text-center mt-4">
-                        <a href="{% url 'lista_pagos_pendientes' %}" class="btn btn-sm btn-outline">
+                        <a href="{% url 'pos:lista_pagos_pendientes' %}" class="btn btn-sm btn-outline">
                             Ver todos los {{ total_pagos_pendientes }} pagos
                         </a>
                     </div>
@@ -698,7 +698,7 @@ function dashboardController() {
         isRefreshing: false,
         countdown: 30, // Auto-refresh cada 30 segundos
         countdownInterval: null,
-        stats: {{ stats|default:{}|tojson }},
+        stats: {{ stats|default:"{}" }},
         notifications: [],
         notificationId: 0,
         isOnline: navigator.onLine,
