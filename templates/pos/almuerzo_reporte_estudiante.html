@@ -2,14 +2,14 @@
 {% load static %}
 {% load humanize %}
 
-{% block title %}Reporte por Estudiante - Almuerzos{% endblock %}
+{% block title %}Reporte por Hijo - Almuerzos{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-6">
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-800">
-            👤 Reporte de Almuerzos por Estudiante
+            👤 Reporte de Almuerzos por Hijo
         </h1>
         <a href="{% url 'pos:almuerzo_reportes' %}" class="btn btn-outline btn-sm">
             ← Volver a Reportes
@@ -21,10 +21,10 @@
         <div class="card-body">
             <h2 class="card-title text-lg mb-4">🔍 Filtros de Búsqueda</h2>
             <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <!-- Selección de Estudiante -->
+                <!-- Selección de Hijo -->
                 <div class="form-control">
                     <label class="label">
-                        <span class="label-text font-semibold">Estudiante</span>
+                        <span class="label-text font-semibold">Hijo</span>
                     </label>
                     <select name="id_hijo" class="select select-bordered w-full" onchange="this.form.submit()">
                         <option value="">-- Seleccionar --</option>
@@ -73,7 +73,7 @@
     </div>
 
     {% if hijo_seleccionado %}
-    <!-- Información del Estudiante -->
+    <!-- Información del Hijo -->
     <div class="card bg-gradient-to-r from-blue-50 to-blue-100 shadow-xl mb-6">
         <div class="card-body">
             <div class="flex items-center justify-between">
@@ -236,7 +236,7 @@
     <div class="alert alert-info shadow-lg">
         <div>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current flex-shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <span>Selecciona un estudiante para ver su historial de almuerzos</span>
+            <span>Selecciona un hijo para ver su historial de almuerzos</span>
         </div>
     </div>
     {% endif %}

@@ -200,7 +200,7 @@ class Hijo(models.Model):
 
 
 class RestriccionesHijos(models.Model):
-    '''Tabla restricciones_hijos - Restricciones alimentarias de estudiantes'''
+    '''Tabla restricciones_hijos - Restricciones alimentarias de hijos'''
     SEVERIDAD_CHOICES = [
         ('Leve', 'Leve'),
         ('Moderada', 'Moderada'),
@@ -259,7 +259,7 @@ class RestriccionesHijos(models.Model):
 
 
 class Tarjeta(models.Model):
-    '''Tabla tarjetas - Tarjetas de estudiantes'''
+    '''Tabla tarjetas - Tarjetas de hijos'''
     ESTADO_CHOICES = [
         ('Activa', 'Activa'),
         ('Bloqueada', 'Bloqueada'),
@@ -2021,8 +2021,14 @@ class VistaVentasDiaDetallado(models.Model):
 
 
 class VistaConsumosEstudiante(models.Model):
-    '''Vista v_consumos_estudiante - Resumen de consumos por estudiante'''
-    id_hijo = models.IntegerField(db_column='ID_Hijo', primary_key=True)
+    '''Vista v_consumos_estudiante - Resumen de consumos por hijo'''
+    id_hijo = models.ForeignKey(
+        Hijo,
+        on_delete=models.DO_NOTHING,
+        db_column='ID_Hijo',
+        primary_key=True,
+        related_name='consumos_vista'
+    )
     estudiante = models.CharField(db_column='Estudiante', max_length=202)
     responsable_nombre = models.CharField(db_column='Responsable_Nombre', max_length=100)
     responsable_apellido = models.CharField(db_column='Responsable_Apellido', max_length=100)
@@ -2037,11 +2043,16 @@ class VistaConsumosEstudiante(models.Model):
     class Meta:
         managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_consumos_estudiante'
-        verbose_name = 'Vista: Consumos por Estudiante'
-        verbose_name_plural = 'Vista: Consumos por Estudiante'
+        verbose_name = 'Vista: Consumos por Hijo'
+        verbose_name_plural = 'Vista: Consumos por Hijo'
 
     def __str__(self):
         return f'{self.estudiante} - Saldo: Gs. {self.saldo_actual:,.0f}'
+    
+    @property
+    def hijo(self):
+        '''Acceso directo al objeto Hijo relacionado'''
+        return self.id_hijo
 
 
 class VistaStockCriticoAlertas(models.Model):
@@ -2069,6 +2080,12 @@ class VistaRecargasHistorial(models.Model):
     fecha_carga = models.DateTimeField(db_column='Fecha_Carga')
     monto_cargado = models.DecimalField(db_column='Monto_Cargado', max_digits=10, decimal_places=2)
     nro_tarjeta = models.CharField(db_column='Nro_Tarjeta', max_length=20)
+    id_hijo = models.ForeignKey(
+        Hijo,
+        on_delete=models.DO_NOTHING,
+        db_column='ID_Hijo',
+        related_name='recargas_vista'
+    )
     estudiante = models.CharField(db_column='Estudiante', max_length=202)
     responsable = models.CharField(db_column='Responsable', max_length=201)
     telefono = models.CharField(db_column='Telefono', max_length=20)
@@ -2083,6 +2100,11 @@ class VistaRecargasHistorial(models.Model):
 
     def __str__(self):
         return f'Recarga {self.id_carga} - {self.estudiante}'
+    
+    @property
+    def hijo(self):
+        '''Acceso directo al objeto Hijo relacionado'''
+        return self.id_hijo
 
 
 class VistaResumenCajaDiario(models.Model):

@@ -1,0 +1,1012 @@
+====================================================================================================
+                    REPORTE DE MÓDULOS Y TABLAS - DER CANTINATITADB
+====================================================================================================
+
+Fecha de generación: 13 de enero de 2026
+Base de datos: cantinatitadb
+
+RESUMEN:
+  - Total tablas: 101
+  - Total vistas: 23
+  - Tablas con modelo: 100
+  - Tablas sin modelo: 12
+  - Módulos identificados: 11
+
+====================================================================================================
+DETALLE DE MÓDULOS Y TABLAS
+====================================================================================================
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+MÓDULO 1: PRODUCTOS Y CATALOGOS
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Total tablas: 9
+
+  1. alergenos (TABLA)
+     Modelo: Alergeno
+     Descripción: Alérgeno
+     Comentario BD: Catálogo de alérgenos e ingredientes restringidos
+     Gestión: Django
+
+  2. categorias (TABLA)
+     Modelo: Categoria
+     Descripción: Categoría
+     Gestión: Django
+     Relaciones FK:
+       • ID_Categoria_Padre → categorias.ID_Categoria
+
+  3. historico_precios (TABLA)
+     Modelo: HistoricoPrecios
+     Descripción: Histórico de Precio
+     Gestión: Django
+     Relaciones FK:
+       • ID_Empleado_Modifico → empleados.ID_Empleado
+       • ID_Precio → precios_por_lista.ID_Precio
+
+  4. impuestos (TABLA)
+     Modelo: Impuesto
+     Descripción: Impuesto
+     Gestión: Django
+
+  5. listas_precios (TABLA)
+     Modelo: ListaPrecios
+     Descripción: Lista de Precios
+     Gestión: Django
+
+  6. precios_por_lista (TABLA)
+     Modelo: PreciosPorLista
+     Descripción: Precio por Lista
+     Gestión: Django
+     Relaciones FK:
+       • ID_Lista → listas_precios.ID_Lista
+       • ID_Producto → productos.ID_Producto
+
+  7. producto_alergenos (TABLA)
+     Modelo: ProductoAlergeno
+     Descripción: Producto-Alérgeno
+     Comentario BD: Relación entre productos y alérgenos
+     Gestión: Django
+     Relaciones FK:
+       • ID_Alergeno → alergenos.ID_Alergeno
+       • ID_Producto → productos.ID_Producto
+
+  8. productos (TABLA)
+     Modelo: Producto
+     Descripción: Producto
+     Gestión: Django
+     Relaciones FK:
+       • ID_Categoria → categorias.ID_Categoria
+       • ID_Impuesto → impuestos.ID_Impuesto
+       • ID_Unidad_de_Medida → unidades_medida.ID_Unidad_de_Medida
+
+  9. unidades_medida (TABLA)
+     Modelo: UnidadMedida
+     Descripción: Unidad de Medida
+     Gestión: Django
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+MÓDULO 2: CLIENTES Y FAMILIA
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Total tablas: 5
+
+  1. aceptacion_terminos_saldo_negativo (TABLA)
+     Modelo: AceptacionTerminosSaldoNegativo
+     Descripción: Aceptación de Términos
+     Comentario BD: Registro de aceptación de términos legales para saldo negativo
+     Gestión: Django
+     Relaciones FK:
+       • id_cliente → clientes.ID_Cliente
+       • id_usuario_portal → auth_user.id
+       • nro_tarjeta → tarjetas.Nro_Tarjeta
+
+  2. clientes (TABLA)
+     Modelo: Cliente
+     Descripción: Cliente
+     Gestión: Django
+     Relaciones FK:
+       • ID_Lista → listas_precios.ID_Lista
+       • ID_Tipo_Cliente → tipos_cliente.ID_Tipo_Cliente
+
+  3. hijos (TABLA)
+     Modelo: Hijo
+     Descripción: Hijo
+     Gestión: Django
+     Relaciones FK:
+       • ID_Cliente_Responsable → clientes.ID_Cliente
+
+  4. restricciones_hijos (TABLA)
+     Modelo: RestriccionesHijos
+     Descripción: Restricción Alimentaria
+     Comentario BD: Restricciones alimentarias de los estudiantes (alergias, intolerancias, dietas especiales)
+     Gestión: Django
+     Relaciones FK:
+       • ID_Hijo → hijos.ID_Hijo
+
+  5. tipos_cliente (TABLA)
+     Modelo: TipoCliente
+     Descripción: Tipo de Cliente
+     Gestión: Django
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+MÓDULO 3: TARJETAS Y SALDOS
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Total tablas: 2
+
+  1. cargas_saldo (TABLA)
+     Modelo: CargasSaldo
+     Descripción: Carga de Saldo
+     Gestión: Django
+     Relaciones FK:
+       • ID_Cliente_Origen → clientes.ID_Cliente
+       • ID_Nota → notas_credito_cliente.ID_Nota
+       • Nro_Tarjeta → tarjetas.Nro_Tarjeta
+
+  2. tarjetas (TABLA)
+     Modelo: Tarjeta
+     Descripción: Tarjeta
+     Gestión: Django
+     Relaciones FK:
+       • ID_Hijo → hijos.ID_Hijo
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+MÓDULO 4: VENTAS Y FACTURACION
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Total tablas: 6
+
+  1. detalle_venta (TABLA)
+     Modelo: DetalleVenta
+     Descripción: Detalle de Venta
+     Gestión: Django
+     Relaciones FK:
+       • ID_Producto → productos.ID_Producto
+       • ID_Venta → ventas.ID_Venta
+
+  2. documentos_tributarios (TABLA)
+     Modelo: DocumentosTributarios
+     Descripción: Documento Tributario
+     Gestión: Django
+     Relaciones FK:
+       • Nro_Timbrado → timbrados.Nro_Timbrado
+
+  3. medios_pago (TABLA)
+     Modelo: MediosPago
+     Descripción: Medio de Pago
+     Gestión: Django
+
+  4. puntos_expedicion (TABLA)
+     Modelo: PuntosExpedicion
+     Descripción: Punto de Expedición
+     Gestión: Django
+
+  5. tipos_pago (TABLA)
+     Modelo: TiposPago
+     Descripción: Tipo de Pago
+     Gestión: Django
+
+  6. ventas (TABLA)
+     Modelo: Ventas
+     Descripción: Venta
+     Gestión: Django
+     Relaciones FK:
+       • Autorizado_Por → empleados.ID_Empleado
+       • ID_Cliente → clientes.ID_Cliente
+       • ID_Empleado_Cajero → empleados.ID_Empleado
+       • ID_Hijo → hijos.ID_Hijo
+       • ID_Tipo_Pago → tipos_pago.ID_Tipo_Pago
+       • Nro_Factura_Venta → documentos_tributarios.ID_Documento
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+MÓDULO 5: PAGOS Y COBRANZAS
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Total tablas: 2
+
+  1. notas_credito_cliente (TABLA)
+     Modelo: NotasCreditoCliente
+     Descripción: Nota de Crédito Cliente
+     Gestión: Django
+     Relaciones FK:
+       • ID_Cliente → clientes.ID_Cliente
+       • ID_Venta_Original → ventas.ID_Venta
+       • Nro_Factura_Venta → documentos_tributarios.ID_Documento
+
+  2. pagos_venta (TABLA)
+     Modelo: PagosVenta
+     Descripción: Pago de Venta
+     Gestión: Django
+     Relaciones FK:
+       • ID_Cierre → cierres_caja.ID_Cierre
+       • ID_Medio_Pago → medios_pago.ID_Medio_Pago
+       • ID_Venta → ventas.ID_Venta
+       • Nro_Tarjeta_Usada → tarjetas.Nro_Tarjeta
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+MÓDULO 6: STOCK E INVENTARIO
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Total tablas: 1
+
+  1. movimientos_stock (TABLA)
+     Modelo: MovimientosStock
+     Descripción: Movimiento de Stock
+     Gestión: Django
+     Relaciones FK:
+       • ID_Compra → compras.ID_Compra
+       • ID_Empleado_Autoriza → empleados.ID_Empleado
+       • ID_Producto → productos.ID_Producto
+       • ID_Venta → ventas.ID_Venta
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+MÓDULO 7: COMPRAS Y PROVEEDORES
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Total tablas: 2
+
+  1. detalle_compra (TABLA)
+     Modelo: DetalleCompra
+     Descripción: Detalle de Compra
+     Gestión: Django
+     Relaciones FK:
+       • ID_Compra → compras.ID_Compra
+       • ID_Producto → productos.ID_Producto
+
+  2. proveedores (TABLA)
+     Modelo: Proveedor
+     Descripción: Proveedor
+     Gestión: Django
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+MÓDULO 8: ALMUERZOS
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Total tablas: 3
+
+  1. planes_almuerzo (TABLA)
+     Modelo: PlanesAlmuerzo
+     Descripción: Plan de Almuerzo
+     Gestión: Django
+
+  2. registro_consumo_almuerzo (TABLA)
+     Modelo: RegistroConsumoAlmuerzo
+     Descripción: Registro de Almuerzo
+     Gestión: Django
+     Relaciones FK:
+       • ID_Hijo → hijos.ID_Hijo
+       • ID_Suscripcion → suscripciones_almuerzo.ID_Suscripcion
+       • ID_Tipo_Almuerzo → tipos_almuerzo.ID_Tipo_Almuerzo
+       • Nro_Tarjeta → tarjetas.Nro_Tarjeta
+
+  3. suscripciones_almuerzo (TABLA)
+     Modelo: SuscripcionesAlmuerzo
+     Descripción: Suscripción de Almuerzo
+     Gestión: Django
+     Relaciones FK:
+       • ID_Hijo → hijos.ID_Hijo
+       • ID_Plan_Almuerzo → planes_almuerzo.ID_Plan_Almuerzo
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+MÓDULO 9: EMPLEADOS Y SEGURIDAD
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Total tablas: 1
+
+  1. empleados (TABLA)
+     Modelo: Empleado
+     Descripción: Empleado
+     Gestión: Django
+     Relaciones FK:
+       • ID_Rol → tipos_rol_general.ID_Rol
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+MÓDULO 11: PROMOCIONES
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Total tablas: 1
+
+  1. promociones (TABLA)
+     Modelo: Promocion
+     Descripción: Promoción
+     Comentario BD: Sistema de promociones y descuentos
+     Gestión: Django
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+MÓDULO 16: SIN CATEGORIA
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Total tablas: 68
+
+  1. ajustes_inventario (TABLA)
+     Modelo: AjustesInventario
+     Descripción: Ajuste de Inventario
+     Gestión: Django
+     Relaciones FK:
+       • ID_Empleado_Responsable → empleados.ID_Empleado
+
+  2. alertas_sistema (TABLA)
+     Modelo: AlertasSistema
+     Descripción: Alerta del Sistema
+     Gestión: Django
+     Relaciones FK:
+       • ID_Empleado_Resuelve → empleados.ID_Empleado
+
+  3. anomalias_detectadas (TABLA)
+     Modelo: AnomaliaDetectada
+     Descripción: Anomalía Detectada
+     Gestión: Django
+
+  4. aplicacion_pagos_compras (TABLA)
+     Modelo: AplicacionPagosCompras
+     Descripción: Aplicación de Pago a Compra
+     Gestión: Django
+     Relaciones FK:
+       • ID_Compra → compras.ID_Compra
+       • ID_Pago_Proveedor → pagos_proveedores.ID_Pago_Proveedor
+
+  5. aplicacion_pagos_ventas (TABLA)
+     Modelo: AplicacionPagosVentas
+     Descripción: Aplicación de Pago a Venta
+     Gestión: Django
+     Relaciones FK:
+       • ID_Pago_Venta → pagos_venta.ID_Pago_Venta
+       • ID_Venta → ventas.ID_Venta
+
+  6. auditoria_comisiones (TABLA)
+     Modelo: AuditoriaComisiones
+     Descripción: Auditoría de Comisión
+     Gestión: Django
+     Relaciones FK:
+       • ID_Empleado_Modifico → empleados.ID_Empleado
+       • ID_Tarifa → tarifas_comision.ID_Tarifa
+
+  7. auditoria_empleados (TABLA)
+     Modelo: AuditoriaEmpleados
+     Descripción: Auditoría de Empleado
+     Gestión: Django
+     Relaciones FK:
+       • ID_Empleado → empleados.ID_Empleado
+
+  8. auditoria_operaciones (TABLA)
+     Modelo: AuditoriaOperacion
+     Descripción: Auditoría de Operación
+     Gestión: Django
+
+  9. auditoria_usuarios_web (TABLA)
+     Modelo: AuditoriaUsuariosWeb
+     Descripción: Auditoría de Usuario Web
+     Gestión: Django
+     Relaciones FK:
+       • ID_Cliente → clientes.ID_Cliente
+
+  10. autenticacion_2fa (TABLA)
+     Modelo: Autenticacion2Fa
+     Descripción: Autenticación 2FA
+     Comentario BD: Almacena configuración de 2FA para usuarios
+     Gestión: Django
+
+  11. autorizacion_saldo_negativo (TABLA)
+     Modelo: AutorizacionSaldoNegativo
+     Descripción: Autorización de Saldo Negativo
+     Comentario BD: Registro de autorizaciones de ventas con saldo negativo
+     Gestión: Django
+     Relaciones FK:
+       • id_carga_regularizacion → cargas_saldo.ID_Carga
+       • id_empleado_autoriza → empleados.ID_Empleado
+       • id_venta → ventas.ID_Venta
+       • nro_tarjeta → tarjetas.Nro_Tarjeta
+
+  12. bloqueos_cuenta (TABLA)
+     Modelo: BloqueoCuenta
+     Descripción: Bloqueo de Cuenta
+     Gestión: Django
+
+  13. cajas (TABLA)
+     Modelo: Cajas
+     Descripción: Caja
+     Gestión: Django
+
+  14. categorias_promocion (TABLA)
+     Modelo: CategoriaPromocion
+     Descripción: Categoría en Promoción
+     Comentario BD: Categorías incluidas en promociones
+     Gestión: Django
+     Relaciones FK:
+       • ID_Categoria → categorias.ID_Categoria
+       • ID_Promocion → promociones.ID_Promocion
+
+  15. cierres_caja (TABLA)
+     Modelo: CierresCaja
+     Descripción: Cierre de Caja
+     Gestión: Django
+     Relaciones FK:
+       • ID_Caja → cajas.ID_Caja
+       • ID_Empleado → empleados.ID_Empleado
+
+  16. compras (TABLA)
+     Modelo: Compras
+     Descripción: Compra
+     Gestión: Django
+     Relaciones FK:
+       • ID_Proveedor → proveedores.ID_Proveedor
+
+  17. conciliacion_pagos (TABLA)
+     Modelo: ConciliacionPagos
+     Descripción: Conciliación de Pago
+     Gestión: Django
+     Relaciones FK:
+       • ID_Pago_Venta → pagos_venta.ID_Pago_Venta
+
+  18. consumos_tarjeta (TABLA)
+     Modelo: ConsumoTarjeta
+     Descripción: Consumo con Tarjeta
+     Gestión: Django
+     Relaciones FK:
+       • ID_Empleado_Registro → empleados.ID_Empleado
+       • Nro_Tarjeta → tarjetas.Nro_Tarjeta
+
+  19. costos_historicos (TABLA)
+     Modelo: CostosHistoricos
+     Descripción: Costo Histórico
+     Gestión: Django
+     Relaciones FK:
+       • ID_Compra → compras.ID_Compra
+       • ID_Producto → productos.ID_Producto
+
+  20. cuentas_almuerzo_mensual (TABLA)
+     Modelo: CuentaAlmuerzoMensual
+     Descripción: Cuenta Mensual de Almuerzo
+     Comentario BD: Cuentas mensuales de almuerzo por estudiante
+     Gestión: Django
+     Relaciones FK:
+       • ID_Hijo → hijos.ID_Hijo
+
+  21. datos_empresa (TABLA)
+     Modelo: DatosEmpresa
+     Descripción: Datos de la Empresa
+     Gestión: Django
+
+  22. datos_facturacion_elect (TABLA)
+     Modelo: DatosFacturacionElect
+     Descripción: Datos Facturación Electrónica
+     Gestión: Django
+     Relaciones FK:
+       • ID_Documento → documentos_tributarios.ID_Documento
+
+  23. datos_facturacion_fisica (TABLA)
+     Modelo: DatosFacturacionFisica
+     Descripción: Datos Facturación Física
+     Gestión: Django
+     Relaciones FK:
+       • ID_Documento → documentos_tributarios.ID_Documento
+
+  24. detalle_ajuste (TABLA)
+     Modelo: DetalleAjuste
+     Descripción: Detalle de Ajuste
+     Gestión: Django
+     Relaciones FK:
+       • ID_Ajuste → ajustes_inventario.ID_Ajuste
+       • ID_MovimientoStock → movimientos_stock.ID_MovimientoStock
+       • ID_Producto → productos.ID_Producto
+
+  25. detalle_comision_venta (TABLA)
+     Modelo: DetalleComisionVenta
+     Descripción: Detalle de Comisión
+     Gestión: Django
+     Relaciones FK:
+       • ID_Pago_Venta → pagos_venta.ID_Pago_Venta
+       • ID_Tarifa → tarifas_comision.ID_Tarifa
+
+  26. detalle_nota (TABLA)
+     Modelo: DetalleNota
+     Descripción: Detalle de Nota de Crédito
+     Gestión: Django
+     Relaciones FK:
+       • ID_Nota → notas_credito_cliente.ID_Nota
+       • ID_Producto → productos.ID_Producto
+
+  27. detalle_nota_credito_proveedor (TABLA)
+     Modelo: DetalleNotaCreditoProveedor
+     Descripción: Detalle NC Proveedor
+     Gestión: Django
+     Relaciones FK:
+       • ID_Nota_Proveedor → notas_credito_proveedor.ID_Nota_Proveedor
+       • ID_Producto → productos.ID_Producto
+
+  28. grados (TABLA)
+     Modelo: Grado
+     Descripción: Grado
+     Comentario BD: Catálogo de grados/cursos disponibles
+     Gestión: Django
+
+  29. historial_grados_hijos (TABLA)
+     Modelo: HistorialGradoHijo
+     Descripción: Historial de Grado
+     Comentario BD: Historial de cambios de grado de cada hijo
+     Gestión: Django
+     Relaciones FK:
+       • ID_Hijo → hijos.ID_Hijo
+
+  30. intentos_2fa (TABLA)
+     Modelo: Intento2Fa
+     Descripción: Intento 2FA
+     Comentario BD: Registro de intentos de verificación 2FA
+     Gestión: Django
+
+  31. intentos_login (TABLA)
+     Modelo: IntentoLogin
+     Descripción: Intento de Login
+     Gestión: Django
+
+  32. log_autorizaciones (TABLA)
+     Modelo: LogAutorizacion
+     Descripción: Log de Autorización
+     Gestión: Django
+     Relaciones FK:
+       • ID_Tarjeta_Autorizacion → tarjetas_autorizacion.ID_Tarjeta_Autorizacion
+
+  33. notas_credito_proveedor (TABLA)
+     Modelo: NotasCreditoProveedor
+     Descripción: Nota de Crédito Proveedor
+     Gestión: Django
+     Relaciones FK:
+       • ID_Compra_Original → compras.ID_Compra
+       • ID_Proveedor → proveedores.ID_Proveedor
+
+  34. notificacion (TABLA)
+     Modelo: Notificacion
+     Descripción: Notificación
+     Gestión: Django
+     Relaciones FK:
+       • ID_Usuario_Portal → usuario_portal.ID_Usuario_Portal
+
+  35. notificacion_saldo (TABLA)
+     Modelo: NotificacionSaldo
+     Descripción: Notificación de Saldo
+     Comentario BD: Registro de notificaciones de saldo enviadas a padres
+     Gestión: Django
+     Relaciones FK:
+       • nro_tarjeta → tarjetas.Nro_Tarjeta
+
+  36. pagos_almuerzo_mensual (TABLA)
+     Modelo: PagosAlmuerzoMensual
+     Descripción: Pago de Almuerzo Mensual
+     Gestión: Django
+     Relaciones FK:
+       • ID_Suscripcion → suscripciones_almuerzo.ID_Suscripcion
+       • ID_Venta → ventas.ID_Venta
+
+  37. pagos_cuentas_almuerzo (TABLA)
+     Modelo: PagoCuentaAlmuerzo
+     Descripción: Pago de Cuenta de Almuerzo
+     Comentario BD: Pagos de cuentas de almuerzo (independiente de tarjeta)
+     Gestión: Django
+     Relaciones FK:
+       • ID_Cuenta → cuentas_almuerzo_mensual.ID_Cuenta
+       • ID_Empleado_Registro → empleados.ID_Empleado
+
+  38. pagos_proveedores (TABLA)
+     Modelo: PagosProveedores
+     Descripción: Pago a Proveedor
+     Gestión: Django
+     Relaciones FK:
+       • ID_Medio_Pago → medios_pago.ID_Medio_Pago
+       • ID_Proveedor → proveedores.ID_Proveedor
+
+  39. patrones_acceso (TABLA)
+     Modelo: PatronAcceso
+     Descripción: Patrón de Acceso
+     Gestión: Django
+
+  40. preferencia_notificacion (TABLA)
+     Modelo: PreferenciaNotificacion
+     Descripción: Preferencia de Notificación
+     Gestión: Django
+     Relaciones FK:
+       • ID_Usuario_Portal → usuario_portal.ID_Usuario_Portal
+
+  41. productos_promocion (TABLA)
+     Modelo: ProductoPromocion
+     Descripción: Producto en Promoción
+     Comentario BD: Productos incluidos en promociones
+     Gestión: Django
+     Relaciones FK:
+       • ID_Producto → productos.ID_Producto
+       • ID_Promocion → promociones.ID_Promocion
+
+  42. promociones_aplicadas (TABLA)
+     Modelo: PromocionAplicada
+     Descripción: Promoción Aplicada
+     Comentario BD: Registro de promociones aplicadas en ventas
+     Gestión: Django
+     Relaciones FK:
+       • ID_Promocion → promociones.ID_Promocion
+       • ID_Venta → ventas.ID_Venta
+
+  43. renovaciones_sesion (TABLA)
+     Modelo: RenovacionSesion
+     Descripción: Renovación de Sesión
+     Comentario BD: Auditoría de renovaciones de tokens de sesión
+     Gestión: Django
+
+  44. restricciones_horarias (TABLA)
+     Modelo: RestriccionHoraria
+     Descripción: Restricción Horaria
+     Comentario BD: Define horarios permitidos para acceso al sistema
+     Gestión: Django
+
+  45. sesiones_activas (TABLA)
+     Modelo: SesionActiva
+     Descripción: Sesión Activa
+     Gestión: Django
+
+  46. solicitudes_notificacion (TABLA)
+     Modelo: SolicitudesNotificacion
+     Descripción: Solicitud de Notificación
+     Gestión: Django
+     Relaciones FK:
+       • ID_Cliente → clientes.ID_Cliente
+       • Nro_Tarjeta → tarjetas.Nro_Tarjeta
+
+  47. stock_unico (TABLA)
+     Modelo: StockUnico
+     Descripción: Stock
+     Gestión: Django
+     Relaciones FK:
+       • ID_Producto → productos.ID_Producto
+
+  48. tarifas_comision (TABLA)
+     Modelo: TarifasComision
+     Descripción: Tarifa de Comisión
+     Gestión: Django
+     Relaciones FK:
+       • ID_Medio_Pago → medios_pago.ID_Medio_Pago
+
+  49. tarjetas_autorizacion (TABLA)
+     Modelo: TarjetaAutorizacion
+     Descripción: Tarjeta de Autorización
+     Gestión: Django
+     Relaciones FK:
+       • ID_Empleado → empleados.ID_Empleado
+
+  50. timbrados (TABLA)
+     Modelo: Timbrados
+     Descripción: Timbrado
+     Gestión: Django
+     Relaciones FK:
+       • ID_Punto → puntos_expedicion.ID_Punto
+
+  51. tipos_almuerzo (TABLA)
+     Modelo: TipoAlmuerzo
+     Descripción: Tipo de Almuerzo
+     Comentario BD: Catálogo de tipos de almuerzo con precios individuales
+     Gestión: Django
+
+  52. tipos_rol_general (TABLA)
+     Modelo: TipoRolGeneral
+     Descripción: Rol
+     Gestión: Django
+
+  53. tokens_recuperacion (TABLA)
+     Modelo: TokenRecuperacion
+     Descripción: Token de Recuperación
+     Gestión: Django
+     Relaciones FK:
+       • ID_Cliente → clientes.ID_Cliente
+
+  54. tokens_verificacion (TABLA)
+     Modelo: TokenVerificacion
+     Descripción: Token de Verificación
+     Gestión: Django
+     Relaciones FK:
+       • ID_Usuario_Portal → usuarios_portal.ID_Usuario_Portal
+
+  55. transaccion_online (TABLA)
+     Modelo: TransaccionOnline
+     Descripción: Transacción Online
+     Gestión: Django
+     Relaciones FK:
+       • ID_Usuario_Portal → usuario_portal.ID_Usuario_Portal
+       • Nro_Tarjeta → tarjetas.Nro_Tarjeta
+
+  56. usuarios_portal (TABLA)
+     Modelo: UsuarioPortal
+     Descripción: Usuario Portal
+     Gestión: Django
+     Relaciones FK:
+       • ID_Cliente → clientes.ID_Cliente
+
+  57. usuarios_web_clientes (TABLA)
+     Modelo: UsuariosWebClientes
+     Descripción: Usuario Web Cliente
+     Gestión: Django
+     Relaciones FK:
+       • ID_Cliente → clientes.ID_Cliente
+
+  58. v_almuerzos_diarios (VISTA)
+     Modelo: VistaAlmuerzosDiarios
+     Descripción: Vista: Almuerzos Diarios
+     Gestión: Django
+
+  59. v_consumos_estudiante (VISTA)
+     Modelo: VistaConsumosEstudiante
+     Descripción: Vista: Consumos por Hijo
+     Gestión: Django
+
+  60. v_cuentas_almuerzo_detallado (VISTA)
+     Modelo: VistaCuentasAlmuerzoDetallado
+     Descripción: Vista: Cuentas de Almuerzo Detallado
+     Gestión: Django
+
+  61. v_notas_credito_detallado (VISTA)
+     Modelo: VistaNotasCreditoDetallado
+     Descripción: Vista: Notas de Crédito Detallado
+     Gestión: Django
+
+  62. v_recargas_historial (VISTA)
+     Modelo: VistaRecargasHistorial
+     Descripción: Vista: Historial de Recargas
+     Gestión: Django
+
+  63. v_reporte_mensual_separado (VISTA)
+     Modelo: VistaReporteMensualSeparado
+     Descripción: Vista: Reporte Mensual Separado
+     Gestión: Django
+
+  64. v_resumen_caja_diario (VISTA)
+     Modelo: VistaResumenCajaDiario
+     Descripción: Vista: Resumen de Caja Diario
+     Gestión: Django
+
+  65. v_saldo_clientes (VISTA)
+     Modelo: VistaSaldoClientes
+     Descripción: Saldo de Cliente
+     Gestión: Django
+
+  66. v_stock_alerta (VISTA)
+     Modelo: VistaStockAlerta
+     Descripción: Alerta de Stock
+     Gestión: Django
+
+  67. v_stock_critico_alertas (VISTA)
+     Modelo: VistaStockCriticoAlertas
+     Descripción: Vista: Stock Crítico
+     Gestión: Django
+
+  68. v_ventas_dia_detallado (VISTA)
+     Modelo: VistaVentasDiaDetallado
+     Descripción: Vista: Ventas del Día Detallado
+     Gestión: Django
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+TABLAS SIN MODELO DJANGO ASIGNADO
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Total: 12
+
+Estas tablas existen en la BD pero no tienen modelo en Django:
+
+  1. auth_group
+
+  2. auth_group_permissions
+     Relaciones FK:
+       • group_id → auth_group.id
+       • permission_id → auth_permission.id
+
+  3. auth_permission
+     Relaciones FK:
+       • content_type_id → django_content_type.id
+
+  4. auth_user
+
+  5. auth_user_groups
+     Relaciones FK:
+       • group_id → auth_group.id
+       • user_id → auth_user.id
+
+  6. auth_user_user_permissions
+     Relaciones FK:
+       • permission_id → auth_permission.id
+       • user_id → auth_user.id
+
+  7. django_admin_log
+     Relaciones FK:
+       • content_type_id → django_content_type.id
+       • user_id → auth_user.id
+
+  8. django_content_type
+
+  9. django_migrations
+
+  10. django_session
+
+  11. token_verificacion
+     Relaciones FK:
+       • ID_Usuario_Portal → usuario_portal.ID_Usuario_Portal
+
+  12. usuario_portal
+     Relaciones FK:
+       • ID_Cliente → clientes.ID_Cliente
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+VISTAS DE BASE DE DATOS
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Total: 23
+
+  1. v_alertas_pendientes
+     Comentario: VIEW
+     ⚠ Sin modelo Django
+
+  2. v_almuerzos_diarios
+     Comentario: VIEW
+     Modelo: VistaAlmuerzosDiarios
+     Módulo: SIN CATEGORIA
+
+  3. v_consumos_estudiante
+     Comentario: VIEW
+     Modelo: VistaConsumosEstudiante
+     Módulo: SIN CATEGORIA
+
+  4. v_control_asistencia
+     Comentario: VIEW
+     ⚠ Sin modelo Django
+
+  5. v_cuentas_almuerzo_detallado
+     Comentario: VIEW
+     Modelo: VistaCuentasAlmuerzoDetallado
+     Módulo: SIN CATEGORIA
+
+  6. v_notas_credito_detallado
+     Comentario: VIEW
+     Modelo: VistaNotasCreditoDetallado
+     Módulo: SIN CATEGORIA
+
+  7. v_productos_mas_vendidos
+     Comentario: VIEW
+     ⚠ Sin modelo Django
+
+  8. v_recargas_historial
+     Comentario: VIEW
+     Modelo: VistaRecargasHistorial
+     Módulo: SIN CATEGORIA
+
+  9. v_reporte_mensual_separado
+     Comentario: VIEW
+     Modelo: VistaReporteMensualSeparado
+     Módulo: SIN CATEGORIA
+
+  10. v_resumen_caja_diario
+     Comentario: VIEW
+     Modelo: VistaResumenCajaDiario
+     Módulo: SIN CATEGORIA
+
+  11. v_resumen_silencioso_hijo
+     Comentario: VIEW
+     ⚠ Sin modelo Django
+
+  12. v_saldo_clientes
+     Comentario: VIEW
+     Modelo: VistaSaldoClientes
+     Módulo: SIN CATEGORIA
+
+  13. v_saldo_proveedores
+     Comentario: VIEW
+     ⚠ Sin modelo Django
+
+  14. v_saldo_tarjetas_compras
+     Comentario: VIEW
+     ⚠ Sin modelo Django
+
+  15. v_stock_alerta
+     Comentario: VIEW
+     Modelo: VistaStockAlerta
+     Módulo: SIN CATEGORIA
+
+  16. v_stock_critico_alertas
+     Comentario: VIEW
+     Modelo: VistaStockCriticoAlertas
+     Módulo: SIN CATEGORIA
+
+  17. v_tarjetas_detalle
+     Comentario: VIEW
+     ⚠ Sin modelo Django
+
+  18. v_ventas_dia
+     Comentario: VIEW
+     ⚠ Sin modelo Django
+
+  19. v_ventas_dia_detallado
+     Comentario: VIEW
+     Modelo: VistaVentasDiaDetallado
+     Módulo: SIN CATEGORIA
+
+  20. vista_movimientos_cta_cte_clientes
+     Comentario: VIEW
+     ⚠ Sin modelo Django
+
+  21. vista_movimientos_cta_cte_proveedores
+     Comentario: VIEW
+     ⚠ Sin modelo Django
+
+  22. vista_saldo_clientes
+     Comentario: VIEW
+     ⚠ Sin modelo Django
+
+  23. vista_saldo_proveedores
+     Comentario: VIEW
+     ⚠ Sin modelo Django
+
+
+====================================================================================================
+RECOMENDACIONES PARA ORGANIZAR EL DER
+====================================================================================================
+
+1. AGRUPACIÓN POR MÓDULOS (Color coding sugerido):
+
+🔵 AZUL:
+  • PRODUCTOS Y CATALOGOS: 9 tablas
+    listas_precios, categorias, unidades_medida, impuestos, productos...
+  • STOCK E INVENTARIO: 1 tablas
+    movimientos_stock
+
+🟢 VERDE:
+  • CLIENTES Y FAMILIA: 5 tablas
+    tipos_cliente, clientes, hijos, restricciones_hijos, aceptacion_terminos_saldo_negativo
+  • TARJETAS Y SALDOS: 2 tablas
+    tarjetas, cargas_saldo
+
+🟠 NARANJA:
+  • VENTAS Y FACTURACION: 6 tablas
+    puntos_expedicion, documentos_tributarios, tipos_pago, medios_pago, ventas...
+  • PAGOS Y COBRANZAS: 2 tablas
+    pagos_venta, notas_credito_cliente
+
+🟡 AMARILLO:
+  • ALMUERZOS: 3 tablas
+    planes_almuerzo, suscripciones_almuerzo, registro_consumo_almuerzo
+
+🔴 ROJO:
+  • EMPLEADOS Y SEGURIDAD: 1 tablas
+    empleados
+
+🟣 MORADO:
+  • COMPRAS Y PROVEEDORES: 2 tablas
+    proveedores, detalle_compra
+
+🟤 CAFÉ:
+  • PROMOCIONES: 1 tablas
+    promociones
+
+⚫ GRIS:
+
+2. ENTIDADES CENTRALES (núcleo del sistema):
+  • clientes (base de todo)
+  • hijos (relacionado con tarjetas y almuerzos)
+  • productos (base de ventas)
+  • ventas (transacciones principales)
+  • tarjetas (sistema de prepago)
+
+3. RELACIONES PRINCIPALES:
+  Tablas con más relaciones FK:
+    • ventas: 6 FK
+    • autorizacion_saldo_negativo: 4 FK
+    • movimientos_stock: 4 FK
+    • pagos_venta: 4 FK
+    • registro_consumo_almuerzo: 4 FK
+    • aceptacion_terminos_saldo_negativo: 3 FK
+    • detalle_ajuste: 3 FK
+    • productos: 3 FK
+    • notas_credito_cliente: 3 FK
+    • cargas_saldo: 3 FK
+
+4. SUGERENCIAS DE DISPOSICIÓN:
+  • Centro: clientes, hijos, tarjetas, ventas
+  • Izquierda: productos, categorías, stock
+  • Derecha: almuerzos, suscripciones
+  • Abajo: empleados, caja, auditoría
+  • Arriba: compras, proveedores
+
+====================================================================================================
+FIN DEL REPORTE
+====================================================================================================

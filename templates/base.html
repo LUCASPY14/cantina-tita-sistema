@@ -359,7 +359,7 @@
                                         // Confirmación del usuario
                                         const confirmar = confirm(
                                             `⚠️ RESTRICCIÓN ALIMENTARIA DETECTADA ⚠️\n\n` +
-                                            `Estudiante: ${this.selectedCard.nombre || 'N/A'}\n` +
+                                            `Hijo: ${this.selectedCard.nombre || 'N/A'}\n` +
                                             `Producto: ${product.name}\n\n` +
                                             `${alertas}\n\n` +
                                             `¿Desea agregar este producto de todas formas?`
@@ -602,7 +602,7 @@
                                 : (parseFloat(item.price) || 0) * (item.quantity || 1)
                         }));
                         
-                        // Obtener grado del estudiante si existe
+                        // Obtener grado del hijo si existe
                         const grado = this.selectedCard && this.selectedCard.grado 
                             ? this.selectedCard.grado 
                             : null;
@@ -617,7 +617,7 @@
                             },
                             body: JSON.stringify({
                                 items: items,
-                                grado_estudiante: grado,
+                                grado_hijo: grado,
                                 codigo_promocion: null // Por ahora sin códigos promocionales
                             })
                         });
@@ -913,7 +913,7 @@
                             const nroTarjetaInput = document.querySelector('input[name="nro_tarjeta"]');
                             if (nroTarjetaInput) nroTarjetaInput.value = '';
                             const tarjetaInfo = document.getElementById('tarjeta-info');
-                            if (tarjetaInfo) tarjetaInfo.innerHTML = '<div class="alert alert-info"><span>👆 Escanee la tarjeta del estudiante</span></div>';
+                            if (tarjetaInfo) tarjetaInfo.innerHTML = '<div class="alert alert-info"><span>👆 Escanee la tarjeta del hijo</span></div>';
                             
                         } else {
                             this.procesandoVenta = false;  // Liberar el lock

@@ -147,8 +147,8 @@
                 <input type="text" class="form-control" id="filtro-tarjeta" placeholder="Número de tarjeta..." oninput="aplicarFiltros()">
             </div>
             <div class="col-md-3">
-                <label>Buscar Estudiante</label>
-                <input type="text" class="form-control" id="filtro-estudiante" placeholder="Nombre..." oninput="aplicarFiltros()">
+                <label>Buscar Hijo</label>
+                <input type="text" class="form-control" id="filtro-hijo" placeholder="Nombre..." oninput="aplicarFiltros()">
             </div>
             <div class="col-md-3">
                 <label>Ordenar por</label>
@@ -156,7 +156,7 @@
                     <option value="saldo-asc">Saldo (Menor a Mayor)</option>
                     <option value="saldo-desc">Saldo (Mayor a Menor)</option>
                     <option value="tarjeta">Número de Tarjeta</option>
-                    <option value="estudiante">Nombre Estudiante</option>
+                    <option value="hijo">Nombre Hijo</option>
                 </select>
             </div>
         </div>
@@ -213,7 +213,7 @@ function actualizarEstadisticas(stats) {
 function aplicarFiltros() {
     const filtroEstado = document.getElementById('filtro-estado').value;
     const filtroTarjeta = document.getElementById('filtro-tarjeta').value.toLowerCase();
-    const filtroEstudiante = document.getElementById('filtro-estudiante').value.toLowerCase();
+    const filtroHijo = document.getElementById('filtro-hijo').value.toLowerCase();
     const filtroOrden = document.getElementById('filtro-orden').value;
     
     // Filtrar
@@ -228,8 +228,8 @@ function aplicarFiltros() {
             return false;
         }
         
-        // Filtro por estudiante
-        if (filtroEstudiante && !tarjeta.estudiante.toLowerCase().includes(filtroEstudiante)) {
+        // Filtro por hijo
+        if (filtroHijo && !tarjeta.estudiante.toLowerCase().includes(filtroHijo)) {
             return false;
         }
         
@@ -245,7 +245,7 @@ function aplicarFiltros() {
                 return b.saldo - a.saldo;
             case 'tarjeta':
                 return a.nro_tarjeta.localeCompare(b.nro_tarjeta);
-            case 'estudiante':
+            case 'hijo':
                 return a.estudiante.localeCompare(b.estudiante);
             default:
                 return 0;

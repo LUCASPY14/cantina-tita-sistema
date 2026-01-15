@@ -1,0 +1,117 @@
+======================================================================
+ESTADÍSTICAS DE LA BASE DE DATOS: cantinatitadb
+Generado: 2026-01-14 23:36:45
+======================================================================
+
+Total de tablas: 101
+Total de columnas: 776
+Total de Primary Keys: 101
+Total de Foreign Keys: 126
+Total de Índices: 274
+
+----------------------------------------------------------------------
+DETALLE POR TABLA
+----------------------------------------------------------------------
+Tabla                                    Cols   PKs   FKs   Idx  
+----------------------------------------------------------------------
+aceptacion_terminos_saldo_negativo       13     1     3     5    
+ajustes_inventario                       6      1     1     1    
+alergenos                                9      1     0     3    
+alertas_sistema                          9      1     1     1    
+anomalias_detectadas                     8      1     0     4    
+aplicacion_pagos_compras                 5      1     2     2    
+aplicacion_pagos_ventas                  5      1     2     2    
+auditoria_comisiones                     7      1     2     2    
+auditoria_empleados                      7      1     1     1    
+auditoria_operaciones                    17     1     0     4    
+auditoria_usuarios_web                   7      1     1     1    
+autenticacion_2fa                        9      1     0     2    
+auth_group                               2      1     0     1    
+auth_group_permissions                   3      1     2     2    
+auth_permission                          4      1     1     1    
+auth_user                                11     1     0     1    
+auth_user_groups                         3      1     2     2    
+auth_user_user_permissions               3      1     2     2    
+autorizacion_saldo_negativo              12     1     4     5    
+bloqueos_cuenta                          9      1     0     2    
+cajas                                    4      1     0     0    
+cargas_saldo                             12     1     3     6    
+categorias                               4      1     1     1    
+categorias_promocion                     3      1     2     3    
+cierres_caja                             9      1     2     2    
+clientes                                 14     1     2     8    
+compras                                  8      1     1     1    
+conciliacion_pagos                       6      1     1     1    
+consumos_tarjeta                         8      1     2     6    
+costos_historicos                        5      1     2     2    
+cuentas_almuerzo_mensual                 12     1     1     4    
+datos_empresa                            9      1     0     0    
+datos_facturacion_elect                  7      1     1     1    
+datos_facturacion_fisica                 2      1     1     1    
+detalle_ajuste                           5      1     3     3    
+detalle_comision_venta                   5      1     2     2    
+detalle_compra                           7      1     2     2    
+detalle_nota                             6      1     2     2    
+detalle_nota_credito_proveedor           6      1     2     2    
+detalle_venta                            6      1     2     5    
+django_admin_log                         8      1     2     2    
+django_content_type                      3      1     0     1    
+django_migrations                        4      1     0     0    
+django_session                           3      1     0     1    
+documentos_tributarios                   10     1     1     5    
+empleados                                14     1     1     5    
+grados                                   7      1     0     3    
+hijos                                    10     1     1     2    
+historial_grados_hijos                   9      1     1     2    
+historico_precios                        8      1     2     2    
+impuestos                                6      1     0     1    
+intentos_2fa                             10     1     0     3    
+intentos_login                           8      1     0     2    
+listas_precios                           5      1     0     1    
+log_autorizaciones                       10     1     1     3    
+medios_pago                              5      1     0     1    
+movimientos_stock                        10     1     4     6    
+notas_credito_cliente                    8      1     3     3    
+notas_credito_proveedor                  9      1     2     4    
+notificacion                             9      1     1     4    
+notificacion_saldo                       11     1     1     3    
+pagos_almuerzo_mensual                   7      1     2     2    
+pagos_cuentas_almuerzo                   8      1     2     3    
+pagos_proveedores                        8      1     2     4    
+pagos_venta                              9      1     4     5    
+patrones_acceso                          11     1     0     3    
+planes_almuerzo                          7      1     0     1    
+precios_por_lista                        5      1     2     2    
+preferencia_notificacion                 7      1     1     3    
+producto_alergenos                       7      1     2     3    
+productos                                9      1     3     7    
+productos_promocion                      3      1     2     3    
+promociones                              22     1     0     5    
+promociones_aplicadas                    5      1     2     3    
+proveedores                              9      1     0     1    
+puntos_expedicion                        5      1     0     1    
+registro_consumo_almuerzo                9      1     4     6    
+renovaciones_sesion                      7      1     0     2    
+restricciones_hijos                      10     1     1     3    
+restricciones_horarias                   8      1     0     3    
+sesiones_activas                         9      1     0     4    
+solicitudes_notificacion                 9      1     2     2    
+stock_unico                              3      1     1     3    
+suscripciones_almuerzo                   6      1     2     2    
+tarifas_comision                         7      1     1     1    
+tarjetas                                 12     1     1     4    
+tarjetas_autorizacion                    12     1     1     4    
+timbrados                                9      1     1     1    
+tipos_almuerzo                           9      1     0     1    
+tipos_cliente                            4      1     0     1    
+tipos_pago                               3      1     0     1    
+tipos_rol_general                        4      1     0     1    
+token_verificacion                       7      1     1     5    
+tokens_recuperacion                      8      1     1     4    
+tokens_verificacion                      8      1     1     3    
+transaccion_online                       12     1     2     6    
+unidades_medida                          4      1     0     0    
+usuario_portal                           10     1     1     4    
+usuarios_portal                          10     1     1     4    
+usuarios_web_clientes                    5      1     1     1    
+ventas                                   15     1     6     12   

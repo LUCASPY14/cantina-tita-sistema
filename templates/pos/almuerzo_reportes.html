@@ -30,7 +30,7 @@
                     <h2 class="card-title text-blue-600">Reporte Diario</h2>
                 </div>
                 <p class="text-gray-600 mb-4">
-                    Consulta todos los almuerzos registrados por día. Filtros por fecha y estudiante.
+                    Consulta todos los almuerzos registrados por día. Filtros por fecha y hijo.
                 </p>
                 <div class="card-actions justify-end">
                     <a href="{% url 'pos:reporte_almuerzos_diarios' %}" class="btn btn-primary btn-sm">
@@ -52,7 +52,7 @@
                     <h2 class="card-title text-green-600">Reporte Mensual</h2>
                 </div>
                 <p class="text-gray-600 mb-4">
-                    Vista separada de almuerzos vs consumos de tarjeta. Totales mensuales por estudiante.
+                    Vista separada de almuerzos vs consumos de tarjeta. Totales mensuales por hijo.
                 </p>
                 <div class="card-actions justify-end">
                     <a href="{% url 'pos:reporte_mensual_separado' %}" class="btn btn-success btn-sm">
@@ -93,10 +93,10 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
                     </div>
-                    <h2 class="card-title text-orange-600">Por Estudiante</h2>
+                    <h2 class="card-title text-orange-600">Por Hijo</h2>
                 </div>
                 <p class="text-gray-600 mb-4">
-                    Historial completo de almuerzos por estudiante/tarjeta con estadísticas detalladas.
+                    Historial completo de almuerzos por hijo/tarjeta con estadísticas detalladas.
                 </p>
                 <div class="card-actions justify-end">
                     <a href="{% url 'pos:reporte_por_estudiante' %}" class="btn btn-warning btn-sm">
