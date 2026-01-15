@@ -17,7 +17,7 @@ Ver [CONFIGURACION_PARAGUAY.md](CONFIGURACION_PARAGUAY.md) para detalles complet
 ## ⚠️ IMPORTANTE: Base de Datos Existente
 
 Este proyecto está **integrado con una base de datos MySQL existente** que contiene:
-- **63 tablas** con datos operativos
+- **101 tablas** con datos operativos
 - **11 vistas** de consulta
 - Sistema completo de gestión de cantina en producción
 
@@ -25,9 +25,23 @@ Este proyecto está **integrado con una base de datos MySQL existente** que cont
 
 Ver [INTEGRACION_BD.md](INTEGRACION_BD.md) para documentación completa de la estructura.
 
+## 📊 Diagramas DER
+
+El proyecto incluye **Diagramas Entidad-Relación** completos y organizados por módulos funcionales:
+
+- **22 módulos funcionales** que cubren las 101 tablas (100% cobertura)
+- **44 diagramas PNG** (Lógicos y Físicos)
+- **Índice HTML interactivo** con visor modal
+
+### Ver DER:
+- **Local**: Abre [diagramas_der_modulos/index_modulos.html](diagramas_der_modulos/index_modulos.html)
+- **Online**: https://raw.githack.com/LUCASPY14/cantina-tita-sistema/main/diagramas_der_modulos/index_modulos.html
+
+Ver [README_DER.md](README_DER.md) y [RESUMEN_DER_MODULOS.md](RESUMEN_DER_MODULOS.md) para más detalles.
+
 ## Características
 
-### Sistema Existente (63 Tablas)
+### Sistema Existente (101 Tablas)
 - **Sistema de Tarjetas**: Tarjetas recargables para estudiantes
 - **Planes de Almuerzo**: Suscripciones mensuales con control de asistencia
 - **Facturación Electrónica**: Integración con SIFEN (Paraguay)
@@ -36,6 +50,10 @@ Ver [INTEGRACION_BD.md](INTEGRACION_BD.md) para documentación completa de la es
 - **Control de Cajas**: Múltiples cajas con cierres diarios
 - **Auditoría Completa**: Logs de todas las operaciones
 - **Sistema Multi-Lista de Precios**: Diferentes precios por tipo de cliente
+- **Seguridad 2FA**: Autenticación de dos factores
+- **Notificaciones**: Sistema de alertas y notificaciones
+- **Gestión de Stock**: Control de inventario con alertas
+- **Promociones**: Sistema de descuentos y ofertas
 
 ### Funcionalidades Django Integradas
 
@@ -163,12 +181,23 @@ anteproyecto20112025/
 
 ## Próximos Pasos
 
+- [x] Crear modelos Django para las 101 tablas
+- [x] Generar DER completo y por módulos
+- [x] Configurar panel de administración
 - [ ] Crear vistas personalizadas para el frontend
 - [ ] Implementar API REST con Django REST Framework
 - [ ] Agregar reportes y estadísticas
 - [ ] Implementar sistema de permisos por rol
 - [ ] Agregar dashboard con gráficas
-- [ ] Implementar sistema de notificaciones
+- [ ] Implementar sistema de notificaciones en tiempo real
+
+## 📚 Documentación Adicional
+
+- [README_DER.md](README_DER.md) - Guía de generación de diagramas DER
+- [RESUMEN_DER_MODULOS.md](RESUMEN_DER_MODULOS.md) - Descripción detallada de los 22 módulos
+- [INTEGRACION_BD.md](INTEGRACION_BD.md) - Integración con base de datos existente
+- [CONFIGURACION_PARAGUAY.md](CONFIGURACION_PARAGUAY.md) - Configuración regional paraguaya
+- [INSTALACION_GRAPHVIZ.md](INSTALACION_GRAPHVIZ.md) - Instalación de Graphviz para DER
 
 ## Tecnologías Utilizadas
 
@@ -176,6 +205,60 @@ anteproyecto20112025/
 - **Base de Datos**: MySQL 8.0
 - **Gestión de Dependencias**: pip
 - **Variables de Entorno**: python-decouple
+- **Diagramas DER**: SQLAlchemy 2.0 + Graphviz 14.1
+- **API REST**: Django REST Framework
+- **Gestión de Imágenes**: Pillow
+- **Reportes**: openpyxl, xlsxwriter
+
+## 📁 Estructura del Proyecto
+
+```
+anteproyecto20112025/
+├── .venv/                      # Entorno virtual de Python
+├── cantina_project/            # Configuración del proyecto Django
+│   ├── settings.py            # Configuración principal
+│   ├── urls.py                # URLs del proyecto
+│   └── wsgi.py                # Configuración WSGI
+├── gestion/                    # Aplicación principal
+│   ├── models.py              # Modelos de datos (101 tablas)
+│   ├── admin.py               # Configuración del admin
+│   ├── views.py               # Vistas
+│   └── urls.py                # URLs de la app
+├── diagramas_der/             # DER completos (global)
+│   ├── DER_Logico_cantinatitadb.png
+│   ├── DER_Fisico_cantinatitadb.png
+│   └── index.html
+├── diagramas_der_modulos/     # DER por módulos (22 módulos)
+│   ├── 01_Autenticacion_Django_Logico.png
+│   ├── 01_Autenticacion_Django_Fisico.png
+│   ├── ... (44 archivos PNG)
+│   └── index_modulos.html
+├── generar_der_completo.py    # Generador DER global
+├── generar_der_por_modulos_completo.py  # Generador DER modular
+├── .env                       # Variables de entorno (NO subir a git)
+├── .env.example              # Ejemplo de variables de entorno
+├── .gitignore                # Archivos ignorados por git
+├── manage.py                 # Script de gestión de Django
+├── requirements.txt          # Dependencias principales
+├── requirements_der.txt      # Dependencias para generación DER
+└── README.md                 # Este archivo
+```
+
+## 🔧 Herramientas de Desarrollo
+
+### Generación de Diagramas DER
+
+El proyecto incluye scripts para generar diagramas entidad-relación:
+
+```bash
+# DER completo (todas las tablas en un solo diagrama)
+.\.venv\Scripts\python.exe generar_der_completo.py
+
+# DER por módulos (22 módulos funcionales)
+.\.venv\Scripts\python.exe generar_der_por_modulos_completo.py
+```
+
+Ver [README_DER.md](README_DER.md) para instrucciones detalladas.
 
 ## Soporte
 
