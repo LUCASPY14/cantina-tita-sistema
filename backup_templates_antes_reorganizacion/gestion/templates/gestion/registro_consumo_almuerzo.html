@@ -1,0 +1,386 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Registro de Consumo Diario{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6" x-data="registroConsumo()">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">
+            <i class="fas fa-check-circle text-success mr-2"></i>
+            Registro de Consumo Diario
+        </h1>
+        <p class="text-gray-600 mt-2">Registra la asistencia al servicio de almuerzos</p>
+    </div>
+
+    <!-- Selector de Fecha y Estadísticas -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="card bg-base-100 shadow-md">
+            <div class="card-body">
+                <h3 class="card-title text-lg">Fecha de Registro</h3>
+                <input type="date" 
+                       x-model="fechaSeleccionada"
+                       @change="cargarSuscripcionesActivas()"
+                       class="input input-bordered input-lg" />
+                <button @click="seleccionarHoy()" class="btn btn-sm btn-outline mt-2">
+                    <i class="fas fa-calendar-day mr-2"></i>Hoy
+                </button>
+            </div>
+        </div>
+
+        <div class="stats shadow">
+            <div class="stat">
+                <div class="stat-figure text-primary">
+                    <i class="fas fa-users text-3xl"></i>
+                </div>
+                <div class="stat-title">Suscripciones Activas</div>
+                <div class="stat-value text-primary" x-text="suscripcionesActivas.length"></div>
+                <div class="stat-desc">Para la fecha seleccionada</div>
+            </div>
+        </div>
+
+        <div class="stats shadow">
+            <div class="stat">
+                <div class="stat-figure text-success">
+                    <i class="fas fa-check text-3xl"></i>
+                </div>
+                <div class="stat-title">Registrados Hoy</div>
+                <div class="stat-value text-success" x-text="consumosRegistrados"></div>
+                <div class="stat-desc" x-text="porcentajeAsistencia + '% de asistencia'"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="flex gap-2 mb-6">
+        <button @click="marcarTodos(true)" class="btn btn-success">
+            <i class="fas fa-check-double mr-2"></i>Marcar Todos
+        </button>
+        <button @click="marcarTodos(false)" class="btn btn-warning">
+            <i class="fas fa-times-circle mr-2"></i>Desmarcar Todos
+        </button>
+        <button @click="guardarRegistros()" class="btn btn-primary" :disabled="guardando">
+            <span x-show="!guardando">
+                <i class="fas fa-save mr-2"></i>Guardar Registros
+            </span>
+            <span x-show="guardando" class="loading loading-spinner"></span>
+        </button>
+    </div>
+
+    <!-- Filtros de Búsqueda -->
+    <div class="card bg-base-100 shadow-md mb-6">
+        <div class="card-body">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Buscar Estudiante</span>
+                    </label>
+                    <input type="text" 
+                           x-model="busqueda"
+                           placeholder="Nombre o código..." 
+                           class="input input-bordered" />
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Filtrar por Grado</span>
+                    </label>
+                    <select x-model="filtroGrado" class="select select-bordered">
+                        <option value="">Todos los grados</option>
+                        <template x-for="grado in gradosDisponibles" :key="grado">
+                            <option :value="grado" x-text="grado"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Filtrar por Estado</span>
+                    </label>
+                    <select x-model="filtroEstado" class="select select-bordered">
+                        <option value="">Todos</option>
+                        <option value="registrado">Ya Registrados</option>
+                        <option value="pendiente">Pendientes</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Suscripciones para Registro -->
+    <div class="card bg-base-100 shadow-md">
+        <div class="card-body">
+            <h3 class="text-xl font-bold mb-4">Lista de Estudiantes</h3>
+            
+            <div class="overflow-x-auto">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr>
+                            <th>
+                                <label>
+                                    <input type="checkbox" 
+                                           @change="toggleTodos($event.target.checked)"
+                                           class="checkbox checkbox-primary" />
+                                </label>
+                            </th>
+                            <th>Estudiante</th>
+                            <th>Grado</th>
+                            <th>Plan</th>
+                            <th>Estado Hoy</th>
+                            <th>Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="sus in suscripcionesFiltradas" :key="sus.id">
+                            <tr :class="{ 'bg-success/10': sus.asistio, 'opacity-60': sus.yaRegistrado }">
+                                <td>
+                                    <label>
+                                        <input type="checkbox" 
+                                               :checked="sus.asistio"
+                                               @change="toggleAsistencia(sus.id, $event.target.checked)"
+                                               :disabled="sus.yaRegistrado"
+                                               class="checkbox checkbox-success" />
+                                    </label>
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-3">
+                                        <div class="avatar placeholder">
+                                            <div class="bg-neutral text-neutral-content rounded-full w-10">
+                                                <span class="text-xs" x-text="sus.estudiante.iniciales"></span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="font-bold" x-text="sus.estudiante.nombre"></div>
+                                            <div class="text-sm opacity-50" x-text="sus.estudiante.codigo"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge badge-ghost" x-text="sus.estudiante.grado"></span>
+                                </td>
+                                <td>
+                                    <div class="text-sm">
+                                        <div class="font-semibold" x-text="sus.plan.nombre"></div>
+                                        <div class="text-xs opacity-70" x-text="sus.plan.tipo"></div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span x-show="sus.yaRegistrado" class="badge badge-info gap-2">
+                                        <i class="fas fa-check"></i> Ya Registrado
+                                    </span>
+                                    <span x-show="!sus.yaRegistrado && sus.asistio" class="badge badge-success gap-2">
+                                        <i class="fas fa-check-circle"></i> Asistió
+                                    </span>
+                                    <span x-show="!sus.yaRegistrado && !sus.asistio" class="badge badge-ghost gap-2">
+                                        <i class="fas fa-minus-circle"></i> No Registrado
+                                    </span>
+                                </td>
+                                <td>
+                                    <input type="text" 
+                                           x-model="sus.observaciones"
+                                           :disabled="sus.yaRegistrado"
+                                           placeholder="Opcional..."
+                                           class="input input-bordered input-sm w-full max-w-xs" />
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación o mensaje vacío -->
+            <div x-show="suscripcionesFiltradas.length === 0" class="text-center py-8">
+                <i class="fas fa-inbox text-4xl text-gray-400 mb-2 block"></i>
+                <p class="text-gray-500">No hay suscripciones activas para esta fecha</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumen de Cambios -->
+    <div x-show="tieneCambiosPendientes" class="alert alert-warning shadow-lg mt-6">
+        <i class="fas fa-exclamation-triangle"></i>
+        <div>
+            <h3 class="font-bold">Cambios Pendientes</h3>
+            <div class="text-sm">
+                Tienes <span x-text="cambiosPendientes"></span> registro(s) sin guardar. 
+                No olvides presionar "Guardar Registros".
+            </div>
+        </div>
+        <button @click="guardarRegistros()" class="btn btn-sm btn-primary">
+            Guardar Ahora
+        </button>
+    </div>
+</div>
+
+<script>
+function registroConsumo() {
+    return {
+        fechaSeleccionada: new Date().toISOString().split('T')[0],
+        suscripcionesActivas: [],
+        busqueda: '',
+        filtroGrado: '',
+        filtroEstado: '',
+        guardando: false,
+
+        get gradosDisponibles() {
+            const grados = [...new Set(this.suscripcionesActivas.map(s => s.estudiante.grado))];
+            return grados.sort();
+        },
+
+        get suscripcionesFiltradas() {
+            let filtradas = this.suscripcionesActivas;
+
+            // Filtro de búsqueda
+            if (this.busqueda) {
+                const busquedaLower = this.busqueda.toLowerCase();
+                filtradas = filtradas.filter(s => 
+                    s.estudiante.nombre.toLowerCase().includes(busquedaLower) ||
+                    s.estudiante.codigo.toLowerCase().includes(busquedaLower)
+                );
+            }
+
+            // Filtro de grado
+            if (this.filtroGrado) {
+                filtradas = filtradas.filter(s => s.estudiante.grado === this.filtroGrado);
+            }
+
+            // Filtro de estado
+            if (this.filtroEstado === 'registrado') {
+                filtradas = filtradas.filter(s => s.yaRegistrado);
+            } else if (this.filtroEstado === 'pendiente') {
+                filtradas = filtradas.filter(s => !s.yaRegistrado);
+            }
+
+            return filtradas;
+        },
+
+        get consumosRegistrados() {
+            return this.suscripcionesActivas.filter(s => s.yaRegistrado || s.asistio).length;
+        },
+
+        get porcentajeAsistencia() {
+            if (this.suscripcionesActivas.length === 0) return 0;
+            return ((this.consumosRegistrados / this.suscripcionesActivas.length) * 100).toFixed(1);
+        },
+
+        get tieneCambiosPendientes() {
+            return this.suscripcionesActivas.some(s => !s.yaRegistrado && s.asistio);
+        },
+
+        get cambiosPendientes() {
+            return this.suscripcionesActivas.filter(s => !s.yaRegistrado && s.asistio).length;
+        },
+
+        init() {
+            this.cargarSuscripcionesActivas();
+        },
+
+        seleccionarHoy() {
+            this.fechaSeleccionada = new Date().toISOString().split('T')[0];
+            this.cargarSuscripcionesActivas();
+        },
+
+        async cargarSuscripcionesActivas() {
+            try {
+                // Aquí harías el fetch real a tu backend
+                // Simulación de datos:
+                this.suscripcionesActivas = [];
+                
+                /* Ejemplo de estructura:
+                this.suscripcionesActivas = [
+                    {
+                        id: 1,
+                        estudiante: {
+                            nombre: 'Juan Pérez',
+                            codigo: 'EST001',
+                            grado: '5to Primaria',
+                            iniciales: 'JP'
+                        },
+                        plan: {
+                            nombre: 'Plan Mensual',
+                            tipo: 'Mensual'
+                        },
+                        asistio: false,
+                        yaRegistrado: false,
+                        observaciones: ''
+                    }
+                ];
+                */
+            } catch (error) {
+                console.error('Error cargando suscripciones:', error);
+                alert('Error al cargar las suscripciones activas');
+            }
+        },
+
+        toggleAsistencia(suscripcionId, asistio) {
+            const sus = this.suscripcionesActivas.find(s => s.id === suscripcionId);
+            if (sus && !sus.yaRegistrado) {
+                sus.asistio = asistio;
+            }
+        },
+
+        toggleTodos(checked) {
+            this.suscripcionesActivas.forEach(sus => {
+                if (!sus.yaRegistrado) {
+                    sus.asistio = checked;
+                }
+            });
+        },
+
+        marcarTodos(asistio) {
+            this.suscripcionesActivas.forEach(sus => {
+                if (!sus.yaRegistrado) {
+                    sus.asistio = asistio;
+                }
+            });
+        },
+
+        async guardarRegistros() {
+            const registros = this.suscripcionesActivas
+                .filter(s => !s.yaRegistrado && s.asistio)
+                .map(s => ({
+                    id_suscripcion: s.id,
+                    fecha_consumo: this.fechaSeleccionada,
+                    asistio: s.asistio,
+                    observaciones: s.observaciones || ''
+                }));
+
+            if (registros.length === 0) {
+                alert('No hay registros nuevos para guardar');
+                return;
+            }
+
+            if (!confirm(`¿Guardar ${registros.length} registro(s) de consumo?`)) {
+                return;
+            }
+
+            this.guardando = true;
+
+            try {
+                const response = await fetch('{% url "pos:registrar_consumo_almuerzo" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({ registros })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`${data.registrados} registro(s) guardado(s) exitosamente`);
+                    this.cargarSuscripcionesActivas();
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudieron guardar los registros'));
+                }
+            } catch (error) {
+                alert('Error de conexión');
+                console.error(error);
+            } finally {
+                this.guardando = false;
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

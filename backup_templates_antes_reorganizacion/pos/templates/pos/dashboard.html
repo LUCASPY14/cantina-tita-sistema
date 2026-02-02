@@ -1,0 +1,886 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | Cantina Tita{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Animaciones para notificaciones */
+@keyframes fade-in {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+}
+
+/* Mejores tooltips */
+.tooltip-custom {
+    position: relative;
+}
+
+.tooltip-custom::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 1000;
+}
+
+.tooltip-custom:hover::after {
+    opacity: 1;
+}
+
+/* Indicadores de carga mejorados */
+.loading-pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Estados de error y éxito */
+.card-error {
+    border: 2px solid #ef4444;
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+}
+
+.card-success {
+    border: 2px solid #10b981;
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+}
+
+/* Animaciones de entrada */
+.slide-in-left {
+    animation: slide-in-left 0.5s ease-out;
+}
+
+@keyframes slide-in-left {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.slide-in-right {
+    animation: slide-in-right 0.5s ease-out;
+}
+
+@keyframes slide-in-right {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-4 min-h-screen pb-8" x-data="dashboardController()">
+    
+    <!-- Sistema de Notificaciones Toast -->
+    <div class="fixed top-4 right-4 z-50 space-y-2" x-show="notifications.length > 0">
+        <template x-for="(notification, index) in notifications" :key="index">
+            <div class="alert shadow-lg max-w-sm animate-fade-in"
+                 :class="{
+                     'alert-success': notification.type === 'success',
+                     'alert-error': notification.type === 'error',
+                     'alert-warning': notification.type === 'warning',
+                     'alert-info': notification.type === 'info'
+                 }">
+                <div class="flex items-center">
+                    <span x-show="notification.type === 'success'">✅</span>
+                    <span x-show="notification.type === 'error'">❌</span>
+                    <span x-show="notification.type === 'warning'">⚠️</span>
+                    <span x-show="notification.type === 'info'">ℹ️</span>
+                    <span class="ml-2" x-text="notification.message"></span>
+                    <button @click="removeNotification(index)" class="btn btn-sm btn-ghost ml-auto">
+                        ✕
+                    </button>
+                </div>
+                <!-- Barra de progreso para auto-remover -->
+                <div class="w-full bg-gray-200 rounded-full h-1 mt-2" x-show="notification.autoRemove">
+                    <div class="bg-current h-1 rounded-full transition-all duration-100"
+                         :style="`width: ${(notification.timeLeft / 5000) * 100}%`"></div>
+                </div>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Encabezado con auto-refresh -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-neutral">📊 Dashboard</h1>
+            <p class="text-gray-600">Resumen de ventas y estadísticas en tiempo real</p>
+        </div>
+        <div class="flex items-center gap-4">
+            <!-- Indicador de conexión -->
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full" :class="isOnline ? 'bg-green-400' : 'bg-red-400'"></div>
+                <span class="text-xs" :class="isOnline ? 'text-green-600' : 'text-red-600'">
+                    <span x-show="isOnline">🟢 En línea</span>
+                    <span x-show="!isOnline">🔴 Sin conexión</span>
+                </span>
+            </div>
+            <!-- Indicador de actualización automática -->
+            <div class="flex items-center gap-2">
+                <div class="loading loading-spinner loading-sm" x-show="isRefreshing" x-transition></div>
+                <span class="text-sm text-gray-600" x-show="!isRefreshing">
+                    🔄 Auto-refresh en <span x-text="countdown"></span>s
+                </span>
+                <span class="text-sm text-green-600" x-show="isRefreshing">Actualizando...</span>
+            </div>
+            <!-- Botón manual refresh -->
+            <button 
+                @click="refreshData()" 
+                :disabled="isRefreshing"
+                class="btn btn-sm btn-outline btn-primary"
+                title="Actualizar datos manualmente"
+            >
+                <span x-show="!isRefreshing">🔄</span>
+                <span x-show="isRefreshing" class="loading loading-spinner loading-sm"></span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Tarjetas de estadísticas principales -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Ventas del día -->
+        <div class="card bg-gradient-to-br from-primary to-orange-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 slide-in-left" 
+             x-tooltip="'Ventas realizadas hoy'">
+            <div class="card-body">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm opacity-80">Ventas Hoy</p>
+                        <h2 class="text-3xl font-bold" x-text="stats.ventas_hoy || '{{ stats.ventas_hoy }}'">
+                            <span class="loading loading-spinner loading-sm loading-pulse" x-show="isRefreshing"></span>
+                            <span x-show="!isRefreshing" x-text="stats.ventas_hoy || '{{ stats.ventas_hoy }}'">0</span>
+                        </h2>
+                    </div>
+                    <div class="text-5xl opacity-80 animate-pulse">💰</div>
+                </div>
+                <div class="divider my-2"></div>
+                <p class="text-sm">
+                    Gs. <span x-text="formatCurrency(stats.total_hoy || {{ stats.total_hoy|default:"0" }})">0</span>
+                </p>
+                <!-- Indicador de cambio -->
+                <div class="flex items-center gap-1 mt-2" x-show="stats.ventas_ayer">
+                    <span class="text-xs opacity-75">vs ayer:</span>
+                    <span class="text-xs font-bold" 
+                          :class="getChangeClass(stats.ventas_hoy - stats.ventas_ayer)">
+                        <span x-show="(stats.ventas_hoy - stats.ventas_ayer) > 0">↗️</span>
+                        <span x-show="(stats.ventas_hoy - stats.ventas_ayer) < 0">↘️</span>
+                        <span x-show="(stats.ventas_hoy - stats.ventas_ayer) === 0">➡️</span>
+                        <span x-text="Math.abs(stats.ventas_hoy - stats.ventas_ayer)"></span>
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Total del mes -->
+        <div class="card bg-gradient-to-br from-secondary to-teal-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
+             x-tooltip="'Total de ventas del mes actual'">
+            <div class="card-body">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm opacity-80">Total Mes</p>
+                        <h2 class="text-3xl font-bold" x-text="stats.ventas_mes || '{{ stats.ventas_mes }}'">0</h2>
+                    </div>
+                    <div class="text-5xl opacity-80 animate-bounce">📈</div>
+                </div>
+                <div class="divider my-2"></div>
+                <p class="text-sm">
+                    Gs. <span x-text="formatCurrency(stats.total_mes || {{ stats.total_mes|default:"0" }})">0</span>
+                </p>
+                <!-- Meta del mes -->
+                <div class="mt-2">
+                    <div class="text-xs opacity-75">Meta: Gs. 50,000,000</div>
+                    <progress class="progress progress-success w-full h-2" 
+                             :value="(stats.total_mes / 50000000) * 100" max="100"></progress>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Productos vendidos -->
+        <div class="card bg-gradient-to-br from-success to-green-600 text-white shadow-xl">
+            <div class="card-body">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm opacity-80">Items Vendidos</p>
+                        <h2 class="text-3xl font-bold">{{ stats.items_vendidos }}</h2>
+                    </div>
+                    <div class="text-5xl opacity-80">📦</div>
+                </div>
+                <div class="divider my-2"></div>
+                <p class="text-sm">Hoy</p>
+            </div>
+        </div>
+        
+        <!-- Promedio por venta -->
+        <div class="card bg-gradient-to-br from-warning to-yellow-600 text-white shadow-xl">
+            <div class="card-body">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm opacity-80">Promedio/Venta</p>
+                        <h2 class="text-3xl font-bold">Gs. {{ stats.promedio|floatformat:0 }}</h2>
+                    </div>
+                    <div class="text-5xl opacity-80">🎯</div>
+                </div>
+                <div class="divider my-2"></div>
+                <p class="text-sm">Hoy</p>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- NOTIFICACIONES DE VALIDACIÓN (Solo para Administradores) -->
+    {% if total_cargas_pendientes > 0 or total_pagos_pendientes > 0 %}
+    <div class="alert alert-warning shadow-lg animate-fade-in">
+        <div>
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <div>
+                <h3 class="font-bold">¡Validaciones Pendientes!</h3>
+                <div class="text-sm">
+                    {% if total_cargas_pendientes > 0 %}
+                    <span class="badge badge-warning mr-2">{{ total_cargas_pendientes }}</span> Cargas de saldo pendientes
+                    {% endif %}
+                    {% if total_pagos_pendientes > 0 %}
+                    <span class="badge badge-warning mr-2">{{ total_pagos_pendientes }}</span> Pagos pendientes
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="flex-none">
+            <button class="btn btn-sm btn-primary" onclick="document.getElementById('validaciones-section').scrollIntoView({behavior: 'smooth'})">
+                Ver Validaciones
+            </button>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Gráficos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        <!-- Ventas por hora -->
+        <div class="card bg-white shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title text-lg">📊 Ventas por Hora (Hoy)</h3>
+                <div class="relative">
+                    <div class="loading loading-spinner loading-lg absolute inset-0 m-auto" x-show="isRefreshing" x-transition></div>
+                    <canvas id="ventasPorHoraChart" x-show="!isRefreshing"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Productos más vendidos -->
+        <div class="card bg-white shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title text-lg">🏆 Top 10 Productos Vendidos</h3>
+                <div class="relative">
+                    <div class="loading loading-spinner loading-lg absolute inset-0 m-auto" x-show="isRefreshing" x-transition></div>
+                    <canvas id="topProductosChart" x-show="!isRefreshing"></canvas>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- Segunda fila de gráficos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        <!-- Ventas últimos 7 días -->
+        <div class="card bg-white shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title text-lg">📅 Ventas Últimos 7 Días</h3>
+                <div class="relative">
+                    <div class="loading loading-spinner loading-lg absolute inset-0 m-auto" x-show="isRefreshing" x-transition></div>
+                    <canvas id="ventasSemanalesChart" x-show="!isRefreshing"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Ventas por categoría -->
+        <div class="card bg-white shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title text-lg">🎨 Ventas por Categoría</h3>
+                <div class="relative">
+                    <div class="loading loading-spinner loading-lg absolute inset-0 m-auto" x-show="isRefreshing" x-transition></div>
+                    <canvas id="ventasCategoriaChart" x-show="!isRefreshing"></canvas>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- Tablas de datos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        <!-- Últimas ventas -->
+        <div class="card bg-white shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title text-lg mb-4">🕐 Últimas Ventas</h3>
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra table-sm">
+                        <thead>
+                            <tr>
+                                <th>Hora</th>
+                                <th>Empleado</th>
+                                <th class="text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for venta in ultimas_ventas %}
+                            <tr>
+                                <td>{{ venta.fecha|date:"H:i" }}</td>
+                                <td>{{ venta.empleado_nombre|default:"N/A" }}</td>
+                                <td class="text-right font-bold">Gs. {{ venta.monto_total|floatformat:0 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-gray-400">Sin ventas</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alertas de stock -->
+        <div class="card bg-white shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title text-lg mb-4">⚠️ Alertas de Stock</h3>
+                <div class="space-y-2">
+                    {% for producto in stock_bajo %}
+                    <div class="alert alert-warning py-2">
+                        <div class="flex justify-between w-full">
+                            <span class="font-semibold text-sm">{{ producto.descripcion }}</span>
+                            <span class="badge badge-error">{{ producto.stock_actual }} unid.</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-gray-400 py-4">
+                        ✅ Todos los productos tienen stock suficiente
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- SECCIÓN DE VALIDACIONES PENDIENTES -->
+    <div id="validaciones-section" class="space-y-4">
+        {% if cargas_pendientes or pagos_pendientes %}
+        <h2 class="text-2xl font-bold text-center mt-8 mb-4">🔔 Validaciones Pendientes</h2>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            
+            <!-- Cargas de Saldo Pendientes -->
+            {% if cargas_pendientes %}
+            <div class="card bg-white shadow-xl">
+                <div class="card-body">
+                    <h3 class="card-title text-lg mb-4">
+                        💳 Cargas de Saldo Pendientes
+                        <span class="badge badge-warning">{{ total_cargas_pendientes }}</span>
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Tarjeta</th>
+                                    <th>Estudiante</th>
+                                    <th class="text-right">Monto</th>
+                                    <th>Referencia</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for carga in cargas_pendientes %}
+                                <tr>
+                                    <td class="text-xs">{{ carga.fecha_carga|date:"d/m/Y H:i" }}</td>
+                                    <td class="font-mono text-xs">{{ carga.nro_tarjeta.nro_tarjeta }}</td>
+                                    <td class="text-sm">{{ carga.nro_tarjeta.id_hijo.nombre }} {{ carga.nro_tarjeta.id_hijo.apellido }}</td>
+                                    <td class="text-right font-bold text-success">Gs. {{ carga.monto_cargado|floatformat:0 }}</td>
+                                    <td class="text-xs">{{ carga.referencia|default:"N/A" }}</td>
+                                    <td>
+                                        <a href="{% url 'pos:validar_carga_saldo' carga.id_carga %}" 
+                                           class="btn btn-xs btn-primary">
+                                            ✓ Validar
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if total_cargas_pendientes > 20 %}
+                    <div class="text-center mt-4">
+                        <a href="{% url 'pos:lista_cargas_pendientes' %}" class="btn btn-sm btn-outline">
+                            Ver todas las {{ total_cargas_pendientes }} cargas
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Pagos Pendientes de Validación -->
+            {% if pagos_pendientes %}
+            <div class="card bg-white shadow-xl">
+                <div class="card-body">
+                    <h3 class="card-title text-lg mb-4">
+                        🏦 Pagos Pendientes de Validación
+                        <span class="badge badge-warning">{{ total_pagos_pendientes }}</span>
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th class="text-right">Monto</th>
+                                    <th>Motivo</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pago in pagos_pendientes %}
+                                <tr>
+                                    <td class="text-xs">{{ pago.fecha|date:"d/m/Y H:i" }}</td>
+                                    <td class="text-sm">{{ pago.id_cliente.nombres }} {{ pago.id_cliente.apellidos }}</td>
+                                    <td class="text-right font-bold text-success">Gs. {{ pago.monto_total|floatformat:0 }}</td>
+                                    <td class="text-xs">{{ pago.motivo_credito|truncatechars:30 }}</td>
+                                    <td>
+                                        <a href="{% url 'pos:validar_pago' pago.id_venta %}" 
+                                           class="btn btn-xs btn-primary">
+                                            ✓ Validar
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if total_pagos_pendientes > 20 %}
+                    <div class="text-center mt-4">
+                        <a href="{% url 'pos:lista_pagos_pendientes' %}" class="btn btn-sm btn-outline">
+                            Ver todos los {{ total_pagos_pendientes }} pagos
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Botones de acción -->
+    <div class="flex gap-2 justify-center pb-8 mt-6">
+        <a href="{% url 'pos:venta' %}" class="btn btn-primary btn-lg">
+            🏪 Ir a Punto de Venta
+        </a>
+        <a href="{% url 'pos:reportes' %}" class="btn btn-secondary btn-lg">
+            📊 Ver Reportes Completos
+        </a>
+        <button class="btn btn-outline btn-lg" onclick="window.location.reload()">
+            🔄 Actualizar
+        </button>
+    </div>
+    
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+    // Esperar a que el DOM y Chart.js estén listos
+    document.addEventListener('DOMContentLoaded', function() {
+        // Configuración global de Chart.js
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.color = '#34495E';
+        
+        // Datos desde Django
+        const ventasPorHora = {{ ventas_por_hora|safe }};
+        const topProductos = {{ top_productos|safe }};
+        const ventasSemanales = {{ ventas_semanales|safe }};
+        const ventasPorCategoria = {{ ventas_por_categoria|safe }};
+        
+        // Gráfico: Ventas por hora
+        const ctxHora = document.getElementById('ventasPorHoraChart');
+        if (ctxHora) {
+            new Chart(ctxHora.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: ventasPorHora.labels,
+            datasets: [{
+                label: 'Ventas',
+                data: ventasPorHora.data,
+                borderColor: '#FF6B35',
+                backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                tension: 0.4,
+                fill: true,
+                pointRadius: 5,
+                pointHoverRadius: 7
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Ventas: ' + context.parsed.y;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+    }
+    
+    // Gráfico: Top productos
+    const ctxTop = document.getElementById('topProductosChart');
+    if (ctxTop) {
+        new Chart(ctxTop.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: topProductos.labels,
+            datasets: [{
+                label: 'Cantidad Vendida',
+                data: topProductos.data,
+                backgroundColor: [
+                    '#FF6B35', '#4ECDC4', '#2ECC71', '#F39C12', '#E74C3C',
+                    '#9B59B6', '#3498DB', '#1ABC9C', '#E67E22', '#95A5A6'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    }
+    
+    // Gráfico: Ventas semanales
+    const ctxSemanal = document.getElementById('ventasSemanalesChart');
+    if (ctxSemanal) {
+        new Chart(ctxSemanal.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: ventasSemanales.labels,
+            datasets: [{
+                label: 'Total Ventas (Gs.)',
+                data: ventasSemanales.data,
+                backgroundColor: '#4ECDC4',
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Gs. ' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'Gs. ' + (value / 1000).toFixed(0) + 'k';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    }
+    
+    // Gráfico: Ventas por categoría (dona)
+    const ctxCategoria = document.getElementById('ventasCategoriaChart');
+    if (ctxCategoria) {
+        new Chart(ctxCategoria.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ventasPorCategoria.labels,
+            datasets: [{
+                data: ventasPorCategoria.data,
+                backgroundColor: [
+                    '#FF6B35', '#4ECDC4', '#2ECC71', '#F39C12', '#E74C3C',
+                    '#9B59B6', '#3498DB', '#1ABC9C'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return label + ': ' + value + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    }
+    
+    // Auto-refresh cada 5 minutos
+    setTimeout(() => {
+        window.location.reload();
+    }, 300000); // 5 minutos
+    
+    }); // Fin de DOMContentLoaded
+</script>
+
+<!-- Controlador Alpine.js para Dashboard Mejorado -->
+<script>
+function dashboardController() {
+    return {
+        isRefreshing: false,
+        countdown: 30, // Auto-refresh cada 30 segundos
+        countdownInterval: null,
+        stats: {{ stats|default:"{}" }},
+        notifications: [],
+        notificationId: 0,
+        isOnline: navigator.onLine,
+        connectionCheckInterval: null,
+        
+        init() {
+            this.startCountdown();
+            this.setupTooltips();
+            this.setupConnectivityMonitoring();
+        },
+        
+        startCountdown() {
+            this.countdownInterval = setInterval(() => {
+                this.countdown--;
+                if (this.countdown <= 0) {
+                    this.refreshData();
+                }
+            }, 1000);
+        },
+        
+        async refreshData() {
+            this.isRefreshing = true;
+            this.countdown = 30;
+            
+            try {
+                // Aquí iría la llamada AJAX para actualizar datos
+                // Por ahora simulamos con un pequeño delay
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // En una implementación real, haríamos:
+                // const response = await fetch('/api/dashboard/stats/');
+                // this.stats = await response.json();
+                
+                // Simular actualización de datos
+                this.stats.ventas_hoy = Math.floor(Math.random() * 50) + 20;
+                this.stats.total_hoy = this.stats.ventas_hoy * 25000;
+                
+                // Mostrar notificación de éxito
+                this.showNotification('Datos actualizados correctamente', 'success');
+                
+            } catch (error) {
+                console.error('Error al actualizar datos:', error);
+                this.showNotification('Error al actualizar datos. Verifica tu conexión.', 'error');
+                
+                // Reintentar en 10 segundos si hay error de conexión
+                if (!this.isOnline) {
+                    setTimeout(() => {
+                        if (this.isOnline) {
+                            this.refreshData();
+                        }
+                    }, 10000);
+                }
+            } finally {
+                this.isRefreshing = false;
+            }
+        },
+        
+        formatCurrency(amount) {
+            return new Intl.NumberFormat('es-PY').format(amount || 0);
+        },
+        
+        getChangeClass(change) {
+            if (change > 0) return 'text-green-300';
+            if (change < 0) return 'text-red-300';
+            return 'text-gray-300';
+        },
+        
+        setupTooltips() {
+            // Tooltips personalizados con Alpine.js
+            document.querySelectorAll('[x-tooltip]').forEach(el => {
+                el.addEventListener('mouseenter', (e) => {
+                    const tooltip = e.target.getAttribute('x-tooltip');
+                    this.showTooltip(e.target, tooltip);
+                });
+                el.addEventListener('mouseleave', () => {
+                    this.hideTooltip();
+                });
+            });
+        },
+        
+        showTooltip(element, text) {
+            const tooltip = document.createElement('div');
+            tooltip.className = 'fixed z-50 px-2 py-1 text-sm text-white bg-gray-800 rounded shadow-lg pointer-events-none';
+            tooltip.textContent = text;
+            tooltip.id = 'dashboard-tooltip';
+            
+            document.body.appendChild(tooltip);
+            
+            const rect = element.getBoundingClientRect();
+            tooltip.style.left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2) + 'px';
+            tooltip.style.top = rect.top - tooltip.offsetHeight - 5 + 'px';
+        },
+        
+        hideTooltip() {
+            const tooltip = document.getElementById('dashboard-tooltip');
+            if (tooltip) {
+                tooltip.remove();
+            }
+        },
+        
+        setupConnectivityMonitoring() {
+            window.addEventListener('online', () => {
+                this.isOnline = true;
+                this.showNotification('Conexión restablecida', 'success');
+                // Actualizar datos inmediatamente cuando se recupera la conexión
+                this.refreshData();
+            });
+            
+            window.addEventListener('offline', () => {
+                this.isOnline = false;
+                this.showNotification('Conexión perdida. Modo offline activado.', 'warning');
+            });
+            
+            // Verificar conexión periódicamente
+            this.connectionCheckInterval = setInterval(() => {
+                this.checkConnection();
+            }, 30000); // Cada 30 segundos
+        },
+        
+        async checkConnection() {
+            try {
+                // Intentar hacer una petición simple para verificar conectividad
+                const response = await fetch('/static/img/favicon.ico', { 
+                    method: 'HEAD',
+                    cache: 'no-cache'
+                });
+                const wasOffline = !this.isOnline;
+                this.isOnline = response.ok;
+                
+                if (wasOffline && this.isOnline) {
+                    this.showNotification('Conexión restablecida', 'success');
+                    this.refreshData();
+                }
+            } catch (error) {
+                if (this.isOnline) {
+                    this.isOnline = false;
+                    this.showNotification('Conexión perdida', 'warning');
+                }
+            }
+        },
+        
+        showNotification(message, type = 'info', autoRemove = true) {
+            const id = this.notificationId++;
+            const notification = {
+                id,
+                message,
+                type,
+                autoRemove,
+                timeLeft: 5000
+            };
+            
+            this.notifications.push(notification);
+            
+            if (autoRemove) {
+                const interval = setInterval(() => {
+                    notification.timeLeft -= 100;
+                    if (notification.timeLeft <= 0) {
+                        this.removeNotificationById(id);
+                        clearInterval(interval);
+                    }
+                }, 100);
+            }
+        },
+        
+        removeNotification(index) {
+            this.notifications.splice(index, 1);
+        },
+        
+        removeNotificationById(id) {
+            const index = this.notifications.findIndex(n => n.id === id);
+            if (index > -1) {
+                this.notifications.splice(index, 1);
+            }
+        },
+    }
+}
+
+// Función para tooltips globales
+document.addEventListener('alpine:init', () => {
+    Alpine.directive('tooltip', (el, { expression }) => {
+        el.setAttribute('x-tooltip', expression);
+    });
+});
+</script>
+{% endblock %}

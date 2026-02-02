@@ -1,0 +1,639 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Dashboard Administrativo | Cantina Tita{% endblock %}
+
+{% block main_class %}w-full{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+<style>
+    body {
+        width: 100%;
+        overflow-x: hidden;
+        background: linear-gradient(120deg, #fff7e6 0%, #f3e8ff 100%);
+    }
+    .dashboard-header {
+        background: linear-gradient(90deg, #ff6b35 0%, #f7931e 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+        animation: fadeInDown 0.7s;
+    }
+    @keyframes fadeInDown {
+        from { opacity: 0; transform: translateY(-30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .stat-card {
+        border-radius: 15px;
+        padding: 1.5rem;
+        border: none;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(102,126,234,0.08);
+        background: linear-gradient(120deg, #fff 80%, #f3e8ff 100%);
+        transition: box-shadow 0.3s, transform 0.3s;
+        animation: fadeInUp 0.8s;
+    }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .stat-card.primary { background: linear-gradient(120deg, #e0e7ff 60%, #c7d2fe 100%); }
+    .stat-card.success { background: linear-gradient(120deg, #e6fff7 60%, #d1fae5 100%); }
+    .stat-card.warning { background: linear-gradient(120deg, #fffbe6 60%, #fef9c3 100%); }
+    .stat-card.danger { background: linear-gradient(120deg, #ffe6e6 60%, #fecaca 100%); }
+    .stat-card.info { background: linear-gradient(120deg, #e6f7ff 60%, #bae6fd 100%); }
+    .stat-card:hover {
+        box-shadow: 0 10px 40px rgba(102,126,234,0.18);
+        transform: translateY(-6px) scale(1.03);
+    }
+    .stat-icon {
+        font-size: 2.8rem;
+        opacity: 1;
+        position: static;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 3.5rem;
+        height: 3.5rem;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #ff6b35 0%, #764ba2 100%);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(102,126,234,0.12);
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .stat-value {
+        font-size: 2.7rem;
+        font-weight: 800;
+        margin: 0.5rem 0;
+        color: #2c3e50;
+        text-align: center;
+        letter-spacing: 1px;
+        transition: color 0.2s;
+    }
+    .stat-label {
+        font-size: 1rem;
+        color: #7f8c8d;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        text-align: center;
+    }
+    .stat-change {
+        font-size: 0.95rem;
+        font-weight: 600;
+        text-align: center;
+        margin-top: 0.5rem;
+    }
+    .stat-change.positive { color: #2ecc71; }
+    .stat-change.negative { color: #e74c3c; }
+    .modern-table {
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+        background: #fff;
+    }
+    .modern-table thead {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+    }
+    .modern-table tbody tr {
+        transition: background 0.2s;
+    }
+    .modern-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        background: linear-gradient(120deg, #fff 80%, #e0e7ff 100%);
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+        animation: fadeInUp 0.8s;
+    }
+    .quick-action {
+        border-radius: 16px;
+        padding: 1.7rem 1.2rem 1.2rem 1.2rem;
+        text-align: center;
+        font-weight: 700;
+        font-size: 1.15rem;
+        box-shadow: 0 4px 18px rgba(102,126,234,0.13);
+        border: 3px solid transparent;
+        cursor: pointer;
+        position: relative;
+        transition: box-shadow 0.3s, transform 0.3s, background 0.3s, border-color 0.3s;
+        animation: fadeInUp 0.8s;
+    }
+    .quick-action.venta {
+        background: linear-gradient(120deg, #fffbe6 60%, #ffecd2 100%);
+        border-color: #ff6b35;
+    }
+    .quick-action.almuerzo {
+        background: linear-gradient(120deg, #fef9c3 60%, #f3e8ff 100%);
+        border-color: #f39c12;
+    }
+    .quick-action.saldo {
+        background: linear-gradient(120deg, #e6fff7 60%, #d1fae5 100%);
+        border-color: #2ecc71;
+    }
+    .quick-action.inventario {
+        background: linear-gradient(120deg, #e0e7ff 60%, #bae6fd 100%);
+        border-color: #3498db;
+    }
+    .quick-action.reportes {
+        background: linear-gradient(120deg, #f3e8ff 60%, #e0e7ff 100%);
+        border-color: #764ba2;
+    }
+    .quick-action.config {
+        background: linear-gradient(120deg, #ffe6e6 60%, #fecaca 100%);
+        border-color: #e74c3c;
+    }
+    .quick-action:hover {
+        transform: translateY(-6px) scale(1.06);
+        box-shadow: 0 12px 32px rgba(255,107,53,0.18);
+        filter: brightness(1.07);
+        border-width: 4px;
+    }
+    .quick-action i {
+        font-size: 2.8rem;
+        margin-bottom: 0.7rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 3.5rem;
+        height: 3.5rem;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #ff6b35 0%, #764ba2 100%);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(102,126,234,0.12);
+        margin-left: auto;
+        margin-right: auto;
+        transition: background 0.3s, color 0.3s;
+    }
+    .alert-custom {
+        border-radius: 10px;
+        border-left: 4px solid;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        animation: fadeInUp 0.8s;
+    }
+    .alert-custom.alert-warning { border-left-color: #f39c12; }
+    .alert-custom.alert-danger { border-left-color: #e74c3c; }
+    .badge-modern {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        color: #fff;
+    }
+    /* Separador decorativo */
+    .section-separator {
+        width: 100%;
+        height: 6px;
+        background: linear-gradient(90deg, #ff6b35 0%, #764ba2 100%);
+        border-radius: 3px;
+        margin: 2rem 0;
+        opacity: 0.7;
+    }
+    /* Responsive */
+    @media (max-width: 768px) {
+        .stat-value { font-size: 2rem; }
+        .stat-icon { font-size: 2rem; width: 2.5rem; height: 2.5rem; }
+        .dashboard-header { padding: 1rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="w-full px-6 py-4" x-data="dashboardApp()">
+    <!-- Header del Dashboard -->
+    <div class="dashboard-header grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+        <div class="md:col-span-2">
+            <h1 class="mb-2 text-2xl font-bold">📊 Dashboard Administrativo</h1>
+            <p class="mb-0 opacity-75 flex flex-wrap gap-2 items-center">
+                <i class="far fa-calendar"></i> {{ hoy|date:"l, d 'de' F 'de' Y" }}
+                <span class="mx-2">|</span>
+                <i class="far fa-clock"></i> <span x-text="currentTime"></span>
+                <span class="mx-2">|</span>
+                <i class="fas fa-user"></i> {{ request.user.username|upper }}
+            </p>
+        </div>
+        <div class="flex md:justify-end items-center gap-2 mt-3 md:mt-0">
+            <button class="btn btn-light" @click="refreshData">
+                <i class="fas fa-sync-alt" :class="{'fa-spin': loading}"></i> Actualizar
+            </button>
+            <a href="{% url 'pos:venta' %}" class="btn btn-outline-light">
+                <i class="fas fa-arrow-left"></i> Volver al POS
+            </a>
+        </div>
+    </div>
+
+    <!-- Estadísticas Principales -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Total Ventas Hoy -->
+        <div>
+            <div class="card stat-card primary h-full">
+                <div class="stat-icon">💰</div>
+                <div class="stat-label">Ventas Hoy</div>
+                <div class="stat-value">{{ total_ventas|default:0 }}</div>
+                <div class="stat-change positive">
+                    <i class="fas fa-arrow-up"></i> {{ total_ventas|default:0 }} transacciones
+                </div>
+            </div>
+        </div>
+        <!-- Ingresos del Día -->
+        <div>
+            <div class="card stat-card success h-full">
+                <div class="stat-icon">💵</div>
+                <div class="stat-label">Ingresos Hoy</div>
+                <div class="stat-value">₲{{ monto_total|floatformat:0|intcomma|default:"0" }}</div>
+                <div class="stat-change">
+                    Promedio: ₲{{ promedio_venta|floatformat:0|intcomma|default:"0" }}
+                </div>
+            </div>
+        </div>
+        <!-- Productos Vendidos -->
+        <div>
+            <div class="card stat-card warning h-full">
+                <div class="stat-icon">📦</div>
+                <div class="stat-label">Productos Vendidos</div>
+                <div class="stat-value">{{ total_productos_vendidos|default:0 }}</div>
+                <div class="stat-change">
+                    {{ productos_diferentes|default:0 }} productos diferentes
+                </div>
+            </div>
+        </div>
+        <!-- Almuerzos Registrados -->
+        <div>
+            <div class="card stat-card info h-full">
+                <div class="stat-icon">🍽️</div>
+                <div class="stat-label">Almuerzos Hoy</div>
+                <div class="stat-value">{{ total_almuerzos|default:0 }}</div>
+                <div class="stat-change">
+                    Activo: {{ almuerzos_activos|default:0 }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-separator"></div>
+
+    <!-- Estadísticas Secundarias -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Cargas de Saldo -->
+        <div>
+            <div class="card stat-card h-full">
+                <div class="stat-icon">💳</div>
+                <div class="stat-label">Cargas de Saldo</div>
+                <div class="stat-value">{{ total_cargas|default:0 }}</div>
+                <div class="stat-change">
+                    ₲{{ monto_cargas|floatformat:0|intcomma|default:"0" }}
+                </div>
+            </div>
+        </div>
+        <!-- Stock Bajo -->
+        <div>
+            <div class="card stat-card danger h-full">
+                <div class="stat-icon">⚠️</div>
+                <div class="stat-label">Productos Bajo Stock</div>
+                <div class="stat-value">{{ productos_bajo_stock|default:0 }}</div>
+                <div class="stat-change negative">
+                    <i class="fas fa-exclamation-triangle"></i> Requiere atención
+                </div>
+            </div>
+        </div>
+        <!-- Clientes Activos -->
+        <div>
+            <div class="card stat-card h-full">
+                <div class="stat-icon">👥</div>
+                <div class="stat-label">Clientes Hoy</div>
+                <div class="stat-value">{{ clientes_unicos|default:0 }}</div>
+                <div class="stat-change">
+                    Clientes únicos
+                </div>
+            </div>
+        </div>
+        <!-- Pendientes -->
+        <div>
+            <div class="card stat-card warning h-full">
+                <div class="stat-icon">⏳</div>
+                <div class="stat-label">Pagos Pendientes</div>
+                <div class="stat-value">{{ pagos_pendientes|default:0 }}</div>
+                <div class="stat-change">
+                    ₲{{ monto_pendiente|floatformat:0|intcomma|default:"0" }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-separator"></div>
+
+    <!-- Gráficos y Tablas -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <!-- Gráfico de Ventas por Hora -->
+        <div class="col-span-2">
+            <div class="chart-container h-full">
+                <canvas id="ventasHoraChart"></canvas>
+            </div>
+        </div>
+        <!-- Distribución de Medios de Pago -->
+        <div>
+            <div class="chart-container h-full">
+                <canvas id="mediosPagoChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="mb-8">
+        <h4 class="mb-3">⚡ Acciones Rápidas</h4>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
+            <a href="{% url 'pos:venta' %}" class="quick-action venta text-decoration-none" style="background: linear-gradient(120deg, #fffbe6 60%, #ffecd2 100%); border-color: #ff6b35;">
+                <i class="fas fa-cash-register" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: #fff;"></i>
+                <div style="color: #ff6b35; font-weight: bold;">Nueva Venta</div>
+            </a>
+            <a href="{% url 'pos:pos_almuerzo' %}" class="quick-action almuerzo text-decoration-none" style="background: linear-gradient(120deg, #fef9c3 60%, #f3e8ff 100%); border-color: #f39c12;">
+                <i class="fas fa-utensils" style="background: linear-gradient(135deg, #f39c12 0%, #ff6b35 100%); color: #fff;"></i>
+                <div style="color: #f39c12; font-weight: bold;">Almuerzos</div>
+            </a>
+            <a href="{% url 'pos:recargas' %}" class="quick-action saldo text-decoration-none" style="background: linear-gradient(120deg, #e6fff7 60%, #d1fae5 100%); border-color: #2ecc71;">
+                <i class="fas fa-wallet" style="background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); color: #fff;"></i>
+                <div style="color: #2ecc71; font-weight: bold;">Cargar Saldo</div>
+            </a>
+            <a href="{% url 'pos:inventario_productos' %}" class="quick-action inventario text-decoration-none" style="background: linear-gradient(120deg, #e0e7ff 60%, #bae6fd 100%); border-color: #3498db;">
+                <i class="fas fa-boxes" style="background: linear-gradient(135deg, #3498db 0%, #667eea 100%); color: #fff;"></i>
+                <div style="color: #3498db; font-weight: bold;">Inventario</div>
+            </a>
+            <a href="{% url 'pos:reportes' %}" class="quick-action reportes text-decoration-none" style="background: linear-gradient(120deg, #f3e8ff 60%, #e0e7ff 100%); border-color: #764ba2;">
+                <i class="fas fa-chart-line" style="background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); color: #fff;"></i>
+                <div style="color: #764ba2; font-weight: bold;">Reportes</div>
+            </a>
+            <a href="{% url 'admin:index' %}" class="quick-action config text-decoration-none" style="background: linear-gradient(120deg, #ffe6e6 60%, #fecaca 100%); border-color: #e74c3c;">
+                <i class="fas fa-cog" style="background: linear-gradient(135deg, #e74c3c 0%, #ff6b35 100%); color: #fff;"></i>
+                <div style="color: #e74c3c; font-weight: bold;">Configuración</div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Productos Más Vendidos y Últimas Ventas -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Top Productos -->
+        <div>
+            <div class="card h-full">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">🏆 Top 10 Productos Más Vendidos</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table modern-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th width="5%">#</th>
+                                    <th>Producto</th>
+                                    <th class="text-center">Cantidad</th>
+                                    <th class="text-end">Ingresos</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for producto in productos_vendidos|slice:":10" %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <strong>{{ producto.id_producto__descripcion }}</strong>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge badge-modern bg-primary">
+                                            {{ producto.cantidad_total }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong>₲{{ producto.ingresos|floatformat:0|intcomma }}</strong>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        No hay ventas registradas hoy
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Últimas Ventas -->
+        <div>
+            <div class="card h-full">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">🕒 Últimas Ventas</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table modern-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Hora</th>
+                                    <th>Cliente</th>
+                                    <th class="text-end">Monto</th>
+                                    <th class="text-center">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for venta in ultimas_ventas|slice:":10" %}
+                                <tr>
+                                    <td>{{ venta.fecha|date:"H:i" }}</td>
+                                    <td>
+                                        {% if venta.id_cliente %}
+                                            {{ venta.id_cliente.nombres }} {{ venta.id_cliente.apellidos }}
+                                        {% elif venta.id_hijo %}
+                                            {{ venta.id_hijo.nombre_completo }}
+                                        {% else %}
+                                            Cliente General
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <strong>₲{{ venta.monto_total|floatformat:0|intcomma }}</strong>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge badge-modern bg-success">
+                                            <i class="fas fa-check"></i> Completado
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        No hay ventas registradas hoy
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertas y Notificaciones -->
+    {% if productos_bajo_stock > 0 or pagos_pendientes > 0 %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">🔔 Alertas y Notificaciones</h4>
+        </div>
+        
+        {% if productos_bajo_stock > 0 %}
+        <div class="col-lg-6 mb-3">
+            <div class="alert alert-custom alert-warning">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">Stock Bajo</h6>
+                        <p class="mb-0">
+                            Hay {{ productos_bajo_stock }} producto{{ productos_bajo_stock|pluralize }} con stock bajo.
+                            <a href="{% url 'pos:inventario_productos' %}" class="alert-link">Ver detalles →</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if pagos_pendientes > 0 %}
+        <div class="col-lg-6 mb-3">
+            <div class="alert alert-custom alert-danger">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">Pagos Pendientes</h6>
+                        <p class="mb-0">
+                            Tienes {{ pagos_pendientes }} pago{{ pagos_pendientes|pluralize }} pendiente{{ pagos_pendientes|pluralize }} de validar.
+                            <a href="{% url 'pos:lista_pagos_pendientes' %}" class="alert-link">Validar ahora →</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function dashboardApp() {
+    return {
+        loading: false,
+        currentTime: new Date().toLocaleTimeString('es-PY'),
+        
+        init() {
+            // Actualizar reloj cada segundo
+            setInterval(() => {
+                this.currentTime = new Date().toLocaleTimeString('es-PY');
+            }, 1000);
+            
+            // Inicializar gráficos
+            this.initCharts();
+        },
+        
+        refreshData() {
+            this.loading = true;
+            setTimeout(() => {
+                location.reload();
+            }, 500);
+        },
+        
+        initCharts() {
+            // Gráfico de Ventas por Hora
+            const ventasCtx = document.getElementById('ventasHoraChart');
+            if (ventasCtx) {
+                new Chart(ventasCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [{% for item in evolucion_hora %}'{{ item.hora }}:00'{% if not forloop.last %},{% endif %}{% endfor %}],
+                        datasets: [{
+                            label: 'Ventas',
+                            data: [{% for item in evolucion_hora %}{{ item.ventas }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            title: {
+                                display: true,
+                                text: 'Ventas por Hora',
+                                font: { size: 16, weight: 'bold' }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { precision: 0 }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Gráfico de Medios de Pago
+            const pagoCtx = document.getElementById('mediosPagoChart');
+            if (pagoCtx) {
+                new Chart(pagoCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: [{% for item in ingresos_pago %}'{{ item.id_medio_pago__descripcion }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                        datasets: [{
+                            data: [{% for item in ingresos_pago %}{{ item.total }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                            backgroundColor: [
+                                '#667eea',
+                                '#f39c12',
+                                '#2ecc71',
+                                '#e74c3c',
+                                '#3498db'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Medios de Pago',
+                                font: { size: 16, weight: 'bold' }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

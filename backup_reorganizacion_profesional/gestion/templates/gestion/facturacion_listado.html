@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Listado de Facturas Electrónicas - Cantina{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Encabezado -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Listado de Facturas Electrónicas</h1>
+        <p class="text-gray-600">Gestión completa de facturas emitidas</p>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Filtros</h3>
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- Estado SIFEN -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Estado</label>
+                <select name="estado_sifen" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Todos</option>
+                    <option value="ACEPTADA" {% if request.GET.estado_sifen == 'ACEPTADA' %}selected{% endif %}>Aceptada</option>
+                    <option value="RECHAZADA" {% if request.GET.estado_sifen == 'RECHAZADA' %}selected{% endif %}>Rechazada</option>
+                    <option value="PENDIENTE" {% if request.GET.estado_sifen == 'PENDIENTE' %}selected{% endif %}>Pendiente</option>
+                    <option value="ANULADA" {% if request.GET.estado_sifen == 'ANULADA' %}selected{% endif %}>Anulada</option>
+                </select>
+            </div>
+
+            <!-- Fecha Inicio -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Desde</label>
+                <input type="date" name="fecha_inicio" value="{{ request.GET.fecha_inicio }}" 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <!-- Fecha Fin -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Hasta</label>
+                <input type="date" name="fecha_fin" value="{{ request.GET.fecha_fin }}" 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <!-- Botones -->
+            <div class="flex items-end gap-2">
+                <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition">
+                    Filtrar
+                </button>
+                <a href="?" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg text-center transition">
+                    Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabla de Facturas -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        {% if facturas %}
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-100 border-b-2 border-gray-300">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-sm font-bold text-gray-800">CDC</th>
+                            <th class="px-6 py-3 text-left text-sm font-bold text-gray-800">Venta</th>
+                            <th class="px-6 py-3 text-left text-sm font-bold text-gray-800">Cliente</th>
+                            <th class="px-6 py-3 text-left text-sm font-bold text-gray-800">Monto (₲)</th>
+                            <th class="px-6 py-3 text-left text-sm font-bold text-gray-800">Estado</th>
+                            <th class="px-6 py-3 text-left text-sm font-bold text-gray-800">Fecha Envío</th>
+                            <th class="px-6 py-3 text-center text-sm font-bold text-gray-800">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for factura in facturas %}
+                            <tr class="border-b border-gray-200 hover:bg-gray-50 transition">
+                                <td class="px-6 py-4">
+                                    <code class="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
+                                        {{ factura.cdc|truncatechars:12 }}
+                                    </code>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="text-blue-600 font-semibold">#{{ factura.venta.id }}</span>
+                                </td>
+                                <td class="px-6 py-4 text-gray-700">
+                                    {{ factura.venta.cliente_nombre|default:"Cliente Anónimo" }}
+                                </td>
+                                <td class="px-6 py-4 font-semibold text-gray-800">
+                                    ₲ {{ factura.venta.total|floatformat:0 }}
+                                </td>
+                                <td class="px-6 py-4">
+                                    {% if factura.estado_sifen == 'ACEPTADA' %}
+                                        <span class="bg-green-100 text-green-800 text-xs font-bold px-3 py-1 rounded-full">
+                                            ✓ Aceptada
+                                        </span>
+                                    {% elif factura.estado_sifen == 'RECHAZADA' %}
+                                        <span class="bg-red-100 text-red-800 text-xs font-bold px-3 py-1 rounded-full">
+                                            ✗ Rechazada
+                                        </span>
+                                    {% elif factura.estado_sifen == 'ANULADA' %}
+                                        <span class="bg-gray-100 text-gray-800 text-xs font-bold px-3 py-1 rounded-full">
+                                            ⊘ Anulada
+                                        </span>
+                                    {% else %}
+                                        <span class="bg-yellow-100 text-yellow-800 text-xs font-bold px-3 py-1 rounded-full">
+                                            ⏳ Pendiente
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-600">
+                                    {{ factura.fecha_envio|date:"d/m/Y H:i" }}
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <div class="flex justify-center gap-2">
+                                        <!-- Ver KUDE (QR) -->
+                                        {% if factura.estado_sifen == 'ACEPTADA' and factura.url_kude %}
+                                            <a href="{% url 'facturacion_descargar_kude' factura.cdc %}" 
+                                               class="text-blue-600 hover:text-blue-800 font-semibold text-sm"
+                                               title="Descargar código QR">
+                                                📱 QR
+                                            </a>
+                                        {% endif %}
+
+                                        <!-- Anular Factura -->
+                                        {% if factura.estado_sifen == 'ACEPTADA' %}
+                                            <button type="button" onclick="anularFactura({{ factura.id }}, '{{ factura.cdc }}')"
+                                                    class="text-red-600 hover:text-red-800 font-semibold text-sm"
+                                                    title="Anular factura">
+                                                🗑️ Anular
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            {% if is_paginated %}
+                <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-center gap-2">
+                    {% if page_obj.has_previous %}
+                        <a href="?page=1{% if request.GET.estado_sifen %}&estado_sifen={{ request.GET.estado_sifen }}{% endif %}"
+                           class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
+                            Primera
+                        </a>
+                        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.estado_sifen %}&estado_sifen={{ request.GET.estado_sifen }}{% endif %}"
+                           class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
+                            ← Anterior
+                        </a>
+                    {% endif %}
+
+                    <span class="px-3 py-1 bg-gray-200 text-gray-800 rounded">
+                        Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                    </span>
+
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.estado_sifen %}&estado_sifen={{ request.GET.estado_sifen }}{% endif %}"
+                           class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
+                            Siguiente →
+                        </a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.estado_sifen %}&estado_sifen={{ request.GET.estado_sifen }}{% endif %}"
+                           class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
+                            Última
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-12">
+                <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p class="text-gray-500 font-semibold mb-1">No hay facturas que mostrar</p>
+                <p class="text-gray-400 text-sm">Intenta ajustar los filtros o crea una nueva venta en POS</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Información de totales -->
+    {% if totales %}
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <p class="text-sm text-gray-600 font-semibold">Total Facturas</p>
+                <p class="text-2xl font-bold text-blue-600 mt-1">{{ totales.total }}</p>
+            </div>
+            <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                <p class="text-sm text-gray-600 font-semibold">Monto Aceptado (₲)</p>
+                <p class="text-2xl font-bold text-green-600 mt-1">{{ totales.monto_aceptado|floatformat:0 }}</p>
+            </div>
+            <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                <p class="text-sm text-gray-600 font-semibold">Monto Total Filtrado (₲)</p>
+                <p class="text-2xl font-bold text-purple-600 mt-1">{{ totales.monto_total|floatformat:0 }}</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    function anularFactura(id, cdc) {
+        if (!confirm('¿Estás seguro de que deseas anular esta factura?\n\nCDC: ' + cdc)) {
+            return;
+        }
+
+        // Mostrar loading
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '⏳ Anulando...';
+
+        fetch('{% url "facturacion_anular_api" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+            },
+            body: JSON.stringify({
+                id_factura: id,
+                motivo: 'Anulación solicitada por usuario'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✓ Factura anulada correctamente');
+                location.reload();
+            } else {
+                alert('✗ Error: ' + data.mensaje);
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        })
+        .catch(error => {
+            alert('✗ Error al anular: ' + error.message);
+            btn.disabled = false;
+            btn.textContent = originalText;
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Configurar Tarifas de Comisión{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-6" x-data="tarifasApp()">
+    <!-- Header -->
+    <div class="mb-6">
+        <a href="{% url 'pos:comisiones_dashboard' %}" class="btn btn-ghost btn-sm mb-2">
+            <i class="fas fa-arrow-left"></i> Volver al Dashboard
+        </a>
+        <h1 class="text-3xl font-bold text-neutral flex items-center gap-3">
+            <i class="fas fa-sliders-h text-primary"></i>
+            Configurar Tarifas de Comisión
+        </h1>
+        <p class="text-sm text-neutral/70 mt-2">
+            Configure los porcentajes y montos fijos de comisión bancaria para cada medio de pago
+        </p>
+    </div>
+
+    <!-- Estadísticas del mes -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="stat bg-base-100 shadow rounded-lg">
+            <div class="stat-figure text-primary">
+                <i class="fas fa-money-bill-wave text-3xl"></i>
+            </div>
+            <div class="stat-title">Comisiones del Mes</div>
+            <div class="stat-value text-primary">Gs {{ stats_mes.total_comisiones|floatformat:0|intcomma|default:"0" }}</div>
+            <div class="stat-desc">Desde {{ mes_actual|date:"d/m/Y" }}</div>
+        </div>
+        
+        <div class="stat bg-base-100 shadow rounded-lg">
+            <div class="stat-figure text-secondary">
+                <i class="fas fa-exchange-alt text-3xl"></i>
+            </div>
+            <div class="stat-title">Transacciones</div>
+            <div class="stat-value text-secondary">{{ stats_mes.total_transacciones|default:"0" }}</div>
+            <div class="stat-desc">Con comisión aplicada</div>
+        </div>
+        
+        <div class="stat bg-base-100 shadow rounded-lg">
+            <div class="stat-figure text-accent">
+                <i class="fas fa-percentage text-3xl"></i>
+            </div>
+            <div class="stat-title">Tarifas Activas</div>
+            <div class="stat-value text-accent">{{ tarifas_existentes|length }}</div>
+            <div class="stat-desc">Medios configurados</div>
+        </div>
+    </div>
+
+    <!-- Grid principal -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Formulario de configuración -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title mb-4">
+                    <i class="fas fa-plus-circle text-primary"></i>
+                    Nueva Tarifa de Comisión
+                </h2>
+                
+                <form @submit.prevent="guardarTarifa">
+                    <!-- Medio de Pago -->
+                    <div class="form-control mb-4">
+                        <label class="label">
+                            <span class="label-text font-bold">
+                                <i class="fas fa-credit-card"></i> Medio de Pago *
+                            </span>
+                        </label>
+                        <select x-model="formData.id_medio_pago" class="select select-bordered" required>
+                            <option value="">-- Seleccione un medio de pago --</option>
+                            {% for medio in medios_comision %}
+                            <option value="{{ medio.id_medio_pago }}">
+                                {{ medio.descripcion }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <label class="label">
+                            <span class="label-text-alt">Solo medios que generan comisión</span>
+                        </label>
+                    </div>
+
+                    <!-- Porcentaje y Monto Fijo -->
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-bold">
+                                    <i class="fas fa-percentage"></i> Porcentaje (%)
+                                </span>
+                            </label>
+                            <input 
+                                type="number" 
+                                x-model="formData.porcentaje" 
+                                class="input input-bordered" 
+                                step="0.01" 
+                                min="0" 
+                                max="100" 
+                                placeholder="Ej: 2.5">
+                            <label class="label">
+                                <span class="label-text-alt">Sobre el monto total</span>
+                            </label>
+                        </div>
+                        
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-bold">
+                                    <i class="fas fa-coins"></i> Monto Fijo (Gs)
+                                </span>
+                            </label>
+                            <input 
+                                type="number" 
+                                x-model="formData.monto_fijo" 
+                                class="input input-bordered" 
+                                step="100" 
+                                min="0" 
+                                placeholder="Ej: 1500">
+                            <label class="label">
+                                <span class="label-text-alt">Cargo fijo adicional</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Información de cálculo -->
+                    <div class="alert alert-info mb-4" x-show="formData.porcentaje || formData.monto_fijo">
+                        <div>
+                            <i class="fas fa-info-circle text-xl"></i>
+                            <div>
+                                <h3 class="font-bold">Vista Previa de Cálculo</h3>
+                                <p class="text-sm mt-1">
+                                    <strong>Fórmula:</strong> Comisión = Monto Fijo + (Monto × Porcentaje / 100)
+                                </p>
+                                <p class="text-sm mt-2" x-show="formData.porcentaje || formData.monto_fijo">
+                                    <strong>Ejemplo para Gs 100,000:</strong><br>
+                                    Comisión = <span x-text="calcularEjemplo()"></span>
+                                </p>
+                                <div class="mt-2" x-show="formData.porcentaje && formData.monto_fijo">
+                                    <p class="text-xs">
+                                        = Gs <span x-text="Number(formData.monto_fijo || 0).toLocaleString('es-PY')"></span> 
+                                        + (Gs 100,000 × <span x-text="(formData.porcentaje || 0)"></span>%)
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="flex justify-end gap-2">
+                        <button 
+                            type="button" 
+                            class="btn btn-ghost" 
+                            @click="resetForm()">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                        <button 
+                            type="submit" 
+                            class="btn btn-primary" 
+                            :disabled="loading || (!formData.porcentaje && !formData.monto_fijo)">
+                            <span x-show="!loading">
+                                <i class="fas fa-save"></i> Guardar Tarifa
+                            </span>
+                            <span x-show="loading" class="loading loading-spinner"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tarifas existentes -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title mb-4">
+                    <i class="fas fa-list text-secondary"></i>
+                    Tarifas Activas
+                </h2>
+
+                {% if tarifas_existentes %}
+                    <div class="space-y-3">
+                        {% for tarifa in tarifas_existentes %}
+                        <div class="border border-base-300 rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="font-bold text-lg">{{ tarifa.medio }}</h3>
+                                <span class="badge badge-success">ACTIVA</span>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <span class="text-neutral/70">Porcentaje:</span>
+                                    <span class="font-bold text-primary">{{ tarifa.porcentaje }}%</span>
+                                </div>
+                                <div>
+                                    <span class="text-neutral/70">Monto Fijo:</span>
+                                    <span class="font-bold text-secondary">
+                                        {% if tarifa.monto_fijo %}
+                                            Gs {{ tarifa.monto_fijo|floatformat:0|intcomma }}
+                                        {% else %}
+                                            No aplica
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="divider my-2"></div>
+                            
+                            <div class="text-xs text-neutral/70">
+                                <i class="fas fa-calculator"></i>
+                                <strong>Ejemplo (Gs 100,000):</strong>
+                                <span class="text-accent font-bold">
+                                    Gs {{ tarifa.ejemplo_100k|floatformat:0|intcomma }}
+                                </span>
+                            </div>
+                            
+                            <div class="text-xs text-neutral/50 mt-2">
+                                <i class="fas fa-clock"></i>
+                                Desde: {{ tarifa.fecha_inicio|date:"d/m/Y H:i" }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-8 text-neutral/50">
+                        <i class="fas fa-inbox text-4xl mb-3"></i>
+                        <p>No hay tarifas configuradas</p>
+                        <p class="text-sm">Configure la primera tarifa usando el formulario</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Información adicional -->
+    <div class="alert alert-warning mt-6">
+        <div>
+            <i class="fas fa-exclamation-triangle text-2xl"></i>
+            <div>
+                <h3 class="font-bold">Importante</h3>
+                <ul class="text-sm list-disc list-inside mt-2">
+                    <li>Al guardar una nueva tarifa, la anterior se desactivará automáticamente</li>
+                    <li>El porcentaje se aplica sobre el monto total de la transacción</li>
+                    <li>El monto fijo se suma al porcentaje calculado</li>
+                    <li>Los cambios aplican inmediatamente a nuevas transacciones</li>
+                    <li>Las comisiones se calculan automáticamente mediante triggers de base de datos</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function tarifasApp() {
+    return {
+        formData: {
+            id_medio_pago: '',
+            porcentaje: 0,
+            monto_fijo: 0
+        },
+        loading: false,
+        
+        calcularEjemplo() {
+            const monto = 100000;
+            const porcentaje = parseFloat(this.formData.porcentaje) || 0;
+            const fijo = parseFloat(this.formData.monto_fijo) || 0;
+            const comision = fijo + (monto * porcentaje / 100);
+            return 'Gs ' + comision.toLocaleString('es-PY', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+        },
+        
+        resetForm() {
+            this.formData = {
+                id_medio_pago: '',
+                porcentaje: 0,
+                monto_fijo: 0
+            };
+        },
+        
+        async guardarTarifa() {
+            // Validaciones
+            if (!this.formData.id_medio_pago) {
+                alert('⚠️ Debe seleccionar un medio de pago');
+                return;
+            }
+            
+            const porcentaje = parseFloat(this.formData.porcentaje) || 0;
+            const monto_fijo = parseFloat(this.formData.monto_fijo) || 0;
+            
+            if (porcentaje === 0 && monto_fijo === 0) {
+                alert('⚠️ Debe especificar al menos un porcentaje o monto fijo');
+                return;
+            }
+            
+            if (porcentaje < 0 || porcentaje > 100) {
+                alert('⚠️ El porcentaje debe estar entre 0% y 100%');
+                return;
+            }
+            
+            if (!confirm('¿Confirma la creación de esta tarifa?\n\nSi existe una tarifa anterior para este medio, será desactivada automáticamente.')) {
+                return;
+            }
+            
+            this.loading = true;
+            
+            try {
+                const response = await fetch('{% url "pos:configurar_tarifas" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify(this.formData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ ' + data.mensaje + '\n\n' + 
+                          'Medio: ' + data.tarifa.medio + '\n' +
+                          'Porcentaje: ' + data.tarifa.porcentaje + '\n' +
+                          'Monto Fijo: ' + data.tarifa.monto_fijo + '\n' +
+                          'Ejemplo: ' + data.tarifa.ejemplo);
+                    location.reload();
+                } else {
+                    alert('❌ Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('❌ Error de conexión: ' + error.message);
+                console.error(error);
+            } finally {
+                this.loading = false;
+            }
+        }
+    }
+}
+</script>
+
+<!-- Font Awesome (si no está cargado en base.html) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+{% endblock %}

@@ -22,6 +22,7 @@ from .models import (
     # Movimientos
     MovimientosStock,
 )
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
 # =============================================================================
@@ -370,3 +371,18 @@ class ProveedorSerializer(serializers.ModelSerializer):
     
     def get_total_compras(self, obj):
         return Compras.objects.filter(id_proveedor=obj).count()
+
+
+class EmpleadoTokenSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        # Añadimos datos personalizados al "payload" del JWT
+        try:
+            empleado = Empleado.objects.get(usuario=user.username)
+            token['empleado_id'] = empleado.id_empleado
+            token['rol'] = empleado.id_rol.nombre_rol
+            token['nombre'] = f"{empleado.nombre} {empleado.apellido}"
+        except Empleado.DoesNotExist:
+            token['rol'] = 'Anonimo'
+        return token

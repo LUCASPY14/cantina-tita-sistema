@@ -1,0 +1,306 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ titulo }} - Sistema de Gestión{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        @apply bg-base-200 rounded-lg p-6 mb-6;
+    }
+    .form-section-title {
+        @apply text-lg font-semibold mb-4 flex items-center gap-2;
+    }
+    .alergenos-grid {
+        @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3;
+    }
+    .alergeno-checkbox {
+        @apply flex items-center gap-2 p-3 bg-base-100 rounded-lg hover:bg-base-300 transition-colors;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Breadcrumb -->
+    <div class="text-sm breadcrumbs mb-4">
+        <ul>
+            <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li><a href="{% url url_cancelar %}">Inventario</a></li>
+            <li>{{ titulo }}</li>
+        </ul>
+    </div>
+
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold">
+            <i class="fas fa-box mr-2"></i>{{ titulo }}
+        </h1>
+    </div>
+
+    <!-- Formulario -->
+    <form method="post" class="max-w-5xl" id="productoForm">
+        {% csrf_token %}
+        
+        <!-- Mensajes de error generales -->
+        {% if form.non_field_errors %}
+        <div class="alert alert-error mb-6">
+            <i class="fas fa-exclamation-circle"></i>
+            <div>
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Sección 1: Información Básica -->
+        <div class="form-section">
+            <h2 class="form-section-title">
+                <i class="fas fa-info-circle text-primary"></i>
+                Información Básica
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Código de Barras -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">
+                            {{ form.codigo_barra.label }}
+                            {% if form.codigo_barra.field.required %}
+                                <span class="text-error">*</span>
+                            {% endif %}
+                        </span>
+                    </label>
+                    {{ form.codigo_barra }}
+                    {% if form.codigo_barra.help_text %}
+                        <label class="label">
+                            <span class="label-text-alt">{{ form.codigo_barra.help_text }}</span>
+                        </label>
+                    {% endif %}
+                    {% if form.codigo_barra.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">
+                                {{ form.codigo_barra.errors.0 }}
+                            </span>
+                        </label>
+                    {% endif %}
+                </div>
+
+                <!-- Descripción -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">
+                            {{ form.descripcion.label }}
+                            <span class="text-error">*</span>
+                        </span>
+                    </label>
+                    {{ form.descripcion }}
+                    {% if form.descripcion.help_text %}
+                        <label class="label">
+                            <span class="label-text-alt">{{ form.descripcion.help_text }}</span>
+                        </label>
+                    {% endif %}
+                    {% if form.descripcion.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">
+                                {{ form.descripcion.errors.0 }}
+                            </span>
+                        </label>
+                    {% endif %}
+                </div>
+
+                <!-- Categoría -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">
+                            {{ form.id_categoria.label }}
+                            <span class="text-error">*</span>
+                        </span>
+                    </label>
+                    {{ form.id_categoria }}
+                    {% if form.id_categoria.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">
+                                {{ form.id_categoria.errors.0 }}
+                            </span>
+                        </label>
+                    {% endif %}
+                </div>
+
+                <!-- Unidad de Medida -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">
+                            {{ form.id_unidad_medida.label }}
+                            <span class="text-error">*</span>
+                        </span>
+                    </label>
+                    {{ form.id_unidad_medida }}
+                    {% if form.id_unidad_medida.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">
+                                {{ form.id_unidad_medida.errors.0 }}
+                            </span>
+                        </label>
+                    {% endif %}
+                </div>
+
+                <!-- Impuesto -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">
+                            {{ form.id_impuesto.label }}
+                            <span class="text-error">*</span>
+                        </span>
+                    </label>
+                    {{ form.id_impuesto }}
+                    {% if form.id_impuesto.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">
+                                {{ form.id_impuesto.errors.0 }}
+                            </span>
+                        </label>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 2: Control de Stock -->
+        <div class="form-section">
+            <h2 class="form-section-title">
+                <i class="fas fa-warehouse text-info"></i>
+                Control de Stock
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Stock Mínimo -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">
+                            {{ form.stock_minimo.label }}
+                        </span>
+                    </label>
+                    {{ form.stock_minimo }}
+                    {% if form.stock_minimo.help_text %}
+                        <label class="label">
+                            <span class="label-text-alt">{{ form.stock_minimo.help_text }}</span>
+                        </label>
+                    {% endif %}
+                    {% if form.stock_minimo.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">
+                                {{ form.stock_minimo.errors.0 }}
+                            </span>
+                        </label>
+                    {% endif %}
+                </div>
+
+                <!-- Permite Stock Negativo -->
+                <div class="form-control">
+                    <label class="label cursor-pointer justify-start gap-3">
+                        {{ form.permite_stock_negativo }}
+                        <span class="label-text font-semibold">
+                            {{ form.permite_stock_negativo.label }}
+                        </span>
+                    </label>
+                    {% if form.permite_stock_negativo.help_text %}
+                        <label class="label">
+                            <span class="label-text-alt">{{ form.permite_stock_negativo.help_text }}</span>
+                        </label>
+                    {% endif %}
+                    {% if form.permite_stock_negativo.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">
+                                {{ form.permite_stock_negativo.errors.0 }}
+                            </span>
+                        </label>
+                    {% endif %}
+                </div>
+
+                <!-- Activo -->
+                <div class="form-control">
+                    <label class="label cursor-pointer justify-start gap-3">
+                        {{ form.activo }}
+                        <span class="label-text font-semibold">
+                            {{ form.activo.label }}
+                        </span>
+                    </label>
+                    {% if form.activo.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">
+                                {{ form.activo.errors.0 }}
+                            </span>
+                        </label>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 3: Alérgenos -->
+        <div class="form-section">
+            <h2 class="form-section-title">
+                <i class="fas fa-triangle-exclamation text-warning"></i>
+                Alérgenos y Restricciones Alimentarias
+            </h2>
+            
+            <p class="text-sm text-base-content/70 mb-4">
+                Selecciona todos los alérgenos presentes en este producto. Esta información se usará para alertar a hijos con restricciones alimentarias.
+            </p>
+
+            <div class="alergenos-grid">
+                {% for checkbox in form.alergenos %}
+                    <label class="alergeno-checkbox">
+                        {{ checkbox.tag }}
+                        <span class="flex-1">{{ checkbox.choice_label }}</span>
+                    </label>
+                {% endfor %}
+            </div>
+
+            {% if form.alergenos.errors %}
+                <div class="alert alert-error mt-4">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>{{ form.alergenos.errors.0 }}</span>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="flex gap-4 mt-8">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save mr-2"></i>
+                {{ accion }} Producto
+            </button>
+            
+            <a href="{% url url_cancelar %}" class="btn btn-outline btn-lg">
+                <i class="fas fa-times mr-2"></i>
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Validación adicional en el cliente
+document.getElementById('productoForm').addEventListener('submit', function(e) {
+    const descripcion = document.querySelector('input[name="descripcion"]');
+    
+    if (!descripcion.value.trim()) {
+        e.preventDefault();
+        alert('La descripción del producto es obligatoria');
+        descripcion.focus();
+        return false;
+    }
+});
+
+// Auto-focus en código de barras
+document.addEventListener('DOMContentLoaded', function() {
+    const codigoBarras = document.querySelector('input[name="codigo_barra"]');
+    if (codigoBarras) {
+        codigoBarras.focus();
+    }
+});
+</script>
+{% endblock %}

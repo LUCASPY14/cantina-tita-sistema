@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Registrar Pago - Almuerzo{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-3xl">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">
+            💰 Registrar Pago de Almuerzo
+        </h1>
+        <a href="{% url 'pos:cuentas_mensuales' %}" class="btn btn-outline btn-sm">
+            ← Volver a Cuentas
+        </a>
+    </div>
+
+    <!-- Información de la Cuenta -->
+    <div class="card bg-gradient-to-r from-blue-50 to-blue-100 shadow-xl mb-6">
+        <div class="card-body">
+            <h2 class="text-2xl font-bold text-blue-900">{{ cuenta.id_hijo.nombre }} {{ cuenta.id_hijo.apellido }}</h2>
+            <div class="divider my-2"></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-sm text-blue-600">Período</p>
+                    <p class="text-lg font-bold">
+                        {% if cuenta.mes == 1 %}Enero
+                        {% elif cuenta.mes == 2 %}Febrero
+                        {% elif cuenta.mes == 3 %}Marzo
+                        {% elif cuenta.mes == 4 %}Abril
+                        {% elif cuenta.mes == 5 %}Mayo
+                        {% elif cuenta.mes == 6 %}Junio
+                        {% elif cuenta.mes == 7 %}Julio
+                        {% elif cuenta.mes == 8 %}Agosto
+                        {% elif cuenta.mes == 9 %}Septiembre
+                        {% elif cuenta.mes == 10 %}Octubre
+                        {% elif cuenta.mes == 11 %}Noviembre
+                        {% else %}Diciembre
+                        {% endif %} {{ cuenta.anio }}
+                    </p>
+                </div>
+                <div>
+                    <p class="text-sm text-blue-600">Cantidad de Almuerzos</p>
+                    <p class="text-lg font-bold">{{ cuenta.cantidad_almuerzos }} almuerzos</p>
+                </div>
+                <div>
+                    <p class="text-sm text-blue-600">Monto Total</p>
+                    <p class="text-2xl font-bold text-blue-900">Gs. {{ cuenta.monto_total|floatformat:0|intcomma }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-blue-600">Pagado</p>
+                    <p class="text-2xl font-bold text-green-600">Gs. {{ cuenta.monto_pagado|floatformat:0|intcomma }}</p>
+                </div>
+                <div class="col-span-2">
+                    <p class="text-sm text-orange-600">Saldo Pendiente</p>
+                    <p class="text-3xl font-bold text-orange-700">Gs. {{ cuenta.saldo_pendiente|floatformat:0|intcomma }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario de Pago -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title mb-4">💳 Datos del Pago</h2>
+            
+            <form method="POST" action="{% url 'pos:pagar_almuerzo' %}">
+                {% csrf_token %}
+                <input type="hidden" name="cuenta_id" value="{{ cuenta.id_cuenta }}">
+                
+                <!-- Monto -->
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text font-semibold">Monto a Pagar (Gs.)</span>
+                        <span class="label-text-alt">
+                            <button type="button" onclick="document.getElementById('id_monto').value='{{ cuenta.saldo_pendiente|floatformat:0 }}'" 
+                                    class="btn btn-xs btn-primary">
+                                Pagar Total
+                            </button>
+                        </span>
+                    </label>
+                    <input type="number" 
+                           id="id_monto"
+                           name="monto" 
+                           class="input input-bordered input-lg text-2xl font-bold" 
+                           placeholder="0"
+                           step="1000"
+                           min="1000"
+                           max="{{ cuenta.saldo_pendiente|floatformat:0 }}"
+                           required
+                           autofocus>
+                    <label class="label">
+                        <span class="label-text-alt text-gray-500">Saldo pendiente: Gs. {{ cuenta.saldo_pendiente|floatformat:0|intcomma }}</span>
+                    </label>
+                </div>
+
+                <!-- Medio de Pago -->
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text font-semibold">Medio de Pago</span>
+                    </label>
+                    <select name="medio_pago" class="select select-bordered w-full" required>
+                        <option value="EFECTIVO" selected>💵 Efectivo</option>
+                        <option value="DEBITO">💳 Débito</option>
+                        <option value="CREDITO">💳 Crédito</option>
+                        <option value="TRANSFERENCIA">🏦 Transferencia</option>
+                        <option value="OTRO">📝 Otro</option>
+                    </select>
+                </div>
+
+                <!-- Referencia -->
+                <div class="form-control mb-6">
+                    <label class="label">
+                        <span class="label-text font-semibold">Referencia / Observaciones</span>
+                    </label>
+                    <textarea name="referencia" 
+                              class="textarea textarea-bordered" 
+                              placeholder="Número de transacción, comprobante, etc. (opcional)"
+                              rows="2"></textarea>
+                </div>
+
+                <!-- Botones -->
+                <div class="flex gap-4 justify-end">
+                    <a href="{% url 'pos:cuentas_mensuales' %}" class="btn btn-ghost">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        💰 Registrar Pago
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Historial de Pagos (si existen) -->
+    {% if cuenta.pagocuentaalmuerzo_set.exists %}
+    <div class="card bg-base-100 shadow-xl mt-6">
+        <div class="card-body">
+            <h2 class="card-title">📋 Historial de Pagos</h2>
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Monto</th>
+                            <th>Medio</th>
+                            <th>Referencia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pago in cuenta.pagocuentaalmuerzo_set.all %}
+                        <tr>
+                            <td>{{ pago.fecha_pago|date:"d/m/Y H:i" }}</td>
+                            <td class="font-mono font-bold">Gs. {{ pago.monto|floatformat:0|intcomma }}</td>
+                            <td>
+                                <div class="badge badge-primary">{{ pago.get_medio_pago_display }}</div>
+                            </td>
+                            <td class="text-sm text-gray-600">{{ pago.referencia|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

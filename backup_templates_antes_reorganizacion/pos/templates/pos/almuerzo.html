@@ -1,0 +1,504 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS Almuerzo - Cantina Tita</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .card-pos {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .input-barcode {
+            font-size: 2rem;
+            padding: 1.5rem;
+            border: 3px solid #667eea;
+            border-radius: 15px;
+            text-align: center;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        
+        .input-barcode:focus {
+            outline: none;
+            border-color: #764ba2;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+        }
+        
+        .feedback {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .registro-item {
+            transition: all 0.3s ease;
+        }
+        
+        .registro-item:hover {
+            transform: translateX(5px);
+            background: #f3f4f6;
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    
+    <div class="container max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-5xl font-bold text-white mb-2">🍽️ POS DE ALMUERZO</h1>
+            <p class="text-white text-xl">Cantina Tita - Registro Rápido</p>
+            <p class="text-white text-sm mt-2">{{ request.user.username|upper }} - {% now "d/m/Y H:i" %}</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Panel Principal: Scanner -->
+            <div class="lg:col-span-2">
+                <div class="card-pos p-8">
+                    <div class="mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2">
+                            📱 Escanear Tarjeta
+                        </h2>
+                        <p class="text-gray-600">
+                            Pase la tarjeta del hijo por el lector de código de barras
+                        </p>
+                    </div>
+
+                    <!-- Formulario de escaneo -->
+                    <form method="post" id="formScan" class="mb-6">
+                        {% csrf_token %}
+                        <input 
+                            type="text" 
+                            name="codigo_barra" 
+                            id="codigo_barra"
+                            class="input-barcode w-full"
+                            placeholder="Código de barras..."
+                            autofocus
+                            autocomplete="off"
+                            maxlength="20"
+                        >
+                        <p class="text-center text-gray-500 mt-3 pulse-animation">
+                            ⬆️ Mantenga el cursor aquí y pase la tarjeta
+                        </p>
+                    </form>
+
+                    <!-- Feedback Visual -->
+                    <div class="feedback-container">
+                        {% if ok %}
+                        <div class="alert alert-success shadow-lg feedback mb-4">
+                            <div>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <div>
+                                    <h3 class="font-bold text-xl">✅ Almuerzo Registrado</h3>
+                                    <div class="text-base mt-2">
+                                        <p><strong>Hijo:</strong> {{ hijo.nombre_completo }}</p>
+                                        <p><strong>Tarjeta:</strong> {{ tarjeta.nro_tarjeta }}</p>
+                                        <p><strong>Tipo:</strong> {{ tipo_almuerzo.nombre }}</p>
+                                        <p><strong>Costo:</strong> Gs. {{ tipo_almuerzo.precio_unitario|floatformat:0 }}</p>
+                                        <p><strong>Hora:</strong> {{ registro.hora_registro }}</p>
+                                        {% if cuenta_mensual %}
+                                        <div class="divider my-2"></div>
+                                        <p class="text-sm"><strong>Cuenta Mensual:</strong> {{ cuenta_mensual.forma_cobro }}</p>
+                                        <p class="text-sm"><strong>Almuerzos del mes:</strong> {{ cuenta_mensual.cantidad_almuerzos }}</p>
+                                        <p class="text-sm"><strong>Total acumulado:</strong> Gs. {{ cuenta_mensual.monto_total|floatformat:0 }}</p>
+                                        <p class="text-sm"><strong>Saldo pendiente:</strong> Gs. {{ cuenta_mensual.saldo_pendiente|floatformat:0 }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if info %}
+                        <div class="alert alert-info shadow-lg feedback mb-4">
+                            <div>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current flex-shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span>{{ info }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if warning %}
+                        <div class="alert alert-warning shadow-lg feedback mb-4">
+                            <div>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                <div>
+                                    <h3 class="font-bold text-lg">{{ warning }}</h3>
+                                    {% if hijo %}
+                                    <p class="text-sm">Tarjeta: {{ tarjeta.nro_tarjeta }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if error %}
+                        <div class="alert alert-error shadow-lg feedback mb-4">
+                            <div>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <div>
+                                    <h3 class="font-bold">{{ error }}</h3>
+                                    {% if codigo %}
+                                    <p class="text-sm">Código: {{ codigo }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Estadísticas del día -->
+                    <div class="stats shadow w-full mt-6">
+                        <div class="stat">
+                            <div class="stat-figure text-primary">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-8 h-8 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <div class="stat-title">Almuerzos Hoy</div>
+                            <div class="stat-value text-primary">{{ ultimos_registros|length }}</div>
+                            <div class="stat-desc">{% now "d/m/Y" %}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel Lateral: Últimos Registros -->
+            <div class="lg:col-span-1">
+                <div class="card-pos p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">
+                        📋 Últimos Registros
+                    </h3>
+                    
+                    <div class="space-y-2 max-h-96 overflow-y-auto">
+                        {% for reg in ultimos_registros %}
+                        <div class="registro-item p-3 border border-gray-200 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <p class="font-bold text-sm text-gray-800">
+                                        {{ reg.id_hijo.nombre_completo }}
+                                    </p>
+                                    <p class="text-xs text-gray-500">
+                                        {{ reg.nro_tarjeta.nro_tarjeta }}
+                                    </p>
+                                    <p class="text-xs text-gray-600 mt-1">
+                                        🕐 {{ reg.hora_registro|time:"H:i" }}
+                                    </p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs font-semibold text-green-600">
+                                        Gs. {{ reg.costo_almuerzo|floatformat:0 }}
+                                    </p>
+                                    {% if forloop.first %}
+                                    <button 
+                                        class="btn btn-xs btn-error mt-1"
+                                        onclick="anularRegistro({{ reg.id_registro_consumo }})"
+                                    >
+                                        Anular
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-gray-500 text-center py-4">
+                            No hay registros hoy
+                        </p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="card-pos p-4 mt-4">
+                    <a href="{% url 'pos:venta' %}" class="btn btn-outline btn-block mb-2">
+                        🛒 Ir a POS Venta
+                    </a>
+                    <a href="{% url 'pos:almuerzo_reportes' %}" class="btn btn-outline btn-block">
+                        📊 Ver Reportes
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mantener foco en el input automáticamente
+        const inputBarra = document.getElementById('codigo_barra');
+        const formScan = document.getElementById('formScan');
+        
+        // Enfocar al cargar
+        window.onload = function() {
+            inputBarra.focus();
+            inputBarra.select();
+            
+            // Si hubo registro exitoso, imprimir ticket automáticamente
+            {% if registro_id %}
+            console.log('📄 Registro exitoso, imprimiendo ticket ID:', {{ registro_id }});
+            imprimirTicketAlmuerzo({{ registro_id }});
+            {% else %}
+            console.log('ℹ️ Sin registro nuevo para imprimir');
+            {% endif %}
+        };
+        
+        // Función para imprimir ticket de almuerzo automáticamente
+        function imprimirTicketAlmuerzo(registroId) {
+            const ticketUrl = `/pos/almuerzo/ticket/${registroId}/`;
+            console.log('🎫 Preparando impresión de ticket:', ticketUrl);
+            
+            // Abrir en nueva ventana pequeña para imprimir
+            const ventanaTicket = window.open(
+                ticketUrl, 
+                'ticket_almuerzo',
+                'width=400,height=700,menubar=no,toolbar=no,location=no,status=no'
+            );
+            
+            if (ventanaTicket) {
+                console.log('✅ Ventana de ticket abierta');
+                // Cuando la ventana cargue, imprimir automáticamente
+                ventanaTicket.onload = function() {
+                    setTimeout(() => {
+                        try {
+                            ventanaTicket.print();
+                            console.log('✅ Comando de impresión enviado');
+                        } catch (e) {
+                            console.error('❌ Error al imprimir:', e);
+                        }
+                    }, 500);
+                };
+            } else {
+                console.error('❌ No se pudo abrir ventana de ticket (bloqueador de popups?)');
+                alert('⚠️ Por favor permita ventanas emergentes para imprimir el ticket');
+            }
+        }
+        
+        // Re-enfocar al hacer click en cualquier parte
+        document.addEventListener('click', function() {
+            if (document.activeElement !== inputBarra) {
+                inputBarra.focus();
+            }
+        });
+        
+        // Limpiar input después de submit
+        formScan.addEventListener('submit', function() {
+            setTimeout(function() {
+                inputBarra.value = '';
+                inputBarra.focus();
+            }, 100);
+        });
+        
+        // Auto-limpiar feedback después de 5 segundos
+        const feedbackElements = document.querySelectorAll('.feedback');
+        if (feedbackElements.length > 0) {
+            setTimeout(function() {
+                feedbackElements.forEach(el => {
+                    el.style.transition = 'opacity 0.5s';
+                    el.style.opacity = '0';
+                    setTimeout(() => el.remove(), 500);
+                });
+            }, 5000);
+        }
+    </script>
+
+    <!-- Modal de Autorización -->
+    <dialog id="modalAutorizacion" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4">🔐 Autorización Requerida</h3>
+            <p class="py-4">Para anular este registro, debe escanear una tarjeta de autorización:</p>
+            
+            <form id="formAutorizacion" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" id="registroAnular" name="registro_id" value="">
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Código de Tarjeta de Autorización</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="inputAutorizacion"
+                        name="codigo_barra"
+                        placeholder="Escanee la tarjeta del administrador" 
+                        class="input input-bordered input-lg text-center font-mono"
+                        autocomplete="off"
+                        required
+                    >
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Motivo de la anulación</span>
+                    </label>
+                    <textarea 
+                        id="motivoAnulacion"
+                        name="motivo"
+                        class="textarea textarea-bordered" 
+                        placeholder="Ej: Registro duplicado, hijo ausente, etc."
+                        rows="2"
+                    ></textarea>
+                </div>
+
+                <div id="mensajeAutorizacion" class="hidden">
+                    <!-- Mensajes dinámicos -->
+                </div>
+
+                <div class="modal-action">
+                    <button type="button" class="btn" onclick="cerrarModalAutorizacion()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        Validar y Anular
+                    </button>
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
+
+    <script>
+        let logAutorizacionId = null;
+
+        function anularRegistro(registroId) {
+            document.getElementById('registroAnular').value = registroId;
+            document.getElementById('modalAutorizacion').showModal();
+            setTimeout(() => {
+                document.getElementById('inputAutorizacion').focus();
+            }, 300);
+        }
+
+        function cerrarModalAutorizacion() {
+            document.getElementById('modalAutorizacion').close();
+            document.getElementById('formAutorizacion').reset();
+            document.getElementById('mensajeAutorizacion').classList.add('hidden');
+            logAutorizacionId = null;
+        }
+
+        // Proceso de dos pasos: 1) Validar autorización, 2) Anular registro
+        document.getElementById('formAutorizacion').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const codigoBarra = formData.get('codigo_barra');
+            const registroId = formData.get('registro_id');
+            const motivo = formData.get('motivo');
+            
+            if (!codigoBarra) {
+                mostrarMensaje('Por favor escanee una tarjeta de autorización', 'error');
+                return;
+            }
+
+            // Paso 1: Validar autorización
+            if (!logAutorizacionId) {
+                try {
+                    const response = await fetch('{% url "pos:validar_autorizacion" %}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: new URLSearchParams({
+                            'codigo_barra': codigoBarra,
+                            'tipo_operacion': 'ANULAR_ALMUERZO',
+                            'id_registro': registroId
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        logAutorizacionId = data.log_id;
+                        mostrarMensaje(`✅ ${data.message} - ${data.tarjeta_tipo}`, 'success');
+                        
+                        // Paso 2: Anular el registro
+                        setTimeout(() => ejecutarAnulacion(registroId, motivo), 500);
+                    } else {
+                        mostrarMensaje(`❌ ${data.message}`, 'error');
+                        document.getElementById('inputAutorizacion').value = '';
+                        document.getElementById('inputAutorizacion').focus();
+                    }
+                } catch (error) {
+                    mostrarMensaje('❌ Error al validar autorización', 'error');
+                    console.error(error);
+                }
+            }
+        });
+
+        async function ejecutarAnulacion(registroId, motivo) {
+            try {
+                const response = await fetch(`/pos/almuerzo/anular/${registroId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: new URLSearchParams({
+                        'log_id': logAutorizacionId,
+                        'motivo': motivo || 'Sin motivo especificado'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    mostrarMensaje(`✅ ${data.message}`, 'success');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    mostrarMensaje(`❌ ${data.message}`, 'error');
+                }
+            } catch (error) {
+                mostrarMensaje('❌ Error al anular registro', 'error');
+                console.error(error);
+            }
+        }
+
+        function mostrarMensaje(texto, tipo) {
+            const div = document.getElementById('mensajeAutorizacion');
+            div.className = tipo === 'success' 
+                ? 'alert alert-success' 
+                : 'alert alert-error';
+            div.textContent = texto;
+            div.classList.remove('hidden');
+        }
+        
+        // Función para anular registro - REEMPLAZADA POR EL MODAL DE AUTORIZACIÓN
+
+        }
+        
+        // Sonido de confirmación (opcional)
+        function playBeep() {
+            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZSA0PWqzn77BdGAg+ltryy3YrBSl+zPLaizsIGGS57OihUBELTKXh8bllHAU2jdXzxm8gBS1+z/PdizYIHm/A7eWXRAwPWqzn7rBdGAc9mNjywXkqBSh8zPLaizwIF2W77OmiURIKS6Xh8bhkHAU3jtbzxW8fBSx+z/PejDcJHW/B7OWXRAwOWa3n7rBeGAc9mNjywXkqBSl8zPLbizsIGGS37emiUBILTKXh8bllHAU2jdXzxm8gBSx+z/PdizYJHXDA7OWXRAwOWK3n7bBeGAc+mNjywXkqBSh8zPLbizsIGGW67emiUBELTKXh8bllHAU2jdXzx28gBSx+z/PdjDcJHHDB7OWXRAwOWK3n7bBeGAc+mNjywXkqBSh8zPLaizsIGGW67emiUBELS6Xh8bllHAU3jtXzx28gBSx+z/PdjDcJHXDA7OWXRAwOWK3n7rBeGAc9mNjywXkqBSl8zPLaizsIGGW67emiUBELTKXh8bllHAU2jdXzxm8gBSx+z/PdjDcJHXDA7OWXRAwOWKzn7rBeGAc+mNjywXkqBSh8zPLaizsIGGW67emiTxELTKXh8bllHAU2jdXzxm8gBSx+z/PdjDcJHHDB7OWXRAwOWKzn7rBeGAc+mNjywXkqBSh8zPLaizsIGGS77emiUBEKTKXh8bllHAU2jdXzxm8gBSx+z/PdjDcJHHDB7OSXRAwOV6zn7rBeGAc+mNjywXkqBSh8zPLaizsIGGS77emiUBELTKXh8bllHAU2jdXzxm8gBSt+z/PdjDcJHHDB7OSXRAwOV6zn7rBeGAc+mNjywHkqBSh8zPLaizsIGGS77emiUBELTKXh8bllHAU2jdXzxm8gBSt+z/PdjDcJHHDB7OSXRAwOWKzn7rBeGAc9mNjywHkqBSl8zPLaizsIGGS77emiUBELTKXh8bllHAU2jdXzxm8gBSt+z/PdjDcJHHDB7OSXRAwOWKzn7rBeGAc9mNjywHkqBSl8zPLaizsIGGS77emiUBELTKXh8bllHAU2jdXzxm8gBSt+z/PdjDcJHHDB7OSXRAwOWKzn7rBeGAc9mNjywHkqBSl8zPLaizsIGGS77emiUBELTKXh8bllHAU2jdXzxm8gBSt+z/PdjDcJHHDB7OSXRAwOWKzn7rBeGAc9mNjywHkqBSl8zPLaizsIGGS77emiUBELTKXh8bllHAU2jdXzxm8gBSt+z/PdjDcJHHDB7OSXRAwOWKzn7rBeGAc9mNjywHkqBSl8zPLaizsIG2S77emiUBELTKXh8bllHAU2jdXzxm8gBSt+z/PdjDcJHHDB7OSXRAwOWKzn7rBeGAc9mNjywHkqBSl8zPLaizsIG2S77emiUBELTKXh8bllHAU2jdXzxm8gBSt+z/PdjDcJHHDB7OSXRAwOWKzn7rBeGAc9mNjywHkqBSl8zPLaizsIG2S77emiUBELTKXh8bllHAU2jdXzxm8gBSt+z/PdjDcJHHDB7OSXRAwOWKzn7rBeGAc9mNjywHkqBSl8zPLaizsIG2S77emiUBELTKXh8bllHAU2jdXzxm8gBSt+z/PdjDcJHHDB7OSXRAwOWKzn7rBeGAc9mNjywHkqBSl8zPLaizsIG2S77emiUBELTKXh8bllHAU2jdXzxm8gBQ==');
+            audio.play().catch(e => console.log('Audio play failed'));
+        }
+    </script>
+</body>
+</html>

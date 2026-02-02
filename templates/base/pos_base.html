@@ -1,0 +1,25 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pos.css' %}">
+{% endblock %}
+
+{% block navigation %}
+{% include "shared/components/navigation_pos.html" %}
+{% endblock %}
+
+{% block footer %}
+<!-- Footer simplificado para POS -->
+<footer class="bg-dark text-white py-2">
+    <div class="container-fluid">
+        <div class="text-center">
+            <small>&copy; 2024 Sistema POS - Paraguay</small>
+        </div>
+    </div>
+</footer>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/pos.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/portal.css' %}">
+{% endblock %}
+
+{% block navigation %}
+{% include "shared/components/navigation_portal.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/portal.js' %}"></script>
+{% endblock %}

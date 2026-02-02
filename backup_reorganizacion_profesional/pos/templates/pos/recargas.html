@@ -1,0 +1,426 @@
+{% extends 'base.html' %}
+
+{% block title %}Recargas de Tarjetas | Cantina Tita{% endblock %}
+
+{% block content %}
+<div class="space-y-4" x-data="recargasApp()">
+    
+    <!-- Encabezado -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-neutral">💳 Recargas de Tarjetas</h1>
+            <p class="text-gray-600">Gestión de recargas estudiantiles</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{% url 'pos:venta' %}" class="btn btn-outline">
+                ← Volver al POS
+            </a>
+            <a href="{% url 'pos:historial_recargas' %}" class="btn btn-secondary">
+                📜 Historial
+            </a>
+        </div>
+    </div>
+    
+    <!-- Grid principal -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        
+        <!-- Columna izquierda: Buscar y Recargar -->
+        <div class="lg:col-span-2 space-y-4">
+            
+            <!-- Buscar tarjeta -->
+            <div class="card bg-white shadow-xl">
+                <div class="card-body">
+                    <h3 class="card-title text-lg mb-4">🔍 Buscar Tarjeta</h3>
+                    
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">Número de Tarjeta</span>
+                        </label>
+                        <div class="flex gap-2">
+                            <input 
+                                type="text" 
+                                id="nro_tarjeta_buscar"
+                                x-model="nroTarjetaBuscar"
+                                @keyup.enter="buscarTarjeta()"
+                                placeholder="Escanear o ingresar número..."
+                                class="input input-bordered input-lg flex-1 font-mono"
+                                autofocus
+                            >
+                            <button 
+                                class="btn btn-primary btn-lg"
+                                @click="buscarTarjeta()"
+                                :disabled="!nroTarjetaBuscar"
+                            >
+                                🔍 Buscar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Información de tarjeta -->
+                    <div x-show="tarjeta" x-transition class="mt-4">
+                        <div class="alert" :class="tarjeta ? 'alert-success' : 'alert-error'">
+                            <div class="w-full">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <h4 class="font-bold text-lg" x-text="tarjeta?.estudiante_nombre"></h4>
+                                        <p class="text-sm" x-text="'Tarjeta: ' + tarjeta?.nro_tarjeta"></p>
+                                        <p class="text-sm" x-text="'Responsable: ' + tarjeta?.responsable_nombre"></p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-xs">Saldo Actual</p>
+                                        <p class="text-3xl font-bold" 
+                                           :class="tarjeta?.saldo_actual < 5000 ? 'text-error' : 'text-success'"
+                                           x-text="'Gs. ' + (tarjeta?.saldo_actual || 0).toLocaleString()"></p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Alertas -->
+                                <template x-if="tarjeta?.estado === 'bloqueada'">
+                                    <div class="alert alert-error mt-2">
+                                        🚫 Tarjeta bloqueada - No se pueden realizar recargas
+                                    </div>
+                                </template>
+                                
+                                <template x-if="tarjeta?.saldo_actual < 5000 && tarjeta?.estado === 'activa'">
+                                    <div class="alert alert-warning mt-2">
+                                        ⚠️ Saldo bajo - Recarga recomendada
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Formulario de recarga -->
+            <div class="card bg-white shadow-xl" x-show="tarjeta && tarjeta.estado === 'activa'" x-transition>
+                <div class="card-body">
+                    <h3 class="card-title text-lg mb-4">💰 Realizar Recarga</h3>
+                    
+                    <!-- Montos rápidos -->
+                    <div>
+                        <label class="label">
+                            <span class="label-text font-semibold">Montos Rápidos</span>
+                        </label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button 
+                                class="btn btn-outline"
+                                @click="montoRecarga = 10000"
+                                :class="montoRecarga === 10000 ? 'btn-primary' : ''"
+                            >
+                                Gs. 10,000
+                            </button>
+                            <button 
+                                class="btn btn-outline"
+                                @click="montoRecarga = 20000"
+                                :class="montoRecarga === 20000 ? 'btn-primary' : ''"
+                            >
+                                Gs. 20,000
+                            </button>
+                            <button 
+                                class="btn btn-outline"
+                                @click="montoRecarga = 50000"
+                                :class="montoRecarga === 50000 ? 'btn-primary' : ''"
+                            >
+                                Gs. 50,000
+                            </button>
+                            <button 
+                                class="btn btn-outline"
+                                @click="montoRecarga = 100000"
+                                :class="montoRecarga === 100000 ? 'btn-primary' : ''"
+                            >
+                                Gs. 100,000
+                            </button>
+                            <button 
+                                class="btn btn-outline"
+                                @click="montoRecarga = 200000"
+                                :class="montoRecarga === 200000 ? 'btn-primary' : ''"
+                            >
+                                Gs. 200,000
+                            </button>
+                            <button 
+                                class="btn btn-outline"
+                                @click="montoRecarga = 500000"
+                                :class="montoRecarga === 500000 ? 'btn-primary' : ''"
+                            >
+                                Gs. 500,000
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Monto personalizado -->
+                    <div class="form-control mt-4">
+                        <label class="label">
+                            <span class="label-text font-semibold">Monto Personalizado</span>
+                        </label>
+                        <input 
+                            type="number" 
+                            x-model.number="montoRecarga"
+                            min="1000"
+                            step="1000"
+                            placeholder="Ingrese monto en Gs."
+                            class="input input-bordered input-lg text-2xl font-bold text-center"
+                        >
+                        <label class="label">
+                            <span class="label-text-alt">Mínimo: Gs. 1,000</span>
+                        </label>
+                    </div>
+                    
+                    <!-- Forma de pago -->
+                    <div class="form-control mt-4">
+                        <label class="label">
+                            <span class="label-text font-semibold">Forma de Pago</span>
+                        </label>
+                        <select x-model="formaPago" class="select select-bordered">
+                            <option value="efectivo">💵 Efectivo</option>
+                            <option value="transferencia">🏦 Transferencia Bancaria</option>
+                            <option value="tarjeta_credito">💳 Tarjeta de Crédito/Débito</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Observaciones -->
+                    <div class="form-control mt-4">
+                        <label class="label">
+                            <span class="label-text">Observaciones (opcional)</span>
+                        </label>
+                        <textarea 
+                            x-model="observaciones"
+                            class="textarea textarea-bordered"
+                            placeholder="Notas adicionales..."
+                            rows="2"
+                        ></textarea>
+                    </div>
+                    
+                    <!-- Resumen -->
+                    <div class="alert alert-info mt-4" x-show="montoRecarga > 0">
+                        <div class="w-full">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Saldo Actual:</span>
+                                <span class="font-bold" x-text="'Gs. ' + (tarjeta?.saldo_actual || 0).toLocaleString()"></span>
+                            </div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Monto a Recargar:</span>
+                                <span class="font-bold text-primary" x-text="'Gs. ' + (montoRecarga || 0).toLocaleString()"></span>
+                            </div>
+                            <div class="divider my-1"></div>
+                            <div class="flex justify-between text-lg font-bold">
+                                <span>Nuevo Saldo:</span>
+                                <span class="text-success" x-text="'Gs. ' + ((tarjeta?.saldo_actual || 0) + (montoRecarga || 0)).toLocaleString()"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Botón confirmar -->
+                    <button 
+                        class="btn btn-success btn-lg w-full mt-4"
+                        @click="confirmarRecarga()"
+                        :disabled="!montoRecarga || montoRecarga < 1000"
+                    >
+                        ✅ CONFIRMAR RECARGA
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+        
+        <!-- Columna derecha: Estadísticas y últimas recargas -->
+        <div class="space-y-4">
+            
+            <!-- Estadísticas del día -->
+            <div class="card bg-gradient-to-br from-primary to-orange-600 text-white shadow-xl">
+                <div class="card-body">
+                    <h3 class="card-title text-sm opacity-80">📊 Hoy</h3>
+                    <div class="stats stats-vertical bg-transparent text-white">
+                        <div class="stat p-2">
+                            <div class="stat-title text-white opacity-70 text-xs">Recargas</div>
+                            <div class="stat-value text-2xl">{{ stats.recargas_hoy }}</div>
+                        </div>
+                        <div class="stat p-2">
+                            <div class="stat-title text-white opacity-70 text-xs">Total Recargado</div>
+                            <div class="stat-value text-xl">Gs. {{ stats.total_hoy|floatformat:0 }}</div>
+                        </div>
+                        <div class="stat p-2">
+                            <div class="stat-title text-white opacity-70 text-xs">Promedio</div>
+                            <div class="stat-value text-xl">Gs. {{ stats.promedio_hoy|floatformat:0 }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Últimas recargas -->
+            <div class="card bg-white shadow-xl">
+                <div class="card-body p-4">
+                    <h3 class="font-bold text-sm mb-3">🕐 Últimas Recargas</h3>
+                    <div class="space-y-2 max-h-96 overflow-y-auto">
+                        {% for recarga in ultimas_recargas %}
+                        <div class="flex justify-between items-center bg-base-200 p-2 rounded">
+                            <div class="flex-1">
+                                <p class="font-semibold text-sm">{{ recarga.descripcion }} {{ recarga.apellido }}</p>
+                                <p class="text-xs text-gray-500">{{ recarga.fecha|date:"H:i" }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-success text-sm">+Gs. {{ recarga.monto|floatformat:0 }}</p>
+                                <p class="text-xs text-gray-500">{{ recarga.nro_tarjeta__nro_tarjeta }}</p>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-center text-gray-400 text-sm py-4">Sin recargas hoy</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        
+    </div>
+    
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function recargasApp() {
+        return {
+            nroTarjetaBuscar: '',
+            tarjeta: null,
+            montoRecarga: 0,
+            formaPago: 'efectivo',
+            observaciones: '',
+            
+            async buscarTarjeta() {
+                if (!this.nroTarjetaBuscar) return;
+                
+                try {
+                    const response = await fetch(`/pos/buscar-tarjeta/?nro_tarjeta=${this.nroTarjetaBuscar}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
+                    const html = await response.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    
+                    // Extraer datos de la tarjeta
+                    const tarjetaElement = doc.querySelector('[x-data]');
+                    if (tarjetaElement) {
+                        const dataAttr = tarjetaElement.getAttribute('x-data');
+                        // Parsear datos manualmente o hacer request JSON
+                        await this.buscarTarjetaJSON();
+                    } else {
+                        playSound('error');
+                        this.showNotification('Tarjeta no encontrada', 'error');
+                        this.tarjeta = null;
+                    }
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    playSound('error');
+                    this.showNotification('Error al buscar tarjeta', 'error');
+                }
+            },
+            
+            async buscarTarjetaJSON() {
+                try {
+                    const response = await fetch(`/api/v1/tarjetas/${this.nroTarjetaBuscar}/`, {
+                        headers: {
+                            'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        this.tarjeta = await response.json();
+                        playSound('scan');
+                        this.showNotification('Tarjeta encontrada', 'success');
+                    } else {
+                        throw new Error('Tarjeta no encontrada');
+                    }
+                } catch (error) {
+                    playSound('error');
+                    this.showNotification('Tarjeta no encontrada', 'error');
+                    this.tarjeta = null;
+                }
+            },
+            
+            async confirmarRecarga() {
+                if (!this.tarjeta || !this.montoRecarga || this.montoRecarga < 1000) {
+                    this.showNotification('Datos incompletos', 'warning');
+                    return;
+                }
+                
+                const confirmacion = confirm(
+                    `¿Confirmar recarga de Gs. ${this.montoRecarga.toLocaleString()} ` +
+                    `para ${this.tarjeta.estudiante_nombre}?`
+                );
+                
+                if (!confirmacion) return;
+                
+                try {
+                    const response = await fetch('{% url "pos:procesar_recarga" %}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            nro_tarjeta: this.tarjeta.nro_tarjeta,
+                            monto: this.montoRecarga,
+                            forma_pago: this.formaPago,
+                            observaciones: this.observaciones
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        playSound('success');
+                        this.showNotification('¡Recarga exitosa!', 'success');
+                        
+                        // Actualizar tarjeta
+                        this.tarjeta.saldo_actual = data.nuevo_saldo;
+                        
+                        // Limpiar formulario
+                        this.montoRecarga = 0;
+                        this.observaciones = '';
+                        this.formaPago = 'efectivo';
+                        
+                        // Recargar página después de 2 segundos
+                        setTimeout(() => window.location.reload(), 2000);
+                    } else {
+                        playSound('error');
+                        this.showNotification(data.error || 'Error al procesar recarga', 'error');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    playSound('error');
+                    this.showNotification('Error de conexión', 'error');
+                }
+            },
+            
+            showNotification(message, type) {
+                // Reutilizar sistema de notificaciones de base.html
+                const event = new CustomEvent('showNotification', {
+                    detail: { message, type }
+                });
+                window.dispatchEvent(event);
+            }
+        }
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

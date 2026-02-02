@@ -62,7 +62,7 @@ class ProductoAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Información Básica', {
-            'fields': ('codigo_barra', 'descripcion', 'id_categoria', 'id_unidad_de_medida')
+            'fields': ('codigo_barra', 'descripcion', 'id_categoria', 'id_unidad_medida')
         }),
         ('Control de Stock', {
             'fields': ('stock_minimo', 'permite_stock_negativo'),
@@ -131,7 +131,7 @@ class ProveedorAdmin(admin.ModelAdmin):
 
 @admin.register(StockUnico)
 class StockUnicoAdmin(admin.ModelAdmin):
-    list_display = ['id_producto', 'stock_actual', 'fecha_ultima_actualizacion']
+    list_display = ['id_producto', 'cantidad', 'fecha_ultima_actualizacion']
     search_fields = ['id_producto__codigo', 'id_producto__descripcion']
     readonly_fields = ['fecha_ultima_actualizacion']
 
@@ -436,9 +436,9 @@ class DatosEmpresaAdmin(admin.ModelAdmin):
 # Precios y Costos
 @admin.register(PreciosPorLista)
 class PreciosPorListaAdmin(admin.ModelAdmin):
-    list_display = ['id_producto', 'id_lista', 'precio_unitario_neto', 'fecha_vigencia']
-    list_filter = ['id_lista']
-    search_fields = ['id_producto__descripcion', 'id_producto__codigo']
+    list_display = ['id_producto', 'id_lista_precios', 'precio_venta', 'fecha_inicio_vigencia', 'fecha_fin_vigencia', 'activo']
+    list_filter = ['id_lista_precios', 'activo']
+    search_fields = ['id_producto__descripcion', 'id_producto__codigo_barra']
 
 
 @admin.register(CostosHistoricos)
@@ -450,9 +450,9 @@ class CostosHistoricosAdmin(admin.ModelAdmin):
 
 @admin.register(HistoricoPrecios)
 class HistoricoPreciosAdmin(admin.ModelAdmin):
-    list_display = ['id_producto', 'id_lista', 'precio_anterior', 'precio_nuevo', 'fecha_cambio', 'id_empleado_modifico']
-    list_filter = ['fecha_cambio']
-    search_fields = ['id_producto']
+    list_display = ['id_producto', 'precio_venta_anterior', 'precio_venta_nuevo', 'fecha_cambio', 'id_empleado_autoriza']
+    list_filter = ['fecha_cambio', 'id_empleado_autoriza']
+    search_fields = ['id_producto__descripcion', 'id_producto__codigo_barra']
 
 
 # Compras

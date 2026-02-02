@@ -29,6 +29,10 @@ from .portal_forms import (
 def login_required_portal(view_func):
     """Decorador para requerir autenticación en el portal"""
     def wrapper(request, *args, **kwargs):
+        """Wrapper
+        
+        TODO: Agregar descripción detallada
+        """
         usuario_id = request.session.get('portal_usuario_id')
         if not usuario_id:
             messages.warning(request, 'Debe iniciar sesión para acceder')

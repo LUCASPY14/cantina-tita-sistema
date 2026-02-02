@@ -31,10 +31,12 @@ from .serializers import (
     CategoriaSerializer, ClienteSerializer, HijoSerializer,
     TarjetaSerializer, CargasSaldoSerializer, ConsumoTarjetaSerializer,
     EmpleadoSerializer, StockSerializer,
-    MovimientoStockSerializer, ProveedorSerializer
+    MovimientoStockSerializer, ProveedorSerializer,
+    EmpleadoTokenSerializer
 )
 
 from .pagination import StandardPagination, LargePagination, SmallPagination, ReportPagination
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 
 # =============================================================================
@@ -150,6 +152,10 @@ class ProductoViewSet(viewsets.ModelViewSet):
     pagination_class = LargePagination  # 50 items por página
     
     def get_serializer_class(self):
+        """Get Serializer Class
+        
+        TODO: Agregar descripción detallada
+        """
         if self.action == 'retrieve':
             return ProductoDetailSerializer
         return ProductoListSerializer
@@ -464,6 +470,10 @@ class VentaViewSet(viewsets.ModelViewSet):
     pagination_class = StandardPagination  # 25 items por página
     
     def get_serializer_class(self):
+        """Get Serializer Class
+        
+        TODO: Agregar descripción detallada
+        """
         if self.action == 'retrieve':
             return VentaDetailSerializer
         return VentaListSerializer
@@ -724,3 +734,6 @@ class ProveedorViewSet(viewsets.ModelViewSet):
     search_fields = ['razon_social', 'ruc', 'telefono']
     ordering_fields = ['razon_social']
     ordering = ['razon_social']
+
+class EmpleadoTokenObtainPairView(TokenObtainPairView):
+    serializer_class = EmpleadoTokenSerializer

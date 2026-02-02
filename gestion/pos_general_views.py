@@ -108,7 +108,7 @@ def buscar_producto_api(request):
         
         # Intenta buscar por código de barras exacto primero
         producto_exacto = productos.filter(codigo_barra__iexact=query).select_related(
-            'id_categoria', 'id_unidad_de_medida', 'id_impuesto'
+            'id_categoria', 'id_unidad_medida', 'id_impuesto'
         ).prefetch_related(
             'precios__id_lista',
             'productoalergeno_set__id_alergeno'
@@ -123,7 +123,7 @@ def buscar_producto_api(request):
                 Q(descripcion__icontains=query) |
                 Q(codigo_barra__icontains=query)
             ).select_related(
-                'id_categoria', 'id_unidad_de_medida', 'id_impuesto', 'stock'
+                'id_categoria', 'id_unidad_medida', 'id_impuesto', 'stock'
             ).prefetch_related(
                 'precios__id_lista',
                 'productoalergeno_set__id_alergeno'

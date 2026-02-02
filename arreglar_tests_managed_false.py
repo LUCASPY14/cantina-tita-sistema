@@ -105,8 +105,15 @@ TESTING = True
 # Base de datos en memoria para tests rápidos
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'test_cantinatitadb',
+        'USER': 'root',
+        'PASSWORD': '',
+        'HOST': 'localhost',
+        'PORT': '3306',
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        }
     }
 }
 

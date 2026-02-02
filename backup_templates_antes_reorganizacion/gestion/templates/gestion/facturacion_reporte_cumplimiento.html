@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Reporte de Cumplimiento - Facturación Electrónica - Cantina{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Encabezado -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Reporte de Cumplimiento Fiscal</h1>
+        <p class="text-gray-600">Análisis de cumplimiento con requisitos SET/Ekuatia (últimos 30 días)</p>
+    </div>
+
+    <!-- Período del Reporte -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <p class="text-sm text-gray-600">
+            <span class="font-semibold">Período:</span> 
+            {{ fecha_inicio|date:"d/m/Y" }} a {{ fecha_fin|date:"d/m/Y" }}
+        </p>
+    </div>
+
+    <!-- Resumen Ejecutivo -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Total Facturas -->
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-md p-6 border-l-4 border-blue-500">
+            <p class="text-gray-600 text-sm font-semibold">Total Facturas Emitidas</p>
+            <p class="text-3xl font-bold text-blue-600 mt-2">{{ stats.total }}</p>
+            <p class="text-xs text-gray-500 mt-1">Período: 30 días</p>
+        </div>
+
+        <!-- Tasa de Aceptación -->
+        <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-md p-6 border-l-4 border-green-500">
+            <p class="text-gray-600 text-sm font-semibold">Tasa de Aceptación</p>
+            <p class="text-3xl font-bold text-green-600 mt-2">{{ stats.tasa_aceptacion }}%</p>
+            <p class="text-xs text-gray-500 mt-1">Facturas aceptadas por SET</p>
+        </div>
+
+        <!-- Tasa de Rechazo -->
+        <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg shadow-md p-6 border-l-4 border-red-500">
+            <p class="text-gray-600 text-sm font-semibold">Tasa de Rechazo</p>
+            <p class="text-3xl font-bold text-red-600 mt-2">{{ stats.tasa_rechazo }}%</p>
+            <p class="text-xs text-gray-500 mt-1">Facturas rechazadas</p>
+        </div>
+
+        <!-- Monto Total Sin IVA -->
+        <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow-md p-6 border-l-4 border-purple-500">
+            <p class="text-gray-600 text-sm font-semibold">Monto Base (Sin IVA)</p>
+            <p class="text-2xl font-bold text-purple-600 mt-2">₲ {{ stats.monto_sin_iva|floatformat:0 }}</p>
+            <p class="text-xs text-gray-500 mt-1">Base gravable</p>
+        </div>
+    </div>
+
+    <!-- Detalles de Estados -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Distribución de Estados -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Distribución de Estados</h3>
+            <div class="space-y-4">
+                <!-- Aceptadas -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <p class="text-gray-700 font-semibold">Aceptadas por SET</p>
+                        <span class="text-green-600 font-bold">{{ stats.aceptadas }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-green-500 h-2 rounded-full" style="width: {{ stats.porcentaje_aceptadas }}%"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">{{ stats.porcentaje_aceptadas }}% del total</p>
+                </div>
+
+                <!-- Rechazadas -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <p class="text-gray-700 font-semibold">Rechazadas por SET</p>
+                        <span class="text-red-600 font-bold">{{ stats.rechazadas }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-red-500 h-2 rounded-full" style="width: {{ stats.porcentaje_rechazadas }}%"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">{{ stats.porcentaje_rechazadas }}% del total</p>
+                </div>
+
+                <!-- Pendientes -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <p class="text-gray-700 font-semibold">Pendientes de Respuesta</p>
+                        <span class="text-yellow-600 font-bold">{{ stats.pendientes }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-yellow-500 h-2 rounded-full" style="width: {{ stats.porcentaje_pendientes }}%"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">{{ stats.porcentaje_pendientes }}% del total</p>
+                </div>
+
+                <!-- Anuladas -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <p class="text-gray-700 font-semibold">Anuladas</p>
+                        <span class="text-gray-600 font-bold">{{ stats.anuladas }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-gray-500 h-2 rounded-full" style="width: {{ stats.porcentaje_anuladas }}%"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">{{ stats.porcentaje_anuladas }}% del total</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Información de Cumplimiento -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Estado de Cumplimiento</h3>
+            
+            {% if stats.tasa_aceptacion >= 95 %}
+                <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-4 rounded">
+                    <p class="font-semibold text-green-800">✓ Excelente Cumplimiento</p>
+                    <p class="text-sm text-green-700 mt-1">
+                        Su tasa de aceptación es superior al 95%. Felicidades por mantener un sistema consistente.
+                    </p>
+                </div>
+            {% elif stats.tasa_aceptacion >= 90 %}
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4 rounded">
+                    <p class="font-semibold text-blue-800">⚠️ Buen Cumplimiento</p>
+                    <p class="text-sm text-blue-700 mt-1">
+                        Su tasa de aceptación es superior al 90%. Revisar rechazos para mejorar.
+                    </p>
+                </div>
+            {% elif stats.tasa_aceptacion >= 80 %}
+                <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-4 rounded">
+                    <p class="font-semibold text-yellow-800">⚠️ Cumplimiento Moderado</p>
+                    <p class="text-sm text-yellow-700 mt-1">
+                        Considere revisar patrones de rechazo para mejorar la tasa de aceptación.
+                    </p>
+                </div>
+            {% else %}
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded">
+                    <p class="font-semibold text-red-800">⛔ Cumplimiento Bajo</p>
+                    <p class="text-sm text-red-700 mt-1">
+                        Acción urgente: Revisar inmediatamente los rechazos con SET/Ekuatia.
+                    </p>
+                </div>
+            {% endif %}
+
+            <div class="space-y-3 mt-4">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <p class="text-sm text-gray-700">Timbrados vigentes: <span class="font-semibold">{{ stats.timbrados_activos }}</span></p>
+                </div>
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <p class="text-sm text-gray-700">Última factura emitida: <span class="font-semibold">{{ stats.fecha_ultima_factura|date:"d/m/Y H:i" }}</span></p>
+                </div>
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <p class="text-sm text-gray-700">Sistema de facturación: <span class="font-semibold text-green-600">Operativo</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Análisis de Rechazos -->
+    {% if stats.rechazadas > 0 %}
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Análisis de Rechazos ({{ stats.rechazadas }} facturas)</h3>
+            
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p class="text-sm text-red-700 mb-3">
+                    <span class="font-semibold">Importante:</span> 
+                    Los rechazos pueden deberse a errores en el formato XML, datos de cliente incorrectos, o 
+                    información fiscal inconsistente. Revise cada rechazo con el equipo de SET/Ekuatia.
+                </p>
+                <p class="text-sm text-red-700">
+                    <strong>Acción recomendada:</strong> Contactar a SET para obtener detalles específicos de los rechazos.
+                </p>
+            </div>
+
+            {% if rechazos_recientes %}
+                <div class="mt-4 space-y-2">
+                    {% for rechazo in rechazos_recientes %}
+                        <div class="bg-red-100 rounded p-3 border-l-4 border-red-500">
+                            <p class="text-sm font-semibold text-red-800">Venta #{{ rechazo.venta_id }}</p>
+                            <p class="text-xs text-red-700 mt-1">CDC: <code>{{ rechazo.cdc|truncatechars:12 }}</code></p>
+                            <p class="text-xs text-red-700">{{ rechazo.fecha_envio|date:"d/m/Y H:i" }}</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Información Legal -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div class="flex items-start">
+            <svg class="w-6 h-6 text-blue-600 mr-4 mt-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+            </svg>
+            <div>
+                <h4 class="font-bold text-blue-900 mb-2">Información de Cumplimiento Fiscal</h4>
+                <ul class="text-sm text-blue-800 space-y-1">
+                    <li>• Todas las facturas se envían automáticamente a Ekuatia (SET)</li>
+                    <li>• CDC (Código de Control Criptográfico) se calcula según RES. 19-SET 2023</li>
+                    <li>• Cada factura requiere acceptación de SET para ser válida fiscalmente</li>
+                    <li>• Los rechazos deben resolverse antes de 30 días</li>
+                    <li>• Mantener este reporte para auditorías fiscales</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Descarga de Reporte -->
+    <div class="mt-8 text-center">
+        <button onclick="descargarReporte()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition">
+            📥 Descargar Reporte (PDF)
+        </button>
+    </div>
+</div>
+
+<script>
+    function descargarReporte() {
+        // Crear elemento para descargar reporte
+        const contenido = document.documentElement.innerHTML;
+        const ventana = window.open('', '_blank');
+        ventana.document.write(contenido);
+        ventana.document.close();
+        ventana.print();
+    }
+</script>
+
+<style>
+    @media print {
+        .no-print {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}

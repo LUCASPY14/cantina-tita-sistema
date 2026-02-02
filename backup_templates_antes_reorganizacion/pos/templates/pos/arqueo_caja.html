@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Arqueo de Caja{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto" x-data="arqueoApp()">
+    <div class="mb-6">
+        <a href="{% url 'pos:cierre_caja' %}" class="btn btn-ghost btn-sm mb-2">← Volver al Cierre</a>
+        <h1 class="text-3xl font-bold text-neutral">💵 Arqueo de Caja</h1>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-error shadow-lg"><span>{{ error }}</span></div>
+    {% else %}
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title">Conteo de Billetes y Monedas</h2>
+            <p class="text-sm text-neutral/70 mb-4">Caja: <strong>{{ caja_abierta.id_caja.descripcion }}</strong></p>
+            
+            <div class="overflow-x-auto">
+                <table class="table w-full">
+                    <thead>
+                        <tr class="bg-neutral text-neutral-content">
+                            <th>Denominación</th>
+                            <th>Cantidad</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="(denom, index) in denominaciones" :key="index">
+                            <tr>
+                                <td>
+                                    <span class="font-mono" x-text="denom.descripcion"></span>
+                                    <span class="badge badge-sm" x-text="denom.tipo" :class="denom.tipo === 'billete' ? 'badge-success' : 'badge-info'"></span>
+                                </td>
+                                <td>
+                                    <input 
+                                        type="number" 
+                                        x-model.number="denom.cantidad"
+                                        @input="calcularTotal()"
+                                        class="input input-bordered input-sm w-24"
+                                        min="0"
+                                        placeholder="0"
+                                    >
+                                </td>
+                                <td class="font-mono" x-text="formatearMoneda(denom.valor * denom.cantidad)"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                    <tfoot>
+                        <tr class="bg-primary text-primary-content font-bold">
+                            <td colspan="2">TOTAL EN CAJA</td>
+                            <td class="text-2xl" x-text="formatearMoneda(totalArqueo)"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-6">
+                <button @click="copiarTotal" class="btn btn-info">📋 Copiar Total</button>
+                <a href="{% url 'pos:cierre_caja' %}" class="btn btn-primary">Continuar con Cierre →</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function arqueoApp() {
+    return {
+        denominaciones: {{ denominaciones|safe }}.map(d => ({...d, cantidad: 0})),
+        totalArqueo: 0,
+        
+        calcularTotal() {
+            this.totalArqueo = this.denominaciones.reduce((sum, d) => sum + (d.valor * d.cantidad), 0);
+        },
+        
+        formatearMoneda(valor) {
+            return 'Gs. ' + valor.toLocaleString('es-PY');
+        },
+        
+        copiarTotal() {
+            navigator.clipboard.writeText(this.totalArqueo);
+            alert('Total copiado: Gs. ' + this.totalArqueo.toLocaleString('es-PY'));
+        }
+    }
+}
+</script>
+{% endblock %}

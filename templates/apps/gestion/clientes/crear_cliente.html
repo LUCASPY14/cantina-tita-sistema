@@ -1,0 +1,101 @@
+{% extends 'pos/base_pos.html' %}
+{% load static %}
+
+{% block title %}Crear Cliente{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title text-2xl mb-6">
+                <i class="fas fa-user-plus mr-2"></i>
+                Crear Nuevo Cliente
+            </h2>
+
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Nombres -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Nombres *</span>
+                        </label>
+                        <input type="text" name="nombres" class="input input-bordered" required>
+                    </div>
+
+                    <!-- Apellidos -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Apellidos *</span>
+                        </label>
+                        <input type="text" name="apellidos" class="input input-bordered" required>
+                    </div>
+
+                    <!-- RUC/CI -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">RUC/CI *</span>
+                        </label>
+                        <input type="text" name="ruc_ci" class="input input-bordered" required>
+                    </div>
+
+                    <!-- Teléfono -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Teléfono</span>
+                        </label>
+                        <input type="tel" name="telefono" class="input input-bordered">
+                    </div>
+
+                    <!-- Email -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Email</span>
+                        </label>
+                        <input type="email" name="email" class="input input-bordered">
+                    </div>
+
+                    <!-- Tipo Cliente -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Tipo de Cliente *</span>
+                        </label>
+                        <select name="id_tipo_cliente" class="select select-bordered" required>
+                            <option value="">Seleccione...</option>
+                            {% for tipo in tipos_cliente %}
+                            <option value="{{ tipo.id_tipo_cliente }}">{{ tipo.descripcion }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Lista de Precios -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Lista de Precios *</span>
+                        </label>
+                        <select name="id_lista" class="select select-bordered" required>
+                            <option value="">Seleccione...</option>
+                            {% for lista in listas_precios %}
+                            <option value="{{ lista.id_lista }}">{{ lista.nombre_lista }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Botones -->
+                <div class="card-actions justify-end mt-6">
+                    <a href="{% url 'pos:gestionar_clientes' %}" class="btn btn-ghost">
+                        <i class="fas fa-times mr-2"></i>
+                        Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save mr-2"></i>
+                        Guardar Cliente
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

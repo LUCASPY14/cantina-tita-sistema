@@ -40,14 +40,10 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # Django Debug Toolbar
-INTERNAL_IPS = [
-    '127.0.0.1',
-    'localhost',
-    '192.168.100.10',
-]
 
-
-# Application definition
+# =============================================================================
+# APLICACIONES INSTALADAS
+# =============================================================================
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -57,18 +53,71 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
-    # Third party apps
     'rest_framework',
     'rest_framework_simplejwt',
     'drf_yasg',
-    'drf_spectacular',  # Documentación OpenAPI 3.0
+    'drf_spectacular',
     'django_filters',
     'corsheaders',
     'debug_toolbar',
     'django_recaptcha',
-    # Local apps
     'gestion',
+    'pos',
 ]
+# Django core apps: admin, auth, contenttypes, sessions, messages, staticfiles, humanize
+# Third-party apps: rest_framework, rest_framework_simplejwt, drf_yasg, drf_spectacular, django_filters, corsheaders, debug_toolbar, django_recaptcha
+# Local apps: gestion, pos
+# =============================================================================
+# MIDDLEWARE CONFIGURATION
+# =============================================================================
+
+MIDDLEWARE = [
+    # Django core security middleware
+    'django.middleware.security.SecurityMiddleware',
+    # Django session middleware (REQUERIDO para admin)
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    # CORS middleware (debe estar antes de CommonMiddleware)
+    'corsheaders.middleware.CorsMiddleware',
+    # Django common middleware
+    'django.middleware.common.CommonMiddleware',
+    # CSRF protection middleware
+    'django.middleware.csrf.CsrfViewMiddleware',
+    # Django authentication middleware (REQUERIDO para admin)
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # Django messages middleware (REQUERIDO para admin)
+    'django.contrib.messages.middleware.MessageMiddleware',
+    # Clickjacking protection
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Debug toolbar (solo en modo DEBUG)
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
+]
+# =============================================================================
+# DEBUG TOOLBAR CONFIGURATION
+# =============================================================================
+
+# Debug toolbar settings (solo en desarrollo)
+if DEBUG:
+    # Mostrar debug toolbar solo para IPs internas
+    DEBUG_TOOLBAR_CONFIG = {
+        'SHOW_TOOLBAR_CALLBACK': lambda request: True,
+    }
+    # Paneles personalizados del debug toolbar
+    DEBUG_TOOLBAR_PANELS = [
+        'debug_toolbar.panels.history.HistoryPanel',
+        'debug_toolbar.panels.versions.VersionsPanel',
+        'debug_toolbar.panels.timer.TimerPanel',
+        'debug_toolbar.panels.settings.SettingsPanel',
+        'debug_toolbar.panels.headers.HeadersPanel',
+        'debug_toolbar.panels.request.RequestPanel',
+        'debug_toolbar.panels.sql.SQLPanel',
+        'debug_toolbar.panels.staticfiles.StaticFilesPanel',
+        'debug_toolbar.panels.templates.TemplatesPanel',
+        'debug_toolbar.panels.cache.CachePanel',
+        'debug_toolbar.panels.signals.SignalsPanel',
+        'debug_toolbar.panels.logging.LoggingPanel',
+        'debug_toolbar.panels.redirects.RedirectsPanel',
+    ]
+
 
 # Authentication backends
 # Se usa un backend personalizado para autenticar empleados contra la tabla empleados
@@ -77,41 +126,51 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',  # Backend por defecto de Django
 ]
 
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # CORS debe ir antes de CommonMiddleware
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
-]
+# Configuración de templates
 
-ROOT_URLCONF = 'cantina_project.urls'
-
+# =============================================================================
+# CONFIGURACIÓN DE TEMPLATES - ESTRUCTURA PROFESIONAL
+# =============================================================================
+# Nueva estructura profesional implementada:
+# templates/
+# ├── base/           - Templates base del sistema
+# ├── shared/         - Componentes reutilizables
+# ├── apps/           - Templates por aplicación (pos, gestion, portal, auth)
+# └── pages/          - Páginas principales y dashboards
+# 
+# Esta estructura mejora la organización, mantenibilidad y reutilización
+# =============================================================================
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
+        'DIRS': [
+            BASE_DIR / 'templates',  # Solo templates globales
+        ],
+        'APP_DIRS': True,  # IMPORTANTE: True para buscar en app/templates/
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'gestion.context_processors.rol_usuario',
             ],
         },
     },
 ]
 
+
 WSGI_APPLICATION = 'cantina_project.wsgi.application'
+
+# Configuración de rutas principales
+ROOT_URLCONF = 'cantina_project.urls'
 
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+
+# =============================================================================
+# CONFIGURACIÓN DE BASE DE DATOS
+# =============================================================================
 
 DATABASES = {
     'default': {

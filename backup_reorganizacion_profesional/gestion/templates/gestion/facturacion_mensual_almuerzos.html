@@ -1,0 +1,379 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Facturación Mensual de Almuerzos{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6" x-data="facturacionAlmuerzos()">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">
+            <i class="fas fa-file-invoice-dollar text-blue-500 mr-2"></i>
+            Facturación Mensual de Almuerzos
+        </h1>
+        <p class="text-gray-600 mt-2">Genera y consulta la facturación mensual automática</p>
+    </div>
+
+    <!-- Selector de Mes y Año -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="card bg-base-100 shadow-md">
+            <div class="card-body">
+                <h3 class="font-semibold mb-2">Seleccionar Período</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Mes</span>
+                        </label>
+                        <select x-model="mesSeleccionado" @change="cargarFacturacion()" class="select select-bordered">
+                            <option value="1">Enero</option>
+                            <option value="2">Febrero</option>
+                            <option value="3">Marzo</option>
+                            <option value="4">Abril</option>
+                            <option value="5">Mayo</option>
+                            <option value="6">Junio</option>
+                            <option value="7">Julio</option>
+                            <option value="8">Agosto</option>
+                            <option value="9">Septiembre</option>
+                            <option value="10">Octubre</option>
+                            <option value="11">Noviembre</option>
+                            <option value="12">Diciembre</option>
+                        </select>
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Año</span>
+                        </label>
+                        <select x-model="anioSeleccionado" @change="cargarFacturacion()" class="select select-bordered">
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                            <option value="2026">2026</option>
+                        </select>
+                    </div>
+                </div>
+                <button @click="seleccionarMesActual()" class="btn btn-sm btn-outline mt-2">
+                    <i class="fas fa-calendar mr-2"></i>Mes Actual
+                </button>
+            </div>
+        </div>
+
+        <div class="stats shadow">
+            <div class="stat">
+                <div class="stat-figure text-primary">
+                    <i class="fas fa-receipt text-3xl"></i>
+                </div>
+                <div class="stat-title">Total Facturado</div>
+                <div class="stat-value text-primary">${{ estadisticas.total_facturado|floatformat:0 }}</div>
+                <div class="stat-desc" x-text="mesNombre + ' ' + anioSeleccionado"></div>
+            </div>
+        </div>
+
+        <div class="stats shadow">
+            <div class="stat">
+                <div class="stat-figure text-success">
+                    <i class="fas fa-users text-3xl"></i>
+                </div>
+                <div class="stat-title">Suscripciones Facturadas</div>
+                <div class="stat-value text-success">{{ estadisticas.total_suscripciones }}</div>
+                <div class="stat-desc">En el período</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones de Facturación -->
+    <div class="card bg-base-100 shadow-md mb-6">
+        <div class="card-body">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="text-xl font-bold">Generar Facturación</h3>
+                    <p class="text-sm text-gray-600 mt-1">
+                        Genera automáticamente los cargos mensuales según el consumo registrado
+                    </p>
+                </div>
+                <button @click="generarFacturacion()" 
+                        class="btn btn-primary" 
+                        :disabled="generando || yaFacturado">
+                    <span x-show="!generando">
+                        <i class="fas fa-magic mr-2"></i>Generar Facturación
+                    </span>
+                    <span x-show="generando" class="loading loading-spinner"></span>
+                </button>
+            </div>
+
+            <div x-show="yaFacturado" class="alert alert-info mt-4">
+                <i class="fas fa-check-circle"></i>
+                <span>La facturación para este período ya fue generada.</span>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Opciones de Facturación -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="form-control">
+                    <label class="label cursor-pointer">
+                        <span class="label-text">Solo suscripciones activas</span>
+                        <input type="checkbox" x-model="opciones.soloActivas" class="toggle toggle-primary" checked />
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer">
+                        <span class="label-text">Incluir días consumidos</span>
+                        <input type="checkbox" x-model="opciones.incluirConsumos" class="toggle toggle-primary" checked />
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer">
+                        <span class="label-text">Cargar a cuenta corriente</span>
+                        <input type="checkbox" x-model="opciones.cargarCtaCte" class="toggle toggle-primary" checked />
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs de Contenido -->
+    <div role="tablist" class="tabs tabs-lifted mb-4">
+        <input type="radio" name="facturacion_tabs" role="tab" class="tab" aria-label="Facturación Actual" checked />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+            <h2 class="text-xl font-bold mb-4">Facturación del Período</h2>
+            <div class="overflow-x-auto">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr>
+                            <th>Estudiante</th>
+                            <th>Plan</th>
+                            <th>Monto</th>
+                            <th>Fecha Pago</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pago in pagos_mes %}
+                        <tr>
+                            <td>
+                                <div class="font-bold">{{ pago.id_suscripcion.id_hijo.nombres }} {{ pago.id_suscripcion.id_hijo.apellidos }}</div>
+                                <div class="text-sm opacity-50">{{ pago.id_suscripcion.id_hijo.grado }}</div>
+                            </td>
+                            <td>
+                                <div class="font-semibold">{{ pago.id_suscripcion.id_plan_almuerzo.nombre_plan }}</div>
+                                <div class="text-xs opacity-70">${{ pago.id_suscripcion.id_plan_almuerzo.precio_mensual|floatformat:0 }}/mes</div>
+                            </td>
+                            <td class="font-bold text-lg">${{ pago.monto_pagado|floatformat:0 }}</td>
+                            <td>{{ pago.fecha_pago|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                {% if pago.estado == 'Pagado' %}
+                                <span class="badge badge-success gap-2">
+                                    <i class="fas fa-check"></i> Pagado
+                                </span>
+                                {% elif pago.estado == 'Pendiente' %}
+                                <span class="badge badge-warning gap-2">
+                                    <i class="fas fa-clock"></i> Pendiente
+                                </span>
+                                {% else %}
+                                <span class="badge badge-error gap-2">
+                                    <i class="fas fa-times"></i> Vencido
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="dropdown dropdown-end">
+                                    <label tabindex="0" class="btn btn-sm btn-ghost">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </label>
+                                    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                                        <li><a @click="verDetalle({{ pago.id_pago_almuerzo_mensual }})">
+                                            <i class="fas fa-eye"></i> Ver Detalle
+                                        </a></li>
+                                        <li><a @click="marcarPagado({{ pago.id_pago_almuerzo_mensual }})">
+                                            <i class="fas fa-check text-success"></i> Marcar Pagado
+                                        </a></li>
+                                        <li><a @click="enviarRecordatorio({{ pago.id_pago_almuerzo_mensual }})">
+                                            <i class="fas fa-paper-plane text-info"></i> Enviar Recordatorio
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-gray-500 py-8">
+                                <i class="fas fa-inbox text-4xl mb-2 block"></i>
+                                No hay facturación generada para este período
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <input type="radio" name="facturacion_tabs" role="tab" class="tab" aria-label="Resumen por Plan" />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+            <h2 class="text-xl font-bold mb-4">Resumen por Plan</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for resumen in resumen_por_plan %}
+                <div class="card bg-gradient-to-br from-blue-50 to-blue-100 shadow">
+                    <div class="card-body">
+                        <h3 class="card-title">{{ resumen.plan }}</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Suscripciones:</span>
+                                <span class="font-bold">{{ resumen.cantidad }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Total Consumos:</span>
+                                <span class="font-bold">{{ resumen.total_consumos }}</span>
+                            </div>
+                            <div class="divider my-1"></div>
+                            <div class="flex justify-between text-lg">
+                                <span class="font-semibold">Total:</span>
+                                <span class="font-bold text-primary">${{ resumen.total|floatformat:0 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-span-3 text-center text-gray-500">
+                    No hay datos disponibles
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <input type="radio" name="facturacion_tabs" role="tab" class="tab" aria-label="Histórico" />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+            <h2 class="text-xl font-bold mb-4">Histórico de Facturación</h2>
+            <div class="overflow-x-auto">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Período</th>
+                            <th>Suscripciones</th>
+                            <th>Total Facturado</th>
+                            <th>Total Pagado</th>
+                            <th>Pendiente</th>
+                            <th>Tasa Cobro</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for hist in historico %}
+                        <tr>
+                            <td class="font-semibold">{{ hist.mes }}/{{ hist.anio }}</td>
+                            <td>{{ hist.suscripciones }}</td>
+                            <td class="font-bold">${{ hist.total_facturado|floatformat:0 }}</td>
+                            <td class="text-success">${{ hist.total_pagado|floatformat:0 }}</td>
+                            <td class="text-warning">${{ hist.pendiente|floatformat:0 }}</td>
+                            <td>
+                                <progress class="progress progress-success w-20" 
+                                          value="{{ hist.tasa_cobro }}" max="100"></progress>
+                                <span class="ml-2 text-sm">{{ hist.tasa_cobro|floatformat:0 }}%</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-gray-500">No hay histórico disponible</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function facturacionAlmuerzos() {
+    return {
+        mesSeleccionado: new Date().getMonth() + 1,
+        anioSeleccionado: new Date().getFullYear(),
+        generando: false,
+        yaFacturado: {{ ya_facturado|yesno:'true,false' }},
+        opciones: {
+            soloActivas: true,
+            incluirConsumos: true,
+            cargarCtaCte: true
+        },
+
+        get mesNombre() {
+            const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                           'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            return meses[this.mesSeleccionado - 1];
+        },
+
+        seleccionarMesActual() {
+            this.mesSeleccionado = new Date().getMonth() + 1;
+            this.anioSeleccionado = new Date().getFullYear();
+            this.cargarFacturacion();
+        },
+
+        cargarFacturacion() {
+            const params = new URLSearchParams({
+                mes: this.mesSeleccionado,
+                anio: this.anioSeleccionado
+            });
+            window.location.href = '{% url "facturacion_mensual_almuerzos" %}?' + params.toString();
+        },
+
+        async generarFacturacion() {
+            if (!confirm(`¿Generar la facturación para ${this.mesNombre} ${this.anioSeleccionado}?\n\nEsto creará cargos automáticos para todas las suscripciones activas.`)) {
+                return;
+            }
+
+            this.generando = true;
+
+            try {
+                const response = await fetch('{% url "generar_facturacion_mensual" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({
+                        mes: this.mesSeleccionado,
+                        anio: this.anioSeleccionado,
+                        opciones: this.opciones
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`Facturación generada exitosamente.\n\n` +
+                          `Suscripciones procesadas: ${data.procesadas}\n` +
+                          `Total facturado: $${data.total_facturado}`);
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo generar la facturación'));
+                }
+            } catch (error) {
+                alert('Error de conexión');
+                console.error(error);
+            } finally {
+                this.generando = false;
+            }
+        },
+
+        async marcarPagado(pagoId) {
+            if (!confirm('¿Marcar este pago como pagado?')) return;
+
+            try {
+                // Implementar endpoint para marcar como pagado
+                alert('Función en desarrollo');
+            } catch (error) {
+                alert('Error al marcar como pagado');
+            }
+        },
+
+        verDetalle(pagoId) {
+            // Implementar modal con detalle del pago
+            alert('Vista de detalle en desarrollo');
+        },
+
+        enviarRecordatorio(pagoId) {
+            // Implementar envío de recordatorio
+            alert('Función de recordatorio en desarrollo');
+        }
+    }
+}
+</script>
+{% endblock %}

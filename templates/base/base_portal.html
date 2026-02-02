@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Portal de Padres - Cantina Tita{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <div class="navbar bg-primary text-primary-content">
+        <div class="flex-1">
+            <a href="{% url 'gestion:portal_dashboard' %}" class="btn btn-ghost normal-case text-xl">
+                🏪 Cantina Tita
+            </a>
+        </div>
+        <div class="flex-none gap-2">
+            <div class="dropdown dropdown-end">
+                <label tabindex="0" class="btn btn-ghost btn-circle avatar placeholder">
+                    <div class="bg-neutral-focus text-neutral-content rounded-full w-10">
+                        <span class="text-xl">{{ usuario.email.0|upper }}</span>
+                    </div>
+                </label>
+                <ul tabindex="0" class="mt-3 p-2 shadow menu menu-compact dropdown-content bg-base-100 text-base-content rounded-box w-52">
+                    <li class="menu-title">
+                        <span>{{ usuario.email }}</span>
+                    </li>
+                    <li><a href="{% url 'gestion:portal_dashboard' %}">🏠 Dashboard</a></li>
+                    <li><a href="{% url 'gestion:portal_mis_hijos' %}">👨‍👩‍👧‍👦 Mis Hijos</a></li>
+                    <li><a href="{% url 'gestion:portal_perfil' %}">⚙️ Perfil</a></li>
+                    <li><a href="{% url 'gestion:portal_logout' %}">🚪 Cerrar Sesión</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Breadcrumb (opcional) -->
+    {% block breadcrumb %}{% endblock %}
+
+    <!-- Contenido principal -->
+    <main class="min-h-screen bg-base-200">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer footer-center p-10 bg-primary text-primary-content">
+        <div>
+            <p class="font-bold">
+                Cantina Tita - Portal de Padres
+            </p>
+            <p>Sistema de gestión de saldo y consumos</p>
+            <p>© 2025 - Todos los derechos reservados</p>
+        </div>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

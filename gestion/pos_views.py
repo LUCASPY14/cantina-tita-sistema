@@ -1027,7 +1027,7 @@ def dashboard_view(request):
         stock_actual_val=F('stock__stock_actual')
     ).filter(
         stock_actual_val__lt=F('stock_minimo')
-    ).select_related('id_categoria', 'stock', 'id_unidad_de_medida').annotate(
+    ).select_related('id_categoria', 'stock', 'id_unidad_medida').annotate(
         stock_actual=F('stock__stock_actual')
     ).order_by('stock__stock_actual')[:10]
     
@@ -2673,7 +2673,7 @@ def inventario_productos(request):
     
     # Query base
     productos = Producto.objects.filter(activo=True).select_related(
-        'id_categoria', 'id_unidad_de_medida', 'stock'
+        'id_categoria', 'id_unidad_medida', 'stock'
     ).annotate(
         stock_actual_val=F('stock__stock_actual')
     )
@@ -2721,7 +2721,7 @@ def kardex_producto(request, producto_id):
     """Kardex completo de un producto (historial de movimientos)"""
     try:
         producto = Producto.objects.select_related(
-            'id_categoria', 'id_unidad_de_medida', 'stock'
+            'id_categoria', 'id_unidad_medida', 'stock'
         ).get(id_producto=producto_id)
         
         # Obtener fechas del filtro
@@ -2805,10 +2805,10 @@ def ajuste_inventario_view(request):
             # Aplicar ajuste
             if tipo_ajuste == 'suma':
                 stock.stock_actual = F('stock_actual') + cantidad
-                descripcion_movimiento = f'Ajuste de inventario: +{cantidad} {producto.id_unidad_de_medida.abreviatura}'
+                descripcion_movimiento = f'Ajuste de inventario: +{cantidad} {producto.id_unidad_medida.abreviatura}'
             elif tipo_ajuste == 'resta':
                 stock.stock_actual = F('stock_actual') - cantidad
-                descripcion_movimiento = f'Ajuste de inventario: -{cantidad} {producto.id_unidad_de_medida.abreviatura}'
+                descripcion_movimiento = f'Ajuste de inventario: -{cantidad} {producto.id_unidad_medida.abreviatura}'
             else:
                 return JsonResponse({
                     'success': False,
@@ -2826,7 +2826,7 @@ def ajuste_inventario_view(request):
                 'stock_anterior': float(stock_anterior),
                 'cantidad_ajuste': float(cantidad),
                 'stock_nuevo': float(stock.stock_actual),
-                'mensaje': f'Ajuste realizado. Nuevo stock: {stock.stock_actual} {producto.id_unidad_de_medida.abreviatura}'
+                'mensaje': f'Ajuste realizado. Nuevo stock: {stock.stock_actual} {producto.id_unidad_medida.abreviatura}'
             })
             
         except Producto.DoesNotExist:
@@ -2842,7 +2842,7 @@ def ajuste_inventario_view(request):
     
     # GET - Mostrar formulario
     productos = Producto.objects.filter(activo=True).select_related(
-        'id_categoria', 'id_unidad_de_medida', 'stock'
+        'id_categoria', 'id_unidad_medida', 'stock'
     ).order_by('descripcion')
     
     context = {
@@ -2864,13 +2864,13 @@ def alertas_inventario(request):
         stock_actual_val=F('stock__stock_actual')
     ).filter(
         stock_actual_val__lt=F('stock_minimo')
-    ).select_related('id_categoria', 'stock', 'id_unidad_de_medida')
+    ).select_related('id_categoria', 'stock', 'id_unidad_medida')
     
     # Productos sin stock
     productos_sin_stock = Producto.objects.filter(
         activo=True,
         stock__stock_actual__lte=0
-    ).select_related('id_categoria', 'stock', 'id_unidad_de_medida')
+    ).select_related('id_categoria', 'stock', 'id_unidad_medida')
     
     # Productos críticos (menos del 50% del stock mínimo)
     productos_criticos = Producto.objects.filter(
@@ -2880,7 +2880,7 @@ def alertas_inventario(request):
         stock_actual_val=F('stock__stock_actual')
     ).filter(
         stock_actual_val__lt=F('stock_minimo') * 0.5
-    ).select_related('id_categoria', 'stock', 'id_unidad_de_medida')
+    ).select_related('id_categoria', 'stock', 'id_unidad_medida')
     
     context = {
         'productos_stock_bajo': productos_stock_bajo,

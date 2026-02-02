@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block titulo %}Configurar 2FA{% endblock %}
+
+{% block contenido %}
+<div class="container mx-auto px-4 py-8 max-w-2xl">
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title text-2xl">🔐 Configurar Autenticación de Dos Factores (2FA)</h2>
+            
+            {% if paso == 'generar' %}
+                <!-- Paso 1: Mostrar código QR y códigos de respaldo -->
+                <div class="alert alert-info mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <div>
+                        <h3 class="font-bold">¿Qué es 2FA?</h3>
+                        <p class="text-sm">La autenticación de dos factores agrega una capa extra de seguridad a tu cuenta. Necesitarás tu contraseña Y un código temporal desde tu teléfono.</p>
+                    </div>
+                </div>
+
+                <div class="divider">Paso 1: Escanea el código QR</div>
+
+                <div class="text-center mb-6">
+                    <p class="mb-4">Usa una aplicación como <strong>Google Authenticator</strong>, <strong>Microsoft Authenticator</strong>, o <strong>Authy</strong> para escanear este código QR:</p>
+                    <div class="flex justify-center">
+                        <img src="{{ qr_code_data }}" alt="QR Code" class="border-4 border-base-300 rounded-lg">
+                    </div>
+                    <p class="text-sm text-gray-600 mt-4">O ingresa manualmente esta clave:</p>
+                    <div class="mockup-code text-left max-w-md mx-auto mt-2">
+                        <pre><code>{{ secret_key }}</code></pre>
+                    </div>
+                </div>
+
+                <div class="divider">Paso 2: Guarda los códigos de respaldo</div>
+
+                <div class="alert alert-warning mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    <div>
+                        <h4 class="font-bold">¡IMPORTANTE!</h4>
+                        <p class="text-sm">Guarda estos códigos en un lugar seguro. Cada código solo se puede usar una vez y te permitirán acceder si pierdes tu teléfono.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 mb-6">
+                    {% for codigo in backup_codes %}
+                    <div class="bg-base-200 p-3 rounded font-mono text-center">
+                        {{ codigo }}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <button onclick="imprimirCodigos()" class="btn btn-outline btn-sm mb-4">
+                    🖨️ Imprimir Códigos
+                </button>
+
+                <div class="divider">Paso 3: Verifica la configuración</div>
+
+                <form method="post" action="{% url 'clientes:activar_2fa' %}">
+                    {% csrf_token %}
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Ingresa el código de 6 dígitos de tu aplicación para activar 2FA:</span>
+                        </label>
+                        <input type="text" name="codigo" maxlength="6" pattern="[0-9]{6}" 
+                               class="input input-bordered input-lg text-center text-2xl tracking-widest" 
+                               placeholder="000000" required autofocus>
+                    </div>
+                    <div class="card-actions justify-end mt-6">
+                        <a href="{% url 'clientes:portal_dashboard' %}" class="btn btn-ghost">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">✅ Activar 2FA</button>
+                    </div>
+                </form>
+
+            {% elif paso == 'ya_activo' %}
+                <!-- 2FA ya está activo -->
+                <div class="alert alert-success">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <div>
+                        <h3 class="font-bold">2FA ya está activo</h3>
+                        <p>Tu cuenta ya tiene autenticación de dos factores habilitada.</p>
+                    </div>
+                </div>
+
+                <div class="card-actions justify-end mt-6">
+                    <a href="{% url 'clientes:portal_dashboard' %}" class="btn btn-primary">Volver al Inicio</a>
+                    <form method="post" action="{% url 'clientes:deshabilitar_2fa' %}" class="inline" onsubmit="return confirm('¿Estás seguro que deseas deshabilitar 2FA? Tu cuenta será menos segura.')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-error">🔓 Deshabilitar 2FA</button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function imprimirCodigos() {
+    window.print();
+}
+</script>
+
+<style>
+@media print {
+    .btn, .divider, .alert-info, form, nav, footer {
+        display: none !important;
+    }
+    .alert-warning {
+        border: 2px solid #000;
+    }
+}
+</style>
+{% endblock %}

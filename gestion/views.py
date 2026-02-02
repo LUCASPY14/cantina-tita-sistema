@@ -602,7 +602,7 @@ def exportar_productos_csv(request):
     
     # Filtrar productos
     productos = Producto.objects.select_related(
-        'id_categoria', 'id_unidad_de_medida', 'id_impuesto', 'stock'
+        'id_categoria', 'id_unidad_medida', 'id_impuesto', 'stock'
     ).filter(activo=True)
     
     if busqueda:
@@ -629,7 +629,7 @@ def exportar_productos_csv(request):
             p.codigo_barra or '',
             p.descripcion,
             p.id_categoria.nombre,
-            p.id_unidad_de_medida.nombre,
+            p.id_unidad_medida.nombre,
             p.id_impuesto.descripcion,
             p.stock.stock_actual if hasattr(p, 'stock') else 0,
             p.stock_minimo or 0,
@@ -651,7 +651,7 @@ def exportar_productos_excel(request):
     
     # Filtrar productos
     productos = Producto.objects.select_related(
-        'id_categoria', 'id_unidad_de_medida', 'id_impuesto', 'stock'
+        'id_categoria', 'id_unidad_medida', 'id_impuesto', 'stock'
     ).filter(activo=True)
     
     if busqueda:
@@ -688,7 +688,7 @@ def exportar_productos_excel(request):
         ws.cell(row=row, column=1, value=p.codigo_barra or '')
         ws.cell(row=row, column=2, value=p.descripcion)
         ws.cell(row=row, column=3, value=p.id_categoria.nombre)
-        ws.cell(row=row, column=4, value=p.id_unidad_de_medida.nombre)
+        ws.cell(row=row, column=4, value=p.id_unidad_medida.nombre)
         ws.cell(row=row, column=5, value=p.id_impuesto.descripcion)
         ws.cell(row=row, column=6, value=float(p.stock.stock_actual) if hasattr(p, 'stock') else 0)
         ws.cell(row=row, column=7, value=float(p.stock_minimo) if p.stock_minimo else 0)
@@ -790,7 +790,7 @@ def _importar_productos_batch(datos, usuario):
                     codigo_barra=fila.get('codigo_barra', '').strip() or None,
                     descripcion=fila.get('descripcion', '').strip(),
                     id_categoria=categoria,
-                    id_unidad_de_medida=unidad,
+                    id_unidad_medida=unidad,
                     id_impuesto=impuesto,
                     stock_minimo=Decimal(str(fila.get('stock_minimo', 0) or 0)),
                     permite_stock_negativo=fila.get('activo', '').lower() in ['si', 'sí', 'yes', '1', 'true'],

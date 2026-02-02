@@ -175,12 +175,12 @@ class AuditoriaSeguridad:
         
         db_config = settings.DATABASES['default']
         
-        # Verificar que no use SQLite en producción
+        # Verificar que use MySQL en producción
         self.verificar(
             "Motor de base de datos",
-            'sqlite' not in db_config['ENGINE'].lower() or settings.DEBUG,
-            f"Usando: {db_config['ENGINE']} (apropiado para producción)",
-            "Usando SQLite en producción. Recomendado: MySQL/PostgreSQL",
+            'mysql' in db_config['ENGINE'].lower(),
+            f"Usando: {db_config['ENGINE']} (MySQL configurado correctamente)",
+            "Se requiere MySQL como motor de base de datos",
             critico=False
         )
         

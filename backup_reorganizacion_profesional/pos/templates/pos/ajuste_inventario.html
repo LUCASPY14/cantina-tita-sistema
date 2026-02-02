@@ -1,0 +1,281 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ajuste de Inventario{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6" x-data="ajusteInventarioApp()">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold">⚙️ Ajuste de Inventario</h1>
+            <p class="text-base-content/70">Corrección manual de stock</p>
+        </div>
+        
+        <a href="{% url 'pos:inventario_dashboard' %}" class="btn btn-ghost">
+            ← Dashboard
+        </a>
+    </div>
+
+    <!-- Formulario de Ajuste -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title mb-4">Datos del Ajuste</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Selección de Producto -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Producto *</span>
+                    </label>
+                    <select x-model="productoSeleccionado" 
+                            @change="cargarProducto()"
+                            class="select select-bordered">
+                        <option value="">Seleccionar producto...</option>
+                        {% for prod in productos %}
+                        <option value="{{ prod.id_producto }}"
+                                data-codigo="{{ prod.codigo }}"
+                                data-descripcion="{{ prod.descripcion }}"
+                                data-stock="{{ prod.stock.stock_actual|default:0 }}"
+                                data-unidad="{{ prod.id_unidad.simbolo }}">
+                            {{ prod.codigo }} - {{ prod.descripcion }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Tipo de Ajuste -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Tipo de Ajuste *</span>
+                    </label>
+                    <select x-model="tipoAjuste" class="select select-bordered">
+                        <option value="">Seleccionar...</option>
+                        <option value="suma">➕ Sumar al stock</option>
+                        <option value="resta">➖ Restar del stock</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Info del Producto Seleccionado -->
+            <div x-show="productoSeleccionado" class="alert alert-info mt-4">
+                <div class="flex flex-col gap-2 w-full">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <p class="text-xs opacity-70">Código</p>
+                            <p class="font-mono font-bold" x-text="productoInfo.codigo"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs opacity-70">Descripción</p>
+                            <p class="font-bold" x-text="productoInfo.descripcion"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs opacity-70">Stock Actual</p>
+                            <p class="text-2xl font-bold" x-text="productoInfo.stock + ' ' + productoInfo.unidad"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cantidad y Motivo -->
+            <div x-show="productoSeleccionado && tipoAjuste" class="grid grid-cols-1 gap-4 mt-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Cantidad *</span>
+                    </label>
+                    <input type="number" 
+                           x-model.number="cantidad"
+                           @input="calcularNuevoStock()"
+                           min="0.01"
+                           step="0.01"
+                           placeholder="Ingrese la cantidad..."
+                           class="input input-bordered">
+                </div>
+
+                <!-- Preview del Cambio -->
+                <div x-show="cantidad > 0" class="alert alert-warning">
+                    <div class="flex justify-between w-full items-center">
+                        <div>
+                            <p class="font-bold">Vista Previa del Ajuste</p>
+                            <p class="text-sm">
+                                Stock actual: <strong x-text="productoInfo.stock"></strong>
+                                <span x-show="tipoAjuste === 'suma'">
+                                    + <strong x-text="cantidad"></strong>
+                                </span>
+                                <span x-show="tipoAjuste === 'resta'">
+                                    - <strong x-text="cantidad"></strong>
+                                </span>
+                                = <strong x-text="nuevoStock"></strong>
+                                <span x-text="productoInfo.unidad"></span>
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs opacity-70">Nuevo Stock</p>
+                            <p class="text-3xl font-bold" 
+                               :class="nuevoStock < 0 ? 'text-error' : 'text-success'"
+                               x-text="nuevoStock + ' ' + productoInfo.unidad">
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Motivo / Justificación *</span>
+                    </label>
+                    <textarea x-model="motivo"
+                              class="textarea textarea-bordered h-24"
+                              placeholder="Describa el motivo del ajuste..."></textarea>
+                    <label class="label">
+                        <span class="label-text-alt">Mínimo 10 caracteres</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Botones -->
+            <div class="card-actions justify-end mt-6">
+                <button type="button" 
+                        @click="window.location.href='{% url 'pos:inventario_dashboard' %}'"
+                        class="btn btn-ghost">
+                    Cancelar
+                </button>
+                <button type="button"
+                        @click="realizarAjuste()"
+                        :disabled="!puedeGuardar()"
+                        class="btn btn-primary">
+                    <span x-show="!guardando">💾 Realizar Ajuste</span>
+                    <span x-show="guardando" class="loading loading-spinner"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notificación -->
+    <div x-show="notificacion.mostrar" 
+         x-transition
+         class="toast toast-top toast-end">
+        <div class="alert"
+             :class="{
+                'alert-success': notificacion.tipo === 'success',
+                'alert-error': notificacion.tipo === 'error'
+             }">
+            <span x-text="notificacion.mensaje"></span>
+        </div>
+    </div>
+</div>
+
+<script>
+function ajusteInventarioApp() {
+    return {
+        productoSeleccionado: '',
+        productoInfo: {
+            codigo: '',
+            descripcion: '',
+            stock: 0,
+            unidad: ''
+        },
+        tipoAjuste: '',
+        cantidad: 0,
+        nuevoStock: 0,
+        motivo: '',
+        guardando: false,
+        notificacion: {
+            mostrar: false,
+            tipo: '',
+            mensaje: ''
+        },
+        
+        cargarProducto() {
+            const select = document.querySelector('select[x-model="productoSeleccionado"]');
+            const option = select.options[select.selectedIndex];
+            
+            if (option.value) {
+                this.productoInfo = {
+                    codigo: option.dataset.codigo,
+                    descripcion: option.dataset.descripcion,
+                    stock: parseFloat(option.dataset.stock),
+                    unidad: option.dataset.unidad
+                };
+                this.cantidad = 0;
+                this.nuevoStock = this.productoInfo.stock;
+            }
+        },
+        
+        calcularNuevoStock() {
+            if (this.tipoAjuste === 'suma') {
+                this.nuevoStock = this.productoInfo.stock + this.cantidad;
+            } else if (this.tipoAjuste === 'resta') {
+                this.nuevoStock = this.productoInfo.stock - this.cantidad;
+            }
+        },
+        
+        puedeGuardar() {
+            return this.productoSeleccionado && 
+                   this.tipoAjuste && 
+                   this.cantidad > 0 && 
+                   this.motivo.length >= 10 &&
+                   !this.guardando;
+        },
+        
+        async realizarAjuste() {
+            if (!this.puedeGuardar()) return;
+            
+            // Confirmar si el stock quedará negativo
+            if (this.nuevoStock < 0) {
+                if (!confirm('⚠️ El stock quedará NEGATIVO. ¿Está seguro de continuar?')) {
+                    return;
+                }
+            }
+            
+            this.guardando = true;
+            
+            try {
+                const response = await fetch('{% url "pos:ajuste_inventario" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({
+                        producto_id: this.productoSeleccionado,
+                        tipo_ajuste: this.tipoAjuste,
+                        cantidad: this.cantidad,
+                        motivo: this.motivo
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.showNotification('success', data.mensaje);
+                    
+                    // Resetear formulario después de 2 segundos
+                    setTimeout(() => {
+                        window.location.href = '{% url "pos:inventario_dashboard" %}';
+                    }, 2000);
+                } else {
+                    this.showNotification('error', data.error || 'Error al realizar el ajuste');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                this.showNotification('error', 'Error de conexión');
+            } finally {
+                this.guardando = false;
+            }
+        },
+        
+        showNotification(tipo, mensaje) {
+            this.notificacion = {
+                mostrar: true,
+                tipo: tipo,
+                mensaje: mensaje
+            };
+            
+            setTimeout(() => {
+                this.notificacion.mostrar = false;
+            }, 5000);
+        }
+    }
+}
+</script>
+{% endblock %}

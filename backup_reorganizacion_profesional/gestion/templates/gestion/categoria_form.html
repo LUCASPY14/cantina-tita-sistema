@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ titulo }} - Sistema de Gestión{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Breadcrumb -->
+    <div class="text-sm breadcrumbs mb-4">
+        <ul>
+            <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li><a href="{% url url_cancelar %}">Categorías</a></li>
+            <li>{{ titulo }}</li>
+        </ul>
+    </div>
+
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold">
+            <i class="fas fa-folder mr-2"></i>{{ titulo }}
+        </h1>
+    </div>
+
+    <!-- Formulario -->
+    <form method="post" class="max-w-2xl">
+        {% csrf_token %}
+        
+        <!-- Mensajes de error generales -->
+        {% if form.non_field_errors %}
+        <div class="alert alert-error mb-6">
+            <i class="fas fa-exclamation-circle"></i>
+            <div>
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="bg-base-200 rounded-lg p-6">
+            <!-- Nombre -->
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text font-semibold">
+                        {{ form.nombre.label }}
+                        <span class="text-error">*</span>
+                    </span>
+                </label>
+                {{ form.nombre }}
+                {% if form.nombre.help_text %}
+                    <label class="label">
+                        <span class="label-text-alt">{{ form.nombre.help_text }}</span>
+                    </label>
+                {% endif %}
+                {% if form.nombre.errors %}
+                    <label class="label">
+                        <span class="label-text-alt text-error">
+                            {{ form.nombre.errors.0 }}
+                        </span>
+                    </label>
+                {% endif %}
+            </div>
+
+            <!-- Categoría Padre -->
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text font-semibold">
+                        {{ form.id_categoria_padre.label }}
+                    </span>
+                </label>
+                {{ form.id_categoria_padre }}
+                {% if form.id_categoria_padre.help_text %}
+                    <label class="label">
+                        <span class="label-text-alt">{{ form.id_categoria_padre.help_text }}</span>
+                    </label>
+                {% endif %}
+                {% if form.id_categoria_padre.errors %}
+                    <label class="label">
+                        <span class="label-text-alt text-error">
+                            {{ form.id_categoria_padre.errors.0 }}
+                        </span>
+                    </label>
+                {% endif %}
+            </div>
+
+            <!-- Activo -->
+            <div class="form-control mb-4">
+                <label class="label cursor-pointer justify-start gap-3">
+                    {{ form.activo }}
+                    <span class="label-text font-semibold">
+                        {{ form.activo.label }}
+                    </span>
+                </label>
+                {% if form.activo.help_text %}
+                    <label class="label">
+                        <span class="label-text-alt">{{ form.activo.help_text }}</span>
+                    </label>
+                {% endif %}
+                {% if form.activo.errors %}
+                    <label class="label">
+                        <span class="label-text-alt text-error">
+                            {{ form.activo.errors.0 }}
+                        </span>
+                    </label>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="flex gap-4 mt-6">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save mr-2"></i>
+                {{ accion }} Categoría
+            </button>
+            
+            <a href="{% url url_cancelar %}" class="btn btn-outline btn-lg">
+                <i class="fas fa-times mr-2"></i>
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-focus en nombre
+document.addEventListener('DOMContentLoaded', function() {
+    const nombre = document.querySelector('input[name="nombre"]');
+    if (nombre) {
+        nombre.focus();
+    }
+});
+</script>
+{% endblock %}

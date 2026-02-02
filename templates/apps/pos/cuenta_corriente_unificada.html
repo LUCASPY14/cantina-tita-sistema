@@ -1,0 +1,485 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Cuenta Corriente Unificada | Cantina Tita{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        @apply bg-white rounded-lg shadow-lg p-6 transition-all hover:shadow-xl;
+    }
+    .movimiento-cargo {
+        @apply bg-red-50 border-l-4 border-red-500;
+    }
+    .movimiento-abono {
+        @apply bg-green-50 border-l-4 border-green-500;
+    }
+    .saldo-positivo {
+        @apply text-green-600 font-bold;
+    }
+    .saldo-negativo {
+        @apply text-red-600 font-bold;
+    }
+    .timeline-item {
+        @apply relative pl-8 pb-6;
+    }
+    .timeline-item::before {
+        content: '';
+        @apply absolute left-0 top-2 w-4 h-4 rounded-full border-4 border-white shadow;
+    }
+    .timeline-item.cargo::before {
+        @apply bg-red-500;
+    }
+    .timeline-item.abono::before {
+        @apply bg-green-500;
+    }
+    .timeline-line {
+        @apply absolute left-2 top-6 bottom-0 w-0.5 bg-gray-300;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6" x-data="cuentaCorrienteUnificada()">
+    
+    <!-- Header del Cliente -->
+    <div class="mb-6">
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                    💳 Cuenta Corriente Unificada
+                </h1>
+                <h2 class="text-2xl text-gray-600">{{ cliente.nombres }} {{ cliente.apellidos }}</h2>
+                <p class="text-sm text-gray-500 mt-1">
+                    RUC/CI: {{ cliente.ruc_ci }} | 
+                    Tel: {{ cliente.telefono|default:"N/A" }} |
+                    Email: {{ cliente.email|default:"N/A" }}
+                </p>
+            </div>
+            <div class="flex gap-2">
+                <a href="{% url 'pos:cuenta_corriente' %}" class="btn btn-ghost">
+                    ← Volver
+                </a>
+                <button @click="imprimirEstadoCuenta()" class="btn btn-primary">
+                    🖨️ Imprimir
+                </button>
+                <button @click="exportarExcel()" class="btn btn-success">
+                    📊 Excel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjetas de Resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <!-- Saldo Actual -->
+        <div class="stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 font-semibold">Saldo Actual</p>
+                    <p class="text-3xl font-bold mt-1" 
+                       :class="saldo_actual >= 0 ? 'text-green-600' : 'text-red-600'">
+                        Gs. {{ saldo_actual|floatformat:0|default:"0" }}
+                    </p>
+                </div>
+                <div class="text-4xl">
+                    {% if saldo_actual >= 0 %}
+                        💰
+                    {% else %}
+                        ⚠️
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Ventas -->
+        <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+            <div>
+                <p class="text-sm opacity-90 font-semibold">Total Ventas</p>
+                <p class="text-3xl font-bold mt-1">{{ total_ventas }}</p>
+                <p class="text-xs opacity-75 mt-1">Gs. {{ monto_ventas|floatformat:0 }}</p>
+            </div>
+        </div>
+
+        <!-- Total Recargas -->
+        <div class="stat-card bg-gradient-to-br from-green-500 to-green-600 text-white">
+            <div>
+                <p class="text-sm opacity-90 font-semibold">Total Recargas</p>
+                <p class="text-3xl font-bold mt-1">{{ total_recargas }}</p>
+                <p class="text-xs opacity-75 mt-1">Gs. {{ monto_recargas|floatformat:0 }}</p>
+            </div>
+        </div>
+
+        <!-- Límite de Crédito -->
+        <div class="stat-card bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+            <div>
+                <p class="text-sm opacity-90 font-semibold">Límite de Crédito</p>
+                <p class="text-3xl font-bold mt-1">
+                    Gs. {{ cliente.limite_credito|floatformat:0|default:"0" }}
+                </p>
+                {% if cliente.limite_credito > 0 %}
+                <p class="text-xs opacity-75 mt-1">
+                    Disponible: Gs. {{ credito_disponible|floatformat:0 }}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros de Fecha y Búsqueda -->
+    <div class="card bg-white shadow-xl mb-6">
+        <div class="card-body">
+            <h3 class="card-title text-lg mb-4">Filtros</h3>
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Desde</span>
+                    </label>
+                    <input type="date" name="fecha_desde" 
+                           class="input input-bordered" 
+                           value="{{ fecha_desde }}">
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Hasta</span>
+                    </label>
+                    <input type="date" name="fecha_hasta" 
+                           class="input input-bordered" 
+                           value="{{ fecha_hasta }}">
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Tipo Movimiento</span>
+                    </label>
+                    <select name="tipo_movimiento" class="select select-bordered">
+                        <option value="">Todos</option>
+                        <option value="venta" {% if tipo_movimiento == 'venta' %}selected{% endif %}>Ventas</option>
+                        <option value="recarga" {% if tipo_movimiento == 'recarga' %}selected{% endif %}>Recargas</option>
+                        <option value="ajuste" {% if tipo_movimiento == 'ajuste' %}selected{% endif %}>Ajustes</option>
+                    </select>
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">&nbsp;</span>
+                    </label>
+                    <button type="submit" class="btn btn-primary w-full">
+                        🔍 Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabs de Visualización -->
+    <div class="mb-6">
+        <div class="tabs tabs-boxed bg-white shadow-lg p-2">
+            <a class="tab tab-lg" :class="{ 'tab-active': vista === 'timeline' }" 
+               @click="vista = 'timeline'">
+                📋 Línea de Tiempo
+            </a>
+            <a class="tab tab-lg" :class="{ 'tab-active': vista === 'tabla' }" 
+               @click="vista = 'tabla'">
+                📊 Tabla Detallada
+            </a>
+            <a class="tab tab-lg" :class="{ 'tab-active': vista === 'grafico' }" 
+               @click="vista = 'grafico'">
+                📈 Gráfico
+            </a>
+        </div>
+    </div>
+
+    <!-- Vista Timeline -->
+    <div x-show="vista === 'timeline'" class="card bg-white shadow-xl">
+        <div class="card-body">
+            <h3 class="card-title text-xl mb-6">Historial de Movimientos</h3>
+            
+            {% if movimientos %}
+            <div class="space-y-2">
+                {% for mov in movimientos %}
+                <div class="timeline-item {{ mov.tipo|lower }}" x-data="{ expanded: false }">
+                    <div class="timeline-line"></div>
+                    <div class="card {% if mov.tipo == 'CARGO' %}movimiento-cargo{% else %}movimiento-abono{% endif %} cursor-pointer" 
+                         @click="expanded = !expanded">
+                        <div class="card-body p-4">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span class="badge {% if mov.tipo == 'CARGO' %}badge-error{% else %}badge-success{% endif %}">
+                                            {{ mov.tipo }}
+                                        </span>
+                                        <span class="text-sm text-gray-600">
+                                            {{ mov.fecha|date:"d/m/Y H:i" }}
+                                        </span>
+                                        {% if mov.estudiante %}
+                                        <span class="text-sm text-gray-500">
+                                            👤 {{ mov.estudiante }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="font-semibold text-gray-700">{{ mov.descripcion }}</p>
+                                    {% if mov.empleado %}
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        Cajero: {{ mov.empleado }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-2xl font-bold {% if mov.tipo == 'CARGO' %}text-red-600{% else %}text-green-600{% endif %}">
+                                        {% if mov.tipo == 'CARGO' %}-{% else %}+{% endif %}
+                                        Gs. {{ mov.monto|floatformat:0 }}
+                                    </p>
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        Saldo: Gs. {{ mov.saldo_acumulado|floatformat:0 }}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <!-- Detalles expandibles -->
+                            <div x-show="expanded" x-collapse class="mt-4 pt-4 border-t">
+                                {% if mov.items %}
+                                <div class="overflow-x-auto">
+                                    <table class="table table-sm w-full">
+                                        <thead>
+                                            <tr>
+                                                <th>Producto</th>
+                                                <th>Cant.</th>
+                                                <th>P. Unit.</th>
+                                                <th>Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in mov.items %}
+                                            <tr>
+                                                <td>{{ item.producto }}</td>
+                                                <td>{{ item.cantidad }}</td>
+                                                <td>Gs. {{ item.precio_unitario|floatformat:0 }}</td>
+                                                <td>Gs. {{ item.subtotal|floatformat:0 }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% endif %}
+                                {% if mov.referencia %}
+                                <p class="text-sm text-gray-600 mt-2">
+                                    <strong>Referencia:</strong> {{ mov.referencia }}
+                                </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <p class="text-gray-500 text-lg">No hay movimientos registrados</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Vista Tabla -->
+    <div x-show="vista === 'tabla'" class="card bg-white shadow-xl">
+        <div class="card-body">
+            <h3 class="card-title text-xl mb-6">Tabla de Movimientos</h3>
+            
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th>Descripción</th>
+                            <th>Estudiante</th>
+                            <th class="text-right">Cargo</th>
+                            <th class="text-right">Abono</th>
+                            <th class="text-right">Saldo</th>
+                            <th>Cajero</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mov in movimientos %}
+                        <tr class="hover">
+                            <td class="text-sm">{{ mov.fecha|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <span class="badge {% if mov.tipo == 'CARGO' %}badge-error{% else %}badge-success{% endif %}">
+                                    {{ mov.tipo }}
+                                </span>
+                            </td>
+                            <td>{{ mov.descripcion|truncatewords:10 }}</td>
+                            <td>{{ mov.estudiante|default:"-" }}</td>
+                            <td class="text-right text-red-600 font-semibold">
+                                {% if mov.tipo == 'CARGO' %}
+                                    Gs. {{ mov.monto|floatformat:0 }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="text-right text-green-600 font-semibold">
+                                {% if mov.tipo == 'ABONO' %}
+                                    Gs. {{ mov.monto|floatformat:0 }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="text-right font-bold">
+                                Gs. {{ mov.saldo_acumulado|floatformat:0 }}
+                            </td>
+                            <td class="text-sm">{{ mov.empleado|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="font-bold bg-gray-100">
+                            <td colspan="4" class="text-right">TOTALES:</td>
+                            <td class="text-right text-red-600">
+                                Gs. {{ total_cargos|floatformat:0 }}
+                            </td>
+                            <td class="text-right text-green-600">
+                                Gs. {{ total_abonos|floatformat:0 }}
+                            </td>
+                            <td class="text-right" 
+                                :class="saldo_actual >= 0 ? 'text-green-600' : 'text-red-600'">
+                                Gs. {{ saldo_actual|floatformat:0 }}
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vista Gráfico -->
+    <div x-show="vista === 'grafico'" class="card bg-white shadow-xl">
+        <div class="card-body">
+            <h3 class="card-title text-xl mb-6">Evolución del Saldo</h3>
+            <canvas id="chartSaldo" height="100"></canvas>
+        </div>
+    </div>
+
+    <!-- Información de Hijos/Tarjetas -->
+    <div class="card bg-white shadow-xl mt-6">
+        <div class="card-body">
+            <h3 class="card-title text-xl mb-4">👨‍👩‍👧‍👦 Estudiantes Asociados</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for hijo in hijos %}
+                <div class="card bg-base-100 border border-gray-200">
+                    <div class="card-body p-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-semibold text-lg">
+                                    {{ hijo.nombre }} {{ hijo.apellido }}
+                                </h4>
+                                <p class="text-sm text-gray-600">
+                                    {{ hijo.grado|default:"Sin grado" }}
+                                </p>
+                                {% if hijo.tarjeta %}
+                                <p class="text-sm text-gray-500 mt-1">
+                                    💳 Tarjeta: {{ hijo.tarjeta.nro_tarjeta }}
+                                </p>
+                                <p class="text-sm font-semibold mt-1">
+                                    Saldo: Gs. {{ hijo.tarjeta.saldo_actual|floatformat:0 }}
+                                </p>
+                                {% endif %}
+                            </div>
+                            {% if hijo.tarjeta %}
+                            <span class="badge {% if hijo.tarjeta.estado == 'ACTIVA' %}badge-success{% else %}badge-warning{% endif %}">
+                                {{ hijo.tarjeta.estado }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-span-2 text-center py-8 text-gray-500">
+                    No hay estudiantes asociados
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+function cuentaCorrienteUnificada() {
+    return {
+        vista: 'timeline',
+        saldo_actual: parseFloat('{{ saldo_actual|default:0 }}'),
+        
+        init() {
+            this.inicializarGrafico();
+        },
+        
+        inicializarGrafico() {
+            const ctx = document.getElementById('chartSaldo');
+            if (!ctx) return;
+            
+            const movimientos = JSON.parse('{{ movimientos_json|safe|escapejs }}');
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: movimientos.map(m => m.fecha),
+                    datasets: [{
+                        label: 'Saldo Acumulado',
+                        data: movimientos.map(m => m.saldo),
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Saldo: Gs. ' + context.parsed.y.toLocaleString('es-PY');
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'Gs. ' + value.toLocaleString('es-PY');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        },
+        
+        imprimirEstadoCuenta() {
+            window.print();
+        },
+        
+        exportarExcel() {
+            const clienteId = parseInt('{{ cliente.id_cliente }}');
+            const fechaDesde = '{{ fecha_desde }}';
+            const fechaHasta = '{{ fecha_hasta }}';
+            window.location.href = `/pos/cuenta-corriente/${clienteId}/excel/?fecha_desde=${fechaDesde}&fecha_hasta=${fechaHasta}`;
+        }
+    }
+}
+</script>
+{% endblock %}

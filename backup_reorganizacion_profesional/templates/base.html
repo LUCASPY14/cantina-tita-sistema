@@ -1,0 +1,1179 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Cantina Tita - POS{% endblock %}</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Sistema de Punto de Venta para Cantina Escolar Tita">
+    <meta name="theme-color" content="#FF6B35">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Cantina POS">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" sizes="192x192" href="/static/icons/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/icon-16x16.png">
+    
+    <!-- Tailwind CSS + DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    
+    <!-- Howler.js para sonidos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+    
+    <!-- Iconos (Heroicons) -->
+    <script src="https://unpkg.com/@heroicons/react@2.0.18/outline"></script>
+    
+    <!-- Configuración de Tailwind personalizada -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF6B35',      // Naranja vibrante
+                        secondary: '#4ECDC4',    // Turquesa
+                        success: '#2ECC71',      // Verde
+                        warning: '#F39C12',      // Amarillo/Naranja
+                        danger: '#E74C3C',       // Rojo coral
+                        neutral: '#34495E',      // Gris azulado
+                        'light-bg': '#F8F9FA'    // Fondo claro
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Estilos personalizados -->
+    <style>
+        /* Botones touch-optimized */
+        .btn-touch {
+            min-height: 80px;
+            min-width: 80px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        /* Grid de productos optimizado */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+        }
+        
+        /* Carrito sticky */
+        .cart-sidebar {
+            position: sticky;
+            top: 1rem;
+            max-height: calc(100vh - 2rem);
+            overflow-y: auto;
+        }
+        
+        /* Animaciones suaves */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Loading state */
+        .htmx-request .htmx-indicator {
+            display: inline;
+        }
+        
+        .htmx-indicator {
+            display: none;
+        }
+        
+        /* Búsqueda highlight */
+        .search-highlight {
+            background-color: #FEF3C7;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        
+        /* Scroll suave */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Touch feedback */
+        .btn-touch:active {
+            transform: scale(0.95);
+            transition: transform 0.1s;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-light-bg" x-data="posApp()">
+    
+    <!-- Navbar -->
+    <div class="navbar bg-primary text-white shadow-lg">
+        <div class="flex-1 flex items-center gap-3">
+            <img src="{% static 'img/logo.png' %}" alt="Cantina Tita" 
+                 style="height: 40px; width: auto;" 
+                 onerror="this.onerror=null; this.style.display='none';">
+            <a href="{% url 'pos:venta' %}" class="btn btn-ghost text-xl font-bold">
+                🍕 Cantina Tita POS
+            </a>
+        </div>
+        <div class="flex-none gap-2">
+            <!-- Usuario actual -->
+            <div class="dropdown dropdown-end">
+                <label tabindex="0" class="btn btn-ghost btn-circle avatar placeholder">
+                    <div class="bg-secondary text-white rounded-full w-10">
+                        <span class="text-xl">{{ request.user.username|first|upper }}</span>
+                    </div>
+                </label>
+                <ul tabindex="0" class="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-white text-neutral rounded-box w-52">
+                    <li class="menu-title">
+                        <span class="text-primary">{{ request.user.username }}</span>
+                        {% if usuario_rol %}
+                        <span class="badge badge-sm badge-secondary">{{ usuario_rol }}</span>
+                        {% endif %}
+                    </li>
+                    <li><a href="{% url 'pos:venta' %}">🏪 Punto de Venta</a></li>
+                    <li><a href="{% url 'pos:pos_almuerzo' %}">🍽️ POS Almuerzo</a></li>
+                    <li><a href="{% url 'pos:recargas' %}">💳 Recargas</a></li>
+                    
+                    {% if puede_ver_reportes %}
+                    <li><a href="{% url 'pos:cuenta_corriente' %}">📋 Cuenta Corriente</a></li>
+                    <li><a href="{% url 'pos:inventario_dashboard' %}">📦 Inventario</a></li>
+                    <li><a href="{% url 'pos:cajas_dashboard' %}">💰 Cajas</a></li>
+                    <li><a href="{% url 'pos:compras_dashboard' %}">🛒 Compras</a></li>
+                    <li><a href="{% url 'pos:comisiones_dashboard' %}">💳 Comisiones</a></li>
+                    <li><a href="{% url 'pos:almuerzos_dashboard' %}">🍽️ Almuerzos</a></li>
+                    <li><a href="{% url 'pos:almuerzo_reportes' %}">📊 Reportes Almuerzo</a></li>
+                    <li><a href="{% url 'pos:alertas_sistema' %}">🔔 Alertas</a></li>
+                    <li><a href="{% url 'pos:dashboard' %}">📊 Dashboard</a></li>
+                    <li><a href="{% url 'pos:historial' %}">📜 Historial Ventas</a></li>
+                    <li><a href="{% url 'pos:reportes' %}">📈 Reportes</a></li>
+                    {% endif %}
+                    
+                    {% if puede_administrar %}
+                    <li class="menu-title"><span class="text-xs text-gray-500">Administración</span></li>
+                    <li><a href="{% url 'pos:gestionar_clientes' %}">👥 Clientes</a></li>
+                    <li><a href="{% url 'pos:proveedores' %}">🏭 Proveedores</a></li>
+                    {% endif %}
+                    <li><a href="{% url 'pos:gestionar_fotos_hijos' %}">📸 Fotos Hijos</a></li>
+                    <li><a href="{% url 'pos:gestionar_grados' %}">🎓 Grados</a></li>
+                    <li><a href="{% url 'admin:index' %}">⚙️ Administración</a></li>
+                    <li><a href="{% url 'pos:dashboard_seguridad' %}">🔒 Seguridad</a></li>
+                    <li class="menu-title"><span class="text-xs text-gray-500">Portal</span></li>
+                    <li><a href="{% url 'clientes:portal_login' %}" target="_blank">🌐 Portal Clientes</a></li>
+                    <li class="menu-title"><span class="text-xs text-gray-500">Mi Cuenta</span></li>
+                    <li><a href="/reportes/empleado/perfil/">👤 Mi Perfil</a></li>
+                    <li><a href="/reportes/empleado/cambiar-contrasena/">🔐 Cambiar Contraseña</a></li>
+                    <li>
+                        <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="text-left w-full" style="background: none; border: none; cursor: pointer; padding: 0;">
+                                🚪 Cerrar Sesión
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Reloj -->
+            <div class="text-sm" x-data="clock()" x-text="time"></div>
+        </div>
+    </div>
+    
+    <!-- Línea divisoria con gradiente -->
+    <div style="height: 3px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+    
+    <!-- Contenido principal -->
+    <main class="{% block main_class %}container mx-auto p-4{% endblock %}">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Toast de notificaciones -->
+    <div class="toast toast-top toast-end z-50" x-show="notification.show" x-transition>
+        <div class="alert" :class="{
+            'alert-success': notification.type === 'success',
+            'alert-error': notification.type === 'error',
+            'alert-warning': notification.type === 'warning',
+            'alert-info': notification.type === 'info'
+        }">
+            <span x-text="notification.message"></span>
+        </div>
+    </div>
+    
+    <!-- Scripts de Alpine.js -->
+    <script>
+        // Sonidos
+        const sounds = {
+            beep: new Howl({ src: ['/static/sounds/beep.mp3'], volume: 0.5 }),
+            success: new Howl({ src: ['/static/sounds/success.mp3'], volume: 0.5 }),
+            error: new Howl({ src: ['/static/sounds/error.mp3'], volume: 0.5 }),
+            scan: new Howl({ src: ['/static/sounds/scan.mp3'], volume: 0.5 })
+        };
+        
+        // Función para reproducir sonidos
+        function playSound(type) {
+            if (sounds[type]) {
+                sounds[type].play();
+            }
+        }
+        
+        // Reloj en tiempo real
+        function clock() {
+            return {
+                time: new Date().toLocaleTimeString('es-PY', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                }),
+                init() {
+                    setInterval(() => {
+                        this.time = new Date().toLocaleTimeString('es-PY', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        });
+                    }, 1000);
+                }
+            }
+        }
+        
+        // Estado global de la aplicación POS
+        function posApp() {
+            return {
+                // Carrito de compras
+                cart: [],
+                
+                // Tarjeta seleccionada
+                selectedCard: null,
+                
+                // Flag para evitar doble procesamiento
+                procesandoVenta: false,
+                
+                // Variables para restricciones alimentarias
+                restriccionesConfirmadas: false,
+                justificacionRestricciones: '',
+                
+                // Número de tarjeta temporal
+                cardNumber: '',
+                
+                // Para productos por kilo
+                pesoIndex: null,
+                tempProduct: null,
+                
+                // Para monto personalizado (recargas)
+                esRecarga: false,
+                
+                // Promociones
+                promocionAplicada: null,
+                descuentoPromocion: 0,
+                calculandoPromocion: false,
+                
+                // Pagos Mixtos
+                pagosMixtos: [],
+                totalPagado: 0,
+                pendientePago: 0,
+                mediosPagoDisponibles: [],
+                
+                // Notificaciones
+                notification: {
+                    show: false,
+                    message: '',
+                    type: 'info'
+                },
+                
+                // Agregar producto al carrito
+                async addToCart(product) {
+                    // Verificar si es un producto de recarga (precio 0 o nombre contiene "recarga")
+                    const esRecarga = product.price === 0 || product.name.toLowerCase().includes('recarga');
+                    
+                    if (esRecarga) {
+                        // Abrir modal para ingresar monto personalizado
+                        this.tempProduct = product;
+                        this.esRecarga = true;
+                        
+                        setTimeout(() => {
+                            const inputMonto = document.getElementById('input-monto-recarga');
+                            if (inputMonto) {
+                                inputMonto.value = '10000';
+                                inputMonto.focus();
+                                inputMonto.select();
+                            }
+                        }, 100);
+                        
+                        document.getElementById('modal-monto-recarga').showModal();
+                        return;
+                    }
+                    
+                    // ⭐ VERIFICAR RESTRICCIONES ALIMENTARIAS ANTES DE AGREGAR
+                    if (this.selectedCard && this.selectedCard.id) {
+                        try {
+                            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                            const response = await fetch('/gestion/api/verificar-restricciones/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': csrftoken
+                                },
+                                body: JSON.stringify({
+                                    tarjeta_codigo: this.selectedCard.id,
+                                    items: [{
+                                        producto_id: product.id,
+                                        cantidad: 1
+                                    }]
+                                })
+                            });
+                            
+                            if (response.ok) {
+                                const data = await response.json();
+                                
+                                // Si hay alertas de restricciones
+                                if (data.tiene_alertas && data.alertas && data.alertas.length > 0) {
+                                    // Mostrar alerta visual
+                                    const alertas = data.alertas.map(a => 
+                                        `⚠️ ${a.tipo_restriccion}: ${a.mensaje} (${Math.round(a.nivel_confianza * 100)}% confianza)`
+                                    ).join('\n');
+                                    
+                                    this.showNotification(
+                                        `ADVERTENCIA: ${data.alertas.length} restricción(es) detectada(s) para ${product.name}`,
+                                        'warning'
+                                    );
+                                    
+                                    // Si requiere autorización, mostrar alerta más fuerte
+                                    if (data.requiere_autorizacion) {
+                                        playSound('error');
+                                        
+                                        // Confirmación del usuario
+                                        const confirmar = confirm(
+                                            `⚠️ RESTRICCIÓN ALIMENTARIA DETECTADA ⚠️\n\n` +
+                                            `Hijo: ${this.selectedCard.nombre || 'N/A'}\n` +
+                                            `Producto: ${product.name}\n\n` +
+                                            `${alertas}\n\n` +
+                                            `¿Desea agregar este producto de todas formas?`
+                                        );
+                                        
+                                        if (!confirmar) {
+                                            playSound('error');
+                                            this.showNotification('Producto NO agregado por restricción', 'error');
+                                            return; // NO agregar al carrito
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error al verificar restricciones:', error);
+                            // Continuar agregando el producto aunque falle la verificación
+                        }
+                    }
+                    
+                    const existingItem = this.cart.find(item => item.id === product.id && !item.esPorKilo && !item.esRecarga);
+                    
+                    if (existingItem) {
+                        existingItem.quantity++;
+                    } else {
+                        this.cart.push({
+                            id: product.id,
+                            name: product.name,
+                            price: product.price,
+                            quantity: 1,
+                            esPorKilo: false,
+                            esRecarga: false
+                        });
+                    }
+                    
+                    playSound('beep');
+                    this.showNotification('Producto agregado', 'success');
+                    
+                    // Recalcular promociones después de agregar
+                    this.calcularPromociones();
+                },
+                
+                // Agregar producto por kilo al carrito
+                addProductoPorKilo(product) {
+                    // Abrir modal para ingresar peso
+                    this.pesoIndex = -1; // -1 indica que es un nuevo producto
+                    this.tempProduct = product; // Guardar producto temporalmente
+                    
+                    // Resetear input de peso
+                    setTimeout(() => {
+                        const inputPeso = document.getElementById('input-peso');
+                        if (inputPeso) {
+                            inputPeso.value = '1.0';
+                            inputPeso.focus();
+                            inputPeso.select();
+                        }
+                    }, 100);
+                    
+                    document.getElementById('modal-peso').showModal();
+                },
+                
+                // Editar peso de un producto en el carrito
+                editPeso(index) {
+                    this.pesoIndex = index;
+                    const item = this.cart[index];
+                    
+                    setTimeout(() => {
+                        const inputPeso = document.getElementById('input-peso');
+                        if (inputPeso) {
+                            inputPeso.value = item.peso || 1.0;
+                            inputPeso.focus();
+                            inputPeso.select();
+                        }
+                    }, 100);
+                    
+                    document.getElementById('modal-peso').showModal();
+                },
+                
+                // Establecer peso rápido
+                setPeso(peso) {
+                    const inputPeso = document.getElementById('input-peso');
+                    if (inputPeso) {
+                        inputPeso.value = peso;
+                    }
+                },
+                
+                // Confirmar peso
+                confirmarPeso() {
+                    const inputPeso = document.getElementById('input-peso');
+                    const peso = parseFloat(inputPeso.value);
+                    
+                    if (!peso || peso <= 0) {
+                        this.showNotification('Ingrese un peso válido', 'error');
+                        return;
+                    }
+                    
+                    if (this.pesoIndex === -1) {
+                        // Es un producto nuevo
+                        const product = this.tempProduct;
+                        this.cart.push({
+                            id: product.id,
+                            name: product.name,
+                            price: product.price,
+                            peso: peso,
+                            quantity: 1, // Siempre 1 para productos por kilo
+                            esPorKilo: true
+                        });
+                        playSound('beep');
+                        this.showNotification(`Agregado ${peso}kg`, 'success');
+                    } else {
+                        // Está editando un producto existente
+                        this.cart[this.pesoIndex].peso = peso;
+                        playSound('beep');
+                        this.showNotification(`Peso actualizado: ${peso}kg`, 'success');
+                    }
+                    
+                    // Cerrar modal
+                    document.getElementById('modal-peso').close();
+                    this.pesoIndex = null;
+                    this.tempProduct = null;
+                    
+                    // Recalcular promociones
+                    this.calcularPromociones();
+                },
+                
+                // Confirmar monto de recarga
+                confirmarMontoRecarga() {
+                    const inputMonto = document.getElementById('input-monto-recarga');
+                    const monto = parseFloat(inputMonto.value);
+                    
+                    if (!monto || monto <= 0) {
+                        this.showNotification('Ingrese un monto válido', 'error');
+                        return;
+                    }
+                    
+                    if (monto < 1000) {
+                        this.showNotification('El monto mínimo es Gs. 1.000', 'warning');
+                        return;
+                    }
+                    
+                    // Agregar al carrito con el monto personalizado
+                    const product = this.tempProduct;
+                    this.cart.push({
+                        id: product.id,
+                        name: product.name,
+                        price: monto,  // Usar el monto ingresado como precio
+                        quantity: 1,
+                        esPorKilo: false,
+                        esRecarga: true
+                    });
+                    
+                    playSound('beep');
+                    this.showNotification(`Recarga agregada: Gs. ${Math.round(monto).toLocaleString('es-PY')}`, 'success');
+                    
+                    // Cerrar modal
+                    document.getElementById('modal-monto-recarga').close();
+                    this.tempProduct = null;
+                    this.esRecarga = false;
+                },
+                
+                // Establecer monto rápido para recarga
+                setMontoRecarga(monto) {
+                    const inputMonto = document.getElementById('input-monto-recarga');
+                    if (inputMonto) {
+                        inputMonto.value = monto;
+                    }
+                },
+                
+                // Quitar producto del carrito
+                removeFromCart(index) {
+                    this.cart.splice(index, 1);
+                    playSound('error');
+                    
+                    // Recalcular promociones después de quitar
+                    this.calcularPromociones();
+                },
+                
+                // Incrementar cantidad
+                increaseQuantity(index) {
+                    this.cart[index].quantity++;
+                    playSound('beep');
+                    
+                    // Recalcular promociones
+                    this.calcularPromociones();
+                },
+                
+                // Decrementar cantidad
+                decreaseQuantity(index) {
+                    if (this.cart[index].quantity > 1) {
+                        this.cart[index].quantity--;
+                        playSound('beep');
+                        
+                        // Recalcular promociones
+                        this.calcularPromociones();
+                    } else {
+                        this.removeFromCart(index);
+                    }
+                },
+                
+                // Calcular subtotal (antes de descuentos)
+                get subtotal() {
+                    return this.cart.reduce((sum, item) => {
+                        const precio = parseFloat(item.price) || 0;
+                        if (item.esPorKilo) {
+                            return sum + (precio * (item.peso || 1));
+                        } else {
+                            return sum + (precio * (item.quantity || 1));
+                        }
+                    }, 0);
+                },
+                
+                // Calcular total (con descuentos aplicados)
+                get total() {
+                    return Math.max(0, this.subtotal - this.descuentoPromocion);
+                },
+                
+                // Calcular promociones disponibles
+                async calcularPromociones() {
+                    // Solo calcular si hay items en el carrito
+                    if (!this.cart || this.cart.length === 0) {
+                        this.promocionAplicada = null;
+                        this.descuentoPromocion = 0;
+                        return;
+                    }
+                    
+                    // Evitar múltiples llamadas simultáneas
+                    if (this.calculandoPromocion) {
+                        return;
+                    }
+                    
+                    this.calculandoPromocion = true;
+                    
+                    try {
+                        // Preparar items del carrito
+                        const items = this.cart.map(item => ({
+                            producto_id: item.id,
+                            cantidad: item.esPorKilo ? (item.peso || 1) : (item.quantity || 1),
+                            precio_unitario: parseFloat(item.price) || 0,
+                            subtotal: item.esPorKilo 
+                                ? (parseFloat(item.price) || 0) * (item.peso || 1)
+                                : (parseFloat(item.price) || 0) * (item.quantity || 1)
+                        }));
+                        
+                        // Obtener grado del hijo si existe
+                        const grado = this.selectedCard && this.selectedCard.grado 
+                            ? this.selectedCard.grado 
+                            : null;
+                        
+                        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                        
+                        const response = await fetch('/pos/calcular-promociones/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrftoken
+                            },
+                            body: JSON.stringify({
+                                items: items,
+                                grado_hijo: grado,
+                                codigo_promocion: null // Por ahora sin códigos promocionales
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            
+                            if (data.mejor_promocion) {
+                                this.promocionAplicada = data.mejor_promocion;
+                                this.descuentoPromocion = data.descuento_maximo || 0;
+                                
+                                console.log('🎉 Promoción aplicada:', this.promocionAplicada.nombre, 
+                                           '- Descuento:', this.descuentoPromocion);
+                            } else {
+                                this.promocionAplicada = null;
+                                this.descuentoPromocion = 0;
+                            }
+                        } else {
+                            // Si falla, resetear promoción
+                            this.promocionAplicada = null;
+                            this.descuentoPromocion = 0;
+                        }
+                    } catch (error) {
+                        console.error('Error al calcular promociones:', error);
+                        // En caso de error, resetear
+                        this.promocionAplicada = null;
+                        this.descuentoPromocion = 0;
+                    } finally {
+                        this.calculandoPromocion = false;
+                    }
+                },
+                
+                // Limpiar carrito
+                clearCart() {
+                    this.cart = [];
+                    this.selectedCard = null;
+                    this.promocionAplicada = null;
+                    this.descuentoPromocion = 0;
+                },
+                
+                // Mostrar notificación
+                showNotification(message, type = 'info') {
+                    this.notification = { show: true, message, type };
+                    setTimeout(() => {
+                        this.notification.show = false;
+                    }, 3000);
+                },
+                
+                // Escanear tarjeta
+                scanCard() {
+                    playSound('scan');
+                },
+                
+                // Seleccionar cliente genérico
+                selectGenericCard() {
+                    this.selectedCard = {
+                        id: null,
+                        nombre: 'Cliente Genérico',
+                        saldo: 999999999
+                    };
+                    playSound('beep');
+                    this.showNotification('Cliente genérico seleccionado', 'info');
+                },
+                
+                // Procesar venta
+                processSale() {
+                    if (!this.cart || this.cart.length === 0) {
+                        this.showNotification('El carrito está vacío', 'warning');
+                        return;
+                    }
+                    
+                    // Resetear pagos mixtos
+                    this.pagosMixtos = [];
+                    this.calcularTotales();
+                    
+                    // Abrir modal de checkout para seleccionar tipo de pago
+                    document.getElementById('modal-checkout').showModal();
+                },
+                
+                // Agregar un pago al listado
+                agregarPago(medioId, descripcionMedio) {
+                    const montoStr = prompt(`¿Cuánto se paga con ${descripcionMedio}?\n\nPendiente: Gs. ${Math.round(this.pendientePago).toLocaleString('es-PY')}`);
+                    
+                    if (!montoStr) return; // Usuario canceló
+                    
+                    const monto = parseFloat(montoStr.replace(/\./g, '').replace(/,/g, '.'));
+                    
+                    if (isNaN(monto) || monto <= 0) {
+                        this.showNotification('Monto inválido', 'error');
+                        return;
+                    }
+                    
+                    if (monto > this.pendientePago + 0.01) {
+                        this.showNotification('El monto excede el pendiente', 'error');
+                        return;
+                    }
+                    
+                    this.pagosMixtos.push({
+                        medio_id: medioId,
+                        descripcion: descripcionMedio,
+                        monto: monto
+                    });
+                    
+                    this.calcularTotales();
+                    playSound('beep');
+                },
+                
+                // Eliminar un pago del listado
+                eliminarPago(index) {
+                    this.pagosMixtos.splice(index, 1);
+                    this.calcularTotales();
+                    playSound('error');
+                },
+                
+                // Calcular totales de pagos
+                calcularTotales() {
+                    this.totalPagado = this.pagosMixtos.reduce((sum, p) => sum + p.monto, 0);
+                    this.pendientePago = this.total - this.totalPagado;
+                },
+                
+                // Validar que el pago esté completo
+                validarPagoCompleto() {
+                    return Math.abs(this.pendientePago) < 0.01;
+                },
+                
+                // Confirmar y procesar venta con el tipo de pago seleccionado
+                async confirmarCheckout() {
+                    // Prevenir doble procesamiento
+                    if (this.procesandoVenta) {
+                        return;
+                    }
+                    
+                    // 💰 VALIDAR PAGOS MIXTOS
+                    if (this.pagosMixtos.length === 0) {
+                        this.showNotification('Debe agregar al menos un medio de pago', 'warning');
+                        return;
+                    }
+                    
+                    if (!this.validarPagoCompleto()) {
+                        this.showNotification(`Falta pagar: Gs. ${Math.round(this.pendientePago).toLocaleString('es-PY')}`, 'error');
+                        return;
+                    }
+                    
+                    // ⭐ VERIFICAR RESTRICCIONES ALIMENTARIAS DEL CARRITO COMPLETO
+                    if (this.selectedCard && this.selectedCard.id) {
+                        try {
+                            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                            const response = await fetch('/gestion/api/verificar-restricciones/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': csrftoken
+                                },
+                                body: JSON.stringify({
+                                    tarjeta_codigo: this.selectedCard.id,
+                                    items: this.cart.map(item => ({
+                                        producto_id: item.id,
+                                        cantidad: item.esPorKilo ? (item.peso || 1) : (item.quantity || 1)
+                                    }))
+                                })
+                            });
+                            
+                            if (response.ok) {
+                                const data = await response.json();
+                                
+                                // Si hay alertas críticas de restricciones
+                                if (data.tiene_alertas && data.alertas && data.alertas.length > 0) {
+                                    const alertasCriticas = data.alertas.filter(a => a.severidad === 'Crítica' || a.severidad === 'Severa');
+                                    
+                                    if (alertasCriticas.length > 0 || data.requiere_autorizacion) {
+                                        // Mostrar modal de restricciones con información detallada
+                                        const detallesAlertas = data.alertas.map(a => 
+                                            `• ${a.producto_nombre}: ${a.tipo_restriccion} (${a.severidad})\n  ${a.mensaje}`
+                                        ).join('\n\n');
+                                        
+                                        // Cerrar modal de checkout
+                                        document.getElementById('modal-checkout').close();
+                                        
+                                        // Preparar y mostrar modal de restricciones
+                                        const modalRestricciones = document.getElementById('modal-restricciones');
+                                        const modalComponent = Alpine.$data(modalRestricciones);
+                                        
+                                        modalComponent.mostrar({
+                                            nombre: this.selectedCard.nombre_completo || this.selectedCard.nombre,
+                                            tarjeta: this.selectedCard.id,
+                                            restricciones: `ALERTAS DETECTADAS EN EL CARRITO:\n\n${detallesAlertas}`
+                                        });
+                                        
+                                        // Esperar confirmación del cajero
+                                        const confirmarRestricciones = (e) => {
+                                            console.log('✅ Cajero confirmó restricciones, procediendo con venta...');
+                                            this.justificacionRestricciones = e.detail.justificacion;
+                                            this.restriccionesConfirmadas = true;
+                                            window.removeEventListener('restriccionesConfirmadas', confirmarRestricciones);
+                                            window.removeEventListener('restriccionesCanceladas', cancelarRestricciones);
+                                            // Procesar venta después de confirmación
+                                            this.procesarVentaFinal();
+                                        };
+                                        
+                                        const cancelarRestricciones = () => {
+                                            console.log('❌ Cajero canceló la venta por restricciones');
+                                            this.procesandoVenta = false;
+                                            window.removeEventListener('restriccionesConfirmadas', confirmarRestricciones);
+                                            window.removeEventListener('restriccionesCanceladas', cancelarRestricciones);
+                                            this.showNotification('Venta cancelada por restricciones alimentarias', 'warning');
+                                        };
+                                        
+                                        window.addEventListener('restriccionesConfirmadas', confirmarRestricciones);
+                                        window.addEventListener('restriccionesCanceladas', cancelarRestricciones);
+                                        
+                                        return;  // No continuar, esperar confirmación
+                                    }
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error al verificar restricciones:', error);
+                            // Continuar con la venta aunque falle la verificación
+                        }
+                    }
+                    
+                    // Si no hay restricciones críticas, procesar normalmente
+                    this.procesarVentaFinal();
+                },
+                
+                // Procesar venta después de todas las validaciones
+                procesarVentaFinal() {
+                    if (this.procesandoVenta) {
+                        return;
+                    }
+                    
+                    this.procesandoVenta = true;
+                    
+                    // Preparar datos de la venta (con pagos mixtos)
+                    const ventaData = {
+                        items: this.cart,
+                        tarjeta: this.selectedCard,
+                        total: this.total,
+                        // 💰 PAGOS MIXTOS en lugar de tipo_pago_id único
+                        pagos: this.pagosMixtos.map(p => ({
+                            medio_id: p.medio_id,
+                            monto: p.monto
+                        })),
+                        // Agregar información de restricciones si fueron confirmadas
+                        restricciones_confirmadas: this.restriccionesConfirmadas || false,
+                        justificacion_restricciones: this.justificacionRestricciones || '',
+                        // Agregar información de promoción si hay alguna aplicada
+                        promocion_id: this.promocionAplicada ? this.promocionAplicada.id : null,
+                        descuento_promocion: this.descuentoPromocion || 0
+                    };
+                    
+                    // Cerrar modal si está abierto
+                    try {
+                        document.getElementById('modal-checkout').close();
+                    } catch (e) {
+                        // Modal ya cerrado
+                    }
+                    
+                    // Enviar al backend
+                    fetch('/pos/procesar-venta/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.getCookie('csrftoken')
+                        },
+                        body: JSON.stringify(ventaData)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        this.procesandoVenta = false;  // Liberar el lock
+                        this.restriccionesConfirmadas = false;  // Reset
+                        this.justificacionRestricciones = '';  // Reset
+                        
+                        if (data.success) {
+                            playSound('success');
+                            this.showNotification('¡Venta exitosa!', 'success');
+                            
+                            // Guardar ID de venta para el ticket
+                            const ventaId = data.venta_id;
+                            
+                            this.clearCart();
+                            
+                            // Abrir ticket en nueva ventana
+                            if (ventaId) {
+                                const ticketWindow = window.open(
+                                    `/pos/ticket/${ventaId}/`,
+                                    'ticket',
+                                    'width=400,height=600,scrollbars=yes'
+                                );
+                            }
+                            
+                            // Resetear tarjeta
+                            this.selectedCard = null;
+                            const nroTarjetaInput = document.querySelector('input[name="nro_tarjeta"]');
+                            if (nroTarjetaInput) nroTarjetaInput.value = '';
+                            const tarjetaInfo = document.getElementById('tarjeta-info');
+                            if (tarjetaInfo) tarjetaInfo.innerHTML = '<div class="alert alert-info"><span>👆 Escanee la tarjeta del hijo</span></div>';
+                            
+                        } else {
+                            this.procesandoVenta = false;  // Liberar el lock
+                            playSound('error');
+                            this.showNotification(data.error || 'Error al procesar venta', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        this.procesandoVenta = false;  // Liberar el lock en caso de error
+                        playSound('error');
+                        this.showNotification('Error de conexión', 'error');
+                        console.error('Error:', error);
+                    });
+                },
+                
+                // Obtener cookie CSRF
+                getCookie(name) {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i = 0; i < cookies.length; i++) {
+                            const cookie = cookies[i].trim();
+                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                break;
+                            }
+                        }
+                    }
+                    return cookieValue;
+                },
+                
+                // Atajos de teclado
+                init() {
+                    // Exponer instancia globalmente para acceso desde HTMX
+                    window.posAppInstance = this;
+                    console.log('✅ Alpine.js posApp inicializado');
+                    
+                    // Listener para HTMX después de swap (el script en tarjeta_info.html se ejecuta automáticamente)
+                    document.body.addEventListener('htmx:afterSwap', (event) => {
+                        if (event.detail.target.id === 'tarjeta-info') {
+                            console.log('🔄 HTMX swap completado en tarjeta-info');
+                            // El script dentro del partial ya estableció selectedCard
+                        }
+                    });
+                    
+                    document.addEventListener('keydown', (e) => {
+                        // F1 - Cliente genérico
+                        if (e.key === 'F1') {
+                            e.preventDefault();
+                            this.selectGenericCard();
+                        }
+                        // F2 - Buscar
+                        if (e.key === 'F2') {
+                            e.preventDefault();
+                            document.getElementById('search-input')?.focus();
+                        }
+                        // F4 - Cobrar
+                        if (e.key === 'F4') {
+                            e.preventDefault();
+                            this.processSale();
+                        }
+                        // ESC - Cancelar
+                        if (e.key === 'Escape') {
+                            e.preventDefault();
+                            this.clearCart();
+                        }
+                    });
+                }
+            }
+        }
+        
+        // Función helper para agregar productos desde onclick
+        async function agregarProductoAlCarrito(element) {
+            if (!window.posAppInstance) {
+                console.error('posAppInstance no está disponible');
+                return;
+            }
+            
+            const precio = parseFloat(element.dataset.productoPrice) || 0;
+            console.log('Precio desde data attribute:', element.dataset.productoPrice);
+            console.log('Precio parseado:', precio);
+            
+            const producto = {
+                id: parseInt(element.dataset.productoId),
+                name: element.dataset.productoName,
+                price: precio
+            };
+            
+            const esPorKilo = element.dataset.esPorKilo === 'true';
+            
+            // 🔍 VERIFICAR RESTRICCIONES ALIMENTARIAS si hay tarjeta seleccionada con restricciones
+            if (window.posAppInstance.selectedCard && window.posAppInstance.selectedCard.tiene_restricciones) {
+                const restricciones = window.posAppInstance.selectedCard.restricciones || '';
+                
+                // Solo verificar si hay restricciones no vacías
+                if (restricciones.trim()) {
+                    console.log('⚠️ Verificando restricciones para producto:', producto.name);
+                    
+                    try {
+                        const resultado = await verificarRestriccionProducto(producto.id, restricciones);
+                        
+                        if (resultado.tiene_conflicto) {
+                            const clienteNombre = window.posAppInstance.selectedCard.nombre_completo || 
+                                                 window.posAppInstance.selectedCard.nombre || 
+                                                 'Cliente';
+                            
+                            // Si es CRÍTICO, bloquear completamente
+                            if (resultado.nivel_riesgo === 'CRITICO') {
+                                window.posAppInstance.showNotification(
+                                    `🚫 BLOQUEADO: ${producto.name} - ${resultado.mensaje}`,
+                                    'error'
+                                );
+                                
+                                // Mostrar alerta detallada
+                                alert(`🚫 VENTA BLOQUEADA\n\n` +
+                                      `Cliente: ${clienteNombre}\n` +
+                                      `Producto: ${producto.name}\n` +
+                                      `Nivel de Riesgo: ${resultado.nivel_riesgo}\n\n` +
+                                      `${resultado.mensaje}\n\n` +
+                                      `Coincidencias detectadas:\n${resultado.coincidencias.map(c => `• ${c}`).join('\n')}\n\n` +
+                                      `⛔ Este producto NO puede venderse a este cliente por seguridad.`);
+                                
+                                return; // BLOQUEAR VENTA
+                            }
+                            
+                            // Para ALTO, MEDIO, BAJO: advertir pero permitir
+                            const iconoRiesgo = {
+                                'ALTO': '⚠️',
+                                'MEDIO': '⚡',
+                                'BAJO': 'ℹ️'
+                            }[resultado.nivel_riesgo] || '⚠️';
+                            
+                            window.posAppInstance.showNotification(
+                                `${iconoRiesgo} ADVERTENCIA: ${resultado.mensaje}`,
+                                'warning'
+                            );
+                            
+                            // Confirmar antes de agregar
+                            const confirmar = confirm(
+                                `${iconoRiesgo} ADVERTENCIA DE RESTRICCIÓN\n\n` +
+                                `Cliente: ${clienteNombre}\n` +
+                                `Producto: ${producto.name}\n` +
+                                `Nivel de Riesgo: ${resultado.nivel_riesgo}\n\n` +
+                                `${resultado.mensaje}\n\n` +
+                                `Coincidencias:\n${resultado.coincidencias.map(c => `• ${c}`).join('\n')}\n\n` +
+                                `¿Confirma que desea agregar este producto al carrito?`
+                            );
+                            
+                            if (!confirmar) {
+                                return; // Usuario canceló
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error al verificar restricciones:', error);
+                        // En caso de error, permitir la venta (fail-safe)
+                        window.posAppInstance.showNotification(
+                            'No se pudo verificar restricciones (agregando producto)',
+                            'warning'
+                        );
+                    }
+                }
+            }
+            
+            // Agregar producto al carrito (si pasó las validaciones)
+            if (esPorKilo) {
+                window.posAppInstance.addProductoPorKilo(producto);
+            } else {
+                window.posAppInstance.addToCart(producto);
+            }
+        }
+        
+        // Función helper para verificar restricciones de un producto
+        async function verificarRestriccionProducto(productoId, restriccionesTexto) {
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            const response = await fetch('/pos/analizar-restriccion/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    producto_id: productoId,
+                    restricciones: restriccionesTexto
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Error al verificar restricciones');
+            }
+            
+            const data = await response.json();
+            return data;
+        }
+    </script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registrado:', registration.scope);
+                        
+                        // Verificar actualizaciones periódicamente
+                        setInterval(() => {
+                            registration.update();
+                        }, 60000); // Cada 1 minuto
+                        
+                        // Solicitar sincronización en background
+                        if ('sync' in registration) {
+                            registration.sync.register('sync-sales').catch(err => {
+                                console.error('Error al registrar sync:', err);
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('❌ Error al registrar Service Worker:', error);
+                    });
+                
+                // Detectar cambios de conexión
+                window.addEventListener('online', () => {
+                    console.log('🌐 Conexión restaurada');
+                    showNetworkStatus('Conectado', 'success');
+                    
+                    // Intentar sincronizar ventas pendientes
+                    if (navigator.serviceWorker.controller) {
+                        navigator.serviceWorker.controller.postMessage({
+                            type: 'SYNC_SALES'
+                        });
+                    }
+                });
+                
+                window.addEventListener('offline', () => {
+                    console.log('📴 Sin conexión');
+                    showNetworkStatus('Modo Offline', 'warning');
+                });
+                
+                // Estado inicial
+                if (!navigator.onLine) {
+                    showNetworkStatus('Modo Offline', 'warning');
+                }
+            });
+        }
+        
+        function showNetworkStatus(message, type) {
+            // Usar sistema de notificaciones de Alpine.js
+            if (window.Alpine && window.Alpine.store && window.Alpine.store.notification) {
+                const notification = window.Alpine.store.notification;
+                notification.show = true;
+                notification.message = message;
+                notification.type = type;
+                
+                setTimeout(() => {
+                    notification.show = false;
+                }, 3000);
+            }
+        }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

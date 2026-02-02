@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <title>Recordatorio de Pago Pendiente - Cantina Tita</title>
+    <style>
+        /* Reset y configuración base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+            color: #334155;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Contenedor principal */
+        .container {
+            max-width: 640px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Header con gradiente profesional */
+        .header {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" opacity="0.1"><circle cx="50" cy="50" r="40" fill="white"/></svg>');
+            background-size: 120px;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.95;
+            font-weight: 500;
+            margin-top: 8px;
+        }
+
+        /* Avatar del cliente */
+        .client-avatar {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            margin: -40px auto 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: white;
+            font-weight: bold;
+            border: 4px solid white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Contenido principal */
+        .content {
+            padding: 40px 30px;
+        }
+
+        /* Saludo personalizado */
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 25px;
+            color: #475569;
+        }
+
+        .greeting strong {
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        /* Banner de alerta */
+        .alert-banner {
+            background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%);
+            border-left: 6px solid #f59e0b;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 30px 0;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1);
+            animation: pulse 2s infinite;
+        }
+
+        .alert-banner h2 {
+            color: #92400e;
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-banner p {
+            color: #b45309;
+            font-size: 16px;
+            margin: 0;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        /* Monto destacado */
+        .amount-display {
+            text-align: center;
+            margin: 40px 0;
+            padding: 30px;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 16px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .amount-label {
+            font-size: 14px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .amount {
+            font-size: 48px;
+            font-weight: 800;
+            color: #dc2626;
+            line-height: 1.2;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .amount small {
+            font-size: 24px;
+            font-weight: 600;
+            color: #ef4444;
+        }
+
+        /* Información del cliente */
+        .client-info {
+            background: #f8fafc;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 30px 0;
+        }
+
+        .client-info h3 {
+            color: #334155;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .info-label {
+            font-size: 13px;
+            color: #64748b;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-size: 16px;
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        /* Límite de crédito */
+        .credit-limit {
+            background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 25px 0;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .credit-limit-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .credit-limit-icon {
+            width: 50px;
+            height: 50px;
+            background: #3b82f6;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .credit-limit-text {
+            flex: 1;
+        }
+
+        .credit-limit-text h4 {
+            color: #1e40af;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .credit-limit-text p {
+            color: #1e40af;
+            font-size: 14px;
+            opacity: 0.9;
+            margin: 0;
+        }
+
+        /* Botón de acción principal */
+        .action-button {
+            display: block;
+            width: 100%;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            text-decoration: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            margin: 40px 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .action-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .action-button:hover::before {
+            left: 100%;
+        }
+
+        .button-icon {
+            margin-right: 12px;
+            font-size: 20px;
+        }
+
+        /* Medios de pago */
+        .payment-methods {
+            margin: 40px 0;
+        }
+
+        .payment-methods h3 {
+            color: #334155;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .methods-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .method-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .method-card:hover {
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .method-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: #475569;
+            margin-bottom: 15px;
+        }
+
+        .method-card h4 {
+            color: #0f172a;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .method-card p {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        /* Advertencia importante */
+        .warning-notice {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            padding: 25px;
+            border-radius: 12px;
+            margin: 40px 0 30px;
+            border-left: 6px solid #dc2626;
+        }
+
+        .warning-notice h4 {
+            color: #991b1b;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .warning-notice p {
+            color: #991b1b;
+            font-size: 15px;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        /* Footer */
+        .footer {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .footer-logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .footer-info {
+            max-width: 400px;
+            margin: 0 auto 30px;
+        }
+
+        .footer-info p {
+            color: #cbd5e1;
+            font-size: 15px;
+            margin-bottom: 12px;
+            line-height: 1.6;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+
+        .footer-link {
+            color: #60a5fa;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .footer-link:hover {
+            color: #93c5fd;
+            text-decoration: underline;
+        }
+
+        .footer-note {
+            color: #94a3b8;
+            font-size: 12px;
+            line-height: 1.5;
+            padding-top: 25px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Timeline de pago */
+        .payment-timeline {
+            background: #f8fafc;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 30px 0;
+        }
+
+        .timeline-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .timeline-header h3 {
+            color: #334155;
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .timeline-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .timeline-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .step-number {
+            width: 30px;
+            height: 30px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .step-content h4 {
+            color: #1e293b;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .step-content p {
+            color: #64748b;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                border-radius: 16px;
+            }
+            
+            .header {
+                padding: 30px 20px;
+            }
+            
+            .header h1 {
+                font-size: 26px;
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .amount {
+                font-size: 36px;
+            }
+            
+            .action-button {
+                padding: 18px;
+                font-size: 16px;
+            }
+            
+            .methods-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .footer-links {
+                flex-direction: column;
+                gap: 15px;
+                align-items: center;
+            }
+        }
+
+        /* Compatibilidad con clientes de email */
+        @media screen and (max-width: 480px) {
+            .container {
+                width: 100% !important;
+            }
+        }
+
+        /* Dark mode support para clientes de email */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #0f172a;
+            }
+            
+            .container {
+                background: #1e293b;
+                border-color: #334155;
+            }
+            
+            .content {
+                color: #cbd5e1;
+            }
+            
+            .greeting strong {
+                color: #f1f5f9;
+            }
+            
+            .client-info {
+                background: #334155;
+            }
+            
+            .info-value {
+                color: #f1f5f9;
+            }
+            
+            .method-card {
+                background: #334155;
+                border-color: #475569;
+            }
+            
+            .method-card h4 {
+                color: #f1f5f9;
+            }
+            
+            .method-card p {
+                color: #cbd5e1;
+            }
+            
+            .amount-display {
+                background: #334155;
+                border-color: #475569;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .container {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+            
+            .action-button {
+                background: #10b981 !important;
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-content">
+                <h1>
+                    <span>📋</span>
+                    Recordatorio de Pago Pendiente
+                </h1>
+                <p>Cantina Tita • Sistema de Crédito Autorizado</p>
+            </div>
+        </div>
+
+        <!-- Avatar del cliente -->
+        <div class="client-avatar">
+            {{ cliente.nombres|first }}{{ cliente.apellidos|first }}
+        </div>
+
+        <!-- Contenido principal -->
+        <div class="content">
+            <!-- Saludo -->
+            <div class="greeting">
+                Estimado/a <strong>{{ cliente.nombres }} {{ cliente.apellidos }}</strong>,
+            </div>
+
+            <!-- Banner de alerta -->
+            <div class="alert-banner">
+                <h2>
+                    <span>⏰</span>
+                    RECORDATORIO IMPORTANTE
+                </h2>
+                <p>
+                    Su cuenta tiene un saldo pendiente que requiere atención inmediata.
+                </p>
+            </div>
+
+            <!-- Monto destacado -->
+            <div class="amount-display">
+                <div class="amount-label">Saldo pendiente total</div>
+                <div class="amount">
+                    Gs. {{ saldo_deudor|floatformat:0 }}
+                </div>
+                <p style="color: #64748b; margin-top: 15px; font-size: 14px;">
+                    Vence: <strong>{{ fecha|date:"d/m/Y" }}</strong>
+                </p>
+            </div>
+
+            <!-- Información del cliente -->
+            <div class="client-info">
+                <h3><span>👤</span> Información del Cliente</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Nombre Completo</div>
+                        <div class="info-value">{{ cliente.apellidos }}, {{ cliente.nombres }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Documento</div>
+                        <div class="info-value">{{ cliente.ruc_ci }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">N° de Cliente</div>
+                        <div class="info-value">#{{ cliente.id_cliente|stringformat:"06d" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Fecha del Recordatorio</div>
+                        <div class="info-value">{{ fecha|date:"d \d\e F \d\e Y" }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline del proceso de pago -->
+            <div class="payment-timeline">
+                <div class="timeline-header">
+                    <span>📝</span>
+                    <h3>Proceso de Pago Sencillo</h3>
+                </div>
+                <div class="timeline-steps">
+                    <div class="timeline-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>Selecciona el método de pago</h4>
+                            <p>Elige la opción que más te convenga</p>
+                        </div>
+                    </div>
+                    <div class="timeline-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>Realiza el pago</h4>
+                            <p>Usa los datos proporcionados más abajo</p>
+                        </div>
+                    </div>
+                    <div class="timeline-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>Confirma tu pago</h4>
+                            <p>Envía el comprobante si es necesario</p>
+                        </div>
+                    </div>
+                    <div class="timeline-step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h4>Cuenta actualizada</h4>
+                            <p>Tu crédito se restaurará automáticamente</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if cliente.limite_credito %}
+            <!-- Límite de crédito -->
+            <div class="credit-limit">
+                <div class="credit-limit-content">
+                    <div class="credit-limit-icon">💳</div>
+                    <div class="credit-limit-text">
+                        <h4>Tu Límite de Crédito Disponible</h4>
+                        <p>Al regularizar tu cuenta, tendrás acceso a un límite de <strong>Gs. {{ cliente.limite_credito|floatformat:0 }}</strong> para realizar compras a crédito.</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Botón de acción principal -->
+            <a href="https://portal.cantitatita.com/pagos?cliente={{ cliente.id_cliente }}&token={{ token|default:'' }}" 
+               class="action-button">
+                <span class="button-icon">💳</span>
+                Regularizar Cuenta Ahora
+            </a>
+
+            <!-- Medios de pago -->
+            <div class="payment-methods">
+                <h3>💳 Medios de Pago Disponibles</h3>
+                <div class="methods-grid">
+                    <div class="method-card">
+                        <div class="method-icon">🏦</div>
+                        <h4>Transferencia Bancaria</h4>
+                        <p>
+                            <strong>Banco XYZ</strong><br>
+                            Cuenta: 1234567890<br>
+                            Titular: Cantina Tita S.A.<br>
+                            RUC: 80012345-6
+                        </p>
+                    </div>
+                    <div class="method-card">
+                        <div class="method-icon">💵</div>
+                        <h4>Pago en Efectivo</h4>
+                        <p>
+                            Directamente en nuestra cantina<br>
+                            Lunes a Viernes: 7:00 - 17:00<br>
+                            Sábados: 8:00 - 12:00
+                        </p>
+                    </div>
+                    <div class="method-card">
+                        <div class="method-icon">📱</div>
+                        <h4>Billeteras Digitales</h4>
+                        <p>
+                            Tigo Money: 0981 123 456<br>
+                            Personal Pay: 0982 654 321<br>
+                            Giros Tigo: 0983 789 012
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advertencia importante -->
+            <div class="warning-notice">
+                <h4>
+                    <span>⚠️</span>
+                    AVISO IMPORTANTE
+                </h4>
+                <p>
+                    Para mantener activo tu crédito y evitar interrupciones en el servicio, 
+                    te solicitamos regularizar tu cuenta dentro de los próximos <strong>3 días hábiles</strong>. 
+                    De lo contrario, tu línea de crédito podría ser suspendida temporalmente 
+                    hasta que se regularice la situación.
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-logo">
+                <span>🏫</span>
+                Cantina Tita
+            </div>
+            
+            <div class="footer-info">
+                <p>
+                    Colegio XYZ • Av. Principal 1234<br>
+                    Asunción, Paraguay
+                </p>
+                <p>
+                    📞 Teléfono: (021) 123-4567<br>
+                    📧 Email: <a href="mailto:contacto@cantitatita.com" class="footer-link">contacto@cantitatita.com</a><br>
+                    🌐 Web: <a href="https://cantitatita.com" class="footer-link">cantitatita.com</a>
+                </p>
+            </div>
+
+            <div class="footer-links">
+                <a href="https://portal.cantitatita.com/mi-cuenta" class="footer-link">Mi Cuenta</a>
+                <a href="https://portal.cantitatita.com/historial" class="footer-link">Historial de Pagos</a>
+                <a href="https://cantitatita.com/faq" class="footer-link">Preguntas Frecuentes</a>
+                <a href="https://cantitatita.com/contacto" class="footer-link">Soporte</a>
+            </div>
+
+            <div class="footer-note">
+                <p>
+                    Este es un mensaje automático. Si ya realizaste el pago, por favor ignora este correo.<br>
+                    Para consultas sobre tu cuenta, comunícate con nuestro equipo de atención al cliente.
+                </p>
+                <p style="margin-top: 15px; font-size: 11px; color: #64748b;">
+                    © {% now "Y" %} Cantina Tita. Todos los derechos reservados.<br>
+                    Este mensaje fue enviado a {{ cliente.email|default:"tu dirección de correo" }}.
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

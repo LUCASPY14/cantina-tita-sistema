@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+
+{% block title %}Logs de Autorizaciones | Cantina Tita{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+    
+    <!-- Encabezado -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-neutral">📊 Logs de Autorizaciones</h1>
+            <p class="text-gray-600">Registro completo de todas las operaciones autorizadas</p>
+        </div>
+        <a href="{% url 'pos:admin_autorizaciones' %}" class="btn btn-outline">
+            ← Volver a Administración
+        </a>
+    </div>
+    
+    <!-- Estadísticas -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="stats shadow">
+            <div class="stat">
+                <div class="stat-title">Total Logs</div>
+                <div class="stat-value text-primary">{{ total_logs }}</div>
+            </div>
+        </div>
+        
+        <div class="stats shadow">
+            <div class="stat">
+                <div class="stat-title">Exitosos</div>
+                <div class="stat-value text-success">{{ exitosos }}</div>
+                <div class="stat-desc">{{ exitosos|floatformat:0 }}% del total</div>
+            </div>
+        </div>
+        
+        <div class="stats shadow">
+            <div class="stat">
+                <div class="stat-title">Rechazados</div>
+                <div class="stat-value text-error">{{ rechazados }}</div>
+                <div class="stat-desc">{{ rechazados|floatformat:0 }}% del total</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="card bg-white shadow-xl">
+        <div class="card-body">
+            <h3 class="card-title mb-4">🔍 Filtros</h3>
+            
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Fecha Desde</span>
+                    </label>
+                    <input type="date" name="fecha_desde" class="input input-bordered input-sm" 
+                           value="{{ fecha_desde }}">
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Fecha Hasta</span>
+                    </label>
+                    <input type="date" name="fecha_hasta" class="input input-bordered input-sm" 
+                           value="{{ fecha_hasta }}">
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Tipo Operación</span>
+                    </label>
+                    <select name="tipo_operacion" class="select select-bordered select-sm">
+                        <option value="">Todas</option>
+                        <option value="ANULAR_ALMUERZO" {% if tipo_operacion == 'ANULAR_ALMUERZO' %}selected{% endif %}>Anular Almuerzo</option>
+                        <option value="ANULAR_VENTA" {% if tipo_operacion == 'ANULAR_VENTA' %}selected{% endif %}>Anular Venta</option>
+                        <option value="ANULAR_RECARGA" {% if tipo_operacion == 'ANULAR_RECARGA' %}selected{% endif %}>Anular Recarga</option>
+                        <option value="MODIFICAR_PRECIO" {% if tipo_operacion == 'MODIFICAR_PRECIO' %}selected{% endif %}>Modificar Precio</option>
+                    </select>
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Resultado</span>
+                    </label>
+                    <select name="resultado" class="select select-bordered select-sm">
+                        <option value="">Todos</option>
+                        <option value="EXITOSO" {% if resultado == 'EXITOSO' %}selected{% endif %}>✅ Exitoso</option>
+                        <option value="RECHAZADO" {% if resultado == 'RECHAZADO' %}selected{% endif %}>❌ Rechazado</option>
+                        <option value="ERROR" {% if resultado == 'ERROR' %}selected{% endif %}>⚠️ Error</option>
+                    </select>
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Tarjeta</span>
+                    </label>
+                    <select name="tarjeta_id" class="select select-bordered select-sm">
+                        <option value="">Todas</option>
+                        {% for tarjeta in tarjetas %}
+                        <option value="{{ tarjeta.id_tarjeta_autorizacion }}" 
+                                {% if tarjeta_id == tarjeta.id_tarjeta_autorizacion|stringformat:"s" %}selected{% endif %}>
+                            {{ tarjeta.codigo_barra }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-span-1 md:col-span-5 flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        🔍 Filtrar
+                    </button>
+                    <a href="{% url 'pos:logs_autorizaciones' %}" class="btn btn-ghost btn-sm">
+                        🔄 Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Tabla de Logs -->
+    <div class="card bg-white shadow-xl">
+        <div class="card-body">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="card-title">📋 Registros de Autorizaciones ({{ logs.paginator.count }})</h3>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="table table-sm table-zebra">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Fecha/Hora</th>
+                            <th>Código Tarjeta</th>
+                            <th>Tipo Operación</th>
+                            <th>Resultado</th>
+                            <th>ID Registro</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td class="font-mono text-xs">{{ log.id_log }}</td>
+                            <td class="text-xs whitespace-nowrap">
+                                {{ log.fecha_hora|date:"d/m/Y" }}<br>
+                                <span class="text-gray-500">{{ log.fecha_hora|date:"H:i:s" }}</span>
+                            </td>
+                            <td class="font-mono font-bold text-xs">
+                                {{ log.codigo_barra }}
+                                {% if log.id_tarjeta_autorizacion %}
+                                    <br>
+                                    <span class="badge badge-xs badge-ghost">
+                                        {{ log.id_tarjeta_autorizacion.get_tipo_autorizacion_display }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if log.tipo_operacion == 'ANULAR_ALMUERZO' %}
+                                    <span class="badge badge-sm badge-warning">🍽️ Almuerzo</span>
+                                {% elif log.tipo_operacion == 'ANULAR_VENTA' %}
+                                    <span class="badge badge-sm badge-info">🛒 Venta</span>
+                                {% elif log.tipo_operacion == 'ANULAR_RECARGA' %}
+                                    <span class="badge badge-sm badge-success">💳 Recarga</span>
+                                {% elif log.tipo_operacion == 'MODIFICAR_PRECIO' %}
+                                    <span class="badge badge-sm badge-error">💰 Precio</span>
+                                {% else %}
+                                    <span class="badge badge-sm">{{ log.get_tipo_operacion_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if log.resultado == 'EXITOSO' %}
+                                    <span class="badge badge-sm badge-success">✅ OK</span>
+                                {% elif log.resultado == 'RECHAZADO' %}
+                                    <span class="badge badge-sm badge-error">❌ Rechazado</span>
+                                {% else %}
+                                    <span class="badge badge-sm badge-warning">⚠️ Error</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-xs">
+                                {% if log.id_registro_afectado %}
+                                    #{{ log.id_registro_afectado }}
+                                {% else %}
+                                    <span class="text-gray-400">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-xs max-w-md">
+                                <div class="truncate" title="{{ log.descripcion }}">
+                                    {{ log.descripcion|truncatewords:20 }}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-gray-400 py-8">
+                                No hay logs con los filtros seleccionados
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Paginación -->
+            {% if logs.has_other_pages %}
+            <div class="flex justify-center mt-4">
+                <div class="join">
+                    {% if logs.has_previous %}
+                    <a href="?page=1&fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}&tipo_operacion={{ tipo_operacion }}&resultado={{ resultado }}&tarjeta_id={{ tarjeta_id }}" 
+                       class="join-item btn btn-sm">«</a>
+                    <a href="?page={{ logs.previous_page_number }}&fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}&tipo_operacion={{ tipo_operacion }}&resultado={{ resultado }}&tarjeta_id={{ tarjeta_id }}" 
+                       class="join-item btn btn-sm">‹</a>
+                    {% endif %}
+                    
+                    <button class="join-item btn btn-sm">
+                        Página {{ logs.number }} de {{ logs.paginator.num_pages }}
+                    </button>
+                    
+                    {% if logs.has_next %}
+                    <a href="?page={{ logs.next_page_number }}&fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}&tipo_operacion={{ tipo_operacion }}&resultado={{ resultado }}&tarjeta_id={{ tarjeta_id }}" 
+                       class="join-item btn btn-sm">›</a>
+                    <a href="?page={{ logs.paginator.num_pages }}&fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}&tipo_operacion={{ tipo_operacion }}&resultado={{ resultado }}&tarjeta_id={{ tarjeta_id }}" 
+                       class="join-item btn btn-sm">»</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+</div>
+{% endblock %}

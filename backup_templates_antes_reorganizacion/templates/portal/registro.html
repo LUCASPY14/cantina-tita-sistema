@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - Portal de Padres</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 py-8">
+        <div class="card w-full max-w-md bg-base-100 shadow-2xl">
+            <div class="card-body">
+                <div class="text-center mb-6">
+                    <h1 class="text-4xl font-bold text-primary mb-2">🏪 Cantina Tita</h1>
+                    <p class="text-gray-600">Portal de Padres - Registro</p>
+                </div>
+                
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} mb-4">
+                        <span>{{ message }}</span>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">RUC/CI del Titular</span>
+                        </label>
+                        {{ form.ruc_ci }}
+                        {% if form.ruc_ci.errors %}
+                            <label class="label">
+                                <span class="label-text-alt text-error">{{ form.ruc_ci.errors.0 }}</span>
+                            </label>
+                        {% endif %}
+                        <label class="label">
+                            <span class="label-text-alt">{{ form.ruc_ci.help_text }}</span>
+                        </label>
+                    </div>
+                    
+                    <div class="form-control mt-4">
+                        <label class="label">
+                            <span class="label-text">Correo Electrónico</span>
+                        </label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <label class="label">
+                                <span class="label-text-alt text-error">{{ form.email.errors.0 }}</span>
+                            </label>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-control mt-4">
+                        <label class="label">
+                            <span class="label-text">Contraseña</span>
+                        </label>
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                            <label class="label">
+                                <span class="label-text-alt text-error">{{ form.password.errors.0 }}</span>
+                            </label>
+                        {% endif %}
+                        <label class="label">
+                            <span class="label-text-alt">{{ form.password.help_text }}</span>
+                        </label>
+                    </div>
+                    
+                    <div class="form-control mt-4">
+                        <label class="label">
+                            <span class="label-text">Confirmar Contraseña</span>
+                        </label>
+                        {{ form.password_confirm }}
+                        {% if form.password_confirm.errors %}
+                            <label class="label">
+                                <span class="label-text-alt text-error">{{ form.password_confirm.errors.0 }}</span>
+                            </label>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-control mt-6">
+                        <label class="cursor-pointer flex items-center gap-2">
+                            {{ form.acepto_terminos }}
+                            <span class="label-text">{{ form.acepto_terminos.label }}</span>
+                        </label>
+                        {% if form.acepto_terminos.errors %}
+                            <label class="label">
+                                <span class="label-text-alt text-error">{{ form.acepto_terminos.errors.0 }}</span>
+                            </label>
+                        {% endif %}
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-error mt-4">
+                            {% for error in form.non_field_errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="form-control mt-6">
+                        <button type="submit" class="btn btn-primary">
+                            Registrarse
+                        </button>
+                    </div>
+                </form>
+                
+                <div class="divider">O</div>
+                
+                <div class="text-center">
+                    <p class="text-sm text-gray-600">
+                        ¿Ya tienes cuenta? 
+                        <a href="{% url 'gestion:portal_login' %}" class="link link-primary">
+                            Inicia sesión aquí
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

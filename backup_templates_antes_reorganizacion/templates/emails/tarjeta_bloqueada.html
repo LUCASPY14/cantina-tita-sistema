@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #6c757d; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border: 1px solid #ddd; }
+        .alert { background: #fff3cd; border-left: 4px solid #ff6f00; padding: 15px; margin: 20px 0; }
+        .bloqueado { background: #6c757d; color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; margin: 20px 0; }
+        .footer { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔒 Tarjeta Bloqueada</h1>
+        </div>
+        
+        <div class="content">
+            <p><strong>Estimado/a padre/madre,</strong></p>
+            
+            <div class="bloqueado">
+                ⚠️ LA TARJETA {{ tarjeta }} HA SIDO BLOQUEADA
+            </div>
+            
+            <p>Le informamos que la tarjeta de su hijo/a ha sido bloqueada automáticamente por el sistema debido a que la deuda pendiente superó los 15 días sin regularizar.</p>
+            
+            <div class="alert">
+                <strong>📋 Información:</strong><br>
+                <strong>💳 Tarjeta:</strong> {{ tarjeta }}<br>
+                <strong>⏰ Días en deuda:</strong> {{ dias_deuda }} días<br>
+                <strong>🔒 Estado:</strong> BLOQUEADA<br>
+            </div>
+            
+            <p><strong>¿Qué significa esto?</strong></p>
+            <ul>
+                <li>❌ Su hijo/a NO podrá realizar compras con esta tarjeta</li>
+                <li>❌ NO podrá adquirir almuerzos ni productos</li>
+                <li>✅ La tarjeta se desbloqueará automáticamente al regularizar la deuda</li>
+            </ul>
+            
+            <p><strong>¿Cómo desbloquear la tarjeta?</strong></p>
+            <p>Para desbloquear la tarjeta debe:</p>
+            <ol>
+                <li>Realizar una recarga que cubra el monto adeudado</li>
+                <li>El sistema aplicará automáticamente el pago a la deuda</li>
+                <li>La tarjeta se desbloqueará inmediatamente</li>
+            </ol>
+            
+            <p>Por favor, contacte con la administración de la cantina para mayor información.</p>
+            
+            <p><strong>Cantina Tita</strong><br>
+            Sistema de Gestión Escolar</p>
+        </div>
+        
+        <div class="footer">
+            <p>Este es un mensaje automático del sistema.</p>
+        </div>
+    </div>
+</body>
+</html>

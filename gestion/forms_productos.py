@@ -30,7 +30,7 @@ class ProductoForm(forms.ModelForm):
             'codigo_barra',
             'descripcion',
             'id_categoria',
-            'id_unidad_de_medida',
+            'id_unidad_medida',
             'id_impuesto',
             'stock_minimo',
             'permite_stock_negativo',
@@ -40,7 +40,7 @@ class ProductoForm(forms.ModelForm):
             'codigo_barra': 'Código de Barras',
             'descripcion': 'Descripción del Producto',
             'id_categoria': 'Categoría',
-            'id_unidad_de_medida': 'Unidad de Medida',
+            'id_unidad_medida': 'Unidad de Medida',
             'id_impuesto': 'Impuesto',
             'stock_minimo': 'Stock Mínimo',
             'permite_stock_negativo': 'Permite Stock Negativo',
@@ -60,7 +60,7 @@ class ProductoForm(forms.ModelForm):
             'id_categoria': forms.Select(attrs={
                 'class': 'select select-bordered w-full'
             }),
-            'id_unidad_de_medida': forms.Select(attrs={
+            'id_unidad_medida': forms.Select(attrs={
                 'class': 'select select-bordered w-full'
             }),
             'id_impuesto': forms.Select(attrs={
@@ -95,7 +95,7 @@ class ProductoForm(forms.ModelForm):
         
         # Filtrar solo categorías activas y ordenar
         self.fields['id_categoria'].queryset = Categoria.objects.filter(activo=True).order_by('nombre')
-        self.fields['id_unidad_de_medida'].queryset = UnidadMedida.objects.filter(activo=True).order_by('nombre')
+        self.fields['id_unidad_medida'].queryset = UnidadMedida.objects.filter(activo=True).order_by('nombre')
         self.fields['id_impuesto'].queryset = Impuesto.objects.filter(activo=True).order_by('descripcion')
     
     def clean_codigo_barra(self):

@@ -18,7 +18,7 @@ def productos_lista(request):
     # Obtener productos con relaciones
     productos_query = Producto.objects.select_related(
         'id_categoria',
-        'id_unidad_de_medida'
+        'id_unidad_medida'
     ).all()
     
     # Filtros

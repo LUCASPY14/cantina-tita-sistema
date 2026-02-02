@@ -13,6 +13,7 @@ from . import pagos_admin_views
 from . import empleado_views
 from . import terminos_views
 from .reportes_gerenciales import ReportesGerenciales
+from .api_views import EmpleadoTokenObtainPairView
 
 app_name = 'gestion'
 
@@ -134,6 +135,11 @@ urlpatterns = [
     path('empleados/<int:empleado_id>/editar/', empleado_views.editar_empleado_ajax, name='editar_empleado_ajax'),
     path('empleados/<int:empleado_id>/resetear-password/', empleado_views.resetear_password_empleado_ajax, name='resetear_password_ajax'),
     path('empleados/<int:empleado_id>/toggle-estado/', empleado_views.toggle_estado_empleado_ajax, name='toggle_estado_ajax'),
+]
+
+urlpatterns += [
+    # Endpoint para obtener JWT personalizado
+    path('api/token/', EmpleadoTokenObtainPairView.as_view(), name='token_obtain_pair'),
 ]
 
 

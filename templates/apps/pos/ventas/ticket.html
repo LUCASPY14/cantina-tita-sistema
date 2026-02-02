@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket de Venta</title>
+    <style>
+        /* Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* Estilos para pantalla */
+        @media screen {
+            body {
+                font-family: 'Courier New', monospace;
+                background: #f5f5f5;
+                padding: 20px;
+            }
+            
+            .ticket-container {
+                max-width: 300px;
+                margin: 0 auto;
+                background: white;
+                padding: 20px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+            
+            .no-print {
+                text-align: center;
+                margin-top: 20px;
+            }
+            
+            .btn {
+                padding: 12px 24px;
+                font-size: 16px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                margin: 5px;
+            }
+            
+            .btn-print {
+                background: #FF6B35;
+                color: white;
+            }
+            
+            .btn-close {
+                background: #E74C3C;
+                color: white;
+            }
+        }
+        
+        /* Estilos para impresión (80mm térmica) */
+        @media print {
+            @page {
+                size: 80mm auto;
+                margin: 0;
+            }
+            
+            body {
+                font-family: 'Courier New', monospace;
+                font-size: 11pt;
+                line-height: 1.4;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .ticket-container {
+                width: 72mm;
+                margin: 0;
+                padding: 4mm;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+        }
+        
+        /* Estilos comunes */
+        .header {
+            text-align: center;
+            border-bottom: 2px dashed #333;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .business-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        
+        .business-info {
+            font-size: 10px;
+            line-height: 1.5;
+        }
+        
+        .ticket-info {
+            font-size: 11px;
+            margin: 10px 0;
+            border-bottom: 1px dashed #333;
+            padding-bottom: 8px;
+        }
+        
+        .ticket-info div {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+        }
+        
+        .items {
+            margin: 10px 0;
+            border-bottom: 2px dashed #333;
+            padding-bottom: 10px;
+        }
+        
+        .item {
+            margin: 8px 0;
+        }
+        
+        .item-name {
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .item-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            margin-top: 2px;
+        }
+        
+        .totals {
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        
+        .totals div {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        
+        .total-final {
+            font-size: 16px;
+            font-weight: bold;
+            border-top: 2px solid #333;
+            border-bottom: 2px solid #333;
+            padding: 8px 0;
+            margin-top: 8px;
+        }
+        
+        .payment-info {
+            margin: 10px 0;
+            font-size: 11px;
+            border-bottom: 1px dashed #333;
+            padding-bottom: 8px;
+        }
+        
+        .payment-info div {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 10px;
+        }
+        
+        .footer-message {
+            margin: 5px 0;
+            font-style: italic;
+        }
+        
+        .barcode {
+            text-align: center;
+            margin: 10px 0;
+            font-family: 'Libre Barcode 128', cursive;
+            font-size: 32px;
+            letter-spacing: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="ticket-container">
+        <!-- Encabezado -->
+        <div class="header">
+            <div class="logo">🏫</div>
+            <div class="business-name">CANTINA TITA</div>
+            <div class="business-info">
+                Colegio Santa Teresa de Jesús<br>
+                Tel: (0981) 410938<br>
+                RUC: 531616-2
+            </div>
+        </div>
+        
+        <!-- Información del ticket -->
+        <div class="ticket-info">
+            <div>
+                <span>Ticket:</span>
+                <span><strong>#{{ venta.id_venta }}</strong></span>
+            </div>
+            <div>
+                <span>Fecha:</span>
+                <span>{{ venta.fecha|date:"d/m/Y H:i" }}</span>
+            </div>
+            <div>
+                <span>Cajero:</span>
+                <span>{{ venta.id_empleado.descripcion|default:"N/A" }}</span>
+            </div>
+            {% if tarjeta %}
+            <div>
+                <span>Tarjeta:</span>
+                <span>{{ tarjeta.nro_tarjeta }}</span>
+            </div>
+            <div>
+                <span>Estudiante:</span>
+                <span>{{ tarjeta.id_hijo.descripcion }}</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Items -->
+        <div class="items">
+            {% for item in detalles %}
+            <div class="item">
+                <div class="item-name">{{ item.id_producto.descripcion }}</div>
+                <div class="item-details">
+                    <span>{{ item.cantidad }} x Gs. {{ item.precio_unitario|floatformat:0 }}</span>
+                    <span><strong>Gs. {{ item.subtotal|floatformat:0 }}</strong></span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Totales -->
+        <div class="totals">
+            <div>
+                <span>Subtotal:</span>
+                <span>Gs. {{ venta.monto_total|floatformat:0 }}</span>
+            </div>
+            <div>
+                <span>Descuento:</span>
+                <span>Gs. {{ venta.descuento|default:0|floatformat:0 }}</span>
+            </div>
+            {% if total_comision > 0 %}
+            <div>
+                <span>Comisión:</span>
+                <span>Gs. {{ total_comision|floatformat:0 }}</span>
+            </div>
+            {% endif %}
+            <div class="total-final">
+                <span>TOTAL A PAGAR:</span>
+                <span>Gs. {{ total_a_pagar|floatformat:0 }}</span>
+            </div>
+        </div>
+        
+        <!-- Información de pago -->
+        <div class="payment-info">
+            <div style="font-weight: bold; margin-bottom: 5px;">Forma de Pago:</div>
+            
+            {% if pagos_venta %}
+                <!-- Pagos Mixtos -->
+                {% for pago in pagos_venta %}
+                <div style="margin-left: 10px;">
+                    <span>{{ pago.id_medio_pago.descripcion }}:</span>
+                    <span>Gs. {{ pago.monto_aplicado|floatformat:0 }}</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <!-- Sistema anterior (compatibilidad) -->
+                <div>
+                    <span>Método:</span>
+                    <span>{% if tarjeta %}Débito de Tarjeta{% else %}Efectivo{% endif %}</span>
+                </div>
+            {% endif %}
+            
+            {% if tarjeta %}
+            <div style="margin-top: 8px; border-top: 1px solid #ccc; padding-top: 5px;">
+                <span>Saldo Anterior:</span>
+                <span>Gs. {{ saldo_anterior|floatformat:0 }}</span>
+            </div>
+            <div>
+                <span>Saldo Actual:</span>
+                <span><strong>Gs. {{ saldo_actual|floatformat:0 }}</strong></span>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Código de barras -->
+        <div class="barcode">
+            *{{ venta.id_venta|stringformat:"06d" }}*
+        </div>
+        
+        <!-- Pie de página -->
+        <div class="footer">
+            <div class="footer-message">¡Gracias por tu compra! 😊</div>
+            <div class="footer-message">Que disfrutes tu almuerzo</div>
+            <div style="margin-top: 10px; font-size: 9px;">
+                Sistema POS Cantina v1.0<br>
+                www.cantina-tita.com.py
+            </div>
+        </div>
+    </div>
+    
+    <!-- Botones (no se imprimen) -->
+    <div class="no-print">
+        <button class="btn btn-print" onclick="window.print()">
+            🖨️ Imprimir Ticket
+        </button>
+        <button class="btn btn-close" onclick="window.close()">
+            ❌ Cerrar
+        </button>
+    </div>
+    
+    <script>
+        // Auto-print al cargar (opcional, comentado por defecto)
+        // window.onload = function() {
+        //     setTimeout(() => window.print(), 500);
+        // };
+        
+        // Cerrar ventana después de imprimir
+        window.onafterprint = function() {
+            // Opcional: cerrar automáticamente
+            // window.close();
+        };
+    </script>
+</body>
+</html>

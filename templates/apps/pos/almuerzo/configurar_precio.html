@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Configurar Precio Almuerzo{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">⚙️ Configuración de Precio</h1>
+            <p class="text-gray-600 mt-2">Almuerzo Completo (Plato + Postre + Jugo)</p>
+        </div>
+        <a href="{% url 'pos:almuerzo_reportes' %}" class="btn btn-ghost">
+            ← Volver a Reportes
+        </a>
+    </div>
+
+    <!-- Mensajes -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                    {% if message.tags == 'success' %}
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    {% else %}
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    {% endif %}
+                </svg>
+                <span>{{ message }}</span>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Formulario de Configuración -->
+        <div class="lg:col-span-2">
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title text-2xl mb-6">💰 Precio del Almuerzo</h2>
+                    
+                    <!-- Precio Actual -->
+                    <div class="bg-primary text-primary-content rounded-lg p-6 mb-6">
+                        <div class="text-sm opacity-80 mb-2">Precio Actual</div>
+                        <div class="text-5xl font-bold">
+                            Gs. {{ tipo_almuerzo.precio_unitario|floatformat:0 }}
+                        </div>
+                        <div class="text-sm opacity-80 mt-2">por almuerzo</div>
+                    </div>
+
+                    <!-- Formulario de Cambio -->
+                    <form method="POST" class="space-y-4">
+                        {% csrf_token %}
+                        
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-semibold">Nuevo Precio (Gs.)</span>
+                            </label>
+                            <input 
+                                type="number" 
+                                name="precio_unitario"
+                                step="100"
+                                min="1000"
+                                value="{{ tipo_almuerzo.precio_unitario }}"
+                                class="input input-bordered input-lg text-2xl"
+                                required
+                                autofocus
+                            >
+                            <label class="label">
+                                <span class="label-text-alt">Mínimo: Gs. 1,000</span>
+                            </label>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <div class="text-sm">
+                                <strong>Importante:</strong> El nuevo precio se aplicará:
+                                <ul class="list-disc list-inside mt-2">
+                                    <li>A todos los nuevos almuerzos registrados</li>
+                                    <li>A los cálculos de cuentas mensuales futuras</li>
+                                    <li>Los registros históricos mantienen su precio original</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="card-actions justify-end mt-6">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                💾 Actualizar Precio
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Información y Estadísticas -->
+        <div class="space-y-6">
+            <!-- Componentes -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h3 class="card-title text-lg">📋 Incluye</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-3">
+                            <div class="text-3xl">🍽️</div>
+                            <div>
+                                <div class="font-semibold">Plato Principal</div>
+                                <div class="text-sm text-gray-600">Comida completa</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="text-3xl">🍰</div>
+                            <div>
+                                <div class="font-semibold">Postre</div>
+                                <div class="text-sm text-gray-600">Fruta o dulce</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="text-3xl">🥤</div>
+                            <div>
+                                <div class="font-semibold">Jugo</div>
+                                <div class="text-sm text-gray-600">Bebida natural</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estadísticas de Impacto -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h3 class="card-title text-lg">📊 Estadísticas</h3>
+                    <div class="space-y-4">
+                        <div class="stat p-0">
+                            <div class="stat-title text-xs">Registros Hoy</div>
+                            <div class="stat-value text-2xl">{{ registros_hoy }}</div>
+                            <div class="stat-desc text-xs">Almuerzos</div>
+                        </div>
+                        <div class="divider my-0"></div>
+                        <div class="stat p-0">
+                            <div class="stat-title text-xs">Cuentas Pendientes</div>
+                            <div class="stat-value text-2xl">{{ cuentas_pendientes }}</div>
+                            <div class="stat-desc text-xs">Por cobrar</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historial de Cambios (futuro) -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h3 class="card-title text-lg">📜 Información</h3>
+                    <div class="text-sm text-gray-600">
+                        <p>El sistema registra el precio exacto con el que se registró cada almuerzo.</p>
+                        <p class="mt-2">Esto permite:</p>
+                        <ul class="list-disc list-inside mt-2">
+                            <li>Cálculos precisos</li>
+                            <li>Auditoría completa</li>
+                            <li>Historial de precios</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

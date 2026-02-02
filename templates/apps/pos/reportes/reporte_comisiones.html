@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Reporte de Comisiones{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-6">
+        <a href="{% url 'pos:comisiones_dashboard' %}" class="btn btn-ghost btn-sm mb-2">← Volver</a>
+        <h1 class="text-3xl font-bold text-neutral">📊 Reporte de Comisiones</h1>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+            <form method="GET" class="flex gap-4 items-end">
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Desde</span></label>
+                    <input type="date" name="fecha_desde" value="{{ fecha_desde }}" class="input input-bordered">
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Hasta</span></label>
+                    <input type="date" name="fecha_hasta" value="{{ fecha_hasta }}" class="input input-bordered">
+                </div>
+                <button type="submit" class="btn btn-primary">🔍 Filtrar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resumen -->
+    <div class="stats stats-vertical lg:stats-horizontal shadow w-full mb-6">
+        <div class="stat">
+            <div class="stat-title">Total Comisiones</div>
+            <div class="stat-value text-primary text-2xl">Gs. {{ total_comision|floatformat:0|intcomma }}</div>
+        </div>
+        <div class="stat">
+            <div class="stat-title">Total Transacciones</div>
+            <div class="stat-value text-success text-2xl">Gs. {{ total_transacciones|floatformat:0|intcomma }}</div>
+        </div>
+        <div class="stat">
+            <div class="stat-title">Cantidad</div>
+            <div class="stat-value text-info">{{ cantidad_total }}</div>
+        </div>
+    </div>
+
+    <!-- Por Medio de Pago -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+            <h2 class="card-title">Resumen por Medio de Pago</h2>
+            <div class="overflow-x-auto">
+                <table class="table w-full">
+                    <thead>
+                        <tr class="bg-neutral text-neutral-content">
+                            <th>Medio</th>
+                            <th>Cantidad</th>
+                            <th>Total Transacciones</th>
+                            <th>Total Comisión</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in por_medio %}
+                        <tr>
+                            <td class="font-bold">{{ item.medio.descripcion }}</td>
+                            <td>{{ item.cantidad }}</td>
+                            <td class="font-mono">Gs. {{ item.total_transacciones|floatformat:0|intcomma }}</td>
+                            <td class="font-mono text-primary">Gs. {{ item.total_comision|floatformat:0|intcomma }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center text-neutral/50">No hay datos para el período seleccionado</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detalle -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title">Detalle de Comisiones</h2>
+            <div class="overflow-x-auto">
+                <table class="table table-zebra table-sm w-full">
+                    <thead>
+                        <tr class="bg-neutral text-neutral-content">
+                            <th>Fecha</th>
+                            <th>Venta</th>
+                            <th>Medio</th>
+                            <th>Monto</th>
+                            <th>Comisión</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for comision in comisiones %}
+                        <tr>
+                            <td>{{ comision.id_venta.fecha_venta|date:"d/m/Y H:i" }}</td>
+                            <td class="font-mono">#{{ comision.id_venta.id_venta }}</td>
+                            <td>{{ comision.id_medio_pago.descripcion }}</td>
+                            <td class="font-mono">Gs. {{ comision.monto_transaccion|floatformat:0|intcomma }}</td>
+                            <td class="font-mono text-primary">Gs. {{ comision.monto_comision|floatformat:0|intcomma }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center text-neutral/50">No hay comisiones registradas</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

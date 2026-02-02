@@ -186,7 +186,7 @@
 - ✅ `values()` y `values_list()`
 - ✅ `select_related()` y `prefetch_related()`
 
-**Resultado:** Sistema 100% compatible con PostgreSQL, MySQL, MariaDB y SQLite
+**Resultado:** Sistema 100% compatible con PostgreSQL y MySQL/MariaDB
 
 ---
 
@@ -371,7 +371,7 @@
 - **API REST:** 100% funcional (41/41 tests)
 - **POS Web:** 100% funcional
 - **Mejoras:** 100% implementadas
-- **Compatibilidad:** PostgreSQL, MySQL, MariaDB, SQLite
+- **Compatibilidad:** PostgreSQL, MySQL, MariaDB (producción)
 
 ---
 

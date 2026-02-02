@@ -1,0 +1,243 @@
+{% extends 'base_portal.html' %}
+
+{% block title %}Términos y Condiciones - Saldo Negativo{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3><i class="fas fa-file-contract"></i> Términos y Condiciones - Uso de Saldo Negativo</h3>
+                </div>
+                
+                <div class="card-body">
+                    {% if ya_acepto %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> <strong>Usted ya aceptó estos términos</strong><br>
+                        Fecha de aceptación: {{ aceptacion.fecha_aceptacion|date:"d/m/Y H:i" }}<br>
+                        Versión: {{ aceptacion.version_terminos }}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Por favor lea atentamente los siguientes términos antes de activar el saldo negativo.
+                    </div>
+                    {% endif %}
+                    
+                    <div id="terminos-contenido" style="max-height: 500px; overflow-y: auto; border: 1px solid #ddd; padding: 20px; background: #f9f9f9;">
+                        <h4>TÉRMINOS Y CONDICIONES PARA USO DE SALDO NEGATIVO</h4>
+                        <p><strong>Versión:</strong> 1.0 | <strong>Vigencia:</strong> Enero 2026</p>
+                        
+                        <hr>
+                        
+                        <h5>1. DEFINICIONES</h5>
+                        <p>
+                            <strong>Saldo Negativo:</strong> Es el crédito otorgado por Cantina Tita que permite al hijo realizar compras 
+                            cuando el saldo de su tarjeta es insuficiente, generando una deuda que debe ser regularizada mediante recarga posterior.
+                        </p>
+                        <p>
+                            <strong>Límite de Crédito:</strong> Es el monto máximo que el hijo puede deber (saldo negativo máximo permitido).
+                        </p>
+                        <p>
+                            <strong>Regularización:</strong> Acción de recargar saldo para cubrir la deuda pendiente.
+                        </p>
+                        
+                        <h5>2. CONDICIONES DE USO</h5>
+                        <ol>
+                            <li>El saldo negativo debe ser autorizado por un supervisor de la cantina en cada ocasión.</li>
+                            <li>El límite de crédito es de <strong>Gs. {{ limite_credito|default:"50.000" }}</strong> por tarjeta.</li>
+                            <li>La deuda debe ser regularizada en un plazo máximo de <strong>15 días</strong> desde la autorización.</li>
+                            <li>El padre/madre responsable se compromete a recargar la tarjeta dentro del plazo establecido.</li>
+                        </ol>
+                        
+                        <h5>3. PROCESO DE AUTORIZACIÓN</h5>
+                        <ol>
+                            <li>Cuando el hijo no tiene saldo suficiente, el cajero solicita autorización a un supervisor.</li>
+                            <li>El supervisor evalúa la situación y, si corresponde, autoriza la venta con saldo negativo.</li>
+                            <li>Se registra la autorización con motivo, fecha, hora y datos del supervisor.</li>
+                            <li>El padre/madre recibe una notificación automática por email y/o WhatsApp.</li>
+                        </ol>
+                        
+                        <h5>4. REGULARIZACIÓN DE DEUDA</h5>
+                        <ol>
+                            <li>Al realizar una recarga, el sistema aplica automáticamente el monto a la deuda pendiente.</li>
+                            <li>El saldo sobrante después de pagar la deuda queda disponible para futuras compras.</li>
+                            <li>Si la recarga no cubre la deuda completa, se aplica parcialmente y la deuda restante persiste.</li>
+                            <li>Recibirá una notificación confirmando la regularización del saldo.</li>
+                        </ol>
+                        
+                        <h5>5. NOTIFICACIONES</h5>
+                        <p>El padre/madre responsable recibirá notificaciones automáticas en las siguientes situaciones:</p>
+                        <ul>
+                            <li><strong>Saldo bajo:</strong> Cuando el saldo es menor al umbral configurado.</li>
+                            <li><strong>Saldo negativo:</strong> Inmediatamente después de cada autorización de compra con saldo negativo.</li>
+                            <li><strong>Recordatorios:</strong> A los 3, 7 y 15 días de tener deuda pendiente.</li>
+                            <li><strong>Bloqueo:</strong> Si la tarjeta es bloqueada por morosidad.</li>
+                            <li><strong>Regularización:</strong> Cuando se regulariza la deuda mediante recarga.</li>
+                        </ul>
+                        
+                        <h5>6. CONSECUENCIAS DE INCUMPLIMIENTO</h5>
+                        <p>En caso de no regularizar la deuda en el plazo de 15 días:</p>
+                        <ul>
+                            <li>❌ La tarjeta será <strong>bloqueada automáticamente</strong></li>
+                            <li>❌ El hijo NO podrá realizar compras en la cantina</li>
+                            <li>❌ La tarjeta permanecerá bloqueada hasta regularizar la deuda completa</li>
+                            <li>⚠️ Podrán aplicarse restricciones adicionales según el reglamento interno</li>
+                        </ul>
+                        
+                        <h5>7. DESBLOQUEO DE TARJETA</h5>
+                        <ol>
+                            <li>Para desbloquear la tarjeta, debe realizar una recarga que cubra el monto total adeudado.</li>
+                            <li>El desbloqueo es automático una vez regularizada la deuda.</li>
+                            <li>No se cobran costos adicionales por el desbloqueo.</li>
+                        </ol>
+                        
+                        <h5>8. REVOCACIÓN DE AUTORIZACIÓN</h5>
+                        <p>
+                            El padre/madre puede revocar la autorización de saldo negativo en cualquier momento desde el portal web.
+                            Una vez revocada, la tarjeta no podrá generar nuevas deudas, pero deberá regularizar las deudas pendientes.
+                        </p>
+                        
+                        <h5>9. MODIFICACIÓN DE TÉRMINOS</h5>
+                        <p>
+                            Cantina Tita se reserva el derecho de modificar estos términos en cualquier momento.
+                            Los cambios se notificarán con al menos 15 días de anticipación por email y/o portal web.
+                        </p>
+                        
+                        <h5>10. DATOS PERSONALES</h5>
+                        <p>
+                            Los datos proporcionados serán utilizados únicamente para la gestión del servicio de saldo negativo
+                            y notificaciones asociadas. No se compartirán con terceros.
+                        </p>
+                        
+                        <h5>11. CONSULTAS</h5>
+                        <p>
+                            Para consultas sobre estos términos o el funcionamiento del sistema, puede contactarse con:
+                        </p>
+                        <ul>
+                            <li>📧 Email: cantina@colegio.edu.py</li>
+                            <li>📞 Teléfono: +595 981 234567</li>
+                            <li>🕐 Horario de atención: Lunes a Viernes, 07:00 - 16:00</li>
+                        </ul>
+                        
+                        <hr>
+                        
+                        <p><strong>DECLARACIÓN DE ACEPTACIÓN:</strong></p>
+                        <p>
+                            Al marcar la casilla de aceptación y confirmar, declaro que:
+                        </p>
+                        <ul>
+                            <li>✅ He leído y comprendido completamente estos términos y condiciones</li>
+                            <li>✅ Acepto las condiciones de uso del saldo negativo</li>
+                            <li>✅ Me comprometo a regularizar las deudas en los plazos establecidos</li>
+                            <li>✅ Entiendo las consecuencias del incumplimiento (bloqueo de tarjeta)</li>
+                            <li>✅ Autorizo el envío de notificaciones por email y WhatsApp</li>
+                        </ul>
+                    </div>
+                    
+                    {% if not ya_acepto %}
+                    <form method="POST" id="formAceptacion">
+                        {% csrf_token %}
+                        
+                        <div class="form-check mt-4">
+                            <input class="form-check-input" type="checkbox" id="checkbox-acepto" name="acepto" required>
+                            <label class="form-check-label" for="checkbox-acepto">
+                                <strong>He leído y acepto los términos y condiciones</strong>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="checkbox-notificaciones" name="acepto_notificaciones" required>
+                            <label class="form-check-label" for="checkbox-notificaciones">
+                                Autorizo el envío de notificaciones por email y WhatsApp
+                            </label>
+                        </div>
+                        
+                        <div class="alert alert-warning mt-3">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            <strong>Importante:</strong> Esta aceptación quedará registrada con su IP, fecha y hora como constancia legal.
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'portal_dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg" id="btnAceptar" disabled>
+                                <i class="fas fa-check-circle"></i> Aceptar Términos y Activar Saldo Negativo
+                            </button>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="mt-4">
+                        <a href="{% url 'portal_dashboard' %}" class="btn btn-primary">
+                            <i class="fas fa-arrow-left"></i> Volver al Dashboard
+                        </a>
+                        {% if puede_revocar %}
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalRevocar">
+                            <i class="fas fa-ban"></i> Revocar Autorización
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="card-footer text-muted">
+                    <small>
+                        Documento legal - Cantina Tita | Versión 1.0 | Enero 2026
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Revocar -->
+{% if ya_acepto and puede_revocar %}
+<div class="modal fade" id="modalRevocar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Revocar Autorización de Saldo Negativo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>¿Está seguro que desea revocar la autorización?</strong></p>
+                <p>Al revocar:</p>
+                <ul>
+                    <li>❌ La tarjeta NO podrá generar nuevas deudas</li>
+                    <li>⚠️ Deberá regularizar las deudas pendientes existentes</li>
+                    <li>🔄 Podrá volver a aceptar los términos en el futuro si lo desea</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <form method="POST" action="{% url 'portal_revocar_terminos' %}">
+                    {% csrf_token %}
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Confirmar Revocación</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Habilitar botón solo si acepta ambos checkboxes
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxAcepto = document.getElementById('checkbox-acepto');
+    const checkboxNotif = document.getElementById('checkbox-notificaciones');
+    const btnAceptar = document.getElementById('btnAceptar');
+    
+    if (checkboxAcepto && checkboxNotif && btnAceptar) {
+        function verificarCheckboxes() {
+            btnAceptar.disabled = !(checkboxAcepto.checked && checkboxNotif.checked);
+        }
+        
+        checkboxAcepto.addEventListener('change', verificarCheckboxes);
+        checkboxNotif.addEventListener('change', verificarCheckboxes);
+    }
+});
+</script>
+{% endblock %}
