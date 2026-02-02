@@ -144,7 +144,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            BASE_DIR / 'templates',  # Solo templates globales
+            BASE_DIR.parent / 'frontend' / 'templates',  # Templates en frontend
         ],
         'APP_DIRS': True,  # IMPORTANTE: True para buscar en app/templates/
         'OPTIONS': {
@@ -457,7 +457,7 @@ STATIC_URL = 'static/'
 
 # Directorios adicionales de archivos estáticos
 STATICFILES_DIRS = [
-    BASE_DIR / 'static',
+    BASE_DIR.parent / 'frontend' / 'static',  # Archivos estáticos en frontend
 ]
 
 # =============================================================================

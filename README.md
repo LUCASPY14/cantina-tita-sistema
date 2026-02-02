@@ -2,6 +2,21 @@
 
 Sistema de gestión completo para administrar una cantina escolar desarrollado con Python/Django y MySQL, configurado para Paraguay.
 
+## 🏗️ Arquitectura Backend/Frontend
+
+```
+├── backend/          # Django API Backend
+│   ├── cantina_project/   # Configuración Django
+│   ├── gestion/          # App de gestión
+│   ├── pos/             # App punto de venta
+│   └── requirements.txt  # Dependencias Python
+├── frontend/         # Frontend Web
+│   ├── templates/       # Templates HTML 
+│   ├── static/         # CSS, JS, imágenes
+│   └── package.json    # Configuración frontend
+└── docs/            # Documentación
+```
+
 ## 🇵🇾 Configuración Regional
 
 - **País:** Paraguay

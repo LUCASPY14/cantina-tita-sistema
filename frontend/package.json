@@ -1,0 +1,16 @@
+{
+  "name": "cantina-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for Cantina Tita Sistema",
+  "main": "index.js",
+  "scripts": {
+    "dev": "echo 'Frontend development server not configured yet'",
+    "build": "echo 'Frontend build not configured yet'",
+    "start": "echo 'Frontend start not configured yet'"
+  },
+  "keywords": ["cantina", "pos", "frontend"],
+  "author": "Cantina Tita",
+  "license": "ISC",
+  "devDependencies": {},
+  "dependencies": {}
+}
