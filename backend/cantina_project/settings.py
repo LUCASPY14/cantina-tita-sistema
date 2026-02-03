@@ -458,7 +458,11 @@ STATIC_URL = 'static/'
 # Directorios adicionales de archivos estáticos
 STATICFILES_DIRS = [
     BASE_DIR.parent / 'frontend' / 'static',  # Archivos estáticos en frontend
+    BASE_DIR.parent / 'frontend' / 'dist',    # Assets compilados por Vite
 ]
+
+# Configuración de Vite
+VITE_DEV_SERVER = 'http://localhost:3000'
 
 # =============================================================================
 # AUTENTICACIÓN Y LOGIN
