@@ -92,13 +92,11 @@ class PreciosPorLista(ManagedModel):
     id_lista_precios = models.ForeignKey(
         ListaPrecios,
         on_delete=models.CASCADE,
-        db_column='ID_Lista_Precios',
+        db_column='ID_Lista',
         related_name='precios_productos'
     )
-    precio_venta = models.DecimalField(db_column='Precio_Venta', max_digits=12, decimal_places=2)
-    activo = models.BooleanField(db_column='Activo', default=True)
-    fecha_inicio_vigencia = models.DateTimeField(db_column='Fecha_Inicio_Vigencia')
-    fecha_fin_vigencia = models.DateTimeField(db_column='Fecha_Fin_Vigencia', blank=True, null=True)
+    precio_venta = models.DecimalField(db_column='Precio_Unitario_Neto', max_digits=20, decimal_places=0)
+    fecha_vigencia = models.DateTimeField(db_column='Fecha_Vigencia')
 
     class Meta(ManagedModel.Meta):
         db_table = 'precios_por_lista'

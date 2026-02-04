@@ -7,7 +7,6 @@ class ListaPrecios(ManagedModel):
     '''Tabla listas_precios - Listas de precios para clientes'''
     id_lista = models.AutoField(db_column='ID_Lista', primary_key=True)
     nombre_lista = models.CharField(db_column='Nombre_Lista', max_length=100, unique=True)
-    descripcion = models.CharField(db_column='Descripcion', max_length=255, blank=True, null=True)
     fecha_vigencia = models.DateField(db_column='Fecha_Vigencia', blank=True, null=True)
     moneda = models.CharField(db_column='Moneda', max_length=3, default='PYG')
     activo = models.BooleanField(db_column='Activo', default=True)
@@ -24,7 +23,6 @@ class TipoCliente(ManagedModel):
     '''Tabla tipos_cliente - Tipos de cliente existentes'''
     id_tipo_cliente = models.AutoField(db_column='ID_Tipo_Cliente', primary_key=True)
     nombre_tipo = models.CharField(db_column='Nombre_Tipo', max_length=50, unique=True)
-    descripcion = models.CharField(db_column='Descripcion', max_length=100, blank=True, null=True)
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta(ManagedModel.Meta):

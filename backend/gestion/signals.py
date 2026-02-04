@@ -54,7 +54,7 @@ def invalidar_cache_producto_guardado(sender, instance, created, **kwargs):
     
     # Log para debugging
     action = 'creado' if created else 'modificado'
-    print(f"[CACHE] Producto {instance.nombre} {action} - Cache invalidado")
+    print(f"[CACHE] Producto {instance.descripcion} {action} - Cache invalidado")
 
 
 @receiver(post_delete, sender=Producto)
@@ -66,7 +66,7 @@ def invalidar_cache_producto_eliminado(sender, instance, **kwargs):
     invalidar_cache_dashboard()
     cache.delete('productos_list:all')
     
-    print(f"[CACHE] Producto {instance.nombre} eliminado - Cache invalidado")
+    print(f"[CACHE] Producto {instance.descripcion} eliminado - Cache invalidado")
 
 
 # =============================================================================
