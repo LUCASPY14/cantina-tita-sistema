@@ -1,0 +1,877 @@
+{
+  "fecha_analisis": "2026-02-03",
+  "total_templates": 274,
+  "clasificados": {
+    "admin": {
+      "authorizations": [
+        "admin\\admin_autorizaciones.html",
+        "portal\\admin_autorizaciones.html"
+      ],
+      "alerts": [
+        "pos\\alertas_sistema.html",
+        "templates_sueltos\\alertas_sistema.html"
+      ],
+      "config": [
+        "pos\\configurar_tarifas.html",
+        "templates_sueltos\\configurar_tarifas.html"
+      ]
+    },
+    "portal": {
+      "limits": [
+        "admin\\configurar_limites_masivo.html",
+        "portal\\configurar_limites_masivo.html"
+      ],
+      "profile": [
+        "gestion\\employees\\perfil.html",
+        "portal\\profile\\perfil.html",
+        "templates_sueltos\\perfil.html"
+      ],
+      "children": [
+        "portal\\consumos_hijo.html",
+        "portal\\mis_hijos.html",
+        "portal\\restricciones_hijo.html",
+        "portal\\children\\consumos-hijo.html",
+        "portal\\children\\mis-hijos.html"
+      ],
+      "registration": [
+        "portal\\registro.html"
+      ]
+    },
+    "dashboard": {
+      "main": [
+        "admin\\dashboard\\main.html",
+        "gestion\\dashboard\\main.html",
+        "portal\\dashboard_principal.html",
+        "portal\\dashboard\\main.html",
+        "pos\\dashboard\\main.html"
+      ],
+      "lunch": [
+        "gestion\\almuerzos_dashboard.html",
+        "templates_sueltos\\almuerzos_dashboard.html"
+      ],
+      "cash": [
+        "portal\\cajas_dashboard.html",
+        "pos\\cash_register\\cajas_dashboard.html"
+      ],
+      "purchases": [
+        "portal\\dashboard_compras.html",
+        "templates_sueltos\\compras_dashboard.html"
+      ],
+      "inventory": [
+        "portal\\inventario_dashboard.html",
+        "templates_sueltos\\inventario_dashboard.html"
+      ],
+      "pos": [
+        "portal\\pos_dashboard.html"
+      ],
+      "commissions": [
+        "templates_sueltos\\comisiones_dashboard.html"
+      ],
+      "saldos": [
+        "templates_sueltos\\dashboard_saldos_tiempo_real.html"
+      ],
+      "security": [
+        "templates_sueltos\\dashboard_seguridad.html"
+      ],
+      "sales": [
+        "templates_sueltos\\dashboard_ventas.html",
+        "templates_sueltos\\dashboard_ventas_mejorado.html",
+        "templates_sueltos\\lista_ventas.html"
+      ]
+    },
+    "auth": {
+      "login": [
+        "auth\\intentos_login.html",
+        "auth\\login.html"
+      ],
+      "security": [
+        "auth\\logs_auditoria.html",
+        "pos\\logs_autorizaciones.html",
+        "templates_sueltos\\logs_autorizaciones.html"
+      ],
+      "password": [
+        "gestion\\employees\\cambiar_contrasena_empleado.html",
+        "portal\\auth\\cambiar_password.html",
+        "portal\\auth\\recuperar_password.html",
+        "portal\\auth\\reset_password.html",
+        "portal\\auth\\restablecer_password.html",
+        "templates_sueltos\\cambiar_contrasena_empleado.html"
+      ],
+      "2fa": [
+        "portal\\configurar_2fa.html",
+        "portal\\verificar_2fa.html",
+        "portal\\auth\\activar-2fa.html",
+        "portal\\auth\\deshabilitar-2fa.html",
+        "portal\\auth\\verificar-2fa.html"
+      ]
+    },
+    "base": {
+      "main": [
+        "base\\base.html",
+        "base\\base_improved.html",
+        "base\\base_modern.html",
+        "base\\gestion_base.html",
+        "base\\pos_base.html",
+        "base\\pos_base_pos.html",
+        "portal\\base_portal.html",
+        "pos\\base_pos.html",
+        "templates_sueltos\\base_pos.html"
+      ]
+    },
+    "components": {
+      "navigation": [
+        "components\\footer.html",
+        "components\\navigation.html"
+      ],
+      "messages": [
+        "components\\messages.html"
+      ],
+      "pagination": [
+        "components\\pagination.html"
+      ]
+    },
+    "inventory": {
+      "products": [
+        "components\\productos_grid.html",
+        "portal\\buscar_productos.html",
+        "portal\\inventario_productos.html",
+        "portal\\kardex_producto.html",
+        "portal\\productos.html",
+        "pos\\inventory\\products_list.html",
+        "templates_sueltos\\crear_productos.html",
+        "templates_sueltos\\editar_productos..html",
+        "templates_sueltos\\inventario_productos.html",
+        "templates_sueltos\\lista_productos..html",
+        "templates_sueltos\\productos_importar.html",
+        "templates_sueltos\\productos_importar_preview.html",
+        "templates_sueltos\\productos_lista.html",
+        "templates_sueltos\\productos_list_paginado.html",
+        "templates_sueltos\\producto_form.html"
+      ],
+      "categories": [
+        "gestion\\categoria_form.html",
+        "templates_sueltos\\categoria_form.html"
+      ],
+      "adjust": [
+        "portal\\ajuste_inventario.html",
+        "pos\\inventory\\adjust_inventory.html",
+        "templates_sueltos\\ajuste_inventario.html"
+      ],
+      "alerts": [
+        "portal\\alertas_inventario.html",
+        "pos\\inventory\\alerts.html",
+        "templates_sueltos\\alertas_inventario.html"
+      ]
+    },
+    "clients": {
+      "cards": [
+        "components\\tarjeta_info.html",
+        "emails\\reminders\\tarjeta_bloqueada.html",
+        "portal\\payments\\recargar_tarjeta.html",
+        "pos\\alertas_tarjetas_saldo.html",
+        "templates_sueltos\\alertas_tarjetas_saldo.html",
+        "templates_sueltos\\recargar_tarjeta.html"
+      ],
+      "list": [
+        "gestion\\clients\\clientes_lista.html",
+        "gestion\\clients\\clientes_list_paginado.html",
+        "templates_sueltos\\clientes_lista.html",
+        "templates_sueltos\\clientes_list_paginado.html",
+        "templates_sueltos\\lista_clientes.html"
+      ],
+      "create": [
+        "gestion\\clients\\crear_cliente.html",
+        "pos\\crear_cliente.html",
+        "templates_sueltos\\crear_cliente.html"
+      ],
+      "manage": [
+        "pos\\gestionar_clientes.html",
+        "templates_sueltos\\gestionar_clientes.html"
+      ],
+      "photos": [
+        "pos\\gestionar_fotos.html",
+        "templates_sueltos\\gestionar_fotos.html"
+      ],
+      "grades": [
+        "pos\\gestionar_grados.html",
+        "templates_sueltos\\gestionar_grados.html"
+      ]
+    },
+    "payments": {
+      "authorization": [
+        "components\\modals\\autorizar_saldo_negativo.html",
+        "pos\\reports\\autorizaciones_saldo_negativo.html",
+        "templates_sueltos\\autorizaciones_saldo_negativo.html",
+        "templates_sueltos\\autorizar_saldo_negativo.html"
+      ],
+      "pending": [
+        "gestion\\lista_cargas_pendientes.html",
+        "gestion\\lista_pagos_pendientes.html",
+        "templates_sueltos\\lista_cargas_pendientes.html",
+        "templates_sueltos\\lista_pagos_pendientes.html"
+      ],
+      "validate": [
+        "gestion\\validar_carga.html",
+        "gestion\\validar_pago.html",
+        "gestion\\validar_pagos.html",
+        "templates_sueltos\\validar_carga.html",
+        "templates_sueltos\\validar_pago.html",
+        "templates_sueltos\\validar_pagos.html"
+      ],
+      "recharge": [
+        "portal\\comprobante_recargas.html",
+        "portal\\procesar_recargas.html",
+        "portal\\recargas_lista.html",
+        "portal\\_recargas.html",
+        "portal\\payments\\cargar_saldo.html",
+        "portal\\payments\\recargas.html",
+        "pos\\recharges\\recargas_lista.html",
+        "templates_sueltos\\cargar_saldo.html",
+        "templates_sueltos\\recargas.html"
+      ],
+      "status": [
+        "portal\\payments\\estado_recarga.html",
+        "portal\\payments\\pago_cancelado.html",
+        "portal\\payments\\pago_exitoso.html",
+        "templates_sueltos\\estado_recarga.html",
+        "templates_sueltos\\pago_cancelado.html",
+        "templates_sueltos\\pago_exitoso.html"
+      ],
+      "notifications": [
+        "portal\\payments\\notificaciones_saldo.html",
+        "portal\\payments\\notificaciones_saldo_widget.html",
+        "templates_sueltos\\notificaciones_saldo.html",
+        "templates_sueltos\\notificaciones_saldo_widget.html"
+      ],
+      "terms": [
+        "portal\\payments\\terminos_saldo_negativo.html",
+        "templates_sueltos\\terminos_saldo_negativo.html"
+      ],
+      "voucher": [
+        "pos\\recharges\\comprobante.html",
+        "templates_sueltos\\comprobante_recarga.html"
+      ]
+    },
+    "emails": {
+      "notifications": [
+        "emails\\notifications\\cuenta_pendiente.html",
+        "emails\\notifications\\recarga_exitosa.html",
+        "emails\\notifications\\saldo_bajo.html"
+      ],
+      "reminders": [
+        "emails\\reminders\\recordatorio_deuda_amable.html",
+        "emails\\reminders\\recordatorio_deuda_critico.html",
+        "emails\\reminders\\recordatorio_deuda_urgente.html"
+      ]
+    },
+    "reports": {
+      "billing": [
+        "gestion\\facturacion_dashboard.html",
+        "gestion\\facturacion_listado.html",
+        "gestion\\facturacion_mensual_almuerzos.html",
+        "templates_sueltos\\facturacion_dashboard.html",
+        "templates_sueltos\\facturacion_listado.html",
+        "templates_sueltos\\facturacion_mensual_almuerzos.html",
+        "templates_sueltos\\facturacion_reporte_cumplimiento.html"
+      ],
+      "general": [
+        "pos\\accounts\\index.html",
+        "pos\\recharges\\index.html",
+        "pos\\reports\\index.html",
+        "pos\\reports\\reportes.html",
+        "templates_sueltos\\reportes.html"
+      ],
+      "commissions": [
+        "pos\\reports\\reporte_comisiones.html",
+        "templates_sueltos\\reporte_comisiones.html"
+      ],
+      "lunch": [
+        "templates_sueltos\\reportes_almuerzos.html"
+      ],
+      "sales": [
+        "templates_sueltos\\reportes_pos.html"
+      ]
+    },
+    "lunch": {
+      "menu": [
+        "gestion\\menu_diario.html",
+        "templates_sueltos\\menu_diario.html"
+      ],
+      "main": [
+        "gestion\\planes_almuerzo.html",
+        "gestion\\registro_consumo_almuerzo.html",
+        "gestion\\suscripciones_almuerzo.html",
+        "portal\\almuerzo.html",
+        "pos\\lunch\\almuerzo.html",
+        "templates_sueltos\\planes_almuerzo.html",
+        "templates_sueltos\\registro_consumo_almuerzo.html",
+        "templates_sueltos\\suscripciones_almuerzo.html"
+      ],
+      "billing": [
+        "portal\\almuerzo_cuentas_mensuales.html",
+        "portal\\almuerzo_generar_cuentas.html",
+        "portal\\almuerzo_pagar.html",
+        "pos\\lunch\\almuerzo_cuentas_mensuales.html",
+        "pos\\lunch\\almuerzo_generar_cuentas.html",
+        "pos\\lunch\\almuerzo_pagar.html"
+      ],
+      "reports": [
+        "portal\\almuerzo_reportes.html",
+        "portal\\almuerzo_reporte_diario.html",
+        "portal\\almuerzo_reporte_estudiante.html",
+        "portal\\almuerzo_reporte_mensual.html",
+        "pos\\lunch\\almuerzo_reportes.html",
+        "pos\\lunch\\almuerzo_reporte_diario.html",
+        "pos\\lunch\\almuerzo_reporte_estudiante.html",
+        "pos\\lunch\\almuerzo_reporte_mensual.html"
+      ],
+      "pricing": [
+        "portal\\configurar_precio.html",
+        "pos\\lunch\\configurar_precio.html"
+      ]
+    },
+    "employees": {
+      "create": [
+        "gestion\\employees\\crear.html",
+        "templates_sueltos\\crear.html",
+        "templates_sueltos\\crear_empleado.html"
+      ],
+      "list": [
+        "gestion\\employees\\gestionar_empleados.html",
+        "templates_sueltos\\gestionar_empleados.html"
+      ],
+      "profile": [
+        "gestion\\employees\\perfil_empleado.html",
+        "templates_sueltos\\perfil_empleado.html"
+      ]
+    },
+    "cash_register": {
+      "opening": [
+        "portal\\apertura_caja.html",
+        "pos\\cash_register\\apertura_caja.html"
+      ],
+      "count": [
+        "portal\\arqueo_caja.html",
+        "pos\\cash_register\\arqueo_caja.html"
+      ],
+      "closing": [
+        "portal\\cierre_caja.html",
+        "pos\\cash_register\\cierre_caja.html"
+      ]
+    },
+    "accounts": {
+      "current": [
+        "portal\\cuenta_corriente.html",
+        "portal\\cuenta_corriente_unificada.html",
+        "pos\\cuenta_corriente.html",
+        "pos\\cuenta_corriente_unificada.html",
+        "templates_sueltos\\cuenta_corriente.html",
+        "templates_sueltos\\cuenta_corriente_unificada.html"
+      ],
+      "detail": [
+        "pos\\cc_detalle.html",
+        "templates_sueltos\\cc_detalle.html"
+      ],
+      "statement": [
+        "pos\\cc_estado_cuenta.html",
+        "templates_sueltos\\cc_estado_cuenta.html"
+      ],
+      "reconciliation": [
+        "pos\\conciliacion_pagos.html",
+        "templates_sueltos\\conciliacion_pagos.html"
+      ],
+      "unified": [
+        "pos\\accounts\\unificada.html"
+      ]
+    },
+    "sales": {
+      "ticket": [
+        "portal\\ticket_almuerzo.html",
+        "pos\\lunch\\ticket_almuerzo.html",
+        "pos\\sales\\ticket.html",
+        "templates_sueltos\\ticket.html"
+      ],
+      "history": [
+        "pos\\historial.html",
+        "pos\\historial_grados.html",
+        "pos\\historial_recargas.html",
+        "templates_sueltos\\historial.html",
+        "templates_sueltos\\historial_grados.html",
+        "templates_sueltos\\historial_recargas.html"
+      ],
+      "new": [
+        "pos\\venta_modern.html",
+        "pos\\sales\\new_sale.html",
+        "templates_sueltos\\nueva_venta.html",
+        "templates_sueltos\\venta_modern.html"
+      ],
+      "list": [
+        "templates_sueltos\\venta_lista.html"
+      ]
+    },
+    "purchases": {
+      "suppliers": [
+        "pos\\deuda_proveedores.html",
+        "pos\\proveedores.html",
+        "pos\\proveedor_detalle.html",
+        "templates_sueltos\\deuda_proveedores.html",
+        "templates_sueltos\\proveedores.html",
+        "templates_sueltos\\proveedor_detalle.html"
+      ],
+      "new": [
+        "pos\\nueva_compra.html",
+        "pos\\purchases\\nueva.html",
+        "templates_sueltos\\nueva_compra.html"
+      ],
+      "reception": [
+        "pos\\recepcion_mercaderia.html",
+        "templates_sueltos\\recepcion_mercaderia.html"
+      ]
+    }
+  },
+  "sin_clasificar": [
+    "gestion\\categories\\create.html",
+    "gestion\\categories\\edit.html",
+    "gestion\\categories\\list.html",
+    "gestion\\clients\\lista.html",
+    "gestion\\employees\\gestionar.html",
+    "gestion\\products\\create.html",
+    "gestion\\products\\edit.html",
+    "gestion\\products\\list.html",
+    "portal\\dashboard.html",
+    "portal\\dashboard_comisiones.html",
+    "portal\\generar_cuentas.html",
+    "portal\\generar_cuentas_mensuales.html",
+    "portal\\payments\\pagos.html",
+    "pos\\pos_bootstrap.html",
+    "pos\\cash_register\\dashboard.html",
+    "pos\\commissions\\dashboard.html",
+    "pos\\inventory\\dashboard.html",
+    "pos\\purchases\\dashboard.html",
+    "pos\\recharges\\procesar.html",
+    "pos\\sales\\dashboard.html",
+    "pos\\security\\dashboard.html",
+    "templates_sueltos\\dashboard.html",
+    "templates_sueltos\\editar.html",
+    "templates_sueltos\\gestionar.html",
+    "templates_sueltos\\lista.html",
+    "templates_sueltos\\pagos.html",
+    "templates_sueltos\\pos_bootstrap.html",
+    "templates_sueltos\\venta.html"
+  ],
+  "estructura_propuesta": {
+    "auth": {
+      "descripcion": "Autenticación, seguridad y control de acceso",
+      "subcategorias": {
+        "login": [
+          "login",
+          "iniciar_sesion"
+        ],
+        "password": [
+          "password",
+          "contrasena",
+          "recuperar",
+          "restablecer",
+          "cambiar_password"
+        ],
+        "2fa": [
+          "2fa",
+          "verificar",
+          "activar",
+          "deshabilitar"
+        ],
+        "security": [
+          "auditoria",
+          "logs",
+          "intentos"
+        ]
+      }
+    },
+    "dashboard": {
+      "descripcion": "Paneles de control y dashboards",
+      "subcategorias": {
+        "main": [
+          "dashboard_principal",
+          "main"
+        ],
+        "pos": [
+          "dashboard.*pos",
+          "pos_dashboard"
+        ],
+        "sales": [
+          "ventas",
+          "dashboard_ventas"
+        ],
+        "purchases": [
+          "compras",
+          "dashboard_compras"
+        ],
+        "inventory": [
+          "inventario_dashboard"
+        ],
+        "lunch": [
+          "almuerzos_dashboard"
+        ],
+        "commissions": [
+          "comisiones_dashboard"
+        ],
+        "cash": [
+          "cajas_dashboard"
+        ],
+        "security": [
+          "dashboard_seguridad"
+        ],
+        "saldos": [
+          "dashboard_saldos"
+        ]
+      }
+    },
+    "sales": {
+      "descripcion": "Ventas, POS y tickets",
+      "subcategorias": {
+        "new": [
+          "nueva_venta",
+          "new_sale",
+          "venta_modern"
+        ],
+        "list": [
+          "lista_ventas",
+          "venta_lista"
+        ],
+        "ticket": [
+          "ticket"
+        ],
+        "history": [
+          "historial"
+        ]
+      }
+    },
+    "purchases": {
+      "descripcion": "Compras, proveedores y recepción",
+      "subcategorias": {
+        "new": [
+          "nueva_compra",
+          "nueva"
+        ],
+        "suppliers": [
+          "proveedores",
+          "proveedor_detalle"
+        ],
+        "reception": [
+          "recepcion_mercaderia"
+        ],
+        "debts": [
+          "deuda_proveedores"
+        ]
+      }
+    },
+    "inventory": {
+      "descripcion": "Gestión de inventario y productos",
+      "subcategorias": {
+        "products": [
+          "productos",
+          "product",
+          "crear_productos",
+          "editar_productos"
+        ],
+        "list": [
+          "productos_lista",
+          "products_list",
+          "lista_productos"
+        ],
+        "import": [
+          "productos_importar",
+          "importar_preview"
+        ],
+        "adjust": [
+          "ajuste_inventario",
+          "adjust_inventory"
+        ],
+        "alerts": [
+          "alertas_inventario",
+          "alerts"
+        ],
+        "kardex": [
+          "kardex"
+        ],
+        "categories": [
+          "categoria"
+        ],
+        "search": [
+          "buscar_productos"
+        ]
+      }
+    },
+    "clients": {
+      "descripcion": "Gestión de clientes y tarjetas",
+      "subcategorias": {
+        "list": [
+          "clientes_lista",
+          "clientes_list",
+          "lista_clientes"
+        ],
+        "create": [
+          "crear_cliente"
+        ],
+        "manage": [
+          "gestionar_clientes"
+        ],
+        "cards": [
+          "tarjeta",
+          "alertas_tarjetas"
+        ],
+        "grades": [
+          "grados",
+          "gestionar_grados",
+          "historial_grados"
+        ],
+        "photos": [
+          "fotos",
+          "gestionar_fotos"
+        ]
+      }
+    },
+    "payments": {
+      "descripcion": "Pagos, recargas y saldo",
+      "subcategorias": {
+        "recharge": [
+          "recargar",
+          "recargas",
+          "cargar_saldo"
+        ],
+        "process": [
+          "procesar_recargas"
+        ],
+        "validate": [
+          "validar_pago",
+          "validar_carga",
+          "validar_pagos"
+        ],
+        "pending": [
+          "pendientes",
+          "lista_cargas_pendientes",
+          "lista_pagos_pendientes"
+        ],
+        "status": [
+          "pago_exitoso",
+          "pago_cancelado",
+          "estado_recarga"
+        ],
+        "voucher": [
+          "comprobante"
+        ],
+        "history": [
+          "historial_recargas"
+        ],
+        "notifications": [
+          "notificaciones_saldo"
+        ],
+        "terms": [
+          "terminos_saldo_negativo"
+        ],
+        "authorization": [
+          "autorizar_saldo_negativo",
+          "autorizaciones_saldo_negativo"
+        ]
+      }
+    },
+    "accounts": {
+      "descripcion": "Cuenta corriente y estados",
+      "subcategorias": {
+        "current": [
+          "cuenta_corriente"
+        ],
+        "unified": [
+          "unificada"
+        ],
+        "statement": [
+          "estado_cuenta"
+        ],
+        "detail": [
+          "cc_detalle"
+        ],
+        "reconciliation": [
+          "conciliacion_pagos"
+        ]
+      }
+    },
+    "cash_register": {
+      "descripcion": "Gestión de caja",
+      "subcategorias": {
+        "opening": [
+          "apertura_caja"
+        ],
+        "closing": [
+          "cierre_caja"
+        ],
+        "count": [
+          "arqueo_caja"
+        ],
+        "dashboard": [
+          "cajas_dashboard"
+        ]
+      }
+    },
+    "lunch": {
+      "descripcion": "Gestión de almuerzos",
+      "subcategorias": {
+        "main": [
+          "almuerzo.html$"
+        ],
+        "menu": [
+          "menu_diario"
+        ],
+        "plans": [
+          "planes_almuerzo"
+        ],
+        "subscriptions": [
+          "suscripciones_almuerzo"
+        ],
+        "registration": [
+          "registro_consumo"
+        ],
+        "reports": [
+          "almuerzo_reporte",
+          "almuerzo_reportes"
+        ],
+        "billing": [
+          "almuerzo_generar_cuentas",
+          "almuerzo_cuentas_mensuales",
+          "almuerzo_pagar"
+        ],
+        "ticket": [
+          "ticket_almuerzo"
+        ],
+        "pricing": [
+          "configurar_precio"
+        ]
+      }
+    },
+    "reports": {
+      "descripcion": "Reportes y estadísticas",
+      "subcategorias": {
+        "general": [
+          "reportes.html$",
+          "index.html"
+        ],
+        "sales": [
+          "reportes_pos"
+        ],
+        "lunch": [
+          "reportes_almuerzos"
+        ],
+        "commissions": [
+          "reporte_comisiones"
+        ],
+        "billing": [
+          "facturacion"
+        ],
+        "authorizations": [
+          "logs_autorizaciones"
+        ]
+      }
+    },
+    "employees": {
+      "descripcion": "Gestión de empleados",
+      "subcategorias": {
+        "list": [
+          "gestionar_empleados"
+        ],
+        "create": [
+          "crear_empleado",
+          "crear.html"
+        ],
+        "profile": [
+          "perfil_empleado"
+        ],
+        "password": [
+          "cambiar_contrasena_empleado"
+        ]
+      }
+    },
+    "portal": {
+      "descripcion": "Portal de padres",
+      "subcategorias": {
+        "children": [
+          "mis_hijos",
+          "mis-hijos",
+          "consumos_hijo",
+          "consumos-hijo",
+          "restricciones_hijo"
+        ],
+        "profile": [
+          "perfil"
+        ],
+        "registration": [
+          "registro"
+        ],
+        "limits": [
+          "configurar_limites"
+        ]
+      }
+    },
+    "admin": {
+      "descripcion": "Administración del sistema",
+      "subcategorias": {
+        "authorizations": [
+          "admin_autorizaciones"
+        ],
+        "alerts": [
+          "alertas_sistema"
+        ],
+        "config": [
+          "configurar_tarifas"
+        ]
+      }
+    },
+    "base": {
+      "descripcion": "Templates base y layouts",
+      "subcategorias": {
+        "main": [
+          "^base",
+          "gestion_base",
+          "pos_base"
+        ]
+      }
+    },
+    "components": {
+      "descripcion": "Componentes compartidos",
+      "subcategorias": {
+        "navigation": [
+          "navigation",
+          "footer"
+        ],
+        "messages": [
+          "messages"
+        ],
+        "pagination": [
+          "pagination"
+        ],
+        "grids": [
+          "grid"
+        ],
+        "modals": [
+          "modal"
+        ],
+        "widgets": [
+          "widget"
+        ]
+      }
+    },
+    "emails": {
+      "descripcion": "Templates de correos electrónicos",
+      "subcategorias": {
+        "notifications": [
+          "notificacion",
+          "recarga_exitosa",
+          "saldo_bajo",
+          "cuenta_pendiente"
+        ],
+        "reminders": [
+          "recordatorio",
+          "tarjeta_bloqueada"
+        ]
+      }
+    }
+  }
+}

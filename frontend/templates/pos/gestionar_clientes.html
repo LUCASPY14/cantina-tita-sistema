@@ -1,0 +1,490 @@
+{% extends "base_pos.html" %}
+{% load static %}
+
+{% block title %}Gestionar Clientes - POS{% endblock %}
+
+{% block content %}
+<div x-data="gestionClientesPOS()" x-init="init()" class="space-y-6">
+    
+    <!-- Header -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                    <i class="fas fa-users mr-3 text-primary"></i>Gestión de Clientes
+                </h1>
+                <p class="text-gray-600 dark:text-gray-400 mt-1">Búsqueda rápida y registro desde POS</p>
+            </div>
+            
+            <!-- Botón nuevo cliente -->
+            <button @click="abrirModalNuevo()" class="btn-pos-primary">
+                <i class="fas fa-user-plus mr-2"></i>
+                Nuevo Cliente
+            </button>
+        </div>
+    </div>
+    
+    <!-- Barra de búsqueda y filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <!-- Búsqueda -->
+            <div class="md:col-span-2">
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-search mr-2"></i>Buscar cliente
+                    </span>
+                </label>
+                <input type="text" 
+                       x-model="busqueda"
+                       @input.debounce.300ms="buscarClientes()"
+                       placeholder="Nombre, número de tarjeta o documento..."
+                       class="input input-bordered w-full">
+            </div>
+            
+            <!-- Filtro por grado -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-filter mr-2"></i>Filtrar por grado
+                    </span>
+                </label>
+                <select x-model="gradoFiltro" 
+                        @change="buscarClientes()"
+                        class="select select-bordered w-full">
+                    <option value="">Todos los grados</option>
+                    <template x-for="grado in grados" :key="grado">
+                        <option :value="grado" x-text="grado"></option>
+                    </template>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tabla de clientes -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        
+        <!-- Loading skeleton -->
+        <template x-if="cargando">
+            <div class="p-6 space-y-4">
+                <template x-for="i in 5" :key="i">
+                    <div class="flex items-center gap-4">
+                        <div class="skeleton h-16 w-16 rounded-full"></div>
+                        <div class="flex-1 space-y-2">
+                            <div class="skeleton h-4 w-full"></div>
+                            <div class="skeleton h-3 w-2/3"></div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+        
+        <!-- Tabla -->
+        <template x-if="!cargando">
+            <div>
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Tarjeta</th>
+                            <th>Grado</th>
+                            <th>Saldo</th>
+                            <th>Estado</th>
+                            <th class="text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="cliente in clientes" :key="cliente.id">
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <!-- Cliente -->
+                                <td>
+                                    <div class="flex items-center gap-3">
+                                        <div class="avatar">
+                                            <div class="w-12 h-12 rounded-full">
+                                                <template x-if="cliente.foto">
+                                                    <img :src="cliente.foto" :alt="cliente.nombre">
+                                                </template>
+                                                <template x-if="!cliente.foto">
+                                                    <div class="w-full h-full bg-primary bg-opacity-20 flex items-center justify-center">
+                                                        <i class="fas fa-user text-primary"></i>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold" x-text="cliente.nombre"></p>
+                                            <p class="text-sm text-gray-500" x-text="cliente.documento"></p>
+                                        </div>
+                                    </div>
+                                </td>
+                                
+                                <!-- Tarjeta -->
+                                <td>
+                                    <span class="font-mono text-sm" x-text="cliente.numero_tarjeta"></span>
+                                </td>
+                                
+                                <!-- Grado -->
+                                <td>
+                                    <span x-text="cliente.grado + ' ' + cliente.seccion"></span>
+                                </td>
+                                
+                                <!-- Saldo -->
+                                <td>
+                                    <span class="font-bold" 
+                                          :class="cliente.saldo < 5000 ? 'text-warning' : 'text-success'"
+                                          x-text="formatearPrecio(cliente.saldo)"></span>
+                                </td>
+                                
+                                <!-- Estado -->
+                                <td>
+                                    <span class="badge" 
+                                          :class="cliente.tarjeta_activa ? 'badge-success' : 'badge-error'">
+                                        <span x-text="cliente.tarjeta_activa ? 'Activa' : 'Bloqueada'"></span>
+                                    </span>
+                                </td>
+                                
+                                <!-- Acciones -->
+                                <td class="text-right">
+                                    <div class="flex gap-2 justify-end">
+                                        <!-- Ver detalles -->
+                                        <button @click="verDetalles(cliente)" 
+                                                class="btn btn-sm btn-ghost"
+                                                title="Ver detalles">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        
+                                        <!-- Recargar -->
+                                        <button @click="abrirModalRecarga(cliente)" 
+                                                class="btn btn-sm btn-warning"
+                                                title="Recargar saldo">
+                                            <i class="fas fa-plus-circle"></i>
+                                        </button>
+                                        
+                                        <!-- Editar -->
+                                        <button @click="abrirModalEditar(cliente)" 
+                                                class="btn btn-sm btn-primary"
+                                                title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+                
+                <!-- Sin resultados -->
+                <template x-if="clientes.length === 0">
+                    <div class="text-center py-12">
+                        <i class="fas fa-user-slash text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
+                        <p class="text-xl font-semibold text-gray-500 dark:text-gray-400">
+                            No se encontraron clientes
+                        </p>
+                        <p class="text-sm text-gray-400 mt-2">
+                            Intenta cambiar los filtros o registra un nuevo cliente
+                        </p>
+                    </div>
+                </template>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Paginación -->
+    <div class="flex justify-center" x-show="totalPaginas > 1">
+        <div class="btn-group">
+            <button class="btn btn-sm" 
+                    :disabled="paginaActual === 1"
+                    @click="cambiarPagina(paginaActual - 1)">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            
+            <template x-for="pagina in totalPaginas" :key="pagina">
+                <button class="btn btn-sm" 
+                        :class="{ 'btn-active': pagina === paginaActual }"
+                        @click="cambiarPagina(pagina)"
+                        x-text="pagina"></button>
+            </template>
+            
+            <button class="btn btn-sm" 
+                    :disabled="paginaActual === totalPaginas"
+                    @click="cambiarPagina(paginaActual + 1)">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Modal para nuevo/editar cliente -->
+    <div x-show="modalAbierto" 
+         @click.self="cerrarModal()"
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+         x-transition>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <!-- Header modal -->
+            <div class="sticky top-0 bg-gradient-to-r from-primary to-secondary text-white p-6 flex items-center justify-between">
+                <h2 class="text-2xl font-bold" x-text="modoEdicion ? 'Editar Cliente' : 'Nuevo Cliente'"></h2>
+                <button @click="cerrarModal()" class="btn btn-sm btn-ghost text-white hover:bg-white hover:bg-opacity-20">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- Formulario -->
+            <form @submit.prevent="guardarCliente()" class="p-6 space-y-4">
+                
+                <!-- Nombre completo -->
+                <div>
+                    <label class="label">
+                        <span class="label-text">Nombre completo *</span>
+                    </label>
+                    <input type="text" 
+                           x-model="formulario.nombre"
+                           required
+                           class="input input-bordered w-full"
+                           placeholder="Juan Pérez">
+                </div>
+                
+                <!-- Documento -->
+                <div>
+                    <label class="label">
+                        <span class="label-text">Documento (CI) *</span>
+                    </label>
+                    <input type="text" 
+                           x-model="formulario.documento"
+                           required
+                           class="input input-bordered w-full"
+                           placeholder="1234567">
+                </div>
+                
+                <!-- Grado y Sección -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="label">
+                            <span class="label-text">Grado *</span>
+                        </label>
+                        <select x-model="formulario.grado" 
+                                required
+                                class="select select-bordered w-full">
+                            <option value="">Seleccionar...</option>
+                            <template x-for="grado in grados" :key="grado">
+                                <option :value="grado" x-text="grado"></option>
+                            </template>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="label">
+                            <span class="label-text">Sección *</span>
+                        </label>
+                        <select x-model="formulario.seccion" 
+                                required
+                                class="select select-bordered w-full">
+                            <option value="">Seleccionar...</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Número de tarjeta (solo si es nuevo) -->
+                <div x-show="!modoEdicion">
+                    <label class="label">
+                        <span class="label-text">Número de tarjeta *</span>
+                    </label>
+                    <input type="text" 
+                           x-model="formulario.numero_tarjeta"
+                           :required="!modoEdicion"
+                           class="input input-bordered w-full"
+                           placeholder="0000000000">
+                    <label class="label">
+                        <span class="label-text-alt">Escanea el código de barras de la tarjeta</span>
+                    </label>
+                </div>
+                
+                <!-- Botones -->
+                <div class="flex gap-3 pt-4">
+                    <button type="button" 
+                            @click="cerrarModal()" 
+                            class="btn btn-ghost flex-1">
+                        <i class="fas fa-times mr-2"></i>
+                        Cancelar
+                    </button>
+                    
+                    <button type="submit" 
+                            class="btn-pos-primary flex-1"
+                            :disabled="guardando">
+                        <template x-if="!guardando">
+                            <span>
+                                <i class="fas fa-save mr-2"></i>
+                                <span x-text="modoEdicion ? 'Actualizar' : 'Guardar'"></span>
+                            </span>
+                        </template>
+                        <template x-if="guardando">
+                            <span>
+                                <span class="loading loading-spinner loading-sm mr-2"></span>
+                                Guardando...
+                            </span>
+                        </template>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function gestionClientesPOS() {
+    return {
+        cargando: true,
+        busqueda: '',
+        gradoFiltro: '',
+        grados: ['1°', '2°', '3°', '4°', '5°', '6°', '7°', '8°', '9°'],
+        clientes: [],
+        paginaActual: 1,
+        totalPaginas: 1,
+        modalAbierto: false,
+        modoEdicion: false,
+        guardando: false,
+        formulario: {
+            id: null,
+            nombre: '',
+            documento: '',
+            grado: '',
+            seccion: '',
+            numero_tarjeta: ''
+        },
+        
+        async init() {
+            await this.buscarClientes();
+            this.cargando = false;
+        },
+        
+        async buscarClientes() {
+            try {
+                const params = new URLSearchParams({
+                    q: this.busqueda,
+                    grado: this.gradoFiltro,
+                    page: this.paginaActual
+                });
+                
+                const response = await fetch(`/api/clientes/buscar/?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.clientes = data.clientes;
+                    this.totalPaginas = data.total_paginas || 1;
+                }
+            } catch (error) {
+                console.error('Error al buscar clientes:', error);
+                posHelpers.notify('Error al cargar clientes', 'error');
+            }
+        },
+        
+        cambiarPagina(pagina) {
+            this.paginaActual = pagina;
+            this.buscarClientes();
+        },
+        
+        abrirModalNuevo() {
+            this.modoEdicion = false;
+            this.formulario = {
+                id: null,
+                nombre: '',
+                documento: '',
+                grado: '',
+                seccion: '',
+                numero_tarjeta: ''
+            };
+            this.modalAbierto = true;
+        },
+        
+        abrirModalEditar(cliente) {
+            this.modoEdicion = true;
+            this.formulario = {
+                id: cliente.id,
+                nombre: cliente.nombre,
+                documento: cliente.documento,
+                grado: cliente.grado,
+                seccion: cliente.seccion,
+                numero_tarjeta: cliente.numero_tarjeta
+            };
+            this.modalAbierto = true;
+        },
+        
+        cerrarModal() {
+            this.modalAbierto = false;
+            this.formulario = {};
+        },
+        
+        async guardarCliente() {
+            this.guardando = true;
+            
+            try {
+                const url = this.modoEdicion 
+                    ? `/api/clientes/${this.formulario.id}/actualizar/`
+                    : '/api/clientes/crear/';
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(this.formulario)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    posHelpers.notify(
+                        this.modoEdicion ? 'Cliente actualizado' : 'Cliente registrado',
+                        'success',
+                        true
+                    );
+                    this.cerrarModal();
+                    await this.buscarClientes();
+                } else {
+                    posHelpers.notify(data.error || 'Error al guardar', 'error');
+                }
+            } catch (error) {
+                console.error('Error al guardar cliente:', error);
+                posHelpers.notify('Error al guardar cliente', 'error');
+            } finally {
+                this.guardando = false;
+            }
+        },
+        
+        async abrirModalRecarga(cliente) {
+            // Redirigir a página de recargas con el cliente pre-seleccionado
+            window.location.href = `/pos/recargas/?tarjeta=${cliente.numero_tarjeta}`;
+        },
+        
+        verDetalles(cliente) {
+            // Mostrar detalles en modal o redirigir
+            posHelpers.notify('Función en desarrollo', 'info');
+        },
+        
+        formatearPrecio(monto) {
+            return posHelpers.formatPrice(monto);
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    }
+}
+</script>
+{% endblock %}

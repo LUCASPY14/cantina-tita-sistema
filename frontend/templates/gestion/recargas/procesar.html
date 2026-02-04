@@ -1,0 +1,602 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Procesar Recarga - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="procesarRecarga()" x-init="init()" class="max-w-4xl mx-auto space-y-6">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <a href="{% url 'gestion:recargas_lista' %}" class="btn btn-ghost btn-sm mb-2">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Volver a Recargas
+            </a>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-plus-circle mr-3 text-primary"></i>
+                Procesar Recarga
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Registra una nueva recarga de tarjeta
+            </p>
+        </div>
+    </div>
+    
+    <!-- Wizard Steps -->
+    <div class="flex items-center justify-center mb-8">
+        <div class="flex items-center space-x-4">
+            <!-- Paso 1 -->
+            <div class="flex items-center">
+                <div class="flex items-center justify-center w-12 h-12 rounded-full transition-all"
+                     :class="paso >= 1 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'">
+                    <i class="fas fa-user text-xl"></i>
+                </div>
+                <span class="ml-2 font-semibold" :class="paso >= 1 ? 'text-primary' : 'text-gray-400'">
+                    Cliente
+                </span>
+            </div>
+            
+            <div class="w-16 h-1 rounded" :class="paso >= 2 ? 'bg-primary' : 'bg-gray-200'"></div>
+            
+            <!-- Paso 2 -->
+            <div class="flex items-center">
+                <div class="flex items-center justify-center w-12 h-12 rounded-full transition-all"
+                     :class="paso >= 2 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'">
+                    <i class="fas fa-dollar-sign text-xl"></i>
+                </div>
+                <span class="ml-2 font-semibold" :class="paso >= 2 ? 'text-primary' : 'text-gray-400'">
+                    Monto
+                </span>
+            </div>
+            
+            <div class="w-16 h-1 rounded" :class="paso >= 3 ? 'bg-primary' : 'bg-gray-200'"></div>
+            
+            <!-- Paso 3 -->
+            <div class="flex items-center">
+                <div class="flex items-center justify-center w-12 h-12 rounded-full transition-all"
+                     :class="paso >= 3 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'">
+                    <i class="fas fa-credit-card text-xl"></i>
+                </div>
+                <span class="ml-2 font-semibold" :class="paso >= 3 ? 'text-primary' : 'text-gray-400'">
+                    Pago
+                </span>
+            </div>
+            
+            <div class="w-16 h-1 rounded" :class="paso >= 4 ? 'bg-primary' : 'bg-gray-200'"></div>
+            
+            <!-- Paso 4 -->
+            <div class="flex items-center">
+                <div class="flex items-center justify-center w-12 h-12 rounded-full transition-all"
+                     :class="paso >= 4 ? 'bg-success text-white' : 'bg-gray-200 text-gray-500'">
+                    <i class="fas fa-check text-xl"></i>
+                </div>
+                <span class="ml-2 font-semibold" :class="paso >= 4 ? 'text-success' : 'text-gray-400'">
+                    Confirmar
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Paso 1: Seleccionar Cliente -->
+    <div x-show="paso === 1" x-transition class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold mb-4">
+            <i class="fas fa-user mr-2 text-primary"></i>
+            Paso 1: Seleccionar Cliente
+        </h2>
+        
+        <!-- Búsqueda de Cliente -->
+        <div class="mb-4">
+            <label class="label">
+                <span class="label-text">Buscar Cliente</span>
+            </label>
+            <div class="flex gap-2">
+                <input type="text" 
+                       x-model="busquedaCliente"
+                       @input.debounce.300ms="buscarClientes()"
+                       placeholder="Buscar por nombre, CI o número de tarjeta..."
+                       class="input input-bordered flex-1">
+                <button @click="buscarClientes()" class="btn btn-primary">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Resultados de Búsqueda -->
+        <template x-if="busquedaCliente.length >= 3">
+            <div class="space-y-2 mb-4">
+                <template x-if="buscandoClientes">
+                    <div class="skeleton h-16 w-full"></div>
+                </template>
+                
+                <template x-if="!buscandoClientes && clientesEncontrados.length > 0">
+                    <div class="space-y-2">
+                        <template x-for="cliente in clientesEncontrados" :key="cliente.id">
+                            <div @click="seleccionarCliente(cliente)"
+                                 class="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+                                 :class="recarga.cliente?.id === cliente.id ? 'border-primary bg-primary bg-opacity-10' : 'border-gray-200 dark:border-gray-700'">
+                                <div class="flex items-center gap-3">
+                                    <div class="avatar">
+                                        <div class="w-12 h-12 rounded-full">
+                                            <template x-if="cliente.foto">
+                                                <img :src="cliente.foto" :alt="cliente.nombre">
+                                            </template>
+                                            <template x-if="!cliente.foto">
+                                                <div class="bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-xl font-bold">
+                                                    <span x-text="cliente.nombre.charAt(0)"></span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold" x-text="cliente.nombre"></p>
+                                        <p class="text-sm text-gray-500">
+                                            CI: <span x-text="cliente.ci"></span> | 
+                                            Tarjeta: <span class="font-mono" x-text="cliente.numero_tarjeta"></span>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm text-gray-500">Saldo Actual</p>
+                                    <p class="text-xl font-bold" 
+                                       :class="cliente.saldo >= 10000 ? 'text-success' : cliente.saldo >= 5000 ? 'text-warning' : 'text-error'"
+                                       x-text="formatearPrecio(cliente.saldo)"></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+                
+                <template x-if="!buscandoClientes && busquedaCliente.length >= 3 && clientesEncontrados.length === 0">
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-user-slash text-4xl mb-2"></i>
+                        <p>No se encontraron clientes</p>
+                    </div>
+                </template>
+            </div>
+        </template>
+        
+        <!-- Cliente Seleccionado -->
+        <template x-if="recarga.cliente">
+            <div class="alert alert-success mb-4">
+                <i class="fas fa-check-circle"></i>
+                <div>
+                    <p class="font-semibold">Cliente seleccionado: <span x-text="recarga.cliente.nombre"></span></p>
+                    <p class="text-sm">Saldo actual: <span x-text="formatearPrecio(recarga.cliente.saldo)"></span></p>
+                </div>
+            </div>
+        </template>
+        
+        <!-- Navegación -->
+        <div class="flex justify-end">
+            <button @click="siguiente()" 
+                    :disabled="!recarga.cliente"
+                    class="btn btn-primary">
+                Siguiente
+                <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Paso 2: Monto -->
+    <div x-show="paso === 2" x-transition class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold mb-4">
+            <i class="fas fa-dollar-sign mr-2 text-primary"></i>
+            Paso 2: Monto de Recarga
+        </h2>
+        
+        <!-- Cliente seleccionado -->
+        <div class="bg-gradient-to-r from-primary to-secondary text-white rounded-lg p-4 mb-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm opacity-90">Recarga para:</p>
+                    <p class="text-xl font-bold" x-text="recarga.cliente?.nombre"></p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm opacity-90">Saldo Actual</p>
+                    <p class="text-2xl font-bold" x-text="formatearPrecio(recarga.cliente?.saldo || 0)"></p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Montos Sugeridos -->
+        <div class="mb-6">
+            <label class="label">
+                <span class="label-text">Montos Sugeridos</span>
+            </label>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <template x-for="monto in montosSugeridos" :key="monto">
+                    <button @click="recarga.monto = monto" 
+                            class="btn btn-lg"
+                            :class="recarga.monto === monto ? 'btn-primary' : 'btn-outline'">
+                        <span x-text="formatearPrecio(monto)"></span>
+                    </button>
+                </template>
+            </div>
+        </div>
+        
+        <!-- Monto Personalizado -->
+        <div class="mb-6">
+            <label class="label">
+                <span class="label-text">Monto Personalizado</span>
+            </label>
+            <div class="relative">
+                <input type="number" 
+                       x-model="recarga.monto"
+                       step="1000"
+                       min="1000"
+                       placeholder="Ingrese el monto..."
+                       class="input input-bordered w-full text-2xl font-bold pr-16">
+                <span class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 font-semibold">
+                    Gs.
+                </span>
+            </div>
+            <template x-if="recarga.monto < 1000">
+                <p class="text-error text-sm mt-1">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                    El monto mínimo es 1,000 Gs.
+                </p>
+            </template>
+        </div>
+        
+        <!-- Nuevo Saldo -->
+        <template x-if="recarga.monto > 0">
+            <div class="bg-success bg-opacity-10 border-2 border-success rounded-lg p-4 mb-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Nuevo Saldo</p>
+                        <p class="text-3xl font-bold text-success" x-text="formatearPrecio((recarga.cliente?.saldo || 0) + parseInt(recarga.monto))"></p>
+                    </div>
+                    <i class="fas fa-arrow-up text-4xl text-success"></i>
+                </div>
+            </div>
+        </template>
+        
+        <!-- Navegación -->
+        <div class="flex justify-between">
+            <button @click="anterior()" class="btn btn-ghost">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Anterior
+            </button>
+            <button @click="siguiente()" 
+                    :disabled="!recarga.monto || recarga.monto < 1000"
+                    class="btn btn-primary">
+                Siguiente
+                <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Paso 3: Método de Pago -->
+    <div x-show="paso === 3" x-transition class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold mb-4">
+            <i class="fas fa-credit-card mr-2 text-primary"></i>
+            Paso 3: Método de Pago
+        </h2>
+        
+        <!-- Resumen -->
+        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500">Cliente</p>
+                    <p class="font-bold" x-text="recarga.cliente?.nombre"></p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm text-gray-500">Monto a Recargar</p>
+                    <p class="text-2xl font-bold text-primary" x-text="formatearPrecio(recarga.monto)"></p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Seleccionar Método -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            
+            <!-- Transferencia -->
+            <div @click="recarga.metodo_pago = 'transferencia'"
+                 class="border-2 rounded-lg p-6 cursor-pointer transition-all hover:shadow-lg"
+                 :class="recarga.metodo_pago === 'transferencia' ? 'border-primary bg-primary bg-opacity-10' : 'border-gray-200 dark:border-gray-700'">
+                <div class="text-center">
+                    <i class="fas fa-exchange-alt text-4xl mb-3" 
+                       :class="recarga.metodo_pago === 'transferencia' ? 'text-primary' : 'text-gray-400'"></i>
+                    <p class="font-bold">Transferencia</p>
+                    <p class="text-sm text-gray-500">Bancaria</p>
+                </div>
+            </div>
+            
+            <!-- Tarjeta -->
+            <div @click="recarga.metodo_pago = 'tarjeta'"
+                 class="border-2 rounded-lg p-6 cursor-pointer transition-all hover:shadow-lg"
+                 :class="recarga.metodo_pago === 'tarjeta' ? 'border-secondary bg-secondary bg-opacity-10' : 'border-gray-200 dark:border-gray-700'">
+                <div class="text-center">
+                    <i class="fas fa-credit-card text-4xl mb-3" 
+                       :class="recarga.metodo_pago === 'tarjeta' ? 'text-secondary' : 'text-gray-400'"></i>
+                    <p class="font-bold">Tarjeta</p>
+                    <p class="text-sm text-gray-500">Crédito/Débito</p>
+                </div>
+            </div>
+            
+            <!-- Efectivo -->
+            <div @click="recarga.metodo_pago = 'efectivo'"
+                 class="border-2 rounded-lg p-6 cursor-pointer transition-all hover:shadow-lg"
+                 :class="recarga.metodo_pago === 'efectivo' ? 'border-success bg-success bg-opacity-10' : 'border-gray-200 dark:border-gray-700'">
+                <div class="text-center">
+                    <i class="fas fa-money-bill-wave text-4xl mb-3" 
+                       :class="recarga.metodo_pago === 'efectivo' ? 'text-success' : 'text-gray-400'"></i>
+                    <p class="font-bold">Efectivo</p>
+                    <p class="text-sm text-gray-500">Caja</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Campos específicos según método -->
+        <template x-if="recarga.metodo_pago">
+            <div class="space-y-4 mb-6">
+                
+                <!-- Transferencia -->
+                <template x-if="recarga.metodo_pago === 'transferencia'">
+                    <div>
+                        <label class="label">
+                            <span class="label-text">Número de Comprobante</span>
+                        </label>
+                        <input type="text" 
+                               x-model="recarga.comprobante_numero"
+                               placeholder="Ingrese el número de comprobante..."
+                               class="input input-bordered w-full">
+                    </div>
+                </template>
+                
+                <!-- Observaciones (todos los métodos) -->
+                <div>
+                    <label class="label">
+                        <span class="label-text">Observaciones (opcional)</span>
+                    </label>
+                    <textarea x-model="recarga.observaciones"
+                              placeholder="Notas adicionales..."
+                              class="textarea textarea-bordered w-full"
+                              rows="3"></textarea>
+                </div>
+            </div>
+        </template>
+        
+        <!-- Navegación -->
+        <div class="flex justify-between">
+            <button @click="anterior()" class="btn btn-ghost">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Anterior
+            </button>
+            <button @click="siguiente()" 
+                    :disabled="!recarga.metodo_pago"
+                    class="btn btn-primary">
+                Siguiente
+                <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Paso 4: Confirmación -->
+    <div x-show="paso === 4" x-transition class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold mb-6 text-center">
+            <i class="fas fa-check-circle mr-2 text-success"></i>
+            Confirmar Recarga
+        </h2>
+        
+        <!-- Resumen Completo -->
+        <div class="space-y-4 mb-6">
+            
+            <!-- Cliente -->
+            <div class="bg-gradient-to-r from-primary to-secondary text-white rounded-lg p-6">
+                <p class="text-sm opacity-90 mb-1">Cliente</p>
+                <p class="text-2xl font-bold mb-2" x-text="recarga.cliente?.nombre"></p>
+                <div class="flex items-center justify-between text-sm">
+                    <span>CI: <span x-text="recarga.cliente?.ci"></span></span>
+                    <span>Tarjeta: <span class="font-mono" x-text="recarga.cliente?.numero_tarjeta"></span></span>
+                </div>
+            </div>
+            
+            <!-- Montos -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <p class="text-sm text-gray-500 mb-1">Saldo Actual</p>
+                    <p class="text-2xl font-bold" x-text="formatearPrecio(recarga.cliente?.saldo || 0)"></p>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <p class="text-sm text-gray-500 mb-1">Monto a Recargar</p>
+                    <p class="text-2xl font-bold text-primary" x-text="formatearPrecio(recarga.monto)"></p>
+                </div>
+            </div>
+            
+            <!-- Nuevo Saldo -->
+            <div class="bg-success bg-opacity-10 border-2 border-success rounded-lg p-6 text-center">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Nuevo Saldo</p>
+                <p class="text-4xl font-bold text-success" x-text="formatearPrecio((recarga.cliente?.saldo || 0) + parseInt(recarga.monto))"></p>
+            </div>
+            
+            <!-- Detalles de Pago -->
+            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-500">Método de Pago</p>
+                        <p class="font-bold capitalize" x-text="recarga.metodo_pago"></p>
+                    </div>
+                    <template x-if="recarga.comprobante_numero">
+                        <div>
+                            <p class="text-sm text-gray-500">N° Comprobante</p>
+                            <p class="font-mono font-bold" x-text="recarga.comprobante_numero"></p>
+                        </div>
+                    </template>
+                </div>
+                <template x-if="recarga.observaciones">
+                    <div class="mt-3">
+                        <p class="text-sm text-gray-500">Observaciones</p>
+                        <p class="text-sm" x-text="recarga.observaciones"></p>
+                    </div>
+                </template>
+            </div>
+        </div>
+        
+        <!-- Navegación -->
+        <div class="flex justify-between">
+            <button @click="anterior()" class="btn btn-ghost">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Anterior
+            </button>
+            <button @click="procesarRecarga()" 
+                    :disabled="procesando"
+                    class="btn btn-success btn-lg">
+                <template x-if="!procesando">
+                    <span>
+                        <i class="fas fa-check mr-2"></i>
+                        Confirmar Recarga
+                    </span>
+                </template>
+                <template x-if="procesando">
+                    <span class="loading loading-spinner"></span>
+                </template>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function procesarRecarga() {
+    return {
+        paso: 1,
+        procesando: false,
+        busquedaCliente: '',
+        buscandoClientes: false,
+        clientesEncontrados: [],
+        montosSugeridos: [5000, 10000, 20000, 50000],
+        recarga: {
+            cliente: null,
+            monto: 0,
+            metodo_pago: '',
+            comprobante_numero: '',
+            observaciones: ''
+        },
+        
+        async init() {
+            // Verificar si hay cliente pre-seleccionado en URL
+            const params = new URLSearchParams(window.location.search);
+            const clienteId = params.get('cliente');
+            
+            if (clienteId) {
+                await this.cargarClientePorId(clienteId);
+            }
+        },
+        
+        async cargarClientePorId(id) {
+            try {
+                const response = await fetch(`/api/clientes/${id}/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.seleccionarCliente(data.cliente);
+                }
+            } catch (error) {
+                console.error('Error al cargar cliente:', error);
+            }
+        },
+        
+        async buscarClientes() {
+            if (this.busquedaCliente.length < 3) {
+                this.clientesEncontrados = [];
+                return;
+            }
+            
+            this.buscandoClientes = true;
+            
+            try {
+                const response = await fetch(`/api/clientes/?q=${this.busquedaCliente}&per_page=10`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.clientesEncontrados = data.clientes || [];
+                }
+            } catch (error) {
+                console.error('Error al buscar clientes:', error);
+            } finally {
+                this.buscandoClientes = false;
+            }
+        },
+        
+        seleccionarCliente(cliente) {
+            this.recarga.cliente = cliente;
+        },
+        
+        siguiente() {
+            if (this.validarPaso()) {
+                this.paso++;
+            }
+        },
+        
+        anterior() {
+            this.paso--;
+        },
+        
+        validarPaso() {
+            switch(this.paso) {
+                case 1:
+                    return this.recarga.cliente !== null;
+                case 2:
+                    return this.recarga.monto >= 1000;
+                case 3:
+                    return this.recarga.metodo_pago !== '';
+                default:
+                    return true;
+            }
+        },
+        
+        async procesarRecarga() {
+            this.procesando = true;
+            
+            try {
+                const response = await fetch('/api/recargas/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        cliente_id: this.recarga.cliente.id,
+                        numero_tarjeta: this.recarga.cliente.numero_tarjeta,
+                        monto: this.recarga.monto,
+                        metodo_pago: this.recarga.metodo_pago,
+                        comprobante_numero: this.recarga.comprobante_numero,
+                        observaciones: this.recarga.observaciones,
+                        origen: 'gestion'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify('Recarga procesada exitosamente', 'success');
+                    
+                    // Redirigir después de 1.5 segundos
+                    setTimeout(() => {
+                        window.location.href = '/gestion/recargas/';
+                    }, 1500);
+                } else {
+                    gestionHelpers.notify(data.message || 'Error al procesar recarga', 'error');
+                    this.procesando = false;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                gestionHelpers.notify('Error al procesar recarga', 'error');
+                this.procesando = false;
+            }
+        },
+        
+        formatearPrecio(monto) {
+            return gestionHelpers.formatPrice(monto);
+        },
+        
+        getCsrfToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        }
+    }
+}
+</script>
+{% endblock %}

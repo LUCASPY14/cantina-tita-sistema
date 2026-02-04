@@ -1,0 +1,463 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Clientes - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="listaClientes()" x-init="init()" class="space-y-6">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-users mr-3 text-secondary"></i>
+                Gestión de Clientes
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Administra estudiantes y tarjetas
+            </p>
+        </div>
+        
+        <a href="{% url 'gestion:clientes_crear' %}" class="btn btn-secondary btn-lg">
+            <i class="fas fa-user-plus mr-2"></i>
+            Nuevo Cliente
+        </a>
+    </div>
+    
+    <!-- Estadísticas Rápidas -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="stat-card bg-white dark:bg-gray-800">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Total Estudiantes</p>
+                    <p class="text-2xl font-bold text-secondary" x-text="stats.total"></p>
+                </div>
+                <i class="fas fa-users text-3xl text-secondary opacity-50"></i>
+            </div>
+        </div>
+        
+        <div class="stat-card bg-white dark:bg-gray-800">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Tarjetas Activas</p>
+                    <p class="text-2xl font-bold text-success" x-text="stats.activas"></p>
+                </div>
+                <i class="fas fa-check-circle text-3xl text-success opacity-50"></i>
+            </div>
+        </div>
+        
+        <div class="stat-card bg-white dark:bg-gray-800">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Saldo Total</p>
+                    <p class="text-2xl font-bold text-primary" x-text="formatearPrecio(stats.saldo_total)"></p>
+                </div>
+                <i class="fas fa-wallet text-3xl text-primary opacity-50"></i>
+            </div>
+        </div>
+        
+        <div class="stat-card bg-white dark:bg-gray-800">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Saldo Bajo</p>
+                    <p class="text-2xl font-bold text-warning" x-text="stats.saldo_bajo"></p>
+                </div>
+                <i class="fas fa-exclamation-triangle text-3xl text-warning opacity-50"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filtros y Búsqueda -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            
+            <!-- Búsqueda -->
+            <div class="md:col-span-2">
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-search mr-2"></i>Buscar cliente
+                    </span>
+                </label>
+                <input type="text" 
+                       x-model="filtros.busqueda"
+                       @input.debounce.300ms="buscarClientes()"
+                       placeholder="Nombre, documento, número de tarjeta..."
+                       class="input input-bordered w-full">
+            </div>
+            
+            <!-- Grado -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-graduation-cap mr-2"></i>Grado
+                    </span>
+                </label>
+                <select x-model="filtros.grado" 
+                        @change="buscarClientes()"
+                        class="select select-bordered w-full">
+                    <option value="">Todos los grados</option>
+                    <template x-for="grado in grados" :key="grado">
+                        <option :value="grado" x-text="grado"></option>
+                    </template>
+                </select>
+            </div>
+            
+            <!-- Estado Tarjeta -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-filter mr-2"></i>Estado
+                    </span>
+                </label>
+                <select x-model="filtros.estado" 
+                        @change="buscarClientes()"
+                        class="select select-bordered w-full">
+                    <option value="">Todos</option>
+                    <option value="activa">Activas</option>
+                    <option value="bloqueada">Bloqueadas</option>
+                    <option value="saldo_bajo">Saldo Bajo</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Acciones -->
+        <div class="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 gap-2">
+            <button @click="exportarCSV()" class="btn btn-sm btn-outline">
+                <i class="fas fa-file-csv mr-1"></i>Exportar CSV
+            </button>
+            
+            <button @click="imprimirListado()" class="btn btn-sm btn-outline">
+                <i class="fas fa-print mr-1"></i>Imprimir
+            </button>
+        </div>
+    </div>
+    
+    <!-- Tabla de Clientes -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        
+        <!-- Loading skeleton -->
+        <template x-if="cargando">
+            <div class="p-6 space-y-4">
+                <template x-for="i in 10" :key="i">
+                    <div class="flex items-center gap-4">
+                        <div class="skeleton h-16 w-16 rounded-full"></div>
+                        <div class="flex-1 space-y-2">
+                            <div class="skeleton h-4 w-full"></div>
+                            <div class="skeleton h-3 w-2/3"></div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+        
+        <!-- Tabla -->
+        <template x-if="!cargando">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full" id="tabla-clientes">
+                    <thead>
+                        <tr>
+                            <th>Estudiante</th>
+                            <th>Tarjeta</th>
+                            <th>Grado/Sección</th>
+                            <th>Saldo</th>
+                            <th>Padre/Tutor</th>
+                            <th>Estado</th>
+                            <th class="text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="cliente in clientes" :key="cliente.id">
+                            <tr class="hover">
+                                <!-- Estudiante -->
+                                <td>
+                                    <div class="flex items-center gap-3">
+                                        <div class="avatar">
+                                            <div class="w-12 h-12 rounded-full">
+                                                <template x-if="cliente.foto">
+                                                    <img :src="cliente.foto" :alt="cliente.nombre">
+                                                </template>
+                                                <template x-if="!cliente.foto">
+                                                    <div class="w-full h-full bg-secondary bg-opacity-20 flex items-center justify-center">
+                                                        <i class="fas fa-user text-secondary"></i>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold" x-text="cliente.nombre"></p>
+                                            <p class="text-sm text-gray-500">CI: <span x-text="cliente.documento"></span></p>
+                                        </div>
+                                    </div>
+                                </td>
+                                
+                                <!-- Tarjeta -->
+                                <td>
+                                    <span class="font-mono text-sm" x-text="cliente.numero_tarjeta"></span>
+                                </td>
+                                
+                                <!-- Grado/Sección -->
+                                <td>
+                                    <span x-text="cliente.grado + ' - ' + cliente.seccion"></span>
+                                </td>
+                                
+                                <!-- Saldo -->
+                                <td>
+                                    <span class="font-bold" 
+                                          :class="{
+                                              'text-success': cliente.saldo >= 10000,
+                                              'text-warning': cliente.saldo >= 5000 && cliente.saldo < 10000,
+                                              'text-error': cliente.saldo < 5000
+                                          }"
+                                          x-text="formatearPrecio(cliente.saldo)"></span>
+                                </td>
+                                
+                                <!-- Padre/Tutor -->
+                                <td>
+                                    <template x-if="cliente.padre">
+                                        <div>
+                                            <p class="text-sm" x-text="cliente.padre.nombre"></p>
+                                            <p class="text-xs text-gray-500" x-text="cliente.padre.telefono"></p>
+                                        </div>
+                                    </template>
+                                    <template x-if="!cliente.padre">
+                                        <span class="text-gray-400 text-sm">Sin asignar</span>
+                                    </template>
+                                </td>
+                                
+                                <!-- Estado -->
+                                <td>
+                                    <span class="badge badge-sm" 
+                                          :class="cliente.tarjeta_activa ? 'badge-success' : 'badge-error'">
+                                        <span x-text="cliente.tarjeta_activa ? 'Activa' : 'Bloqueada'"></span>
+                                    </span>
+                                </td>
+                                
+                                <!-- Acciones -->
+                                <td class="text-right">
+                                    <div class="dropdown dropdown-end">
+                                        <label tabindex="0" class="btn btn-sm btn-ghost">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </label>
+                                        <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+                                            <li>
+                                                <button @click="verDetalles(cliente)">
+                                                    <i class="fas fa-eye"></i>Ver Detalles
+                                                </button>
+                                            </li>
+                                            <li>
+                                                <a :href="`{% url 'gestion:clientes_editar' 0 %}`.replace('0', cliente.id)">
+                                                    <i class="fas fa-edit"></i>Editar
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <button @click="recargarSaldo(cliente)">
+                                                    <i class="fas fa-plus-circle"></i>Recargar Saldo
+                                                </button>
+                                            </li>
+                                            <li>
+                                                <button @click="toggleEstadoTarjeta(cliente)">
+                                                    <i class="fas" :class="cliente.tarjeta_activa ? 'fa-ban' : 'fa-check'"></i>
+                                                    <span x-text="cliente.tarjeta_activa ? 'Bloquear' : 'Activar'"></span>
+                                                </button>
+                                            </li>
+                                            <li class="border-t">
+                                                <button @click="verHistorial(cliente)" class="text-primary">
+                                                    <i class="fas fa-history"></i>Historial
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+                
+                <!-- Sin resultados -->
+                <template x-if="clientes.length === 0">
+                    <div class="text-center py-12">
+                        <i class="fas fa-user-slash text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
+                        <p class="text-xl font-semibold text-gray-500 dark:text-gray-400">
+                            No se encontraron clientes
+                        </p>
+                    </div>
+                </template>
+            </div>
+        </template>
+        
+        <!-- Paginación -->
+        <div class="border-t dark:border-gray-700 p-4 flex items-center justify-between">
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                Mostrando <span x-text="(paginaActual - 1) * itemsPorPagina + 1"></span> 
+                a <span x-text="Math.min(paginaActual * itemsPorPagina, totalClientes)"></span> 
+                de <span x-text="totalClientes"></span> clientes
+            </div>
+            
+            <div class="btn-group" x-show="totalPaginas > 1">
+                <button class="btn btn-sm" 
+                        :disabled="paginaActual === 1"
+                        @click="cambiarPagina(paginaActual - 1)">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                
+                <template x-for="pagina in paginasVisibles()" :key="pagina">
+                    <button class="btn btn-sm" 
+                            :class="{ 'btn-active': pagina === paginaActual }"
+                            @click="cambiarPagina(pagina)"
+                            x-text="pagina"></button>
+                </template>
+                
+                <button class="btn btn-sm" 
+                        :disabled="paginaActual === totalPaginas"
+                        @click="cambiarPagina(paginaActual + 1)">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function listaClientes() {
+    return {
+        cargando: true,
+        clientes: [],
+        grados: ['1°', '2°', '3°', '4°', '5°', '6°', '7°', '8°', '9°'],
+        filtros: {
+            busqueda: '',
+            grado: '',
+            estado: ''
+        },
+        stats: {
+            total: 0,
+            activas: 0,
+            saldo_total: 0,
+            saldo_bajo: 0
+        },
+        paginaActual: 1,
+        totalPaginas: 1,
+        totalClientes: 0,
+        itemsPorPagina: 20,
+        
+        async init() {
+            await this.buscarClientes();
+            this.cargando = false;
+        },
+        
+        async buscarClientes() {
+            try {
+                const params = new URLSearchParams({
+                    q: this.filtros.busqueda,
+                    grado: this.filtros.grado,
+                    estado: this.filtros.estado,
+                    page: this.paginaActual,
+                    per_page: this.itemsPorPagina
+                });
+                
+                const response = await fetch(`/api/clientes/?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.clientes = data.clientes || [];
+                    this.stats = data.stats || this.stats;
+                    this.totalClientes = data.total || 0;
+                    this.totalPaginas = Math.ceil(this.totalClientes / this.itemsPorPagina);
+                }
+            } catch (error) {
+                console.error('Error al buscar clientes:', error);
+            }
+        },
+        
+        cambiarPagina(pagina) {
+            this.paginaActual = pagina;
+            this.buscarClientes();
+        },
+        
+        paginasVisibles() {
+            const paginas = [];
+            const inicio = Math.max(1, this.paginaActual - 2);
+            const fin = Math.min(this.totalPaginas, this.paginaActual + 2);
+            
+            for (let i = inicio; i <= fin; i++) {
+                paginas.push(i);
+            }
+            return paginas;
+        },
+        
+        verDetalles(cliente) {
+            // Implementar modal o redirigir
+            window.location.href = `/gestion/clientes/${cliente.id}/`;
+        },
+        
+        recargarSaldo(cliente) {
+            // Implementar modal de recarga
+            window.location.href = `/gestion/recargas/?cliente=${cliente.id}`;
+        },
+        
+        async toggleEstadoTarjeta(cliente) {
+            const accion = cliente.tarjeta_activa ? 'bloquear' : 'activar';
+            const confirmado = await gestionHelpers.confirm(
+                `¿Estás seguro de ${accion} la tarjeta de ${cliente.nombre}?`,
+                `${accion.charAt(0).toUpperCase() + accion.slice(1)} Tarjeta`
+            );
+            
+            if (!confirmado) return;
+            
+            try {
+                const response = await fetch(`/api/tarjetas/${cliente.numero_tarjeta}/toggle-estado/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify(`Tarjeta ${accion}da exitosamente`, 'success');
+                    await this.buscarClientes();
+                } else {
+                    gestionHelpers.notify(data.error || 'Error al cambiar estado', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                gestionHelpers.notify('Error al cambiar estado de tarjeta', 'error');
+            }
+        },
+        
+        verHistorial(cliente) {
+            window.location.href = `/gestion/clientes/${cliente.id}/historial/`;
+        },
+        
+        exportarCSV() {
+            gestionHelpers.exportTableToCSV('tabla-clientes', 'clientes.csv');
+        },
+        
+        imprimirListado() {
+            gestionHelpers.printContent('tabla-clientes');
+        },
+        
+        formatearPrecio(monto) {
+            return gestionHelpers.formatPrice(monto);
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    }
+}
+</script>
+{% endblock %}

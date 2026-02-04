@@ -17,7 +17,8 @@ from typing import Dict, Optional, Tuple
 import socket
 import time
 
-from .models import Ventas, MediosPago
+from .models import MediosPago
+from pos.models import Venta as Ventas
 from .facturacion_electronica import GeneradorXMLFactura, ClienteEkuatia
 from .pos_general_views import imprimir_ticket_venta
 

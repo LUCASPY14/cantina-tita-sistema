@@ -1,0 +1,638 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Detalle Venta #{{ venta.numero_ticket }} - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="detalleVenta({{ venta.id }})" x-init="cargarDetalle()" class="container mx-auto px-4 py-8">
+    
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'gestion:ventas_lista' %}" class="btn btn-ghost btn-circle">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                    Ticket <span class="text-primary font-mono" x-text="venta.numero_ticket ? '#' + venta.numero_ticket : ''"></span>
+                </h1>
+                <p class="text-gray-600 dark:text-gray-400 mt-1" x-text="gestionHelpers.formatDateTime(venta.fecha_hora)"></p>
+            </div>
+            <div x-show="venta.estado" class="ml-4">
+                <div class="badge badge-lg" 
+                     :class="{
+                         'badge-success': venta.estado === 'completada',
+                         'badge-error': venta.estado === 'anulada',
+                         'badge-warning': venta.estado === 'pendiente'
+                     }">
+                    <i class="fas mr-2" 
+                       :class="{
+                           'fa-check-circle': venta.estado === 'completada',
+                           'fa-times-circle': venta.estado === 'anulada',
+                           'fa-clock': venta.estado === 'pendiente'
+                       }"></i>
+                    <span x-text="venta.estado_display"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex gap-2">
+            <button @click="imprimirTicket()" class="btn btn-secondary gap-2">
+                <i class="fas fa-print"></i>
+                Reimprimir Ticket
+            </button>
+            <template x-if="venta.estado === 'completada'">
+                <button @click="anularVenta()" class="btn btn-error gap-2">
+                    <i class="fas fa-ban"></i>
+                    Anular Venta
+                </button>
+            </template>
+            <div class="dropdown dropdown-end">
+                <label tabindex="0" class="btn btn-ghost">
+                    <i class="fas fa-ellipsis-v"></i>
+                </label>
+                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                    <li><a @click="exportarPDF()"><i class="fas fa-file-pdf mr-2"></i>Exportar PDF</a></li>
+                    <li><a @click="enviarEmail()"><i class="fas fa-envelope mr-2"></i>Enviar por Email</a></li>
+                    <template x-if="venta.factura_id">
+                        <li><a :href="`/gestion/facturacion/${venta.factura_id}/`"><i class="fas fa-file-invoice mr-2"></i>Ver Factura</a></li>
+                    </template>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <template x-if="cargando">
+        <div class="flex justify-center items-center py-20">
+            <span class="loading loading-spinner loading-lg text-secondary"></span>
+        </div>
+    </template>
+    
+    <template x-if="!cargando && venta.id">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Columna Principal -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- Información de la Venta -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-info-circle text-secondary"></i>
+                        Información de la Venta
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Cliente -->
+                        <div class="p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-lg">
+                            <p class="text-xs text-blue-600 dark:text-blue-300 mb-2 flex items-center gap-2">
+                                <i class="fas fa-user"></i>
+                                Cliente
+                            </p>
+                            <template x-if="venta.cliente">
+                                <div>
+                                    <p class="font-bold text-lg" x-text="venta.cliente_nombre"></p>
+                                    <template x-if="venta.cliente_hijo">
+                                        <p class="text-sm text-gray-600 dark:text-gray-400" x-text="venta.cliente_hijo"></p>
+                                    </template>
+                                    <template x-if="venta.cliente_telefono">
+                                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                            <i class="fas fa-phone mr-1"></i>
+                                            <span x-text="venta.cliente_telefono"></span>
+                                        </p>
+                                    </template>
+                                </div>
+                            </template>
+                            <template x-if="!venta.cliente">
+                                <p class="text-gray-500 italic">Venta general</p>
+                            </template>
+                        </div>
+                        
+                        <!-- Empleado -->
+                        <div class="p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 rounded-lg">
+                            <p class="text-xs text-purple-600 dark:text-purple-300 mb-2 flex items-center gap-2">
+                                <i class="fas fa-user-tie"></i>
+                                Atendido por
+                            </p>
+                            <div class="flex items-center gap-3">
+                                <div class="avatar placeholder">
+                                    <div class="bg-secondary text-white rounded-full w-12 h-12">
+                                        <span class="text-xl" x-text="venta.empleado_nombre ? venta.empleado_nombre.charAt(0) : '?'"></span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-lg" x-text="venta.empleado_nombre"></p>
+                                    <template x-if="venta.empleado_rol">
+                                        <p class="text-sm text-gray-600 dark:text-gray-400" x-text="venta.empleado_rol"></p>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Método de Pago -->
+                        <div class="p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 rounded-lg">
+                            <p class="text-xs text-green-600 dark:text-green-300 mb-2 flex items-center gap-2">
+                                <i class="fas fa-credit-card"></i>
+                                Método de Pago
+                            </p>
+                            <div class="badge badge-lg" 
+                                 :class="{
+                                     'badge-success': venta.metodo_pago === 'efectivo',
+                                     'badge-primary': venta.metodo_pago === 'tarjeta',
+                                     'badge-warning': venta.metodo_pago === 'cuenta_corriente'
+                                 }">
+                                <i class="fas mr-2" 
+                                   :class="{
+                                       'fa-money-bill-wave': venta.metodo_pago === 'efectivo',
+                                       'fa-credit-card': venta.metodo_pago === 'tarjeta',
+                                       'fa-file-invoice-dollar': venta.metodo_pago === 'cuenta_corriente'
+                                   }"></i>
+                                <span x-text="venta.metodo_pago_display"></span>
+                            </div>
+                            <template x-if="venta.metodo_pago === 'efectivo'">
+                                <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                    <div>
+                                        <p class="text-gray-600 dark:text-gray-400">Pagado:</p>
+                                        <p class="font-semibold" x-text="gestionHelpers.formatPrice(venta.monto_pagado || 0)"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-600 dark:text-gray-400">Cambio:</p>
+                                        <p class="font-semibold" x-text="gestionHelpers.formatPrice(venta.cambio || 0)"></p>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        
+                        <!-- Fecha y Hora -->
+                        <div class="p-4 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900 dark:to-orange-800 rounded-lg">
+                            <p class="text-xs text-orange-600 dark:text-orange-300 mb-2 flex items-center gap-2">
+                                <i class="fas fa-clock"></i>
+                                Fecha y Hora
+                            </p>
+                            <p class="font-bold text-lg" x-text="gestionHelpers.formatDate(venta.fecha_hora)"></p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400" x-text="gestionHelpers.formatTime(venta.fecha_hora)"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Items de la Venta -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-shopping-basket text-secondary"></i>
+                        Productos
+                    </h2>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="table w-full">
+                            <thead>
+                                <tr class="bg-gray-100 dark:bg-gray-700">
+                                    <th class="w-12">#</th>
+                                    <th>Producto</th>
+                                    <th class="text-center">Cantidad</th>
+                                    <th class="text-right">Precio Unit.</th>
+                                    <th class="text-right">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(item, index) in venta.items" :key="item.id">
+                                    <tr class="hover">
+                                        <td class="text-gray-500" x-text="index + 1"></td>
+                                        <td>
+                                            <div class="flex items-center gap-3">
+                                                <template x-if="item.producto_imagen">
+                                                    <div class="avatar">
+                                                        <div class="w-12 h-12 rounded">
+                                                            <img :src="item.producto_imagen" :alt="item.producto_nombre">
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                                <template x-if="!item.producto_imagen">
+                                                    <div class="avatar placeholder">
+                                                        <div class="bg-gray-200 dark:bg-gray-600 rounded w-12 h-12">
+                                                            <i class="fas fa-box text-gray-400"></i>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                                <div>
+                                                    <p class="font-semibold" x-text="item.producto_nombre"></p>
+                                                    <template x-if="item.producto_categoria">
+                                                        <p class="text-xs text-gray-500" x-text="item.producto_categoria"></p>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="badge badge-secondary badge-lg font-bold" x-text="item.cantidad"></div>
+                                        </td>
+                                        <td class="text-right font-mono" x-text="gestionHelpers.formatPrice(item.precio_unitario)"></td>
+                                        <td class="text-right font-bold text-lg" x-text="gestionHelpers.formatPrice(item.subtotal)"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Observaciones -->
+                <template x-if="venta.observaciones">
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                        <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-comment-alt text-secondary"></i>
+                            Observaciones
+                        </h2>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <p x-text="venta.observaciones"></p>
+                        </div>
+                    </div>
+                </template>
+                
+                <!-- Historial de Cambios -->
+                <template x-if="historial.length > 0">
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                        <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-history text-secondary"></i>
+                            Historial de Cambios
+                        </h2>
+                        
+                        <div class="space-y-4">
+                            <template x-for="evento in historial" :key="evento.id">
+                                <div class="flex gap-4">
+                                    <div class="flex flex-col items-center">
+                                        <div class="w-10 h-10 rounded-full flex items-center justify-center"
+                                             :class="{
+                                                 'bg-success text-white': evento.tipo === 'creacion',
+                                                 'bg-warning text-white': evento.tipo === 'modificacion',
+                                                 'bg-error text-white': evento.tipo === 'anulacion',
+                                                 'bg-primary text-white': evento.tipo === 'impresion'
+                                             }">
+                                            <i class="fas" 
+                                               :class="{
+                                                   'fa-plus': evento.tipo === 'creacion',
+                                                   'fa-edit': evento.tipo === 'modificacion',
+                                                   'fa-ban': evento.tipo === 'anulacion',
+                                                   'fa-print': evento.tipo === 'impresion'
+                                               }"></i>
+                                        </div>
+                                        <template x-if="evento !== historial[historial.length - 1]">
+                                            <div class="w-0.5 flex-1 bg-gray-300 dark:bg-gray-600 min-h-8"></div>
+                                        </template>
+                                    </div>
+                                    <div class="flex-1 pb-4">
+                                        <p class="font-semibold" x-text="evento.descripcion"></p>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400" x-text="evento.usuario"></p>
+                                        <p class="text-xs text-gray-500 mt-1" x-text="gestionHelpers.formatDateTime(evento.fecha)"></p>
+                                        <template x-if="evento.detalle">
+                                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-2" x-text="evento.detalle"></p>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            
+            <!-- Columna Lateral -->
+            <div class="space-y-6">
+                
+                <!-- Resumen Financiero -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-calculator text-secondary"></i>
+                        Resumen
+                    </h2>
+                    
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600 dark:text-gray-400">Subtotal:</span>
+                            <span class="font-mono" x-text="gestionHelpers.formatPrice(venta.subtotal || 0)"></span>
+                        </div>
+                        
+                        <template x-if="venta.descuento > 0">
+                            <div class="flex justify-between items-center text-error">
+                                <span>Descuento:</span>
+                                <span class="font-mono" x-text="'- ' + gestionHelpers.formatPrice(venta.descuento)"></span>
+                            </div>
+                        </template>
+                        
+                        <template x-if="venta.iva > 0">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600 dark:text-gray-400">IVA (10%):</span>
+                                <span class="font-mono" x-text="gestionHelpers.formatPrice(venta.iva)"></span>
+                            </div>
+                        </template>
+                        
+                        <div class="divider my-2"></div>
+                        
+                        <div class="flex justify-between items-center text-2xl font-bold">
+                            <span>TOTAL:</span>
+                            <span class="text-success" x-text="gestionHelpers.formatPrice(venta.total)"></span>
+                        </div>
+                        
+                        <div class="divider my-2"></div>
+                        
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-gray-600 dark:text-gray-400">Total Items:</span>
+                            <span class="badge badge-secondary badge-lg" x-text="venta.cantidad_items"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Información Adicional -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-info text-secondary"></i>
+                        Detalles
+                    </h2>
+                    
+                    <div class="space-y-3 text-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-600 dark:text-gray-400">
+                                <i class="fas fa-hashtag mr-2"></i>Ticket:
+                            </span>
+                            <span class="font-mono font-bold" x-text="'#' + venta.numero_ticket"></span>
+                        </div>
+                        
+                        <template x-if="venta.numero_factura">
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-600 dark:text-gray-400">
+                                    <i class="fas fa-file-invoice mr-2"></i>Factura:
+                                </span>
+                                <span class="font-mono font-bold" x-text="venta.numero_factura"></span>
+                            </div>
+                        </template>
+                        
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-600 dark:text-gray-400">
+                                <i class="fas fa-cash-register mr-2"></i>Caja:
+                            </span>
+                            <span x-text="venta.caja_nombre || '-'"></span>
+                        </div>
+                        
+                        <template x-if="venta.turno">
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-600 dark:text-gray-400">
+                                    <i class="fas fa-clock mr-2"></i>Turno:
+                                </span>
+                                <span x-text="venta.turno"></span>
+                            </div>
+                        </template>
+                        
+                        <div class="divider my-2"></div>
+                        
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-600 dark:text-gray-400">
+                                <i class="fas fa-calendar-plus mr-2"></i>Creada:
+                            </span>
+                            <span x-text="gestionHelpers.formatDateTime(venta.created_at)"></span>
+                        </div>
+                        
+                        <template x-if="venta.updated_at !== venta.created_at">
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-600 dark:text-gray-400">
+                                    <i class="fas fa-edit mr-2"></i>Modificada:
+                                </span>
+                                <span x-text="gestionHelpers.formatDateTime(venta.updated_at)"></span>
+                            </div>
+                        </template>
+                        
+                        <template x-if="venta.fecha_anulacion">
+                            <div class="flex items-center justify-between text-error">
+                                <span>
+                                    <i class="fas fa-ban mr-2"></i>Anulada:
+                                </span>
+                                <span x-text="gestionHelpers.formatDateTime(venta.fecha_anulacion)"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+                <!-- Estadísticas del Cliente -->
+                <template x-if="venta.cliente && estadisticasCliente">
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                        <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-chart-line text-secondary"></i>
+                            Stats del Cliente
+                        </h2>
+                        
+                        <div class="space-y-4">
+                            <div class="stat-mini">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs text-gray-600">Total Compras</span>
+                                    <i class="fas fa-shopping-cart text-primary"></i>
+                                </div>
+                                <p class="text-2xl font-bold" x-text="estadisticasCliente.total_compras || 0"></p>
+                            </div>
+                            
+                            <div class="stat-mini">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs text-gray-600">Monto Total</span>
+                                    <i class="fas fa-dollar-sign text-success"></i>
+                                </div>
+                                <p class="text-lg font-bold text-success" x-text="gestionHelpers.formatPrice(estadisticasCliente.monto_total || 0)"></p>
+                            </div>
+                            
+                            <div class="stat-mini">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs text-gray-600">Ticket Promedio</span>
+                                    <i class="fas fa-calculator text-secondary"></i>
+                                </div>
+                                <p class="text-lg font-bold" x-text="gestionHelpers.formatPrice(estadisticasCliente.ticket_promedio || 0)"></p>
+                            </div>
+                            
+                            <template x-if="estadisticasCliente.ultima_compra">
+                                <div class="text-xs text-gray-600">
+                                    <i class="fas fa-calendar mr-1"></i>
+                                    Última compra: <span x-text="gestionHelpers.formatDate(estadisticasCliente.ultima_compra)"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+                
+                <!-- Acciones Rápidas -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-bolt text-secondary"></i>
+                        Acciones
+                    </h2>
+                    
+                    <div class="space-y-2">
+                        <button @click="imprimirTicket()" class="btn btn-secondary btn-block justify-start gap-2">
+                            <i class="fas fa-print"></i>
+                            Reimprimir Ticket
+                        </button>
+                        
+                        <button @click="enviarEmail()" class="btn btn-ghost btn-block justify-start gap-2">
+                            <i class="fas fa-envelope"></i>
+                            Enviar por Email
+                        </button>
+                        
+                        <button @click="exportarPDF()" class="btn btn-ghost btn-block justify-start gap-2">
+                            <i class="fas fa-file-pdf"></i>
+                            Descargar PDF
+                        </button>
+                        
+                        <template x-if="venta.cliente">
+                            <a :href="`/gestion/clientes/${venta.cliente}/`" class="btn btn-ghost btn-block justify-start gap-2">
+                                <i class="fas fa-user"></i>
+                                Ver Cliente
+                            </a>
+                        </template>
+                        
+                        <div class="divider my-2"></div>
+                        
+                        <template x-if="venta.estado === 'completada'">
+                            <button @click="anularVenta()" class="btn btn-error btn-block justify-start gap-2">
+                                <i class="fas fa-ban"></i>
+                                Anular Venta
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function detalleVenta(ventaId) {
+    return {
+        ventaId: ventaId,
+        venta: {},
+        historial: [],
+        estadisticasCliente: null,
+        cargando: false,
+        
+        async cargarDetalle() {
+            this.cargando = true;
+            try {
+                const response = await fetch(`/api/ventas/${this.ventaId}/detalle/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.venta = data.venta;
+                    this.historial = data.historial || [];
+                    this.estadisticasCliente = data.estadisticas_cliente || null;
+                } else {
+                    gestionHelpers.notify('Error al cargar detalle de venta', 'error');
+                }
+            } catch (error) {
+                console.error('Error al cargar detalle:', error);
+                gestionHelpers.notify('Error al cargar detalle de venta', 'error');
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        imprimirTicket() {
+            window.open(`/pos/ticket/${this.ventaId}/`, '_blank');
+        },
+        
+        async enviarEmail() {
+            if (!this.venta.cliente) {
+                gestionHelpers.notify('Esta venta no tiene cliente asociado', 'warning');
+                return;
+            }
+            
+            if (!await gestionHelpers.confirm(
+                'Enviar ticket por email',
+                `¿Enviar a ${this.venta.cliente_nombre}?`
+            )) return;
+            
+            try {
+                const response = await fetch(`/api/ventas/${this.ventaId}/enviar-email/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify('Email enviado correctamente', 'success');
+                } else {
+                    gestionHelpers.notify(data.message || 'Error al enviar email', 'error');
+                }
+            } catch (error) {
+                console.error('Error al enviar email:', error);
+                gestionHelpers.notify('Error al enviar email', 'error');
+            }
+        },
+        
+        exportarPDF() {
+            window.print();
+        },
+        
+        async anularVenta() {
+            if (!await gestionHelpers.confirm(
+                '¿Anular esta venta?',
+                `Ticket #${this.venta.numero_ticket} - ${gestionHelpers.formatPrice(this.venta.total)}\n\nEsta acción no se puede deshacer.`
+            )) return;
+            
+            try {
+                const response = await fetch(`/api/ventas/${this.ventaId}/anular/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify('Venta anulada correctamente', 'success');
+                    this.cargarDetalle();
+                } else {
+                    gestionHelpers.notify(data.message || 'Error al anular venta', 'error');
+                }
+            } catch (error) {
+                console.error('Error al anular venta:', error);
+                gestionHelpers.notify('Error al anular venta', 'error');
+            }
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    }
+}
+</script>
+{% endblock %}
+
+{% block extra_styles %}
+<style>
+@media print {
+    .btn, .dropdown, nav, aside, footer {
+        display: none !important;
+    }
+    
+    .container {
+        max-width: 100%;
+        padding: 0;
+    }
+    
+    .shadow-lg {
+        box-shadow: none !important;
+    }
+}
+
+.stat-mini {
+    @apply p-4 bg-gray-50 dark:bg-gray-700 rounded-lg;
+}
+</style>
+{% endblock %}

@@ -239,7 +239,8 @@ def get_datos_dashboard_cacheados():
         return datos
     
     # Generar estadísticas (importar aquí para evitar circular imports)
-    from .models import Producto, Cliente, Ventas, ConsumoTarjeta
+    from .models import Producto, Cliente, ConsumoTarjeta
+    from pos.models import Venta as Ventas
     from django.db.models import Sum, Count
     from django.utils import timezone
     

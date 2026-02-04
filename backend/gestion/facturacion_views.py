@@ -85,7 +85,7 @@ def dashboard_facturacion(request):
         # Cache por 5 minutos
         cache.set(cache_key, context, 300)
     
-    return render(request, 'gestion/facturacion_dashboard.html', context)
+    return render(request, 'reports/billing/dashboard.html', context)
 
 
 @login_required
@@ -346,7 +346,7 @@ def listar_facturas(request):
         'titulo': 'Listado de Facturas Electrónicas'
     }
     
-    return render(request, 'gestion/facturacion_listado.html', context)
+    return render(request, 'reports/billing/listado.html', context)
 
 
 @login_required
@@ -401,4 +401,4 @@ def reporte_cumplimiento(request):
         # Cache por 10 minutos
         cache.set(cache_key, context, 600)
     
-    return render(request, 'gestion/facturacion_reporte_cumplimiento.html', context)
+    return render(request, 'reports/billing/cumplimiento.html', context)

@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Registro - Portal Padres{% endblock %}
+
+{% block content %}
+<div class="min-h-screen py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary/10 via-secondary/10 to-purple-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div class="max-w-2xl mx-auto" x-data="registroPortal()" x-init="init()">
+        
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <img src="{% static 'images/tita_logotipo.png' %}" 
+                 alt="Cantina Tita" 
+                 class="mx-auto h-20 w-auto mb-4">
+            <h2 class="text-3xl font-extrabold text-gray-900 dark:text-gray-100">
+                Crear Cuenta - Portal Padres
+            </h2>
+            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                Únete para gestionar las tarjetas de tus hijos
+            </p>
+        </div>
+        
+        <!-- Formulario de Registro -->
+        <form @submit.prevent="registrar()" class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 space-y-6">
+            
+            <!-- Paso indicator -->
+            <div class="flex items-center justify-center mb-6">
+                <template x-for="i in totalPasos" :key="i">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold"
+                             :class="i === pasoActual ? 'bg-primary text-white' : 
+                                     i < pasoActual ? 'bg-success text-white' : 
+                                     'bg-gray-200 dark:bg-gray-700 text-gray-500'">
+                            <template x-if="i < pasoActual">
+                                <i class="fas fa-check"></i>
+                            </template>
+                            <template x-if="i >= pasoActual">
+                                <span x-text="i"></span>
+                            </template>
+                        </div>
+                        <div class="w-16 h-1" 
+                             :class="i < pasoActual ? 'bg-success' : 'bg-gray-200 dark:bg-gray-700'"
+                             x-show="i < totalPasos"></div>
+                    </div>
+                </template>
+            </div>
+            
+            <!-- Paso 1: Datos Personales -->
+            <div x-show="pasoActual === 1" x-transition class="space-y-4">
+                <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-100">
+                    <i class="fas fa-user mr-2 text-primary"></i>
+                    Datos Personales
+                </h3>
+                
+                <!-- Nombre completo -->
+                <div x-data="formValidation()">
+                    <label class="label">
+                        <span class="label-text">Nombre Completo *</span>
+                    </label>
+                    <input type="text" 
+                           x-model="formulario.nombre"
+                           @input="validate('nombre', formulario.nombre, ['required', 'minLength:3'])"
+                           required
+                           class="input input-bordered w-full"
+                           :class="{ 'input-error': errors.nombre }"
+                           placeholder="Juan Pérez Gómez">
+                    <template x-if="errors.nombre">
+                        <label class="label">
+                            <span class="label-text-alt text-error">
+                                <i class="fas fa-exclamation-circle mr-1"></i>
+                                <span x-text="errors.nombre"></span>
+                            </span>
+                        </label>
+                    </template>
+                </div>
+                
+                <!-- Documento -->
+                <div x-data="formValidation()">
+                    <label class="label">
+                        <span class="label-text">Documento de Identidad (CI) *</span>
+                    </label>
+                    <input type="text" 
+                           x-model="formulario.documento"
+                           @input="validate('documento', formulario.documento, ['required', 'numeric'])"
+                           required
+                           class="input input-bordered w-full"
+                           :class="{ 'input-error': errors.documento }"
+                           placeholder="1234567">
+                    <template x-if="errors.documento">
+                        <label class="label">
+                            <span class="label-text-alt text-error">
+                                <i class="fas fa-exclamation-circle mr-1"></i>
+                                <span x-text="errors.documento"></span>
+                            </span>
+                        </label>
+                    </template>
+                </div>
+                
+                <!-- Teléfono -->
+                <div x-data="formValidation()">
+                    <label class="label">
+                        <span class="label-text">Teléfono de Contacto *</span>
+                    </label>
+                    <input type="tel" 
+                           x-model="formulario.telefono"
+                           @input="validate('telefono', formulario.telefono, ['required', 'phone'])"
+                           required
+                           class="input input-bordered w-full"
+                           :class="{ 'input-error': errors.telefono }"
+                           placeholder="0981234567">
+                    <template x-if="errors.telefono">
+                        <label class="label">
+                            <span class="label-text-alt text-error">
+                                <i class="fas fa-exclamation-circle mr-1"></i>
+                                <span x-text="errors.telefono"></span>
+                            </span>
+                        </label>
+                    </template>
+                </div>
+            </div>
+            
+            <!-- Paso 2: Cuenta de Acceso -->
+            <div x-show="pasoActual === 2" x-transition class="space-y-4">
+                <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-100">
+                    <i class="fas fa-key mr-2 text-primary"></i>
+                    Credenciales de Acceso
+                </h3>
+                
+                <!-- Email -->
+                <div x-data="formValidation()">
+                    <label class="label">
+                        <span class="label-text">Correo Electrónico *</span>
+                    </label>
+                    <input type="email" 
+                           x-model="formulario.email"
+                           @input="validate('email', formulario.email, ['required', 'email'])"
+                           required
+                           class="input input-bordered w-full"
+                           :class="{ 'input-error': errors.email }"
+                           placeholder="tu@email.com">
+                    <template x-if="errors.email">
+                        <label class="label">
+                            <span class="label-text-alt text-error">
+                                <i class="fas fa-exclamation-circle mr-1"></i>
+                                <span x-text="errors.email"></span>
+                            </span>
+                        </label>
+                    </template>
+                </div>
+                
+                <!-- Contraseña -->
+                <div x-data="{ showPassword: false }">
+                    <label class="label">
+                        <span class="label-text">Contraseña *</span>
+                    </label>
+                    <div class="relative">
+                        <input :type="showPassword ? 'text' : 'password'" 
+                               x-model="formulario.password"
+                               @input="validarPassword()"
+                               required
+                               class="input input-bordered w-full pr-12"
+                               :class="{ 'input-error': !passwordValida && formulario.password.length > 0 }"
+                               placeholder="Mínimo 8 caracteres">
+                        <button type="button"
+                                @click="showPassword = !showPassword"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+                            <i class="fas" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Password strength indicator -->
+                    <div class="mt-2 space-y-1" x-show="formulario.password.length > 0">
+                        <div class="flex items-center text-xs"
+                             :class="formulario.password.length >= 8 ? 'text-success' : 'text-error'">
+                            <i class="fas fa-check-circle mr-1" x-show="formulario.password.length >= 8"></i>
+                            <i class="fas fa-times-circle mr-1" x-show="formulario.password.length < 8"></i>
+                            Al menos 8 caracteres
+                        </div>
+                        <div class="flex items-center text-xs"
+                             :class="/[A-Z]/.test(formulario.password) ? 'text-success' : 'text-error'">
+                            <i class="fas fa-check-circle mr-1" x-show="/[A-Z]/.test(formulario.password)"></i>
+                            <i class="fas fa-times-circle mr-1" x-show="!/[A-Z]/.test(formulario.password)"></i>
+                            Una mayúscula
+                        </div>
+                        <div class="flex items-center text-xs"
+                             :class="/[0-9]/.test(formulario.password) ? 'text-success' : 'text-error'">
+                            <i class="fas fa-check-circle mr-1" x-show="/[0-9]/.test(formulario.password)"></i>
+                            <i class="fas fa-times-circle mr-1" x-show="!/[0-9]/.test(formulario.password)"></i>
+                            Un número
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Confirmar contraseña -->
+                <div x-data="{ showPassword: false }">
+                    <label class="label">
+                        <span class="label-text">Confirmar Contraseña *</span>
+                    </label>
+                    <div class="relative">
+                        <input :type="showPassword ? 'text' : 'password'" 
+                               x-model="formulario.password_confirm"
+                               required
+                               class="input input-bordered w-full pr-12"
+                               :class="{ 'input-error': formulario.password_confirm && formulario.password !== formulario.password_confirm }"
+                               placeholder="Repite tu contraseña">
+                        <button type="button"
+                                @click="showPassword = !showPassword"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+                            <i class="fas" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                        </button>
+                    </div>
+                    <template x-if="formulario.password_confirm && formulario.password !== formulario.password_confirm">
+                        <label class="label">
+                            <span class="label-text-alt text-error">
+                                <i class="fas fa-exclamation-circle mr-1"></i>
+                                Las contraseñas no coinciden
+                            </span>
+                        </label>
+                    </template>
+                </div>
+            </div>
+            
+            <!-- Paso 3: Confirmación -->
+            <div x-show="pasoActual === 3" x-transition class="space-y-4">
+                <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-100">
+                    <i class="fas fa-check-circle mr-2 text-primary"></i>
+                    Confirma tus Datos
+                </h3>
+                
+                <div class="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Nombre:</span>
+                        <span class="font-semibold" x-text="formulario.nombre"></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Documento:</span>
+                        <span class="font-semibold" x-text="formulario.documento"></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Teléfono:</span>
+                        <span class="font-semibold" x-text="formulario.telefono"></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Email:</span>
+                        <span class="font-semibold" x-text="formulario.email"></span>
+                    </div>
+                </div>
+                
+                <!-- Términos y condiciones -->
+                <div class="form-control">
+                    <label class="label cursor-pointer justify-start gap-3">
+                        <input type="checkbox" 
+                               x-model="aceptaTerminos"
+                               class="checkbox checkbox-primary">
+                        <span class="label-text">
+                            Acepto los 
+                            <a href="#" class="link link-primary">términos y condiciones</a> 
+                            y la 
+                            <a href="#" class="link link-primary">política de privacidad</a>
+                        </span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Botones de navegación -->
+            <div class="flex gap-3 pt-4">
+                <button type="button" 
+                        @click="pasoAnterior()"
+                        x-show="pasoActual > 1"
+                        class="btn btn-ghost flex-1">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Anterior
+                </button>
+                
+                <button type="button" 
+                        @click="siguientePaso()"
+                        x-show="pasoActual < totalPasos"
+                        class="btn btn-primary flex-1"
+                        :disabled="!puedeAvanzar()">
+                    Siguiente
+                    <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+                
+                <button type="submit" 
+                        x-show="pasoActual === totalPasos"
+                        class="btn btn-primary flex-1"
+                        :disabled="!aceptaTerminos || loading">
+                    <template x-if="!loading">
+                        <span>
+                            <i class="fas fa-check mr-2"></i>
+                            Crear Cuenta
+                        </span>
+                    </template>
+                    <template x-if="loading">
+                        <span>
+                            <span class="loading loading-spinner loading-sm mr-2"></span>
+                            Creando cuenta...
+                        </span>
+                    </template>
+                </button>
+            </div>
+            
+            <!-- Link a login -->
+            <div class="text-center pt-4 border-t dark:border-gray-700">
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                    ¿Ya tienes una cuenta?
+                    <a href="{% url 'portal:login' %}" class="link link-primary font-semibold">
+                        Inicia sesión
+                    </a>
+                </p>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function registroPortal() {
+    return {
+        pasoActual: 1,
+        totalPasos: 3,
+        loading: false,
+        aceptaTerminos: false,
+        passwordValida: false,
+        formulario: {
+            nombre: '',
+            documento: '',
+            telefono: '',
+            email: '',
+            password: '',
+            password_confirm: ''
+        },
+        
+        init() {
+            // Cualquier inicialización necesaria
+        },
+        
+        siguientePaso() {
+            if (this.puedeAvanzar()) {
+                this.pasoActual++;
+            }
+        },
+        
+        pasoAnterior() {
+            if (this.pasoActual > 1) {
+                this.pasoActual--;
+            }
+        },
+        
+        puedeAvanzar() {
+            switch(this.pasoActual) {
+                case 1:
+                    return this.formulario.nombre.length >= 3 &&
+                           this.formulario.documento.length > 0 &&
+                           this.formulario.telefono.length >= 9;
+                case 2:
+                    return this.formulario.email.includes('@') &&
+                           this.passwordValida &&
+                           this.formulario.password === this.formulario.password_confirm;
+                default:
+                    return true;
+            }
+        },
+        
+        validarPassword() {
+            const password = this.formulario.password;
+            this.passwordValida = password.length >= 8 &&
+                                 /[A-Z]/.test(password) &&
+                                 /[0-9]/.test(password);
+        },
+        
+        async registrar() {
+            if (!this.aceptaTerminos) {
+                this.showNotification('Debes aceptar los términos y condiciones', 'error');
+                return;
+            }
+            
+            this.loading = true;
+            
+            try {
+                const response = await fetch('{% url "portal:registro_submit" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(this.formulario)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.showNotification('Cuenta creada exitosamente. Redirigiendo...', 'success');
+                    setTimeout(() => {
+                        window.location.href = data.redirect_url || '{% url "portal:dashboard" %}';
+                    }, 2000);
+                } else {
+                    this.showNotification(data.error || 'Error al crear la cuenta', 'error');
+                }
+            } catch (error) {
+                console.error('Error al registrar:', error);
+                this.showNotification('Error al crear la cuenta. Intenta de nuevo.', 'error');
+            } finally {
+                this.loading = false;
+            }
+        },
+        
+        showNotification(message, type) {
+            window.Alpine.store('notifications').add(message, type);
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    }
+}
+</script>
+{% endblock %}

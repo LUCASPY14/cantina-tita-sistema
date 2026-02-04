@@ -1,0 +1,448 @@
+{% extends "base_pos.html" %}
+{% load static %}
+
+{% block title %}Cierre de Caja - POS{% endblock %}
+
+{% block content %}
+<div x-data="cierreCaja()" x-init="init()" class="space-y-6">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <a href="{% url 'pos:dashboard' %}" 
+               class="btn btn-ghost btn-sm mb-2"
+               aria-label="Volver al Dashboard">
+                <i class="fas fa-arrow-left mr-2" aria-hidden="true"></i>
+                Volver al Dashboard
+            </a>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-cash-register mr-3 text-primary" aria-hidden="true"></i>
+                Cierre de Caja
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Cuadratura y cierre del turno actual
+            </p>
+        </div>
+    </div>
+    
+    <template x-if="cargando">
+        <div class="space-y-6" role="status" aria-live="polite">
+            <div class="skeleton h-64 w-full"></div>
+            <div class="skeleton h-96 w-full"></div>
+            <span class="sr-only">Cargando datos de cierre...</span>
+        </div>
+    </template>
+    
+    <template x-if="!cargando">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Columna Principal: Resumen y Cuadratura -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- Información del Turno -->
+                <div class="bg-gradient-to-r from-primary to-orange-600 text-white rounded-xl shadow-xl p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm opacity-80">Turno Actual</p>
+                            <p class="text-2xl font-bold" x-text="turno.empleado"></p>
+                            <p class="text-sm opacity-90 mt-1">
+                                Inicio: <span x-text="turno.fecha_hora_inicio"></span>
+                            </p>
+                        </div>
+                        <i class="fas fa-clock text-6xl opacity-20"></i>
+                    </div>
+                </div>
+                
+                <!-- Resumen de Ventas -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-chart-line mr-2 text-primary"></i>
+                        Resumen de Ventas
+                    </h2>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+                            <p class="text-sm opacity-90 mb-1">Total Ventas</p>
+                            <p class="text-3xl font-bold" x-text="resumen.cantidad_ventas"></p>
+                        </div>
+                        
+                        <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+                            <p class="text-sm opacity-90 mb-1">Efectivo</p>
+                            <p class="text-xl font-bold" x-text="formatearPrecio(resumen.efectivo)"></p>
+                        </div>
+                        
+                        <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+                            <p class="text-sm opacity-90 mb-1">Tarjeta</p>
+                            <p class="text-xl font-bold" x-text="formatearPrecio(resumen.tarjeta)"></p>
+                        </div>
+                        
+                        <div class="stat-card bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+                            <p class="text-sm opacity-90 mb-1">Total</p>
+                            <p class="text-xl font-bold" x-text="formatearPrecio(resumen.total)"></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Desglose de Métodos de Pago -->
+                    <div class="overflow-x-auto">
+                        <table class="table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Método</th>
+                                    <th class="text-right">Cantidad</th>
+                                    <th class="text-right">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="metodo in desglosePago" :key="metodo.tipo">
+                                    <tr>
+                                        <td>
+                                            <span class="badge capitalize" 
+                                                  :class="{
+                                                      'badge-success': metodo.tipo === 'efectivo',
+                                                      'badge-secondary': metodo.tipo === 'tarjeta'
+                                                  }">
+                                                <i class="fas mr-1" 
+                                                   :class="metodo.tipo === 'efectivo' ? 'fa-money-bill-wave' : 'fa-credit-card'"></i>
+                                                <span x-text="metodo.tipo"></span>
+                                            </span>
+                                        </td>
+                                        <td class="text-right font-semibold" x-text="metodo.cantidad"></td>
+                                        <td class="text-right font-bold text-primary" x-text="formatearPrecio(metodo.monto)"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                            <tfoot>
+                                <tr class="font-bold">
+                                    <td>TOTAL</td>
+                                    <td class="text-right" x-text="resumen.cantidad_ventas"></td>
+                                    <td class="text-right text-primary" x-text="formatearPrecio(resumen.total)"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Recuento de Efectivo -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-coins mr-2 text-success" aria-hidden="true"></i>
+                        Recuento de Efectivo
+                    </h2>
+                    
+                    <div class="alert alert-info mb-4" role="alert">
+                        <i class="fas fa-info-circle" aria-hidden="true"></i>
+                        <span>Ingrese la cantidad de billetes y monedas en caja</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <template x-for="denominacion in denominaciones" :key="denominacion.valor">
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text font-semibold" x-text="formatearPrecio(denominacion.valor)"></span>
+                                </label>
+                                <div class="flex gap-2">
+                                    <input type="number" 
+                                           x-model="denominacion.cantidad"
+                                           @input="calcularRecuento()"
+                                           min="0"
+                                           step="1"
+                                           placeholder="0"
+                                           class="input input-bordered input-sm w-20"
+                                           :aria-label="'Cantidad de billetes o monedas de ' + formatearPrecio(denominacion.valor)">
+                                    <span class="text-sm text-gray-500 self-center" aria-live="polite">
+                                        = <span x-text="formatearPrecio(denominacion.valor * denominacion.cantidad)"></span>
+                                    </span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <!-- Total Contado -->
+                    <div class="divider"></div>
+                    <div class="flex items-center justify-between bg-success bg-opacity-10 rounded-lg p-4">
+                        <div>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Total Contado</p>
+                            <p class="text-3xl font-bold text-success" x-text="formatearPrecio(totalContado)"></p>
+                        </div>
+                        <i class="fas fa-wallet text-5xl text-success opacity-20"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Columna Derecha: Cuadratura y Acciones -->
+            <div class="lg:col-span-1 space-y-6">
+                
+                <!-- Cuadratura -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-balance-scale mr-2 text-warning" aria-hidden="true"></i>
+                        Cuadratura
+                    </h2>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <span class="text-sm text-gray-600 dark:text-gray-400">Efectivo Sistema</span>
+                            <span class="font-bold" x-text="formatearPrecio(resumen.efectivo)" aria-label="Efectivo registrado en el sistema"></span>
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <span class="text-sm text-gray-600 dark:text-gray-400">Efectivo Contado</span>
+                            <span class="font-bold" x-text="formatearPrecio(totalContado)" aria-label="Efectivo contado físicamente" aria-live="polite"></span>
+                        </div>
+                        
+                        <div class="divider my-2"></div>
+                        
+                        <div class="flex items-center justify-between p-4 rounded-lg"
+                             role="status"
+                             aria-live="polite"
+                             :class="{
+                                 'bg-success bg-opacity-10': diferencia === 0,
+                                 'bg-warning bg-opacity-10': Math.abs(diferencia) > 0 && Math.abs(diferencia) <= 10000,
+                                 'bg-error bg-opacity-10': Math.abs(diferencia) > 10000
+                             }">
+                            <div>
+                                <p class="text-sm">Diferencia</p>
+                                <p class="text-2xl font-bold"
+                                   :class="{
+                                       'text-success': diferencia === 0,
+                                       'text-warning': Math.abs(diferencia) > 0 && Math.abs(diferencia) <= 10000,
+                                       'text-error': Math.abs(diferencia) > 10000
+                                   }"
+                                   x-text="formatearPrecio(Math.abs(diferencia))"
+                                   :aria-label="diferencia === 0 ? 'Sin diferencia, cuadra perfectamente' : diferencia > 0 ? 'Sobrante de ' + formatearPrecio(Math.abs(diferencia)) : 'Faltante de ' + formatearPrecio(Math.abs(diferencia))"></p>
+                                <p class="text-xs mt-1"
+                                   :class="{
+                                       'text-success': diferencia === 0,
+                                       'text-warning': Math.abs(diferencia) > 0 && Math.abs(diferencia) <= 10000,
+                                       'text-error': Math.abs(diferencia) > 10000
+                                   }">
+                                    <span x-text="diferencia === 0 ? 'Cuadra perfectamente' : diferencia > 0 ? 'Sobrante' : 'Faltante'"></span>
+                                </p>
+                            </div>
+                            <i class="fas text-4xl opacity-30" aria-hidden="true"
+                               :class="{
+                                   'fa-check-circle text-success': diferencia === 0,
+                                   'fa-exclamation-triangle text-warning': Math.abs(diferencia) > 0 && Math.abs(diferencia) <= 10000,
+                                   'fa-times-circle text-error': Math.abs(diferencia) > 10000
+                               }"></i>
+                        </div>
+                    </div>
+                </div>
+                             }">
+                            <div>
+                                <p class="text-sm">Diferencia</p>
+                                <p class="text-2xl font-bold"
+                                   :class="{
+                                       'text-success': diferencia === 0,
+                                       'text-warning': Math.abs(diferencia) > 0 && Math.abs(diferencia) <= 10000,
+                                       'text-error': Math.abs(diferencia) > 10000
+                                   }"
+                                   x-text="formatearPrecio(Math.abs(diferencia))"></p>
+                                <p class="text-xs mt-1"
+                                   :class="{
+                                       'text-success': diferencia === 0,
+                                       'text-warning': Math.abs(diferencia) > 0 && Math.abs(diferencia) <= 10000,
+                                       'text-error': Math.abs(diferencia) > 10000
+                                   }">
+                                    <span x-text="diferencia === 0 ? 'Cuadra perfectamente' : diferencia > 0 ? 'Sobrante' : 'Faltante'"></span>
+                                </p>
+                            </div>
+                            <i class="fas text-4xl opacity-30"
+                               :class="{
+                                   'fa-check-circle text-success': diferencia === 0,
+                                   'fa-exclamation-triangle text-warning': Math.abs(diferencia) > 0 && Math.abs(diferencia) <= 10000,
+                                   'fa-times-circle text-error': Math.abs(diferencia) > 10000
+                               }"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Observaciones -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h3 class="font-bold mb-3">
+                        <label for="observaciones-cierre">Observaciones</label>
+                    </h3>
+                    <textarea id="observaciones-cierre"
+                              x-model="observaciones"
+                              placeholder="Notas sobre el cierre (opcional)..."
+                              class="textarea textarea-bordered w-full"
+                              rows="4"
+                              aria-label="Observaciones adicionales sobre el cierre de caja"></textarea>
+                </div>
+                
+                <!-- Acciones -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <button @click="confirmarCierre()" 
+                            :disabled="procesando || !puedeCerrar()"
+                            class="btn btn-error btn-lg w-full mb-3"
+                            :aria-disabled="procesando || !puedeCerrar() ? 'true' : 'false'"
+                            aria-label="Cerrar caja y finalizar turno">
+                        <template x-if="!procesando">
+                            <span>
+                                <i class="fas fa-lock mr-2" aria-hidden="true"></i>
+                                Cerrar Caja
+                            </span>
+                        </template>
+                        <template x-if="procesando">
+                            <span class="loading loading-spinner" role="status" aria-live="polite">
+                                <span class="sr-only">Procesando cierre...</span>
+                            </span>
+                        </template>
+                    </button>
+                    
+                    <template x-if="Math.abs(diferencia) > 10000">
+                        <div class="alert alert-warning text-sm" role="alert">
+                            <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                            <span>Diferencia significativa. Revisa el conteo antes de cerrar.</span>
+                        </div>
+                    </template>
+                    
+                    <a href="{% url 'pos:dashboard' %}" 
+                       class="btn btn-ghost w-full mt-2"
+                       aria-label="Cancelar cierre y volver al dashboard">Cancelar</a>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function cierreCaja() {
+    return {
+        cargando: true,
+        procesando: false,
+        turno: {},
+        resumen: {
+            cantidad_ventas: 0,
+            efectivo: 0,
+            tarjeta: 0,
+            total: 0
+        },
+        desglosePago: [],
+        denominaciones: [
+            { valor: 100000, cantidad: 0 },
+            { valor: 50000, cantidad: 0 },
+            { valor: 20000, cantidad: 0 },
+            { valor: 10000, cantidad: 0 },
+            { valor: 5000, cantidad: 0 },
+            { valor: 2000, cantidad: 0 },
+            { valor: 1000, cantidad: 0 },
+            { valor: 500, cantidad: 0 },
+            { valor: 100, cantidad: 0 },
+            { valor: 50, cantidad: 0 }
+        ],
+        totalContado: 0,
+        diferencia: 0,
+        observaciones: '',
+        
+        async init() {
+            await this.cargarDatos();
+        },
+        
+        async cargarDatos() {
+            this.cargando = true;
+            
+            try {
+                const response = await fetch('/api/pos/cierre/datos/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.turno = data.turno;
+                    this.resumen = data.resumen;
+                    this.desglosePago = data.desglose_pago || [];
+                    this.calcularDiferencia();
+                } else {
+                    posHelpers.notify(data.message || 'Error al cargar datos', 'error');
+                }
+            } catch (error) {
+                console.error('Error al cargar datos:', error);
+                posHelpers.notify('Error al cargar datos del turno', 'error');
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        calcularRecuento() {
+            this.totalContado = this.denominaciones.reduce((total, denom) => {
+                return total + (denom.valor * (denom.cantidad || 0));
+            }, 0);
+            this.calcularDiferencia();
+        },
+        
+        calcularDiferencia() {
+            this.diferencia = this.totalContado - this.resumen.efectivo;
+        },
+        
+        puedeCerrar() {
+            // Puede cerrar si el total contado es mayor a 0
+            return this.totalContado > 0;
+        },
+        
+        async confirmarCierre() {
+            // Confirmar si hay diferencia significativa
+            if (Math.abs(this.diferencia) > 10000) {
+                const mensaje = `Hay una diferencia de ${this.formatearPrecio(Math.abs(this.diferencia))}.\n${this.diferencia > 0 ? 'SOBRANTE' : 'FALTANTE'}\n\n¿Estás seguro de continuar con el cierre?`;
+                
+                if (!confirm(mensaje)) {
+                    return;
+                }
+            }
+            
+            await this.procesarCierre();
+        },
+        
+        async procesarCierre() {
+            this.procesando = true;
+            
+            try {
+                // Preparar datos del cierre
+                const datoCierre = {
+                    total_contado: this.totalContado,
+                    diferencia: this.diferencia,
+                    desglose_denominaciones: this.denominaciones.filter(d => d.cantidad > 0),
+                    observaciones: this.observaciones
+                };
+                
+                const response = await fetch('/api/pos/cierre/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCsrfToken()
+                    },
+                    body: JSON.stringify(datoCierre)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    posHelpers.playSound('success');
+                    posHelpers.notify('Cierre de caja completado exitosamente', 'success');
+                    
+                    // Redirigir al dashboard después de 2 segundos
+                    setTimeout(() => {
+                        window.location.href = '/pos/dashboard/';
+                    }, 2000);
+                } else {
+                    posHelpers.notify(data.message || 'Error al cerrar caja', 'error');
+                    this.procesando = false;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                posHelpers.notify('Error al procesar cierre de caja', 'error');
+                this.procesando = false;
+            }
+        },
+        
+        formatearPrecio(monto) {
+            return posHelpers.formatPrice(monto);
+        },
+        
+        getCsrfToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,15 @@
+{
+  "scripts": {
+    "dev": "python dev_server.py",
+    "dev:backend": "cd backend && python manage.py runserver",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "install": "cd frontend && npm install",
+    "setup": "npm run install && cd backend && pip install -r requirements.txt",
+    "typecheck": "cd frontend && npm run typecheck",
+    "test": "cd backend && python manage.py test"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

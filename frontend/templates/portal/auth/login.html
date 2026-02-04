@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Ingresar - Portal Padres{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8" x-data="loginPortal()">
+        
+        <!-- Logo y Header -->
+        <div class="text-center">
+            <img src="{% static 'images/tita_logotipo.png' %}" 
+                 alt="Cantina Tita" 
+                 class="mx-auto h-24 w-auto">
+            <h2 class="mt-6 text-3xl font-extrabold text-gray-900 dark:text-gray-100">
+                Portal de Padres
+            </h2>
+            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                Gestiona las tarjetas de tus hijos
+            </p>
+        </div>
+        
+        <!-- Formulario de Login -->
+        <form @submit.prevent="login()" class="mt-8 space-y-6 bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg">
+            
+            <!-- Mensajes de Django -->
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert" 
+                     :class="{
+                         'alert-success': '{{ message.tags }}' === 'success',
+                         'alert-error': '{{ message.tags }}' === 'error',
+                         'alert-warning': '{{ message.tags }}' === 'warning',
+                         'alert-info': '{{ message.tags }}' === 'info'
+                     }">
+                    <i class="fas" 
+                       :class="{
+                           'fa-check-circle': '{{ message.tags }}' === 'success',
+                           'fa-exclamation-circle': '{{ message.tags }}' === 'error',
+                           'fa-exclamation-triangle': '{{ message.tags }}' === 'warning',
+                           'fa-info-circle': '{{ message.tags }}' === 'info'
+                       }"></i>
+                    <span>{{ message }}</span>
+                </div>
+                {% endfor %}
+            {% endif %}
+            
+            <!-- Email -->
+            <div x-data="formValidation()">
+                <label for="email" class="label">
+                    <span class="label-text">
+                        <i class="fas fa-envelope mr-2"></i>Correo Electrónico
+                    </span>
+                </label>
+                <input id="email"
+                       name="email" 
+                       type="email" 
+                       required
+                       x-model="email"
+                       @input="validate('email', email, ['required', 'email'])"
+                       class="input input-bordered w-full"
+                       :class="{ 'input-error': errors.email }"
+                       placeholder="tu@email.com"
+                       autocomplete="email">
+                
+                <!-- Error message -->
+                <template x-if="errors.email">
+                    <label class="label">
+                        <span class="label-text-alt text-error">
+                            <i class="fas fa-exclamation-circle mr-1"></i>
+                            <span x-text="errors.email"></span>
+                        </span>
+                    </label>
+                </template>
+            </div>
+            
+            <!-- Contraseña -->
+            <div x-data="{ showPassword: false }">
+                <label for="password" class="label">
+                    <span class="label-text">
+                        <i class="fas fa-lock mr-2"></i>Contraseña
+                    </span>
+                </label>
+                <div class="relative">
+                    <input id="password"
+                           name="password" 
+                           :type="showPassword ? 'text' : 'password'" 
+                           required
+                           x-model="password"
+                           class="input input-bordered w-full pr-12"
+                           placeholder="••••••••"
+                           autocomplete="current-password">
+                    
+                    <!-- Toggle password visibility -->
+                    <button type="button"
+                            @click="showPassword = !showPassword"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                        <i class="fas" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Recordar sesión y Olvidé contraseña -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <input id="remember-me" 
+                           name="remember" 
+                           type="checkbox" 
+                           class="checkbox checkbox-primary checkbox-sm">
+                    <label for="remember-me" class="ml-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                        Recordar sesión
+                    </label>
+                </div>
+                
+                <div class="text-sm">
+                    <a href="{% url 'portal:password_reset' %}" 
+                       class="link link-primary">
+                        ¿Olvidaste tu contraseña?
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Botón de submit -->
+            <button type="submit" 
+                    class="btn btn-primary w-full text-lg"
+                    :disabled="loading">
+                <template x-if="!loading">
+                    <span>
+                        <i class="fas fa-sign-in-alt mr-2"></i>
+                        Ingresar
+                    </span>
+                </template>
+                <template x-if="loading">
+                    <span>
+                        <span class="loading loading-spinner loading-sm mr-2"></span>
+                        Iniciando sesión...
+                    </span>
+                </template>
+            </button>
+            
+            <!-- Divider -->
+            <div class="divider">O</div>
+            
+            <!-- Link a registro -->
+            <div class="text-center">
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                    ¿No tienes una cuenta?
+                    <a href="{% url 'portal:registro' %}" class="link link-primary font-semibold">
+                        Regístrate aquí
+                    </a>
+                </p>
+            </div>
+        </form>
+        
+        <!-- Footer info -->
+        <div class="text-center text-xs text-gray-500">
+            <p>© 2025 Cantina Tita. Todos los derechos reservados.</p>
+            <p class="mt-1">
+                <a href="#" class="link link-hover">Términos de Servicio</a> • 
+                <a href="#" class="link link-hover">Privacidad</a> • 
+                <a href="#" class="link link-hover">Ayuda</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function loginPortal() {
+    return {
+        email: '',
+        password: '',
+        loading: false,
+        
+        async login() {
+            // Validación básica
+            if (!this.email || !this.password) {
+                this.showNotification('Por favor completa todos los campos', 'error');
+                return;
+            }
+            
+            this.loading = true;
+            
+            // En producción, esto se enviará al backend Django
+            // Por ahora, simular delay
+            try {
+                // El formulario se enviará normalmente al backend Django
+                // Este script es solo para mejorar la UX con loading states
+                this.$el.closest('form').submit();
+            } catch (error) {
+                console.error('Error al iniciar sesión:', error);
+                this.showNotification('Error al iniciar sesión. Intenta de nuevo.', 'error');
+                this.loading = false;
+            }
+        },
+        
+        showNotification(message, type) {
+            window.Alpine.store('notifications').add(message, type);
+        }
+    }
+}
+</script>
+{% endblock %}

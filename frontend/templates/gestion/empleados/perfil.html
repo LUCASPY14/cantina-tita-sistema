@@ -1,0 +1,429 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Perfil de {{ empleado.nombre_completo }} - Gestión{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div x-data="perfilEmpleado({{ empleado.id }})" x-init="cargarDatos()" class="container mx-auto px-4 py-8">
+    
+    <!-- Header con botón volver -->
+    <div class="mb-8">
+        <a href="{% url 'gestion:empleados_lista' %}" class="btn btn-ghost mb-4">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Volver a Lista de Empleados
+        </a>
+    </div>
+    
+    <!-- Perfil Card -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden mb-6">
+        <!-- Header con degradado -->
+        <div class="bg-gradient-to-r from-secondary to-teal-600 h-32"></div>
+        
+        <!-- Info del empleado -->
+        <div class="px-8 pb-8">
+            <div class="flex flex-col md:flex-row items-start md:items-end gap-6 -mt-16">
+                <!-- Avatar -->
+                <div class="avatar">
+                    <div class="w-32 h-32 rounded-full ring ring-white ring-offset-4 bg-white">
+                        <template x-if="empleado.foto">
+                            <img :src="empleado.foto" :alt="empleado.nombre_completo">
+                        </template>
+                        <template x-if="!empleado.foto">
+                            <div class="w-full h-full bg-gradient-to-br from-secondary to-teal-600 flex items-center justify-center text-white font-bold text-5xl">
+                                <span x-text="empleado.nombre_completo ? empleado.nombre_completo.charAt(0) : ''"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+                <!-- Información principal -->
+                <div class="flex-1">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100" x-text="empleado.nombre_completo"></h1>
+                            <div class="flex flex-wrap gap-3 mt-2">
+                                <div class="badge badge-lg" 
+                                     :class="{
+                                         'badge-primary': empleado.rol === 'admin',
+                                         'badge-secondary': empleado.rol === 'cajero',
+                                         'badge-accent': empleado.rol === 'supervisor',
+                                         'badge-info': empleado.rol === 'gerente'
+                                     }">
+                                    <i class="fas mr-1" 
+                                       :class="{
+                                           'fa-user-shield': empleado.rol === 'admin',
+                                           'fa-cash-register': empleado.rol === 'cajero',
+                                           'fa-user-tie': empleado.rol === 'supervisor',
+                                           'fa-briefcase': empleado.rol === 'gerente'
+                                       }"></i>
+                                    <span x-text="empleado.rol_display || empleado.rol"></span>
+                                </div>
+                                <div class="badge badge-lg" 
+                                     :class="empleado.activo ? 'badge-success' : 'badge-error'">
+                                    <i class="fas mr-1" :class="empleado.activo ? 'fa-check-circle' : 'fa-times-circle'"></i>
+                                    <span x-text="empleado.activo ? 'Activo' : 'Inactivo'"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Acciones -->
+                        <div class="flex gap-2">
+                            <a :href="`/gestion/empleados/${empleado.id}/editar/`" 
+                               class="btn btn-secondary">
+                                <i class="fas fa-edit mr-2"></i>
+                                Editar
+                            </a>
+                            <button @click="imprimirPerfil()" class="btn btn-ghost">
+                                <i class="fas fa-print"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Grid de información -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        
+        <!-- Columna izquierda: Información Personal -->
+        <div class="lg:col-span-1 space-y-6">
+            
+            <!-- Datos Personales -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-bold mb-4 flex items-center">
+                    <i class="fas fa-id-card mr-2 text-secondary"></i>
+                    Información Personal
+                </h3>
+                
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-id-badge text-gray-400 mt-1"></i>
+                        <div class="flex-1">
+                            <p class="text-xs text-gray-500">Cédula</p>
+                            <p class="font-semibold font-mono" x-text="empleado.cedula || '-'"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-envelope text-gray-400 mt-1"></i>
+                        <div class="flex-1">
+                            <p class="text-xs text-gray-500">Email</p>
+                            <p class="font-semibold" x-text="empleado.email || '-'"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-phone text-gray-400 mt-1"></i>
+                        <div class="flex-1">
+                            <p class="text-xs text-gray-500">Teléfono</p>
+                            <p class="font-semibold" x-text="empleado.telefono || '-'"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-map-marker-alt text-gray-400 mt-1"></i>
+                        <div class="flex-1">
+                            <p class="text-xs text-gray-500">Dirección</p>
+                            <p class="font-semibold" x-text="empleado.direccion || '-'"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-birthday-cake text-gray-400 mt-1"></i>
+                        <div class="flex-1">
+                            <p class="text-xs text-gray-500">Fecha de Nacimiento</p>
+                            <p class="font-semibold" x-text="gestionHelpers.formatDate(empleado.fecha_nacimiento) || '-'"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Información Laboral -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-bold mb-4 flex items-center">
+                    <i class="fas fa-briefcase mr-2 text-primary"></i>
+                    Información Laboral
+                </h3>
+                
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-calendar-check text-gray-400 mt-1"></i>
+                        <div class="flex-1">
+                            <p class="text-xs text-gray-500">Fecha de Ingreso</p>
+                            <p class="font-semibold" x-text="gestionHelpers.formatDate(empleado.fecha_ingreso) || '-'"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-clock text-gray-400 mt-1"></i>
+                        <div class="flex-1">
+                            <p class="text-xs text-gray-500">Antigüedad</p>
+                            <p class="font-semibold" x-text="calcularAntiguedad()"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-money-bill-wave text-gray-400 mt-1"></i>
+                        <div class="flex-1">
+                            <p class="text-xs text-gray-500">Salario</p>
+                            <p class="font-semibold text-success" x-text="gestionHelpers.formatPrice(empleado.salario) || '-'"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-user text-gray-400 mt-1"></i>
+                        <div class="flex-1">
+                            <p class="text-xs text-gray-500">Usuario</p>
+                            <p class="font-semibold font-mono" x-text="empleado.username || '-'"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notas -->
+            <template x-if="empleado.notas">
+                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6">
+                    <h3 class="text-lg font-bold mb-2 flex items-center">
+                        <i class="fas fa-sticky-note mr-2 text-info"></i>
+                        Notas
+                    </h3>
+                    <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap" x-text="empleado.notas"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Columna derecha: Estadísticas y Actividad -->
+        <div class="lg:col-span-2 space-y-6">
+            
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-receipt text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Ventas Hoy</p>
+                    <p class="text-3xl font-bold" x-text="stats.ventas_hoy_cantidad || 0"></p>
+                    <p class="text-sm opacity-80" x-text="gestionHelpers.formatPrice(stats.ventas_hoy_monto || 0)"></p>
+                </div>
+                
+                <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-chart-line text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Ventas del Mes</p>
+                    <p class="text-3xl font-bold" x-text="stats.ventas_mes_cantidad || 0"></p>
+                    <p class="text-sm opacity-80" x-text="gestionHelpers.formatPrice(stats.ventas_mes_monto || 0)"></p>
+                </div>
+                
+                <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-calendar-alt text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Promedio Diario</p>
+                    <p class="text-2xl font-bold" x-text="gestionHelpers.formatPrice(stats.promedio_diario || 0)"></p>
+                </div>
+            </div>
+            
+            <!-- Gráfico de Ventas -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-bold mb-4 flex items-center">
+                    <i class="fas fa-chart-bar mr-2 text-primary"></i>
+                    Ventas de los Últimos 30 Días
+                </h3>
+                <canvas id="chartVentas"></canvas>
+            </div>
+            
+            <!-- Últimas Ventas -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-bold mb-4 flex items-center">
+                    <i class="fas fa-history mr-2 text-secondary"></i>
+                    Últimas 10 Ventas
+                </h3>
+                
+                <template x-if="ultimasVentas.length > 0">
+                    <div class="overflow-x-auto">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Fecha/Hora</th>
+                                    <th>Cliente</th>
+                                    <th class="text-center">Items</th>
+                                    <th class="text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="venta in ultimasVentas" :key="venta.id">
+                                    <tr class="hover">
+                                        <td class="font-mono text-xs" x-text="gestionHelpers.formatDateTime(venta.fecha_hora)"></td>
+                                        <td x-text="venta.cliente_nombre || 'Venta general'"></td>
+                                        <td class="text-center">
+                                            <div class="badge badge-secondary badge-sm" x-text="venta.cantidad_items"></div>
+                                        </td>
+                                        <td class="text-right font-semibold text-success" x-text="gestionHelpers.formatPrice(venta.total)"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+                
+                <template x-if="ultimasVentas.length === 0">
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-inbox text-4xl mb-2"></i>
+                        <p>No hay ventas registradas</p>
+                    </div>
+                </template>
+            </div>
+            
+            <!-- Actividad Reciente -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-bold mb-4 flex items-center">
+                    <i class="fas fa-list mr-2 text-info"></i>
+                    Actividad Reciente
+                </h3>
+                
+                <template x-if="actividadReciente.length > 0">
+                    <div class="space-y-3">
+                        <template x-for="actividad in actividadReciente" :key="actividad.id">
+                            <div class="flex gap-3 items-start p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                                     :class="{
+                                         'bg-success text-white': actividad.tipo === 'venta',
+                                         'bg-primary text-white': actividad.tipo === 'recarga',
+                                         'bg-info text-white': actividad.tipo === 'login',
+                                         'bg-warning text-white': actividad.tipo === 'edicion'
+                                     }">
+                                    <i class="fas" 
+                                       :class="{
+                                           'fa-receipt': actividad.tipo === 'venta',
+                                           'fa-money-bill-wave': actividad.tipo === 'recarga',
+                                           'fa-sign-in-alt': actividad.tipo === 'login',
+                                           'fa-edit': actividad.tipo === 'edicion'
+                                       }"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="font-semibold" x-text="actividad.descripcion"></p>
+                                    <p class="text-xs text-gray-500" x-text="gestionHelpers.formatDateTime(actividad.fecha_hora)"></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+                
+                <template x-if="actividadReciente.length === 0">
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-clipboard-list text-4xl mb-2"></i>
+                        <p>No hay actividad reciente</p>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function perfilEmpleado(empleadoId) {
+    return {
+        empleadoId: empleadoId,
+        empleado: {},
+        stats: {},
+        ultimasVentas: [],
+        actividadReciente: [],
+        chartVentas: null,
+        
+        async cargarDatos() {
+            try {
+                const response = await fetch(`/api/empleados/${this.empleadoId}/perfil/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.empleado = data.empleado;
+                    this.stats = data.stats || {};
+                    this.ultimasVentas = data.ultimas_ventas || [];
+                    this.actividadReciente = data.actividad_reciente || [];
+                    
+                    // Renderizar gráfico
+                    this.$nextTick(() => {
+                        this.renderChartVentas(data.ventas_30_dias || []);
+                    });
+                }
+            } catch (error) {
+                console.error('Error al cargar perfil:', error);
+                gestionHelpers.notify('Error al cargar perfil del empleado', 'error');
+            }
+        },
+        
+        renderChartVentas(datos) {
+            const ctx = document.getElementById('chartVentas');
+            
+            if (this.chartVentas) {
+                this.chartVentas.destroy();
+            }
+            
+            this.chartVentas = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: datos.map(d => d.fecha),
+                    datasets: [{
+                        label: 'Monto de Ventas (Gs)',
+                        data: datos.map(d => d.monto),
+                        borderColor: '#FF6B35',
+                        backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: (value) => gestionHelpers.formatPrice(value)
+                            }
+                        }
+                    }
+                }
+            });
+        },
+        
+        calcularAntiguedad() {
+            if (!this.empleado.fecha_ingreso) return '-';
+            
+            const inicio = new Date(this.empleado.fecha_ingreso);
+            const ahora = new Date();
+            const diff = ahora - inicio;
+            
+            const años = Math.floor(diff / (1000 * 60 * 60 * 24 * 365));
+            const meses = Math.floor((diff % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24 * 30));
+            
+            if (años > 0) {
+                return `${años} ${años === 1 ? 'año' : 'años'}${meses > 0 ? `, ${meses} ${meses === 1 ? 'mes' : 'meses'}` : ''}`;
+            } else if (meses > 0) {
+                return `${meses} ${meses === 1 ? 'mes' : 'meses'}`;
+            } else {
+                const dias = Math.floor(diff / (1000 * 60 * 60 * 24));
+                return `${dias} ${dias === 1 ? 'día' : 'días'}`;
+            }
+        },
+        
+        imprimirPerfil() {
+            window.print();
+        }
+    }
+}
+</script>
+{% endblock %}

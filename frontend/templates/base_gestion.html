@@ -1,0 +1,522 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gestión - Cantina Tita{% endblock %}
+
+{% block body_class %}gestion-mode{% endblock %}
+
+{% block header_title %}
+<i class="fas fa-cogs mr-2"></i>Panel de Gestión
+{% endblock %}
+
+{% block header_subtitle %}Administración{% endblock %}
+
+{% block extra_styles %}
+<style>
+    /* Estilos específicos para Gestión/Admin */
+    .gestion-mode {
+        background: linear-gradient(135deg, #4ECDC4 0%, #95E1D3 50%, #F38181 100%);
+    }
+    
+    /* Sidebar de navegación */
+    .sidebar {
+        @apply bg-white dark:bg-gray-800 shadow-xl rounded-2xl p-4;
+        min-height: calc(100vh - 200px);
+        position: sticky;
+        top: 1rem;
+    }
+    
+    .sidebar-menu {
+        @apply space-y-2;
+    }
+    
+    .sidebar-item {
+        @apply flex items-center px-4 py-3 rounded-lg
+               transition-all duration-200
+               hover:bg-primary hover:bg-opacity-10
+               hover:translate-x-1
+               cursor-pointer;
+    }
+    
+    .sidebar-item.active {
+        @apply bg-primary text-white;
+    }
+    
+    .sidebar-item i {
+        @apply mr-3 text-lg;
+        min-width: 1.5rem;
+    }
+    
+    /* Cards de estadísticas */
+    .stat-card {
+        @apply bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6
+               transform transition-all duration-300
+               hover:scale-105 hover:shadow-2xl;
+    }
+    
+    .stat-card .stat-value {
+        @apply text-4xl font-bold;
+    }
+    
+    .stat-card .stat-title {
+        @apply text-gray-600 dark:text-gray-400 text-sm font-medium;
+    }
+    
+    .stat-card .stat-icon {
+        @apply text-5xl opacity-20 absolute top-4 right-4;
+    }
+    
+    /* Tablas mejoradas */
+    .data-table {
+        @apply table table-zebra w-full;
+    }
+    
+    .data-table thead {
+        @apply bg-primary text-white;
+    }
+    
+    .data-table thead th {
+        @apply py-4 px-6 text-left font-semibold;
+    }
+    
+    .data-table tbody tr {
+        @apply hover:bg-primary hover:bg-opacity-5 
+               transition-colors duration-150;
+    }
+    
+    .data-table tbody td {
+        @apply py-3 px-6;
+    }
+    
+    /* Filtros y búsqueda */
+    .filter-bar {
+        @apply bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 mb-6
+               flex flex-wrap gap-4 items-center;
+    }
+    
+    /* Formularios mejorados */
+    .form-group {
+        @apply mb-4;
+    }
+    
+    .form-label {
+        @apply block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2;
+    }
+    
+    .form-input {
+        @apply input input-bordered w-full
+               focus:ring-2 focus:ring-primary focus:border-transparent
+               transition-all duration-200;
+    }
+    
+    .form-select {
+        @apply select select-bordered w-full
+               focus:ring-2 focus:ring-primary focus:border-transparent;
+    }
+    
+    .form-textarea {
+        @apply textarea textarea-bordered w-full
+               focus:ring-2 focus:ring-primary focus:border-transparent;
+    }
+    
+    /* Botones de acción */
+    .action-buttons {
+        @apply flex flex-wrap gap-2;
+    }
+    
+    .btn-action {
+        @apply btn btn-sm gap-2;
+    }
+    
+    /* Badges de estado */
+    .status-badge {
+        @apply badge badge-lg font-semibold;
+    }
+    
+    .status-badge.active {
+        @apply badge-success;
+    }
+    
+    .status-badge.inactive {
+        @apply badge-error;
+    }
+    
+    .status-badge.pending {
+        @apply badge-warning;
+    }
+    
+    /* Modal mejorado */
+    .modal-enhanced .modal-box {
+        @apply max-w-3xl shadow-2xl;
+    }
+    
+    .modal-header {
+        @apply flex items-center justify-between pb-4 mb-4 border-b-2 border-gray-200 dark:border-gray-700;
+    }
+    
+    .modal-footer {
+        @apply flex justify-end gap-2 pt-4 mt-4 border-t-2 border-gray-200 dark:border-gray-700;
+    }
+    
+    /* Breadcrumbs */
+    .breadcrumbs-custom {
+        @apply text-sm breadcrumbs mb-4;
+    }
+    
+    /* Cards de contenido */
+    .content-card {
+        @apply bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6;
+    }
+    
+    .content-card-header {
+        @apply flex items-center justify-between mb-4 pb-4 border-b-2 border-gray-200 dark:border-gray-700;
+    }
+    
+    .content-card-title {
+        @apply text-2xl font-bold text-gray-800 dark:text-gray-100;
+    }
+    
+    /* Gráficos y reportes */
+    .chart-container {
+        @apply bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6;
+        min-height: 300px;
+    }
+    
+    /* Pagination */
+    .pagination-custom {
+        @apply flex justify-center gap-2 mt-6;
+    }
+    
+    .pagination-custom .btn {
+        @apply btn-sm;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 1024px) {
+        .sidebar {
+            position: relative;
+            min-height: auto;
+            margin-bottom: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block navigation %}
+<!-- Navegación específica Gestión -->
+<a href="{% url 'gestion:dashboard' %}" 
+   class="btn btn-ghost hover:bg-white hover:bg-opacity-20"
+   aria-label="Dashboard">
+    <i class="fas fa-home mr-2"></i>
+    <span class="hidden lg:inline">Dashboard</span>
+</a>
+
+<div class="dropdown dropdown-end">
+    <label tabindex="0" class="btn btn-ghost hover:bg-white hover:bg-opacity-20">
+        <i class="fas fa-boxes mr-2"></i>
+        <span class="hidden lg:inline">Inventario</span>
+        <i class="fas fa-chevron-down ml-2"></i>
+    </label>
+    <ul tabindex="0" class="dropdown-content menu p-2 shadow-lg bg-white dark:bg-gray-800 rounded-box w-52 mt-2">
+        <li><a href="{% url 'gestion:productos' %}"><i class="fas fa-box mr-2"></i>Productos</a></li>
+        <li><a href="{% url 'gestion:categorias' %}"><i class="fas fa-tags mr-2"></i>Categorías</a></li>
+        <li><a href="{% url 'gestion:stock' %}"><i class="fas fa-warehouse mr-2"></i>Stock</a></li>
+    </ul>
+</div>
+
+<div class="dropdown dropdown-end">
+    <label tabindex="0" class="btn btn-ghost hover:bg-white hover:bg-opacity-20">
+        <i class="fas fa-users mr-2"></i>
+        <span class="hidden lg:inline">Clientes</span>
+        <i class="fas fa-chevron-down ml-2"></i>
+    </label>
+    <ul tabindex="0" class="dropdown-content menu p-2 shadow-lg bg-white dark:bg-gray-800 rounded-box w-52 mt-2">
+        <li><a href="{% url 'gestion:clientes' %}"><i class="fas fa-user mr-2"></i>Listado</a></li>
+        <li><a href="{% url 'gestion:tarjetas' %}"><i class="fas fa-credit-card mr-2"></i>Tarjetas</a></li>
+        <li><a href="{% url 'gestion:cuenta_corriente' %}"><i class="fas fa-file-invoice-dollar mr-2"></i>Cuenta Corriente</a></li>
+    </ul>
+</div>
+
+<a href="{% url 'gestion:reportes' %}" 
+   class="btn btn-ghost hover:bg-white hover:bg-opacity-20"
+   aria-label="Reportes">
+    <i class="fas fa-chart-bar mr-2"></i>
+    <span class="hidden lg:inline">Reportes</span>
+</a>
+
+<!-- Usuario actual -->
+<div class="dropdown dropdown-end">
+    <label tabindex="0" class="btn btn-ghost btn-circle">
+        <i class="fas fa-user text-xl"></i>
+    </label>
+    <ul tabindex="0" class="dropdown-content menu p-2 shadow-lg bg-white dark:bg-gray-800 rounded-box w-52 mt-2">
+        <li class="menu-title">
+            <span>{{ user.get_full_name|default:user.username }}</span>
+        </li>
+        <li><a href="{% url 'gestion:perfil' %}"><i class="fas fa-user-cog mr-2"></i>Mi Perfil</a></li>
+        <li><a href="{% url 'gestion:configuracion' %}"><i class="fas fa-cog mr-2"></i>Configuración</a></li>
+        <li class="divider"></li>
+        <li><a href="{% url 'logout' %}"><i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión</a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block mobile_navigation %}
+<div class="p-4 space-y-2">
+    <a href="{% url 'gestion:dashboard' %}" class="btn btn-block justify-start">
+        <i class="fas fa-home mr-2"></i>Dashboard
+    </a>
+    
+    <div class="divider">Inventario</div>
+    <a href="{% url 'gestion:productos' %}" class="btn btn-block btn-sm justify-start">
+        <i class="fas fa-box mr-2"></i>Productos
+    </a>
+    <a href="{% url 'gestion:categorias' %}" class="btn btn-block btn-sm justify-start">
+        <i class="fas fa-tags mr-2"></i>Categorías
+    </a>
+    <a href="{% url 'gestion:stock' %}" class="btn btn-block btn-sm justify-start">
+        <i class="fas fa-warehouse mr-2"></i>Stock
+    </a>
+    
+    <div class="divider">Clientes</div>
+    <a href="{% url 'gestion:clientes' %}" class="btn btn-block btn-sm justify-start">
+        <i class="fas fa-user mr-2"></i>Listado
+    </a>
+    <a href="{% url 'gestion:tarjetas' %}" class="btn btn-block btn-sm justify-start">
+        <i class="fas fa-credit-card mr-2"></i>Tarjetas
+    </a>
+    
+    <div class="divider"></div>
+    <a href="{% url 'gestion:reportes' %}" class="btn btn-block justify-start">
+        <i class="fas fa-chart-bar mr-2"></i>Reportes
+    </a>
+    
+    <div class="divider"></div>
+    <a href="{% url 'logout' %}" class="btn btn-block btn-error justify-start">
+        <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Scripts específicos Gestión -->
+<script>
+    // Helpers para gestión
+    window.gestionHelpers = {
+        // Formatear precio
+        formatPrice(amount) {
+            return new Intl.NumberFormat('es-PY', {
+                style: 'currency',
+                currency: 'PYG',
+                minimumFractionDigits: 0
+            }).format(amount);
+        },
+        
+        // Formatear fecha
+        formatDate(date) {
+            return new Intl.DateTimeFormat('es-PY', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }).format(new Date(date));
+        },
+        
+        // Formatear fecha y hora
+        formatDateTime(date) {
+            return new Intl.DateTimeFormat('es-PY', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).format(new Date(date));
+        },
+        
+        // Confirmar eliminación
+        async confirmDelete(itemName) {
+            return window.confirm(
+                `¿Está seguro de eliminar "${itemName}"?\n\nEsta acción no se puede deshacer.`
+            );
+        },
+        
+        // Exportar tabla a CSV
+        exportTableToCSV(tableId, filename = 'export.csv') {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            
+            let csv = [];
+            const rows = table.querySelectorAll('tr');
+            
+            rows.forEach(row => {
+                const cols = row.querySelectorAll('td, th');
+                const rowData = Array.from(cols).map(col => {
+                    let data = col.innerText;
+                    data = data.replace(/"/g, '""'); // Escapar comillas
+                    return `"${data}"`;
+                });
+                csv.push(rowData.join(','));
+            });
+            
+            const csvContent = csv.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        },
+        
+        // Imprimir contenido
+        printContent(elementId) {
+            const content = document.getElementById(elementId);
+            if (!content) return;
+            
+            const printWindow = window.open('', '', 'height=600,width=800');
+            printWindow.document.write('<html><head><title>Imprimir</title>');
+            printWindow.document.write('<style>body{font-family:Arial,sans-serif;}</style>');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(content.innerHTML);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.print();
+        }
+    };
+    
+    // Inicialización
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('⚙️  Modo Gestión activado');
+        
+        // Agregar tooltips a elementos con data-tooltip
+        document.querySelectorAll('[data-tooltip]').forEach(el => {
+            el.setAttribute('title', el.dataset.tooltip);
+        });
+    });
+</script>
+{% endblock %}
+
+{% block page_scripts %}
+<!-- Inicialización Alpine.js para Gestión -->
+<script>
+    document.addEventListener('alpine:init', () => {
+        // Componente para tablas con filtros y búsqueda
+        Alpine.data('dataTable', (initialData = []) => ({
+            data: initialData,
+            filteredData: [],
+            searchQuery: '',
+            sortColumn: null,
+            sortDirection: 'asc',
+            currentPage: 1,
+            perPage: 10,
+            
+            init() {
+                this.filteredData = [...this.data];
+            },
+            
+            search() {
+                if (!this.searchQuery) {
+                    this.filteredData = [...this.data];
+                    return;
+                }
+                
+                const query = this.searchQuery.toLowerCase();
+                this.filteredData = this.data.filter(item => 
+                    Object.values(item).some(value => 
+                        String(value).toLowerCase().includes(query)
+                    )
+                );
+            },
+            
+            sort(column) {
+                if (this.sortColumn === column) {
+                    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sortColumn = column;
+                    this.sortDirection = 'asc';
+                }
+                
+                this.filteredData.sort((a, b) => {
+                    const aVal = a[column];
+                    const bVal = b[column];
+                    
+                    if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
+                    if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            },
+            
+            get paginatedData() {
+                const start = (this.currentPage - 1) * this.perPage;
+                const end = start + this.perPage;
+                return this.filteredData.slice(start, end);
+            },
+            
+            get totalPages() {
+                return Math.ceil(this.filteredData.length / this.perPage);
+            }
+        }));
+        
+        // Componente para modales
+        Alpine.data('modal', (isOpen = false) => ({
+            open: isOpen,
+            
+            show() {
+                this.open = true;
+                document.body.style.overflow = 'hidden';
+            },
+            
+            hide() {
+                this.open = false;
+                document.body.style.overflow = '';
+            },
+            
+            toggle() {
+                this.open ? this.hide() : this.show();
+            }
+        }));
+        
+        // Componente para formularios con validación
+        Alpine.data('formValidation', () => ({
+            errors: {},
+            touched: {},
+            submitting: false,
+            
+            validateField(fieldName, value, rules) {
+                const errors = [];
+                
+                if (rules.required && !value) {
+                    errors.push('Este campo es requerido');
+                }
+                
+                if (rules.minLength && value.length < rules.minLength) {
+                    errors.push(`Mínimo ${rules.minLength} caracteres`);
+                }
+                
+                if (rules.email && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                    errors.push('Email inválido');
+                }
+                
+                if (errors.length > 0) {
+                    this.errors[fieldName] = errors[0];
+                } else {
+                    delete this.errors[fieldName];
+                }
+                
+                this.touched[fieldName] = true;
+            },
+            
+            hasError(fieldName) {
+                return this.touched[fieldName] && this.errors[fieldName];
+            },
+            
+            isValid() {
+                return Object.keys(this.errors).length === 0;
+            }
+        }));
+    });
+</script>
+{% endblock %}

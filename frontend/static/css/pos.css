@@ -1,0 +1,122 @@
+
+/* POS CSS - Estilos del sistema de punto de venta */
+.pos-header {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    padding: 1rem 0;
+}
+
+.pos-nav {
+    background-color: #d97706;
+    padding: 0.5rem 0;
+}
+
+.pos-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.pos-main {
+    background: white;
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.pos-sidebar {
+    background: white;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.producto-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.producto-card {
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.producto-card:hover {
+    border-color: #f59e0b;
+    background: #fffbeb;
+}
+
+.producto-card.selected {
+    border-color: #f59e0b;
+    background: #fef3c7;
+}
+
+.venta-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.venta-total {
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-align: center;
+    background: #f59e0b;
+    color: white;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin-top: 1rem;
+}
+
+.tarjeta-info {
+    background: #dbeafe;
+    border: 1px solid #93c5fd;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.saldo-disponible {
+    color: #10b981;
+    font-weight: bold;
+}
+
+.saldo-insuficiente {
+    color: #ef4444;
+    font-weight: bold;
+}
+
+.dashboard-pos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.dashboard-metric {
+    background: white;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #f59e0b;
+}
+
+.metric-label {
+    color: #6b7280;
+    margin-top: 0.5rem;
+}

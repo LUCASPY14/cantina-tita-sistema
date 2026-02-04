@@ -1,0 +1,882 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Generar Factura Electrónica - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="generarFactura()" x-init="inicializar()" class="container mx-auto px-4 py-8">
+    
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'gestion:facturacion_lista' %}" class="btn btn-ghost btn-circle">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                    <i class="fas fa-file-invoice-dollar mr-3 text-secondary"></i>
+                    Generar Factura Electrónica (KUDE)
+                </h1>
+                <p class="text-gray-600 dark:text-gray-400 mt-1">
+                    Sistema de facturación electrónica SET - Paraguay
+                </p>
+            </div>
+        </div>
+        
+        <div class="flex gap-2">
+            <button @click="guardarBorrador()" 
+                    :disabled="guardando"
+                    class="btn btn-ghost gap-2">
+                <i class="fas fa-save"></i>
+                Guardar Borrador
+            </button>
+            <button @click="generarYEnviar()" 
+                    :disabled="!formularioValido() || generando"
+                    class="btn btn-secondary text-white gap-2">
+                <template x-if="!generando">
+                    <i class="fas fa-paper-plane"></i>
+                </template>
+                <template x-if="generando">
+                    <span class="loading loading-spinner loading-sm"></span>
+                </template>
+                <span x-text="generando ? 'Generando...' : 'Generar y Enviar a SET'"></span>
+            </button>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Columna Principal - Formulario -->
+        <div class="lg:col-span-2 space-y-6">
+            
+            <!-- Información del Timbrado -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-stamp text-secondary"></i>
+                    Información Fiscal
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Timbrado -->
+                    <div class="form-control md:col-span-2">
+                        <label class="label">
+                            <span class="label-text font-semibold">
+                                <i class="fas fa-stamp mr-2"></i>Timbrado *
+                            </span>
+                        </label>
+                        <select x-model="factura.timbrado_id" 
+                                @change="cargarTimbrado()"
+                                class="select select-bordered"
+                                required>
+                            <option value="">Seleccionar timbrado...</option>
+                            <template x-for="timbrado in timbrados" :key="timbrado.id">
+                                <option :value="timbrado.id">
+                                    <span x-text="timbrado.numero"></span> - 
+                                    Vigente hasta: <span x-text="gestionHelpers.formatDate(timbrado.fecha_vencimiento)"></span>
+                                    (Disponibles: <span x-text="timbrado.disponibles"></span>)
+                                </option>
+                            </template>
+                        </select>
+                        <template x-if="timbradoSeleccionado">
+                            <div class="mt-2 grid grid-cols-3 gap-2 text-sm">
+                                <div class="p-2 bg-blue-50 dark:bg-blue-900 rounded">
+                                    <p class="text-xs text-gray-600">Número</p>
+                                    <p class="font-mono font-bold" x-text="timbradoSeleccionado.numero"></p>
+                                </div>
+                                <div class="p-2 bg-green-50 dark:bg-green-900 rounded">
+                                    <p class="text-xs text-gray-600">Establecimiento</p>
+                                    <p class="font-mono font-bold" x-text="timbradoSeleccionado.establecimiento"></p>
+                                </div>
+                                <div class="p-2 bg-purple-50 dark:bg-purple-900 rounded">
+                                    <p class="text-xs text-gray-600">Punto Expedición</p>
+                                    <p class="font-mono font-bold" x-text="timbradoSeleccionado.punto_expedicion"></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <!-- Tipo de Documento -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">
+                                <i class="fas fa-file-alt mr-2"></i>Tipo de Documento *
+                            </span>
+                        </label>
+                        <select x-model="factura.tipo_documento" class="select select-bordered" required>
+                            <option value="factura">Factura Electrónica</option>
+                            <option value="nota_credito">Nota de Crédito</option>
+                            <option value="nota_debito">Nota de Débito</option>
+                            <option value="autofactura">Autofactura</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Fecha de Emisión -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">
+                                <i class="fas fa-calendar mr-2"></i>Fecha de Emisión *
+                            </span>
+                        </label>
+                        <input type="date" 
+                               x-model="factura.fecha_emision"
+                               class="input input-bordered"
+                               required>
+                    </div>
+                    
+                    <!-- Condición de Venta -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">
+                                <i class="fas fa-handshake mr-2"></i>Condición de Venta *
+                            </span>
+                        </label>
+                        <select x-model="factura.condicion_venta" class="select select-bordered" required>
+                            <option value="contado">Contado</option>
+                            <option value="credito">Crédito</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Plazo de Crédito (si aplica) -->
+                    <template x-if="factura.condicion_venta === 'credito'">
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-semibold">
+                                    <i class="fas fa-calendar-days mr-2"></i>Plazo (días)
+                                </span>
+                            </label>
+                            <input type="number" 
+                                   x-model.number="factura.plazo_credito"
+                                   min="1"
+                                   max="365"
+                                   class="input input-bordered">
+                        </div>
+                    </template>
+                </div>
+            </div>
+            
+            <!-- Datos del Cliente -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-user text-secondary"></i>
+                    Datos del Cliente
+                </h2>
+                
+                <!-- Búsqueda de Cliente -->
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text font-semibold">Buscar Cliente</span>
+                    </label>
+                    <div class="relative">
+                        <input type="text" 
+                               x-model="busquedaCliente"
+                               @input.debounce.300ms="buscarClientes()"
+                               @focus="mostrarResultados = true"
+                               placeholder="Nombre, RUC, cédula..."
+                               class="input input-bordered w-full">
+                        <i class="fas fa-search absolute right-4 top-4 text-gray-400"></i>
+                        
+                        <!-- Resultados de búsqueda -->
+                        <template x-if="mostrarResultados && clientesEncontrados.length > 0">
+                            <div class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                <template x-for="cliente in clientesEncontrados" :key="cliente.id">
+                                    <div @click="seleccionarCliente(cliente)" 
+                                         class="p-3 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer border-b">
+                                        <p class="font-semibold" x-text="cliente.nombre_completo"></p>
+                                        <p class="text-sm text-gray-600" x-text="cliente.ruc ? 'RUC: ' + cliente.ruc : 'CI: ' + cliente.cedula"></p>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Nombre / Razón Social -->
+                    <div class="form-control md:col-span-2">
+                        <label class="label">
+                            <span class="label-text font-semibold">Nombre / Razón Social *</span>
+                        </label>
+                        <input type="text" 
+                               x-model="factura.cliente_razon_social"
+                               placeholder="Razón social del cliente"
+                               class="input input-bordered"
+                               required>
+                    </div>
+                    
+                    <!-- RUC -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">RUC *</span>
+                        </label>
+                        <input type="text" 
+                               x-model="factura.cliente_ruc"
+                               @input="validarRUC()"
+                               placeholder="12345678-9"
+                               pattern="[0-9]{6,8}-[0-9]"
+                               class="input input-bordered font-mono"
+                               required>
+                        <template x-if="!rucValido && factura.cliente_ruc">
+                            <label class="label">
+                                <span class="label-text-alt text-error">
+                                    <i class="fas fa-exclamation-circle mr-1"></i>
+                                    Formato: 12345678-9
+                                </span>
+                            </label>
+                        </template>
+                    </div>
+                    
+                    <!-- DV (Dígito Verificador) -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">Tipo Contribuyente</span>
+                        </label>
+                        <select x-model="factura.cliente_tipo_contribuyente" class="select select-bordered">
+                            <option value="1">Persona Física</option>
+                            <option value="2">Persona Jurídica</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Dirección -->
+                    <div class="form-control md:col-span-2">
+                        <label class="label">
+                            <span class="label-text font-semibold">Dirección *</span>
+                        </label>
+                        <input type="text" 
+                               x-model="factura.cliente_direccion"
+                               placeholder="Dirección completa"
+                               class="input input-bordered"
+                               required>
+                    </div>
+                    
+                    <!-- Email -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">Email</span>
+                        </label>
+                        <input type="email" 
+                               x-model="factura.cliente_email"
+                               placeholder="cliente@ejemplo.com"
+                               class="input input-bordered">
+                    </div>
+                    
+                    <!-- Teléfono -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">Teléfono</span>
+                        </label>
+                        <input type="tel" 
+                               x-model="factura.cliente_telefono"
+                               placeholder="0981234567"
+                               class="input input-bordered">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Items de la Factura -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-list text-secondary"></i>
+                    Items de la Factura
+                </h2>
+                
+                <!-- Agregar Item -->
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
+                    <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+                        <div class="form-control md:col-span-2">
+                            <input type="text" 
+                                   x-model="nuevoItem.descripcion"
+                                   placeholder="Descripción del producto/servicio"
+                                   class="input input-bordered input-sm">
+                        </div>
+                        <div class="form-control">
+                            <input type="number" 
+                                   x-model.number="nuevoItem.cantidad"
+                                   min="1"
+                                   step="1"
+                                   placeholder="Cant."
+                                   class="input input-bordered input-sm">
+                        </div>
+                        <div class="form-control">
+                            <input type="number" 
+                                   x-model.number="nuevoItem.precio_unitario"
+                                   min="0"
+                                   step="100"
+                                   placeholder="Precio unit."
+                                   class="input input-bordered input-sm">
+                        </div>
+                        <div class="form-control">
+                            <select x-model="nuevoItem.tipo_iva" class="select select-bordered select-sm">
+                                <option value="10">IVA 10%</option>
+                                <option value="5">IVA 5%</option>
+                                <option value="0">Exenta</option>
+                            </select>
+                        </div>
+                        <div class="form-control">
+                            <button @click="agregarItem()" 
+                                    :disabled="!nuevoItem.descripcion || !nuevoItem.cantidad || !nuevoItem.precio_unitario"
+                                    class="btn btn-secondary btn-sm">
+                                <i class="fas fa-plus mr-1"></i>
+                                Agregar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tabla de Items -->
+                <div class="overflow-x-auto">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr class="bg-gray-100 dark:bg-gray-700">
+                                <th class="w-12">#</th>
+                                <th>Descripción</th>
+                                <th class="text-center w-24">Cant.</th>
+                                <th class="text-right w-32">Precio Unit.</th>
+                                <th class="text-center w-24">IVA</th>
+                                <th class="text-right w-32">Subtotal</th>
+                                <th class="text-center w-20"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-if="factura.items.length === 0">
+                                <tr>
+                                    <td colspan="7" class="text-center py-8 text-gray-500">
+                                        <i class="fas fa-inbox text-4xl mb-2"></i>
+                                        <p>No hay items agregados</p>
+                                    </td>
+                                </tr>
+                            </template>
+                            
+                            <template x-for="(item, index) in factura.items" :key="index">
+                                <tr class="hover">
+                                    <td class="text-gray-500" x-text="index + 1"></td>
+                                    <td>
+                                        <input type="text" 
+                                               x-model="item.descripcion"
+                                               class="input input-ghost input-sm w-full">
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="number" 
+                                               x-model.number="item.cantidad"
+                                               @input="calcularTotales()"
+                                               min="1"
+                                               class="input input-ghost input-sm w-20 text-center">
+                                    </td>
+                                    <td class="text-right">
+                                        <input type="number" 
+                                               x-model.number="item.precio_unitario"
+                                               @input="calcularTotales()"
+                                               min="0"
+                                               step="100"
+                                               class="input input-ghost input-sm w-28 text-right font-mono">
+                                    </td>
+                                    <td class="text-center">
+                                        <select x-model="item.tipo_iva" 
+                                                @change="calcularTotales()"
+                                                class="select select-ghost select-sm">
+                                            <option value="10">10%</option>
+                                            <option value="5">5%</option>
+                                            <option value="0">Exenta</option>
+                                        </select>
+                                    </td>
+                                    <td class="text-right font-bold" x-text="gestionHelpers.formatPrice(calcularSubtotalItem(item))"></td>
+                                    <td class="text-center">
+                                        <button @click="eliminarItem(index)" class="btn btn-ghost btn-xs text-error">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Observaciones -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-comment-alt text-secondary"></i>
+                    Observaciones
+                </h2>
+                
+                <div class="form-control">
+                    <textarea x-model="factura.observaciones"
+                              rows="3"
+                              maxlength="500"
+                              placeholder="Observaciones adicionales..."
+                              class="textarea textarea-bordered"></textarea>
+                    <label class="label">
+                        <span class="label-text-alt"></span>
+                        <span class="label-text-alt" x-text="(factura.observaciones?.length || 0) + '/500'"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Columna Lateral - Resumen y Totales -->
+        <div class="space-y-6">
+            
+            <!-- Resumen de Totales -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sticky top-4">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-calculator text-secondary"></i>
+                    Resumen
+                </h2>
+                
+                <div class="space-y-3">
+                    <!-- Totales por tipo de IVA -->
+                    <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <p class="text-xs text-gray-600 mb-2">Operaciones Exentas</p>
+                        <p class="text-lg font-bold" x-text="gestionHelpers.formatPrice(totales.exentas)"></p>
+                    </div>
+                    
+                    <div class="p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
+                        <p class="text-xs text-blue-600 dark:text-blue-300 mb-1">Gravadas IVA 5%</p>
+                        <p class="text-lg font-bold" x-text="gestionHelpers.formatPrice(totales.gravadas_5)"></p>
+                        <p class="text-xs text-gray-600 mt-1">
+                            IVA: <span class="font-semibold" x-text="gestionHelpers.formatPrice(totales.iva_5)"></span>
+                        </p>
+                    </div>
+                    
+                    <div class="p-3 bg-green-50 dark:bg-green-900 rounded-lg">
+                        <p class="text-xs text-green-600 dark:text-green-300 mb-1">Gravadas IVA 10%</p>
+                        <p class="text-lg font-bold" x-text="gestionHelpers.formatPrice(totales.gravadas_10)"></p>
+                        <p class="text-xs text-gray-600 mt-1">
+                            IVA: <span class="font-semibold" x-text="gestionHelpers.formatPrice(totales.iva_10)"></span>
+                        </p>
+                    </div>
+                    
+                    <div class="divider my-2"></div>
+                    
+                    <!-- Total IVA -->
+                    <div class="flex justify-between items-center text-lg">
+                        <span class="font-semibold">Total IVA:</span>
+                        <span class="font-bold text-warning" x-text="gestionHelpers.formatPrice(totales.total_iva)"></span>
+                    </div>
+                    
+                    <div class="divider my-2"></div>
+                    
+                    <!-- Total General -->
+                    <div class="flex justify-between items-center text-2xl">
+                        <span class="font-bold">TOTAL:</span>
+                        <span class="font-bold text-success" x-text="gestionHelpers.formatPrice(totales.total_general)"></span>
+                    </div>
+                    
+                    <!-- Total Items -->
+                    <div class="text-center pt-2 border-t">
+                        <span class="text-sm text-gray-600">Total de Items: </span>
+                        <span class="badge badge-secondary badge-lg" x-text="factura.items.length"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Información del Documento -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-secondary"></i>
+                    Información
+                </h2>
+                
+                <div class="space-y-3 text-sm">
+                    <template x-if="timbradoSeleccionado">
+                        <div class="p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
+                            <p class="text-xs text-blue-600 dark:text-blue-300 mb-1">Numeración</p>
+                            <p class="font-mono font-bold text-lg" x-text="proximoNumero"></p>
+                            <p class="text-xs text-gray-600 mt-1">
+                                <span x-text="timbradoSeleccionado.establecimiento"></span>-<span x-text="timbradoSeleccionado.punto_expedicion"></span>-<span x-text="proximoNumero.padStart(7, '0')"></span>
+                            </p>
+                        </div>
+                    </template>
+                    
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-calendar text-secondary"></i>
+                        <div>
+                            <p class="text-xs text-gray-600">Fecha</p>
+                            <p class="font-semibold" x-text="gestionHelpers.formatDate(factura.fecha_emision)"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-handshake text-secondary"></i>
+                        <div>
+                            <p class="text-xs text-gray-600">Condición</p>
+                            <p class="font-semibold" x-text="factura.condicion_venta === 'contado' ? 'Contado' : 'Crédito'"></p>
+                        </div>
+                    </div>
+                    
+                    <template x-if="factura.condicion_venta === 'credito' && factura.plazo_credito">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-calendar-days text-secondary"></i>
+                            <div>
+                                <p class="text-xs text-gray-600">Plazo</p>
+                                <p class="font-semibold" x-text="factura.plazo_credito + ' días'"></p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                
+                <div class="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900 rounded-lg">
+                    <div class="flex items-start gap-2">
+                        <i class="fas fa-exclamation-triangle text-warning mt-1"></i>
+                        <div class="text-xs">
+                            <p class="font-semibold mb-1">Importante:</p>
+                            <ul class="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
+                                <li>Verificar datos del cliente</li>
+                                <li>Confirmar montos y cantidades</li>
+                                <li>Revisar tipo de IVA aplicado</li>
+                                <li>El CDC se genera automáticamente</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Firma Digital -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-signature text-secondary"></i>
+                    Firma Digital
+                </h2>
+                
+                <div class="space-y-3">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">Certificado Digital</span>
+                        </label>
+                        <select x-model="factura.certificado_id" class="select select-bordered">
+                            <option value="">Seleccionar certificado...</option>
+                            <template x-for="cert in certificados" :key="cert.id">
+                                <option :value="cert.id">
+                                    <span x-text="cert.nombre"></span>
+                                    (Vence: <span x-text="gestionHelpers.formatDate(cert.fecha_vencimiento)"></span>)
+                                </option>
+                            </template>
+                        </select>
+                    </div>
+                    
+                    <template x-if="factura.certificado_id">
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i>
+                            <span class="text-sm">Certificado válido y activo</span>
+                        </div>
+                    </template>
+                    
+                    <template x-if="!factura.certificado_id">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span class="text-sm">Seleccione un certificado para firmar</span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function generarFactura() {
+    return {
+        factura: {
+            timbrado_id: '',
+            tipo_documento: 'factura',
+            fecha_emision: new Date().toISOString().split('T')[0],
+            condicion_venta: 'contado',
+            plazo_credito: null,
+            cliente_razon_social: '',
+            cliente_ruc: '',
+            cliente_tipo_contribuyente: '1',
+            cliente_direccion: '',
+            cliente_email: '',
+            cliente_telefono: '',
+            items: [],
+            observaciones: '',
+            certificado_id: ''
+        },
+        nuevoItem: {
+            descripcion: '',
+            cantidad: 1,
+            precio_unitario: 0,
+            tipo_iva: '10'
+        },
+        timbrados: [],
+        timbradoSeleccionado: null,
+        certificados: [],
+        clientesEncontrados: [],
+        busquedaCliente: '',
+        mostrarResultados: false,
+        proximoNumero: '0000001',
+        totales: {
+            exentas: 0,
+            gravadas_5: 0,
+            gravadas_10: 0,
+            iva_5: 0,
+            iva_10: 0,
+            total_iva: 0,
+            total_general: 0
+        },
+        rucValido: false,
+        guardando: false,
+        generando: false,
+        
+        async inicializar() {
+            await this.cargarTimbrados();
+            await this.cargarCertificados();
+        },
+        
+        async cargarTimbrados() {
+            try {
+                const response = await fetch('/api/facturacion/timbrados-activos/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.timbrados = data.timbrados;
+                }
+            } catch (error) {
+                console.error('Error al cargar timbrados:', error);
+                gestionHelpers.notify('Error al cargar timbrados', 'error');
+            }
+        },
+        
+        async cargarCertificados() {
+            try {
+                const response = await fetch('/api/facturacion/certificados-activos/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.certificados = data.certificados;
+                    if (this.certificados.length === 1) {
+                        this.factura.certificado_id = this.certificados[0].id;
+                    }
+                }
+            } catch (error) {
+                console.error('Error al cargar certificados:', error);
+            }
+        },
+        
+        async cargarTimbrado() {
+            if (!this.factura.timbrado_id) {
+                this.timbradoSeleccionado = null;
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/facturacion/timbrados/${this.factura.timbrado_id}/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.timbradoSeleccionado = data.timbrado;
+                    this.proximoNumero = String(data.proximo_numero).padStart(7, '0');
+                }
+            } catch (error) {
+                console.error('Error al cargar timbrado:', error);
+            }
+        },
+        
+        async buscarClientes() {
+            if (this.busquedaCliente.length < 3) {
+                this.clientesEncontrados = [];
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/clientes/buscar/?q=${encodeURIComponent(this.busquedaCliente)}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.clientesEncontrados = data.clientes;
+                }
+            } catch (error) {
+                console.error('Error al buscar clientes:', error);
+            }
+        },
+        
+        seleccionarCliente(cliente) {
+            this.factura.cliente_razon_social = cliente.razon_social || cliente.nombre_completo;
+            this.factura.cliente_ruc = cliente.ruc || '';
+            this.factura.cliente_direccion = cliente.direccion || '';
+            this.factura.cliente_email = cliente.email || '';
+            this.factura.cliente_telefono = cliente.telefono || '';
+            this.factura.cliente_tipo_contribuyente = cliente.tipo_contribuyente || '1';
+            
+            this.busquedaCliente = '';
+            this.clientesEncontrados = [];
+            this.mostrarResultados = false;
+            this.validarRUC();
+        },
+        
+        validarRUC() {
+            const rucPattern = /^[0-9]{6,8}-[0-9]$/;
+            this.rucValido = rucPattern.test(this.factura.cliente_ruc);
+        },
+        
+        agregarItem() {
+            if (!this.nuevoItem.descripcion || !this.nuevoItem.cantidad || !this.nuevoItem.precio_unitario) {
+                return;
+            }
+            
+            this.factura.items.push({
+                descripcion: this.nuevoItem.descripcion,
+                cantidad: this.nuevoItem.cantidad,
+                precio_unitario: this.nuevoItem.precio_unitario,
+                tipo_iva: this.nuevoItem.tipo_iva
+            });
+            
+            // Reset form
+            this.nuevoItem = {
+                descripcion: '',
+                cantidad: 1,
+                precio_unitario: 0,
+                tipo_iva: '10'
+            };
+            
+            this.calcularTotales();
+        },
+        
+        eliminarItem(index) {
+            this.factura.items.splice(index, 1);
+            this.calcularTotales();
+        },
+        
+        calcularSubtotalItem(item) {
+            return item.cantidad * item.precio_unitario;
+        },
+        
+        calcularTotales() {
+            this.totales = {
+                exentas: 0,
+                gravadas_5: 0,
+                gravadas_10: 0,
+                iva_5: 0,
+                iva_10: 0,
+                total_iva: 0,
+                total_general: 0
+            };
+            
+            this.factura.items.forEach(item => {
+                const subtotal = this.calcularSubtotalItem(item);
+                
+                if (item.tipo_iva === '0') {
+                    this.totales.exentas += subtotal;
+                } else if (item.tipo_iva === '5') {
+                    const base = subtotal / 1.05;
+                    this.totales.gravadas_5 += base;
+                    this.totales.iva_5 += subtotal - base;
+                } else if (item.tipo_iva === '10') {
+                    const base = subtotal / 1.10;
+                    this.totales.gravadas_10 += base;
+                    this.totales.iva_10 += subtotal - base;
+                }
+            });
+            
+            this.totales.total_iva = this.totales.iva_5 + this.totales.iva_10;
+            this.totales.total_general = this.totales.exentas + this.totales.gravadas_5 + this.totales.iva_5 + this.totales.gravadas_10 + this.totales.iva_10;
+        },
+        
+        formularioValido() {
+            return this.factura.timbrado_id &&
+                   this.factura.cliente_razon_social &&
+                   this.rucValido &&
+                   this.factura.cliente_direccion &&
+                   this.factura.items.length > 0 &&
+                   this.factura.certificado_id;
+        },
+        
+        async guardarBorrador() {
+            if (!this.formularioValido()) {
+                gestionHelpers.notify('Complete los campos requeridos', 'warning');
+                return;
+            }
+            
+            this.guardando = true;
+            
+            try {
+                const response = await fetch('/api/facturacion/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        ...this.factura,
+                        estado: 'borrador',
+                        totales: this.totales
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify('Factura guardada como borrador', 'success');
+                    window.location.href = `/gestion/facturacion/${data.factura_id}/`;
+                } else {
+                    gestionHelpers.notify(data.message || 'Error al guardar', 'error');
+                }
+            } catch (error) {
+                console.error('Error al guardar:', error);
+                gestionHelpers.notify('Error al guardar factura', 'error');
+            } finally {
+                this.guardando = false;
+            }
+        },
+        
+        async generarYEnviar() {
+            if (!this.formularioValido()) {
+                gestionHelpers.notify('Complete todos los campos requeridos', 'warning');
+                return;
+            }
+            
+            if (!await gestionHelpers.confirm(
+                'Generar y Enviar a SET',
+                `Se generará la factura y se enviará automáticamente a la SET.\n\nTotal: ${gestionHelpers.formatPrice(this.totales.total_general)}\n\n¿Continuar?`
+            )) return;
+            
+            this.generando = true;
+            
+            try {
+                const response = await fetch('/api/facturacion/generar-y-enviar/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        ...this.factura,
+                        totales: this.totales
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify('Factura generada y enviada a SET correctamente', 'success');
+                    window.location.href = `/gestion/facturacion/${data.factura_id}/`;
+                } else {
+                    gestionHelpers.notify(data.message || 'Error al generar factura', 'error');
+                }
+            } catch (error) {
+                console.error('Error al generar:', error);
+                gestionHelpers.notify('Error al generar factura', 'error');
+            } finally {
+                this.generando = false;
+            }
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    }
+}
+</script>
+{% endblock %}

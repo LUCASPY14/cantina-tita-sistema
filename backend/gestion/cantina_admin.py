@@ -193,7 +193,7 @@ class CantinaAdminSite(admin.AdminSite):
         # =====================================================================
         # TOP 5 PRODUCTOS MÁS VENDIDOS (HOY)
         # =====================================================================
-        from gestion.models import DetalleVenta
+        from pos.models import DetalleVenta
         
         top_productos_hoy = DetalleVenta.objects.filter(
             id_venta__fecha__date=hoy,

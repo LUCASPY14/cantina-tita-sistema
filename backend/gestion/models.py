@@ -36,7 +36,7 @@ class ListaPrecios(models.Model):
     activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = 'test' not in sys.argv  # True para tests, False para producción
+        managed = False  # Tabla existente, Django no la administra
         db_table = 'listas_precios'
         verbose_name = 'Lista de Precios'
         verbose_name_plural = 'Listas de Precios'
@@ -1138,185 +1138,25 @@ class CierresCaja(models.Model):
 
 
 # ==================== VENTAS ====================
+# ⚠️ DEPRECADO: Los modelos Ventas, DetalleVenta y PagosVenta han sido movidos a la app 'pos/'
+# 
+# NUEVA UBICACIÓN:
+#   - pos.models.Venta (antes gestion.models.Ventas)
+#   - pos.models.DetalleVenta (antes gestion.models.DetalleVenta)
+#   - pos.models.PagoVenta (antes gestion.models.PagosVenta)
+# 
+# RAZÓN: Separación de responsabilidades. El sistema POS ahora es una app independiente
+# con su propia lógica de negocio, serializers, views y tests.
+# 
+# MIGRACIÓN: Las tablas de base de datos (ventas, detalle_venta, pagos_venta) ahora son
+# gestionadas por la app 'pos'. NO recrear estos modelos aquí.
+#
+# SI NECESITAS USAR ESTOS MODELOS, importa desde pos:
+#   from pos.models import Venta, DetalleVenta, PagoVenta
+#
+# NOTA: Si algún archivo legacy falla, actualiza los imports manualmente.
 
-class Ventas(models.Model):
-    '''Tabla ventas - Ventas realizadas'''
-    TIPO_VENTA_CHOICES = [
-        ('CONTADO', 'Contado'),
-        ('CREDITO', 'Crédito'),
-    ]
-
-    id_venta = models.BigAutoField(db_column='ID_Venta', primary_key=True)
-    nro_factura_venta = models.BigIntegerField(db_column='Nro_Factura_Venta', null=True, blank=True)
-    id_cliente = models.ForeignKey(
-        Cliente,
-        on_delete=models.PROTECT,
-        db_column='ID_Cliente',
-        related_name='ventas'
-    )
-    id_hijo = models.ForeignKey(
-        Hijo,
-        on_delete=models.PROTECT,
-        db_column='ID_Hijo',
-        blank=True,
-        null=True
-    )
-    id_tipo_pago = models.ForeignKey(
-        TiposPago,
-        on_delete=models.PROTECT,
-        db_column='ID_Tipo_Pago'
-    )
-    id_empleado_cajero = models.ForeignKey(
-        Empleado,
-        on_delete=models.PROTECT,
-        db_column='ID_Empleado_Cajero'
-    )
-    fecha = models.DateTimeField(db_column='Fecha')
-    monto_total = models.BigIntegerField(db_column='Monto_Total')
-    saldo_pendiente = models.BigIntegerField(db_column='Saldo_Pendiente', blank=True, null=True)
-    estado_pago = models.CharField(
-        db_column='Estado_Pago',
-        max_length=10,
-        choices=[('PENDIENTE', 'Pendiente'), ('PARCIAL', 'Parcial'), ('PAGADA', 'Pagada')],
-        default='PENDIENTE'
-    )
-    estado = models.CharField(
-        db_column='Estado',
-        max_length=10,
-        choices=[('PROCESADO', 'Procesado'), ('ANULADO', 'Anulado')],
-        default='PROCESADO'
-    )
-    tipo_venta = models.CharField(db_column='Tipo_Venta', max_length=20, choices=TIPO_VENTA_CHOICES)
-    autorizado_por = models.ForeignKey(
-        'Empleado',
-        on_delete=models.PROTECT,
-        db_column='Autorizado_Por',
-        related_name='ventas_autorizadas',
-        blank=True,
-        null=True,
-        help_text='Supervisor que autorizó la venta (para ventas a crédito con saldo insuficiente)'
-    )
-    motivo_credito = models.TextField(
-        db_column='Motivo_Credito',
-        blank=True,
-        null=True,
-        help_text='Justificación de la venta a crédito'
-    )
-    genera_factura_legal = models.BooleanField(
-        db_column='Genera_Factura_Legal',
-        default=False,
-        help_text='True si la venta genera factura contable (solo pagos con medios externos)'
-    )
-
-    def clean(self):
-        """Validaciones de negocio para Ventas"""
-        from django.core.exceptions import ValidationError
-        
-        # Validar que saldo_pendiente <= monto_total
-        if self.saldo_pendiente and self.monto_total:
-            if self.saldo_pendiente > self.monto_total:
-                raise ValidationError({
-                    'saldo_pendiente': 'El saldo pendiente no puede ser mayor al total de la venta'
-                })
-        
-        # Validar consistencia estado_pago con saldo
-        if self.estado_pago == 'PAGADA' and self.saldo_pendiente and self.saldo_pendiente > 0:
-            raise ValidationError({
-                'estado_pago': 'Una venta PAGADA no puede tener saldo pendiente mayor a 0'
-            })
-        
-        if self.estado_pago == 'PENDIENTE' and self.saldo_pendiente != self.monto_total:
-            raise ValidationError({
-                'estado_pago': 'Una venta PENDIENTE debe tener saldo igual al total'
-            })
-
-    class Meta:
-        managed = 'test' not in sys.argv  # True para tests, False para producción
-        db_table = 'ventas'
-        verbose_name = 'Venta'
-        verbose_name_plural = 'Ventas'
-
-    def __str__(self):
-        return f'Venta #{self.id_venta} - {self.id_cliente.nombre_completo}: Gs. {self.monto_total}'
-
-
-class DetalleVenta(models.Model):
-    '''Tabla detalle_venta - Detalle de productos vendidos'''
-    id_detalle = models.BigAutoField(db_column='ID_Detalle', primary_key=True)
-    # id_venta = models.ForeignKey(  # COMENTADO: Modelo Venta no existe en gestion
-    #     Ventas,
-    #     on_delete=models.CASCADE,
-    #     db_column='ID_Venta',
-    #     related_name='detalles'
-    # )
-    id_producto = models.ForeignKey(
-        Producto,
-        on_delete=models.PROTECT,
-        db_column='ID_Producto'
-    )
-    cantidad = models.DecimalField(db_column='Cantidad', max_digits=10, decimal_places=3)
-    precio_unitario = models.BigIntegerField(db_column='Precio_Unitario')
-    subtotal_total = models.BigIntegerField(db_column='Subtotal_Total')
-
-    class Meta:
-        managed = 'test' not in sys.argv  # True para tests, False para producción
-        db_table = 'detalle_venta'
-        verbose_name = 'Detalle de Venta'
-        verbose_name_plural = 'Detalles de Venta'
-        unique_together = (('id_venta', 'id_producto'),)
-
-    def __str__(self):
-        return f'{self.id_producto.descripcion} x {self.cantidad}'
-
-
-class PagosVenta(models.Model):
-    '''Tabla pagos_venta - Pagos aplicados a ventas'''
-    id_pago_venta = models.BigAutoField(db_column='ID_Pago_Venta', primary_key=True)
-    # id_venta = models.ForeignKey(  # COMENTADO: Modelo Venta no existe en gestion
-    #     Ventas,
-    #     on_delete=models.CASCADE,
-    #     db_column='ID_Venta',
-    #     related_name='pagos'
-    # )
-    id_medio_pago = models.ForeignKey(
-        MediosPago,
-        on_delete=models.PROTECT,
-        db_column='ID_Medio_Pago'
-    )
-    id_cierre = models.ForeignKey(
-        CierresCaja,
-        on_delete=models.PROTECT,
-        db_column='ID_Cierre',
-        blank=True,
-        null=True
-    )
-    nro_tarjeta_usada = models.ForeignKey(
-        Tarjeta,
-        on_delete=models.PROTECT,
-        db_column='Nro_Tarjeta_Usada',
-        blank=True,
-        null=True
-    )
-    monto_aplicado = models.BigIntegerField(db_column='Monto_Aplicado')
-    referencia_transaccion = models.CharField(db_column='Referencia_Transaccion', max_length=100, blank=True, null=True)
-    fecha_pago = models.DateTimeField(db_column='Fecha_Pago', blank=True, null=True)
-    estado = models.CharField(
-        db_column='Estado',
-        max_length=10,
-        choices=[('PROCESADO', 'Procesado'), ('ANULADO', 'Anulado')],
-        default='PROCESADO'
-    )
-
-    class Meta:
-        managed = 'test' not in sys.argv  # True para tests, False para producción
-        db_table = 'pagos_venta'
-        verbose_name = 'Pago de Venta'
-        verbose_name_plural = 'Pagos de Venta'
-
-    def __str__(self):
-        return f'Pago {self.id_pago_venta} - Venta {self.id_venta_id}: Gs. {self.monto_aplicado}'
-
-
+# FIN DE MODELOS DEPRECADOS DE VENTAS
 # ==================== SISTEMA DE CUENTA CORRIENTE ====================
 
 class PagosProveedores(models.Model):

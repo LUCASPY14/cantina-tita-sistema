@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Iniciar Sesión - Cantina Tita{% endblock %}
+
+{% block body_class %}login-page{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .login-page {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 1rem;
+    }
+    
+    .login-container {
+        background: white;
+        border-radius: 2rem;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+        max-width: 900px;
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+    }
+    
+    @media (max-width: 768px) {
+        .login-container {
+            grid-template-columns: 1fr;
+        }
+        .login-banner {
+            display: none !important;
+        }
+    }
+    
+    .login-banner {
+        background: linear-gradient(135deg, #FF6B35 0%, #4ECDC4 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem;
+        color: white;
+    }
+    
+    .login-form-container {
+        padding: 3rem;
+    }
+    
+    .logo-large {
+        width: 120px;
+        height: 120px;
+        object-fit: contain;
+        margin-bottom: 1.5rem;
+        filter: brightness(0) invert(1);
+    }
+</style>
+{% endblock %}
+
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="login-container animate-fade-in">
+    <!-- Banner lateral -->
+    <div class="login-banner">
+        <img src="{% static 'images/tita_logotipo.png' %}" alt="Cantina Tita" class="logo-large">
+        <h2 class="text-3xl font-bold mb-4 text-center">Cantina Tita</h2>
+        <p class="text-lg text-center opacity-90">Sistema de Gestión POS</p>
+        <div class="mt-8 text-center space-y-2 opacity-75">
+            <p><i class="fas fa-utensils mr-2"></i>Gestión de Ventas</p>
+            <p><i class="fas fa-credit-card mr-2"></i>Control de Recargas</p>
+            <p><i class="fas fa-chart-line mr-2"></i>Reportes en Tiempo Real</p>
+        </div>
+    </div>
+    
+    <!-- Formulario de login -->
+    <div class="login-form-container">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Bienvenido</h1>
+            <p class="text-gray-600">Ingrese sus credenciales para continuar</p>
+        </div>
+        
+        <!-- Formulario con validación Alpine.js -->
+        <form method="post" 
+              action="{% url 'login' %}"
+              x-data="formValidation({
+                  username: {
+                      value: '',
+                      rules: [
+                          ValidationRules.required('El usuario es requerido'),
+                          ValidationRules.minLength(3, 'Mínimo 3 caracteres')
+                      ]
+                  },
+                  password: {
+                      value: '',
+                      rules: [
+                          ValidationRules.required('La contraseña es requerida'),
+                          ValidationRules.minLength(4, 'Mínimo 4 caracteres')
+                      ]
+                  }
+              })"
+              @submit.prevent="handleSubmit"
+              novalidate>
+            
+            {% csrf_token %}
+            
+            <!-- Campo Usuario -->
+            <div class="form-group">
+                <label for="username" class="form-label">
+                    <i class="fas fa-user mr-2"></i>Usuario
+                </label>
+                <input 
+                    type="text" 
+                    id="username"
+                    name="username"
+                    x-model="fields.username.value"
+                    @blur="validateField('username')"
+                    @input="validateField('username')"
+                    :class="{ 'input-error': fields.username.error }"
+                    class="input input-bordered w-full"
+                    placeholder="Ingrese su usuario"
+                    autocomplete="username"
+                    autofocus
+                    required>
+                
+                <!-- Mensaje de error -->
+                <label class="label" x-show="fields.username.error">
+                    <span class="label-text-alt text-error" x-text="fields.username.error"></span>
+                </label>
+                
+                <!-- Validación visual -->
+                <label class="label" x-show="fields.username.value && !fields.username.error">
+                    <span class="label-text-alt text-success">
+                        <i class="fas fa-check-circle mr-1"></i>Usuario válido
+                    </span>
+                </label>
+            </div>
+            
+            <!-- Campo Contraseña -->
+            <div class="form-group">
+                <label for="password" class="form-label">
+                    <i class="fas fa-lock mr-2"></i>Contraseña
+                </label>
+                <div class="relative">
+                    <input 
+                        :type="showPassword ? 'text' : 'password'"
+                        id="password"
+                        name="password"
+                        x-model="fields.password.value"
+                        @blur="validateField('password')"
+                        @input="validateField('password')"
+                        :class="{ 'input-error': fields.password.error }"
+                        class="input input-bordered w-full pr-12"
+                        placeholder="Ingrese su contraseña"
+                        autocomplete="current-password"
+                        required>
+                    
+                    <!-- Toggle mostrar/ocultar contraseña -->
+                    <button 
+                        type="button"
+                        @click="showPassword = !showPassword"
+                        class="absolute right-3 top-1/2 transform -translate-y-1/2 btn btn-ghost btn-sm btn-circle"
+                        aria-label="Mostrar/Ocultar contraseña">
+                        <i class="fas" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                    </button>
+                </div>
+                
+                <!-- Mensaje de error -->
+                <label class="label" x-show="fields.password.error">
+                    <span class="label-text-alt text-error" x-text="fields.password.error"></span>
+                </label>
+            </div>
+            
+            <!-- Recordarme -->
+            <div class="form-control mb-4">
+                <label class="label cursor-pointer justify-start gap-3">
+                    <input type="checkbox" name="remember" class="checkbox checkbox-primary" />
+                    <span class="label-text">Recordar sesión</span>
+                </label>
+            </div>
+            
+            <!-- Errores del servidor -->
+            {% if form.non_field_errors %}
+            <div class="alert alert-error mb-4 animate-slide-in">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>{{ form.non_field_errors.0 }}</span>
+            </div>
+            {% endif %}
+            
+            <!-- Botón de submit con loading state -->
+            <button 
+                type="submit"
+                :disabled="loading || !isValid"
+                class="btn btn-primary btn-block btn-lg gap-2 relative overflow-hidden"
+                x-data="{ loading: false }"
+                @click="loading = true">
+                
+                <!-- Texto normal -->
+                <span :class="{ 'invisible': loading }">
+                    <i class="fas fa-sign-in-alt mr-2"></i>
+                    Iniciar Sesión
+                </span>
+                
+                <!-- Loading spinner -->
+                <div x-show="loading" 
+                     class="absolute inset-0 flex items-center justify-center">
+                    <div class="spinner"></div>
+                    <span class="ml-2">Iniciando...</span>
+                </div>
+            </button>
+            
+            <!-- Enlaces adicionales -->
+            <div class="mt-6 text-center space-y-2">
+                <a href="{% url 'password_reset' %}" 
+                   class="link link-primary text-sm">
+                    ¿Olvidó su contraseña?
+                </a>
+                
+                <div class="divider text-xs text-gray-500">O</div>
+                
+                <a href="{% url 'portal:registro' %}" 
+                   class="btn btn-outline btn-block gap-2">
+                    <i class="fas fa-user-plus"></i>
+                    Registrarse como Padre/Tutor
+                </a>
+            </div>
+        </form>
+        
+        <!-- Información adicional -->
+        <div class="mt-8 p-4 bg-blue-50 rounded-lg text-sm text-gray-600">
+            <p class="font-semibold mb-2">
+                <i class="fas fa-info-circle mr-2 text-blue-500"></i>
+                Información de acceso
+            </p>
+            <ul class="space-y-1 text-xs">
+                <li>• Empleados: Usar credenciales del sistema</li>
+                <li>• Padres: Registrarse para acceder al portal</li>
+                <li>• Soporte: Contactar al administrador</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+    // Script específico para login
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('🔐 Página de login cargada');
+        
+        // Auto-focus en el primer campo con error
+        const errorInput = document.querySelector('.input-error');
+        if (errorInput) {
+            errorInput.focus();
+        }
+        
+        // Agregar data adicional a Alpine
+        Alpine.data('loginForm', () => ({
+            showPassword: false,
+            
+            handleSubmit() {
+                if (this.isValid) {
+                    this.loading = true;
+                    this.$el.submit();
+                } else {
+                    // Mostrar notificación de campos inválidos
+                    window.dispatchEvent(new CustomEvent('show-notification', {
+                        detail: {
+                            message: 'Por favor complete todos los campos correctamente',
+                            type: 'warning',
+                            duration: 3000
+                        }
+                    }));
+                }
+            }
+        }));
+    });
+</script>
+{% endblock %}

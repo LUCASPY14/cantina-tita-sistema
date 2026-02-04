@@ -1,0 +1,539 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Historial de Recargas - Portal Padres{% endblock %}
+
+{% block content %}
+<div x-data="historialRecargas()" x-init="init()" class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-8">
+    <div class="container mx-auto px-4 max-w-6xl">
+        
+        <!-- Header -->
+        <div class="mb-8">
+            <a href="{% url 'portal:dashboard' %}" class="btn btn-ghost mb-4">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Volver al Dashboard
+            </a>
+            
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                        <i class="fas fa-credit-card mr-3 text-success"></i>
+                        Historial de Recargas
+                    </h1>
+                    <p class="text-gray-600 dark:text-gray-400 mt-1">
+                        Todas las recargas realizadas para <span class="font-semibold" x-text="hijo.nombre"></span>
+                    </p>
+                </div>
+                
+                <a href="{% url 'portal:recargar' %}" class="btn btn-success">
+                    <i class="fas fa-plus mr-2"></i>
+                    Nueva Recarga
+                </a>
+            </div>
+        </div>
+        
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            
+            <!-- Total Recargas -->
+            <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+                <template x-if="cargando">
+                    <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+                </template>
+                <template x-if="!cargando">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-list text-3xl opacity-80"></i>
+                        </div>
+                        <p class="text-sm opacity-90 mb-1">Total Recargas</p>
+                        <p class="text-3xl font-bold" x-text="stats.cantidad_recargas"></p>
+                    </div>
+                </template>
+            </div>
+            
+            <!-- Monto Total -->
+            <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+                <template x-if="cargando">
+                    <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+                </template>
+                <template x-if="!cargando">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-money-bill-wave text-3xl opacity-80"></i>
+                        </div>
+                        <p class="text-sm opacity-90 mb-1">Monto Total</p>
+                        <p class="text-2xl font-bold" x-text="formatearPrecio(stats.monto_total)"></p>
+                    </div>
+                </template>
+            </div>
+            
+            <!-- Promedio -->
+            <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+                <template x-if="cargando">
+                    <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+                </template>
+                <template x-if="!cargando">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-calculator text-3xl opacity-80"></i>
+                        </div>
+                        <p class="text-sm opacity-90 mb-1">Promedio</p>
+                        <p class="text-2xl font-bold" x-text="formatearPrecio(stats.promedio_recarga)"></p>
+                    </div>
+                </template>
+            </div>
+            
+            <!-- Pendientes -->
+            <div class="stat-card bg-gradient-to-br from-warning to-yellow-600 text-white">
+                <template x-if="cargando">
+                    <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+                </template>
+                <template x-if="!cargando">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-clock text-3xl opacity-80"></i>
+                        </div>
+                        <p class="text-sm opacity-90 mb-1">Pendientes</p>
+                        <p class="text-3xl font-bold" x-text="stats.pendientes"></p>
+                    </div>
+                </template>
+            </div>
+        </div>
+        
+        <!-- Filtros -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                
+                <!-- Fecha Desde -->
+                <div>
+                    <label class="label">
+                        <span class="label-text">
+                            <i class="fas fa-calendar mr-2"></i>Desde
+                        </span>
+                    </label>
+                    <input type="date" 
+                           x-model="filtros.fecha_desde"
+                           @change="buscarRecargas()"
+                           class="input input-bordered w-full">
+                </div>
+                
+                <!-- Fecha Hasta -->
+                <div>
+                    <label class="label">
+                        <span class="label-text">
+                            <i class="fas fa-calendar mr-2"></i>Hasta
+                        </span>
+                    </label>
+                    <input type="date" 
+                           x-model="filtros.fecha_hasta"
+                           @change="buscarRecargas()"
+                           class="input input-bordered w-full">
+                </div>
+                
+                <!-- Estado -->
+                <div>
+                    <label class="label">
+                        <span class="label-text">
+                            <i class="fas fa-filter mr-2"></i>Estado
+                        </span>
+                    </label>
+                    <select x-model="filtros.estado" 
+                            @change="buscarRecargas()"
+                            class="select select-bordered w-full">
+                        <option value="">Todos</option>
+                        <option value="confirmada">Confirmadas</option>
+                        <option value="pendiente">Pendientes</option>
+                        <option value="rechazada">Rechazadas</option>
+                    </select>
+                </div>
+                
+                <!-- Método -->
+                <div>
+                    <label class="label">
+                        <span class="label-text">
+                            <i class="fas fa-credit-card mr-2"></i>Método
+                        </span>
+                    </label>
+                    <select x-model="filtros.metodo" 
+                            @change="buscarRecargas()"
+                            class="select select-bordered w-full">
+                        <option value="">Todos</option>
+                        <option value="transferencia">Transferencia</option>
+                        <option value="tarjeta">Tarjeta</option>
+                        <option value="efectivo">Efectivo</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tabla de Recargas -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+            
+            <!-- Loading -->
+            <template x-if="cargando">
+                <div class="overflow-x-auto">
+                    <table class="table w-full">
+                        <thead>
+                            <tr>
+                                <th>Fecha/Hora</th>
+                                <th>Monto</th>
+                                <th>Método</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="i in 10" :key="i">
+                                <tr>
+                                    <td><div class="skeleton h-4 w-32"></div></td>
+                                    <td><div class="skeleton h-4 w-24"></div></td>
+                                    <td><div class="skeleton h-4 w-28"></div></td>
+                                    <td><div class="skeleton h-4 w-20"></div></td>
+                                    <td><div class="skeleton h-4 w-24"></div></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </template>
+            
+            <!-- Tabla con Datos -->
+            <template x-if="!cargando && recargas.length > 0">
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra w-full">
+                        <thead>
+                            <tr>
+                                <th>Fecha/Hora</th>
+                                <th class="text-right">Monto</th>
+                                <th>Método de Pago</th>
+                                <th class="text-center">Estado</th>
+                                <th>Origen</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="recarga in recargas" :key="recarga.id">
+                                <tr class="hover">
+                                    <td class="font-mono text-sm" x-text="recarga.fecha_hora"></td>
+                                    <td class="text-right">
+                                        <span class="text-xl font-bold text-success" x-text="formatearPrecio(recarga.monto)"></span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-sm capitalize"
+                                              :class="{
+                                                  'badge-secondary': recarga.metodo_pago === 'transferencia',
+                                                  'badge-primary': recarga.metodo_pago === 'tarjeta',
+                                                  'badge-success': recarga.metodo_pago === 'efectivo'
+                                              }">
+                                            <i class="fas mr-1"
+                                               :class="{
+                                                   'fa-exchange-alt': recarga.metodo_pago === 'transferencia',
+                                                   'fa-credit-card': recarga.metodo_pago === 'tarjeta',
+                                                   'fa-money-bill-wave': recarga.metodo_pago === 'efectivo'
+                                               }"></i>
+                                            <span x-text="recarga.metodo_pago"></span>
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge"
+                                              :class="{
+                                                  'badge-success': recarga.estado === 'confirmada',
+                                                  'badge-warning': recarga.estado === 'pendiente',
+                                                  'badge-error': recarga.estado === 'rechazada'
+                                              }">
+                                            <i class="fas mr-1"
+                                               :class="{
+                                                   'fa-check-circle': recarga.estado === 'confirmada',
+                                                   'fa-clock': recarga.estado === 'pendiente',
+                                                   'fa-times-circle': recarga.estado === 'rechazada'
+                                               }"></i>
+                                            <span class="capitalize" x-text="recarga.estado"></span>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="text-sm capitalize" x-text="recarga.origen"></span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="flex gap-1 justify-center">
+                                            <button @click="verDetalle(recarga)" 
+                                                    class="btn btn-ghost btn-xs"
+                                                    title="Ver detalle">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button @click="descargarComprobante(recarga)" 
+                                                    x-show="recarga.comprobante"
+                                                    class="btn btn-ghost btn-xs"
+                                                    title="Descargar comprobante">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                        <tfoot>
+                            <tr class="font-bold">
+                                <td>TOTAL:</td>
+                                <td class="text-right text-success text-lg" x-text="formatearPrecio(stats.monto_total)"></td>
+                                <td colspan="4"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </template>
+            
+            <!-- Empty State -->
+            <template x-if="!cargando && recargas.length === 0">
+                <div class="text-center py-16">
+                    <i class="fas fa-credit-card text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
+                    <p class="text-xl text-gray-500 dark:text-gray-400 mb-2">No se encontraron recargas</p>
+                    <p class="text-gray-400 dark:text-gray-500 mb-6">Intenta ajustar los filtros o realiza tu primera recarga</p>
+                    <a href="{% url 'portal:recargar' %}" class="btn btn-success">
+                        <i class="fas fa-plus mr-2"></i>
+                        Nueva Recarga
+                    </a>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Paginación -->
+        <template x-if="!cargando && totalPaginas > 1">
+            <div class="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 mt-6">
+                <div class="text-sm text-gray-600 dark:text-gray-400">
+                    Mostrando 
+                    <span class="font-semibold" x-text="(paginaActual - 1) * itemsPorPagina + 1"></span>
+                    -
+                    <span class="font-semibold" x-text="Math.min(paginaActual * itemsPorPagina, totalRecargas)"></span>
+                    de
+                    <span class="font-semibold" x-text="totalRecargas"></span>
+                    recargas
+                </div>
+                
+                <div class="btn-group">
+                    <button @click="cambiarPagina(paginaActual - 1)" 
+                            :disabled="paginaActual === 1"
+                            class="btn btn-sm">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    
+                    <template x-for="pagina in paginasVisibles()" :key="pagina">
+                        <button @click="cambiarPagina(pagina)" 
+                                class="btn btn-sm"
+                                :class="{'btn-active': pagina === paginaActual}"
+                                x-text="pagina"></button>
+                    </template>
+                    
+                    <button @click="cambiarPagina(paginaActual + 1)" 
+                            :disabled="paginaActual === totalPaginas"
+                            class="btn btn-sm">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Modal Detalle -->
+    <template x-if="recargaSeleccionada">
+        <div class="modal modal-open">
+            <div class="modal-box">
+                <h3 class="font-bold text-lg mb-4">
+                    <i class="fas fa-receipt mr-2 text-success"></i>
+                    Detalle de la Recarga
+                </h3>
+                
+                <!-- Info Principal -->
+                <div class="bg-gradient-to-br from-success to-green-600 text-white rounded-lg p-6 mb-4 text-center">
+                    <p class="text-sm opacity-90 mb-2">Monto Recargado</p>
+                    <p class="text-4xl font-bold" x-text="formatearPrecio(recargaSeleccionada.monto)"></p>
+                </div>
+                
+                <!-- Detalles -->
+                <div class="space-y-3">
+                    <div class="flex justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                        <span class="text-gray-500">Fecha y Hora:</span>
+                        <span class="font-semibold" x-text="recargaSeleccionada.fecha_hora"></span>
+                    </div>
+                    
+                    <div class="flex justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                        <span class="text-gray-500">Método de Pago:</span>
+                        <span class="badge capitalize"
+                              :class="{
+                                  'badge-secondary': recargaSeleccionada.metodo_pago === 'transferencia',
+                                  'badge-primary': recargaSeleccionada.metodo_pago === 'tarjeta',
+                                  'badge-success': recargaSeleccionada.metodo_pago === 'efectivo'
+                              }">
+                            <span x-text="recargaSeleccionada.metodo_pago"></span>
+                        </span>
+                    </div>
+                    
+                    <div class="flex justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                        <span class="text-gray-500">Estado:</span>
+                        <span class="badge"
+                              :class="{
+                                  'badge-success': recargaSeleccionada.estado === 'confirmada',
+                                  'badge-warning': recargaSeleccionada.estado === 'pendiente',
+                                  'badge-error': recargaSeleccionada.estado === 'rechazada'
+                              }">
+                            <span class="capitalize" x-text="recargaSeleccionada.estado"></span>
+                        </span>
+                    </div>
+                    
+                    <div class="flex justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                        <span class="text-gray-500">Origen:</span>
+                        <span class="font-semibold capitalize" x-text="recargaSeleccionada.origen"></span>
+                    </div>
+                    
+                    <template x-if="recargaSeleccionada.referencia">
+                        <div class="flex justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                            <span class="text-gray-500">Referencia:</span>
+                            <span class="font-mono text-sm" x-text="recargaSeleccionada.referencia"></span>
+                        </div>
+                    </template>
+                    
+                    <template x-if="recargaSeleccionada.observaciones">
+                        <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded">
+                            <p class="text-sm font-semibold mb-1">Observaciones:</p>
+                            <p class="text-sm" x-text="recargaSeleccionada.observaciones"></p>
+                        </div>
+                    </template>
+                </div>
+                
+                <div class="modal-action">
+                    <button @click="descargarComprobante(recargaSeleccionada)" 
+                            x-show="recargaSeleccionada.comprobante"
+                            class="btn btn-success">
+                        <i class="fas fa-download mr-2"></i>
+                        Descargar Comprobante
+                    </button>
+                    <button @click="recargaSeleccionada = null" class="btn">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function historialRecargas() {
+    return {
+        cargando: true,
+        recargas: [],
+        recargaSeleccionada: null,
+        hijo: {},
+        filtros: {
+            fecha_desde: '',
+            fecha_hasta: '',
+            estado: '',
+            metodo: ''
+        },
+        stats: {
+            cantidad_recargas: 0,
+            monto_total: 0,
+            promedio_recarga: 0,
+            pendientes: 0
+        },
+        paginaActual: 1,
+        totalPaginas: 1,
+        totalRecargas: 0,
+        itemsPorPagina: 20,
+        
+        async init() {
+            // Establecer fechas por defecto (últimos 90 días)
+            const hoy = new Date();
+            const hace90Dias = new Date();
+            hace90Dias.setDate(hace90Dias.getDate() - 90);
+            
+            this.filtros.fecha_desde = this.formatearFecha(hace90Dias);
+            this.filtros.fecha_hasta = this.formatearFecha(hoy);
+            
+            await this.buscarRecargas();
+        },
+        
+        async buscarRecargas() {
+            this.cargando = true;
+            
+            try {
+                const params = new URLSearchParams({
+                    fecha_desde: this.filtros.fecha_desde,
+                    fecha_hasta: this.filtros.fecha_hasta,
+                    estado: this.filtros.estado,
+                    metodo: this.filtros.metodo,
+                    page: this.paginaActual,
+                    per_page: this.itemsPorPagina
+                });
+                
+                const response = await fetch(`/api/portal/recargas/?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.recargas = data.recargas || [];
+                    this.stats = data.stats || this.stats;
+                    this.hijo = data.hijo || {};
+                    this.totalRecargas = data.total || 0;
+                    this.totalPaginas = Math.ceil(this.totalRecargas / this.itemsPorPagina);
+                }
+            } catch (error) {
+                console.error('Error al cargar recargas:', error);
+                this.notificar('Error al cargar historial', 'error');
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        cambiarPagina(pagina) {
+            if (pagina >= 1 && pagina <= this.totalPaginas) {
+                this.paginaActual = pagina;
+                this.buscarRecargas();
+            }
+        },
+        
+        paginasVisibles() {
+            const paginas = [];
+            const rango = 2;
+            const inicio = Math.max(1, this.paginaActual - rango);
+            const fin = Math.min(this.totalPaginas, this.paginaActual + rango);
+            
+            for (let i = inicio; i <= fin; i++) {
+                paginas.push(i);
+            }
+            return paginas;
+        },
+        
+        verDetalle(recarga) {
+            this.recargaSeleccionada = recarga;
+        },
+        
+        descargarComprobante(recarga) {
+            if (!recarga.comprobante) {
+                this.notificar('No hay comprobante disponible', 'warning');
+                return;
+            }
+            
+            // Abrir en nueva pestaña
+            window.open(recarga.comprobante, '_blank');
+        },
+        
+        formatearFecha(fecha) {
+            return fecha.toISOString().split('T')[0];
+        },
+        
+        formatearPrecio(monto) {
+            return new Intl.NumberFormat('es-PY', {
+                style: 'currency',
+                currency: 'PYG',
+                minimumFractionDigits: 0
+            }).format(monto);
+        },
+        
+        notificar(mensaje, tipo = 'info') {
+            const event = new CustomEvent('notify', {
+                detail: { message: mensaje, type: tipo }
+            });
+            window.dispatchEvent(event);
+        }
+    }
+}
+</script>
+{% endblock %}

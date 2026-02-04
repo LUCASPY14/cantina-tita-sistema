@@ -92,13 +92,16 @@ urlpatterns = [
     path('pos/', include('gestion.pos_urls')),
     
     # Portal de Padres
-    path('portal/', include('gestion.portal_urls')),
+    path('portal/', include('portal_urls')),
     
     # Portal de Clientes
     path('clientes/', include('gestion.cliente_urls')),
     
     # API REST v1
     path('api/v1/', include('gestion.api_urls')),
+    
+    # API POS (Punto de Venta)
+    path('api/pos/', include('pos.urls')),
     
     # Documentación OpenAPI 3.0 (drf-spectacular) - RECOMENDADO
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

@@ -1,0 +1,697 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Registro - Cantina Tita{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center p-4">
+    <div x-data="registroForm()" class="w-full max-w-2xl">
+        
+        <!-- Logo y Header -->
+        <div class="text-center mb-8">
+            <div class="inline-block bg-white rounded-full p-4 mb-4 shadow-lg">
+                <i class="fas fa-utensils text-5xl text-primary"></i>
+            </div>
+            <h1 class="text-4xl font-bold text-white mb-2">Cantina Tita</h1>
+            <p class="text-white text-lg opacity-90">Crear nueva cuenta</p>
+        </div>
+        
+        <!-- Formulario de Registro -->
+        <div class="bg-white rounded-2xl shadow-2xl p-8">
+            
+            <!-- Progress Steps -->
+            <ul class="steps w-full mb-8">
+                <li class="step" :class="{'step-secondary': paso >= 1}">Datos Personales</li>
+                <li class="step" :class="{'step-secondary': paso >= 2}">Información de Contacto</li>
+                <li class="step" :class="{'step-secondary': paso >= 3}">Seguridad</li>
+            </ul>
+            
+            <!-- Mensajes -->
+            <template x-if="mensaje.texto">
+                <div class="alert mb-6" 
+                     :class="{
+                         'alert-success': mensaje.tipo === 'success',
+                         'alert-error': mensaje.tipo === 'error',
+                         'alert-warning': mensaje.tipo === 'warning'
+                     }">
+                    <i class="fas" 
+                       :class="{
+                           'fa-check-circle': mensaje.tipo === 'success',
+                           'fa-exclamation-circle': mensaje.tipo === 'error',
+                           'fa-exclamation-triangle': mensaje.tipo === 'warning'
+                       }"></i>
+                    <span x-text="mensaje.texto"></span>
+                </div>
+            </template>
+            
+            <form @submit.prevent="registrar()">
+                
+                <!-- Paso 1: Datos Personales -->
+                <div x-show="paso === 1" x-transition>
+                    <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+                        <i class="fas fa-user text-secondary"></i>
+                        Datos Personales
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Nombres -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-semibold">Nombres *</span>
+                            </label>
+                            <input type="text" 
+                                   x-model="form.nombres"
+                                   @input="validarCampo('nombres')"
+                                   placeholder="Juan Carlos"
+                                   class="input input-bordered"
+                                   :class="{'input-error': errores.nombres}"
+                                   required>
+                            <template x-if="errores.nombres">
+                                <label class="label">
+                                    <span class="label-text-alt text-error" x-text="errores.nombres"></span>
+                                </label>
+                            </template>
+                        </div>
+                        
+                        <!-- Apellidos -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-semibold">Apellidos *</span>
+                            </label>
+                            <input type="text" 
+                                   x-model="form.apellidos"
+                                   @input="validarCampo('apellidos')"
+                                   placeholder="González Pérez"
+                                   class="input input-bordered"
+                                   :class="{'input-error': errores.apellidos}"
+                                   required>
+                            <template x-if="errores.apellidos">
+                                <label class="label">
+                                    <span class="label-text-alt text-error" x-text="errores.apellidos"></span>
+                                </label>
+                            </template>
+                        </div>
+                        
+                        <!-- Cédula -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-semibold">Cédula de Identidad *</span>
+                            </label>
+                            <input type="text" 
+                                   x-model="form.cedula"
+                                   @input="validarCampo('cedula')"
+                                   placeholder="1234567"
+                                   pattern="[0-9]{6,8}"
+                                   maxlength="8"
+                                   class="input input-bordered font-mono"
+                                   :class="{'input-error': errores.cedula}"
+                                   required>
+                            <template x-if="errores.cedula">
+                                <label class="label">
+                                    <span class="label-text-alt text-error" x-text="errores.cedula"></span>
+                                </label>
+                            </template>
+                        </div>
+                        
+                        <!-- Fecha de Nacimiento -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-semibold">Fecha de Nacimiento *</span>
+                            </label>
+                            <input type="date" 
+                                   x-model="form.fecha_nacimiento"
+                                   @change="validarCampo('fecha_nacimiento')"
+                                   :max="fechaMaxima"
+                                   class="input input-bordered"
+                                   :class="{'input-error': errores.fecha_nacimiento}"
+                                   required>
+                            <template x-if="errores.fecha_nacimiento">
+                                <label class="label">
+                                    <span class="label-text-alt text-error" x-text="errores.fecha_nacimiento"></span>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Paso 2: Información de Contacto -->
+                <div x-show="paso === 2" x-transition>
+                    <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+                        <i class="fas fa-address-card text-secondary"></i>
+                        Información de Contacto
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 gap-4">
+                        <!-- Email -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-semibold">Email *</span>
+                            </label>
+                            <div class="relative">
+                                <input type="email" 
+                                       x-model="form.email"
+                                       @input="validarCampo('email')"
+                                       @blur="verificarEmailDisponible()"
+                                       placeholder="correo@ejemplo.com"
+                                       class="input input-bordered w-full"
+                                       :class="{'input-error': errores.email, 'input-success': emailDisponible}"
+                                       required>
+                                <template x-if="verificandoEmail">
+                                    <span class="loading loading-spinner loading-sm absolute right-4 top-4"></span>
+                                </template>
+                                <template x-if="emailDisponible && !verificandoEmail">
+                                    <i class="fas fa-check-circle text-success absolute right-4 top-4"></i>
+                                </template>
+                            </div>
+                            <template x-if="errores.email">
+                                <label class="label">
+                                    <span class="label-text-alt text-error" x-text="errores.email"></span>
+                                </label>
+                            </template>
+                        </div>
+                        
+                        <!-- Teléfono -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-semibold">Teléfono *</span>
+                            </label>
+                            <input type="tel" 
+                                   x-model="form.telefono"
+                                   @input="validarCampo('telefono')"
+                                   placeholder="0981234567"
+                                   pattern="[0-9]{10}"
+                                   maxlength="10"
+                                   class="input input-bordered font-mono"
+                                   :class="{'input-error': errores.telefono}"
+                                   required>
+                            <template x-if="errores.telefono">
+                                <label class="label">
+                                    <span class="label-text-alt text-error" x-text="errores.telefono"></span>
+                                </label>
+                            </template>
+                        </div>
+                        
+                        <!-- Dirección -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-semibold">Dirección</span>
+                            </label>
+                            <textarea x-model="form.direccion"
+                                      rows="2"
+                                      placeholder="Dirección completa"
+                                      class="textarea textarea-bordered"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Paso 3: Seguridad -->
+                <div x-show="paso === 3" x-transition>
+                    <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+                        <i class="fas fa-lock text-secondary"></i>
+                        Seguridad de la Cuenta
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 gap-4">
+                        <!-- Username -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-semibold">Nombre de Usuario *</span>
+                            </label>
+                            <div class="relative">
+                                <input type="text" 
+                                       x-model="form.username"
+                                       @input="validarCampo('username')"
+                                       @blur="verificarUsernameDisponible()"
+                                       placeholder="usuario123"
+                                       minlength="4"
+                                       maxlength="30"
+                                       pattern="[a-zA-Z0-9_]+"
+                                       class="input input-bordered w-full font-mono"
+                                       :class="{'input-error': errores.username, 'input-success': usernameDisponible}"
+                                       required>
+                                <template x-if="verificandoUsername">
+                                    <span class="loading loading-spinner loading-sm absolute right-4 top-4"></span>
+                                </template>
+                                <template x-if="usernameDisponible && !verificandoUsername">
+                                    <i class="fas fa-check-circle text-success absolute right-4 top-4"></i>
+                                </template>
+                            </div>
+                            <label class="label">
+                                <span class="label-text-alt">Solo letras, números y guión bajo (_)</span>
+                            </label>
+                            <template x-if="errores.username">
+                                <label class="label">
+                                    <span class="label-text-alt text-error" x-text="errores.username"></span>
+                                </label>
+                            </template>
+                        </div>
+                        
+                        <!-- Password -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-semibold">Contraseña *</span>
+                            </label>
+                            <div class="relative">
+                                <input :type="mostrarPassword ? 'text' : 'password'" 
+                                       x-model="form.password"
+                                       @input="validarFortalezaPassword()"
+                                       placeholder="••••••••"
+                                       minlength="8"
+                                       class="input input-bordered w-full"
+                                       :class="{'input-error': errores.password}"
+                                       required>
+                                <button type="button"
+                                        @click="mostrarPassword = !mostrarPassword"
+                                        class="btn btn-ghost btn-sm absolute right-1 top-1">
+                                    <i class="fas" :class="mostrarPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Indicador de Fortaleza -->
+                            <template x-if="form.password">
+                                <div class="mt-2">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <progress class="progress w-full" 
+                                                  :class="{
+                                                      'progress-error': fortaleza.porcentaje <= 40,
+                                                      'progress-warning': fortaleza.porcentaje > 40 && fortaleza.porcentaje <= 80,
+                                                      'progress-success': fortaleza.porcentaje > 80
+                                                  }"
+                                                  :value="fortaleza.porcentaje" 
+                                                  max="100"></progress>
+                                        <span class="text-sm font-semibold"
+                                              :class="{
+                                                  'text-error': fortaleza.porcentaje <= 40,
+                                                  'text-warning': fortaleza.porcentaje > 40 && fortaleza.porcentaje <= 80,
+                                                  'text-success': fortaleza.porcentaje > 80
+                                              }"
+                                              x-text="fortaleza.nivel"></span>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-2 gap-2 text-xs">
+                                        <div class="flex items-center gap-1"
+                                             :class="requisitos.longitud ? 'text-success' : 'text-gray-400'">
+                                            <i class="fas fa-check-circle"></i>
+                                            <span>Mínimo 8 caracteres</span>
+                                        </div>
+                                        <div class="flex items-center gap-1"
+                                             :class="requisitos.mayuscula ? 'text-success' : 'text-gray-400'">
+                                            <i class="fas fa-check-circle"></i>
+                                            <span>Una mayúscula</span>
+                                        </div>
+                                        <div class="flex items-center gap-1"
+                                             :class="requisitos.minuscula ? 'text-success' : 'text-gray-400'">
+                                            <i class="fas fa-check-circle"></i>
+                                            <span>Una minúscula</span>
+                                        </div>
+                                        <div class="flex items-center gap-1"
+                                             :class="requisitos.numero ? 'text-success' : 'text-gray-400'">
+                                            <i class="fas fa-check-circle"></i>
+                                            <span>Un número</span>
+                                        </div>
+                                        <div class="flex items-center gap-1"
+                                             :class="requisitos.especial ? 'text-success' : 'text-gray-400'">
+                                            <i class="fas fa-check-circle"></i>
+                                            <span>Un carácter especial</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        
+                        <!-- Confirmar Password -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-semibold">Confirmar Contraseña *</span>
+                            </label>
+                            <div class="relative">
+                                <input :type="mostrarPassword2 ? 'text' : 'password'" 
+                                       x-model="form.password_confirmar"
+                                       @input="validarCampo('password_confirmar')"
+                                       placeholder="••••••••"
+                                       class="input input-bordered w-full"
+                                       :class="{'input-error': errores.password_confirmar, 'input-success': passwordsCoinciden}"
+                                       required>
+                                <button type="button"
+                                        @click="mostrarPassword2 = !mostrarPassword2"
+                                        class="btn btn-ghost btn-sm absolute right-1 top-1">
+                                    <i class="fas" :class="mostrarPassword2 ? 'fa-eye-slash' : 'fa-eye'"></i>
+                                </button>
+                            </div>
+                            <template x-if="form.password && form.password_confirmar">
+                                <label class="label">
+                                    <span class="label-text-alt"
+                                          :class="passwordsCoinciden ? 'text-success' : 'text-error'">
+                                        <i class="fas" :class="passwordsCoinciden ? 'fa-check-circle' : 'fa-times-circle'"></i>
+                                        <span x-text="passwordsCoinciden ? 'Las contraseñas coinciden' : 'Las contraseñas no coinciden'"></span>
+                                    </span>
+                                </label>
+                            </template>
+                        </div>
+                        
+                        <!-- Términos y Condiciones -->
+                        <div class="form-control">
+                            <label class="label cursor-pointer justify-start gap-3">
+                                <input type="checkbox" 
+                                       x-model="form.aceptar_terminos"
+                                       class="checkbox checkbox-secondary"
+                                       required>
+                                <span class="label-text">
+                                    Acepto los 
+                                    <a href="#" class="link link-secondary font-semibold">términos y condiciones</a>
+                                    y la 
+                                    <a href="#" class="link link-secondary font-semibold">política de privacidad</a>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Botones de Navegación -->
+                <div class="flex justify-between mt-8 gap-4">
+                    <template x-if="paso > 1">
+                        <button type="button" 
+                                @click="paso--"
+                                class="btn btn-ghost gap-2">
+                            <i class="fas fa-arrow-left"></i>
+                            Anterior
+                        </button>
+                    </template>
+                    <template x-if="paso === 1">
+                        <div></div>
+                    </template>
+                    
+                    <template x-if="paso < 3">
+                        <button type="button" 
+                                @click="siguientePaso()"
+                                :disabled="!pasoValido()"
+                                class="btn btn-secondary text-white gap-2">
+                            Siguiente
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </template>
+                    
+                    <template x-if="paso === 3">
+                        <button type="submit" 
+                                :disabled="!formularioValido() || registrando"
+                                class="btn btn-secondary text-white gap-2">
+                            <template x-if="!registrando">
+                                <i class="fas fa-user-plus"></i>
+                            </template>
+                            <template x-if="registrando">
+                                <span class="loading loading-spinner loading-sm"></span>
+                            </template>
+                            <span x-text="registrando ? 'Registrando...' : 'Crear Cuenta'"></span>
+                        </button>
+                    </template>
+                </div>
+            </form>
+            
+            <!-- Link a Login -->
+            <div class="text-center mt-6 pt-6 border-t">
+                <p class="text-gray-600">
+                    ¿Ya tienes una cuenta? 
+                    <a href="{% url 'login' %}" class="link link-secondary font-semibold">Inicia sesión aquí</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function registroForm() {
+    return {
+        paso: 1,
+        form: {
+            nombres: '',
+            apellidos: '',
+            cedula: '',
+            fecha_nacimiento: '',
+            email: '',
+            telefono: '',
+            direccion: '',
+            username: '',
+            password: '',
+            password_confirmar: '',
+            aceptar_terminos: false
+        },
+        errores: {},
+        mensaje: {
+            texto: '',
+            tipo: ''
+        },
+        mostrarPassword: false,
+        mostrarPassword2: false,
+        emailDisponible: false,
+        usernameDisponible: false,
+        verificandoEmail: false,
+        verificandoUsername: false,
+        registrando: false,
+        requisitos: {
+            longitud: false,
+            mayuscula: false,
+            minuscula: false,
+            numero: false,
+            especial: false
+        },
+        fortaleza: {
+            nivel: '',
+            porcentaje: 0
+        },
+        
+        get fechaMaxima() {
+            const hoy = new Date();
+            hoy.setFullYear(hoy.getFullYear() - 18);
+            return hoy.toISOString().split('T')[0];
+        },
+        
+        get passwordsCoinciden() {
+            return this.form.password && this.form.password_confirmar && 
+                   this.form.password === this.form.password_confirmar;
+        },
+        
+        validarCampo(campo) {
+            delete this.errores[campo];
+            
+            switch(campo) {
+                case 'nombres':
+                case 'apellidos':
+                    if (this.form[campo].length < 2) {
+                        this.errores[campo] = 'Debe tener al menos 2 caracteres';
+                    }
+                    break;
+                    
+                case 'cedula':
+                    if (!/^[0-9]{6,8}$/.test(this.form.cedula)) {
+                        this.errores.cedula = 'Cédula debe tener 6-8 dígitos';
+                    }
+                    break;
+                    
+                case 'fecha_nacimiento':
+                    const fecha = new Date(this.form.fecha_nacimiento);
+                    const hoy = new Date();
+                    const edad = hoy.getFullYear() - fecha.getFullYear();
+                    if (edad < 18) {
+                        this.errores.fecha_nacimiento = 'Debe ser mayor de 18 años';
+                    }
+                    break;
+                    
+                case 'email':
+                    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailPattern.test(this.form.email)) {
+                        this.errores.email = 'Email inválido';
+                    }
+                    break;
+                    
+                case 'telefono':
+                    if (!/^[0-9]{10}$/.test(this.form.telefono)) {
+                        this.errores.telefono = 'Teléfono debe tener 10 dígitos';
+                    }
+                    break;
+                    
+                case 'username':
+                    if (this.form.username.length < 4) {
+                        this.errores.username = 'Debe tener al menos 4 caracteres';
+                    } else if (!/^[a-zA-Z0-9_]+$/.test(this.form.username)) {
+                        this.errores.username = 'Solo letras, números y guión bajo';
+                    }
+                    break;
+                    
+                case 'password_confirmar':
+                    if (!this.passwordsCoinciden) {
+                        this.errores.password_confirmar = 'Las contraseñas no coinciden';
+                    }
+                    break;
+            }
+        },
+        
+        validarFortalezaPassword() {
+            const pwd = this.form.password;
+            
+            this.requisitos = {
+                longitud: pwd.length >= 8,
+                mayuscula: /[A-Z]/.test(pwd),
+                minuscula: /[a-z]/.test(pwd),
+                numero: /[0-9]/.test(pwd),
+                especial: /[@$!%*?&]/.test(pwd)
+            };
+            
+            const cumplidos = Object.values(this.requisitos).filter(v => v).length;
+            this.fortaleza.porcentaje = cumplidos * 20;
+            
+            if (this.fortaleza.porcentaje <= 40) {
+                this.fortaleza.nivel = 'Débil';
+            } else if (this.fortaleza.porcentaje <= 80) {
+                this.fortaleza.nivel = 'Media';
+            } else {
+                this.fortaleza.nivel = 'Fuerte';
+            }
+        },
+        
+        async verificarEmailDisponible() {
+            if (this.errores.email || !this.form.email) return;
+            
+            this.verificandoEmail = true;
+            this.emailDisponible = false;
+            
+            try {
+                const response = await fetch(`/api/auth/verificar-email/?email=${encodeURIComponent(this.form.email)}`);
+                const data = await response.json();
+                
+                if (data.disponible) {
+                    this.emailDisponible = true;
+                } else {
+                    this.errores.email = 'Este email ya está registrado';
+                }
+            } catch (error) {
+                console.error('Error al verificar email:', error);
+            } finally {
+                this.verificandoEmail = false;
+            }
+        },
+        
+        async verificarUsernameDisponible() {
+            if (this.errores.username || !this.form.username) return;
+            
+            this.verificandoUsername = true;
+            this.usernameDisponible = false;
+            
+            try {
+                const response = await fetch(`/api/auth/verificar-username/?username=${encodeURIComponent(this.form.username)}`);
+                const data = await response.json();
+                
+                if (data.disponible) {
+                    this.usernameDisponible = true;
+                } else {
+                    this.errores.username = 'Este nombre de usuario ya está en uso';
+                }
+            } catch (error) {
+                console.error('Error al verificar username:', error);
+            } finally {
+                this.verificandoUsername = false;
+            }
+        },
+        
+        pasoValido() {
+            switch(this.paso) {
+                case 1:
+                    return this.form.nombres && this.form.apellidos && 
+                           this.form.cedula && this.form.fecha_nacimiento &&
+                           !this.errores.nombres && !this.errores.apellidos &&
+                           !this.errores.cedula && !this.errores.fecha_nacimiento;
+                           
+                case 2:
+                    return this.form.email && this.form.telefono &&
+                           !this.errores.email && !this.errores.telefono &&
+                           this.emailDisponible;
+                           
+                case 3:
+                    return this.form.username && this.form.password &&
+                           this.form.password_confirmar && this.form.aceptar_terminos &&
+                           !this.errores.username && !this.errores.password &&
+                           this.passwordsCoinciden && this.usernameDisponible &&
+                           this.fortaleza.porcentaje > 40;
+            }
+            return false;
+        },
+        
+        siguientePaso() {
+            if (this.pasoValido()) {
+                this.paso++;
+            }
+        },
+        
+        formularioValido() {
+            return this.pasoValido() && Object.keys(this.errores).length === 0;
+        },
+        
+        async registrar() {
+            if (!this.formularioValido()) {
+                this.mensaje = {
+                    texto: 'Por favor complete todos los campos correctamente',
+                    tipo: 'warning'
+                };
+                return;
+            }
+            
+            this.registrando = true;
+            this.mensaje = { texto: '', tipo: '' };
+            
+            try {
+                const response = await fetch('/api/auth/registro/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(this.form)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.mensaje = {
+                        texto: '¡Registro exitoso! Revisa tu email para verificar tu cuenta.',
+                        tipo: 'success'
+                    };
+                    
+                    setTimeout(() => {
+                        window.location.href = '/auth/login/';
+                    }, 2000);
+                } else {
+                    this.mensaje = {
+                        texto: data.message || 'Error al registrar usuario',
+                        tipo: 'error'
+                    };
+                }
+            } catch (error) {
+                console.error('Error al registrar:', error);
+                this.mensaje = {
+                    texto: 'Error de conexión. Intente nuevamente.',
+                    tipo: 'error'
+                };
+            } finally {
+                this.registrando = false;
+            }
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    }
+}
+</script>
+{% endblock %}

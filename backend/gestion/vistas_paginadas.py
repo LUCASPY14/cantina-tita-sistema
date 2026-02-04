@@ -165,7 +165,7 @@ def ventas_lista(request):
     """
     Vista paginada de ventas con filtros
     """
-    from gestion.models import Ventas
+    from pos.models import Venta as Ventas
     from django.utils import timezone
     from datetime import timedelta
     from django.db.models import Sum

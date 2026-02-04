@@ -1,0 +1,436 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Movimientos de Stock - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="movimientosStock()" x-init="init()" class="space-y-6">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-history mr-3 text-secondary"></i>
+                Movimientos de Stock
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Historial completo de entradas y salidas
+            </p>
+        </div>
+        
+        <button @click="exportarExcel()" class="btn btn-success">
+            <i class="fas fa-file-excel mr-2"></i>
+            Exportar
+        </button>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        
+        <!-- Total Movimientos -->
+        <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-list text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Total Movimientos</p>
+                    <p class="text-3xl font-bold" x-text="stats.total_movimientos"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Entradas -->
+        <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-arrow-down text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Entradas</p>
+                    <p class="text-3xl font-bold" x-text="stats.total_entradas"></p>
+                    <p class="text-xs opacity-80">Unidades agregadas</p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Salidas -->
+        <div class="stat-card bg-gradient-to-br from-error to-red-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-arrow-up text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Salidas</p>
+                    <p class="text-3xl font-bold" x-text="stats.total_salidas"></p>
+                    <p class="text-xs opacity-80">Unidades retiradas</p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Ajustes -->
+        <div class="stat-card bg-gradient-to-br from-info to-blue-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-sliders-h text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Ajustes</p>
+                    <p class="text-3xl font-bold" x-text="stats.total_ajustes"></p>
+                    <p class="text-xs opacity-80">Manuales</p>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            
+            <!-- Producto -->
+            <div class="md:col-span-2">
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-box mr-2"></i>Producto
+                    </span>
+                </label>
+                <select x-model="filtros.producto" 
+                        @change="buscarMovimientos()"
+                        class="select select-bordered w-full">
+                    <option value="">Todos los productos</option>
+                    <template x-for="prod in productos" :key="prod.id">
+                        <option :value="prod.id" x-text="prod.nombre"></option>
+                    </template>
+                </select>
+            </div>
+            
+            <!-- Tipo -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-filter mr-2"></i>Tipo
+                    </span>
+                </label>
+                <select x-model="filtros.tipo" 
+                        @change="buscarMovimientos()"
+                        class="select select-bordered w-full">
+                    <option value="">Todos</option>
+                    <option value="entrada">Entradas</option>
+                    <option value="salida">Salidas</option>
+                    <option value="ajuste">Ajustes</option>
+                </select>
+            </div>
+            
+            <!-- Fecha Desde -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-calendar mr-2"></i>Desde
+                    </span>
+                </label>
+                <input type="date" 
+                       x-model="filtros.fecha_desde"
+                       @change="buscarMovimientos()"
+                       class="input input-bordered w-full">
+            </div>
+            
+            <!-- Fecha Hasta -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-calendar mr-2"></i>Hasta
+                    </span>
+                </label>
+                <input type="date" 
+                       x-model="filtros.fecha_hasta"
+                       @change="buscarMovimientos()"
+                       class="input input-bordered w-full">
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tabla de Movimientos -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        
+        <!-- Loading -->
+        <template x-if="cargando">
+            <div class="overflow-x-auto">
+                <table class="table w-full">
+                    <thead>
+                        <tr>
+                            <th>Fecha/Hora</th>
+                            <th>Producto</th>
+                            <th>Tipo</th>
+                            <th>Cantidad</th>
+                            <th>Stock Anterior</th>
+                            <th>Stock Nuevo</th>
+                            <th>Usuario</th>
+                            <th>Motivo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="i in 10" :key="i">
+                            <tr>
+                                <td><div class="skeleton h-4 w-32"></div></td>
+                                <td><div class="skeleton h-4 w-40"></div></td>
+                                <td><div class="skeleton h-4 w-20"></div></td>
+                                <td><div class="skeleton h-4 w-16"></div></td>
+                                <td><div class="skeleton h-4 w-16"></div></td>
+                                <td><div class="skeleton h-4 w-16"></div></td>
+                                <td><div class="skeleton h-4 w-24"></div></td>
+                                <td><div class="skeleton h-4 w-48"></div></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </template>
+        
+        <!-- Tabla con Datos -->
+        <template x-if="!cargando && movimientos.length > 0">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full" id="tabla-movimientos">
+                    <thead>
+                        <tr>
+                            <th>Fecha/Hora</th>
+                            <th>Producto</th>
+                            <th class="text-center">Tipo</th>
+                            <th class="text-center">Cantidad</th>
+                            <th class="text-center">Stock Anterior</th>
+                            <th class="text-center">Stock Nuevo</th>
+                            <th>Usuario</th>
+                            <th>Motivo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="mov in movimientos" :key="mov.id">
+                            <tr class="hover">
+                                <td class="font-mono text-sm" x-text="mov.fecha_hora"></td>
+                                <td>
+                                    <p class="font-semibold" x-text="mov.producto_nombre"></p>
+                                    <p class="text-xs text-gray-500" x-text="mov.producto_codigo"></p>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge badge-sm capitalize"
+                                          :class="{
+                                              'badge-success': mov.tipo === 'entrada',
+                                              'badge-error': mov.tipo === 'salida',
+                                              'badge-info': mov.tipo === 'ajuste'
+                                          }">
+                                        <i class="fas mr-1"
+                                           :class="{
+                                               'fa-arrow-down': mov.tipo === 'entrada',
+                                               'fa-arrow-up': mov.tipo === 'salida',
+                                               'fa-sliders-h': mov.tipo === 'ajuste'
+                                           }"></i>
+                                        <span x-text="mov.tipo"></span>
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="font-bold text-lg"
+                                          :class="{
+                                              'text-success': mov.tipo === 'entrada',
+                                              'text-error': mov.tipo === 'salida',
+                                              'text-info': mov.tipo === 'ajuste'
+                                          }">
+                                        <span x-text="(mov.tipo === 'salida' ? '-' : '+') + mov.cantidad"></span>
+                                    </span>
+                                </td>
+                                <td class="text-center text-gray-500" x-text="mov.stock_anterior"></td>
+                                <td class="text-center">
+                                    <span class="font-bold" x-text="mov.stock_nuevo"></span>
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <div class="avatar placeholder">
+                                            <div class="w-8 h-8 rounded-full bg-secondary text-white text-xs">
+                                                <span x-text="mov.usuario_nombre?.charAt(0)"></span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-semibold" x-text="mov.usuario_nombre"></p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <p class="text-sm" x-text="mov.motivo"></p>
+                                    <template x-if="mov.referencia">
+                                        <p class="text-xs text-gray-500">Ref: <span x-text="mov.referencia"></span></p>
+                                    </template>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </template>
+        
+        <!-- Empty State -->
+        <template x-if="!cargando && movimientos.length === 0">
+            <div class="text-center py-16">
+                <i class="fas fa-inbox text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
+                <p class="text-xl text-gray-500 dark:text-gray-400 mb-2">No se encontraron movimientos</p>
+                <p class="text-gray-400 dark:text-gray-500">Intenta ajustar los filtros de búsqueda</p>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Paginación -->
+    <template x-if="!cargando && totalPaginas > 1">
+        <div class="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                Mostrando 
+                <span class="font-semibold" x-text="(paginaActual - 1) * itemsPorPagina + 1"></span>
+                -
+                <span class="font-semibold" x-text="Math.min(paginaActual * itemsPorPagina, totalMovimientos)"></span>
+                de
+                <span class="font-semibold" x-text="totalMovimientos"></span>
+                movimientos
+            </div>
+            
+            <div class="btn-group">
+                <button @click="cambiarPagina(paginaActual - 1)" 
+                        :disabled="paginaActual === 1"
+                        class="btn btn-sm">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                
+                <template x-for="pagina in paginasVisibles()" :key="pagina">
+                    <button @click="cambiarPagina(pagina)" 
+                            class="btn btn-sm"
+                            :class="{'btn-active': pagina === paginaActual}"
+                            x-text="pagina"></button>
+                </template>
+                
+                <button @click="cambiarPagina(paginaActual + 1)" 
+                        :disabled="paginaActual === totalPaginas"
+                        class="btn btn-sm">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function movimientosStock() {
+    return {
+        cargando: true,
+        movimientos: [],
+        productos: [],
+        filtros: {
+            producto: '{{ request.GET.producto|default:"" }}',
+            tipo: '',
+            fecha_desde: '',
+            fecha_hasta: ''
+        },
+        stats: {
+            total_movimientos: 0,
+            total_entradas: 0,
+            total_salidas: 0,
+            total_ajustes: 0
+        },
+        paginaActual: 1,
+        totalPaginas: 1,
+        totalMovimientos: 0,
+        itemsPorPagina: 20,
+        
+        async init() {
+            // Establecer fechas por defecto (últimos 30 días)
+            const hoy = new Date();
+            const hace30Dias = new Date();
+            hace30Dias.setDate(hace30Dias.getDate() - 30);
+            
+            this.filtros.fecha_desde = this.formatearFecha(hace30Dias);
+            this.filtros.fecha_hasta = this.formatearFecha(hoy);
+            
+            await this.cargarProductos();
+            await this.buscarMovimientos();
+        },
+        
+        async cargarProductos() {
+            try {
+                const response = await fetch('/api/productos/?solo_activos=true&per_page=1000');
+                const data = await response.json();
+                if (data.success) {
+                    this.productos = data.productos || [];
+                }
+            } catch (error) {
+                console.error('Error al cargar productos:', error);
+            }
+        },
+        
+        async buscarMovimientos() {
+            this.cargando = true;
+            
+            try {
+                const params = new URLSearchParams({
+                    producto: this.filtros.producto,
+                    tipo: this.filtros.tipo,
+                    fecha_desde: this.filtros.fecha_desde,
+                    fecha_hasta: this.filtros.fecha_hasta,
+                    page: this.paginaActual,
+                    per_page: this.itemsPorPagina
+                });
+                
+                const response = await fetch(`/api/stock/movimientos/?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.movimientos = data.movimientos || [];
+                    this.stats = data.stats || this.stats;
+                    this.totalMovimientos = data.total || 0;
+                    this.totalPaginas = Math.ceil(this.totalMovimientos / this.itemsPorPagina);
+                }
+            } catch (error) {
+                console.error('Error al cargar movimientos:', error);
+                gestionHelpers.notify('Error al cargar movimientos', 'error');
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        cambiarPagina(pagina) {
+            if (pagina >= 1 && pagina <= this.totalPaginas) {
+                this.paginaActual = pagina;
+                this.buscarMovimientos();
+            }
+        },
+        
+        paginasVisibles() {
+            const paginas = [];
+            const rango = 2;
+            const inicio = Math.max(1, this.paginaActual - rango);
+            const fin = Math.min(this.totalPaginas, this.paginaActual + rango);
+            
+            for (let i = inicio; i <= fin; i++) {
+                paginas.push(i);
+            }
+            return paginas;
+        },
+        
+        exportarExcel() {
+            gestionHelpers.exportTableToCSV('tabla-movimientos', `movimientos_stock_${this.filtros.fecha_desde}_${this.filtros.fecha_hasta}.csv`);
+        },
+        
+        formatearFecha(fecha) {
+            return fecha.toISOString().split('T')[0];
+        }
+    }
+}
+</script>
+{% endblock %}

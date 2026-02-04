@@ -11,7 +11,7 @@ class CustomLoginView(auth_views.LoginView):
     """
     Vista personalizada de login con redirección al POS
     """
-    template_name = 'registration/login.html'
+    template_name = 'auth/login.html'
     redirect_authenticated_user = True
     
     def get_success_url(self):

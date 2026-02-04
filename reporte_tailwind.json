@@ -1,0 +1,1248 @@
+{
+  "total_templates": 182,
+  "templates_problematicos": 172,
+  "porcentaje_completo": 5.4945054945054945,
+  "problemas_detallados": {
+    "frontend\\templates\\base\\base.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mt-3, mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\base\\base_improved.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-0",
+        "🌐 CDN Bootstrap/legacy detectado"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\base\\base_modern.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-6, mb-4, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\base\\base_portal.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mt-3"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\base\\gestion_base.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-6, mt-2"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\base\\pos_base_pos.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: pt-2, mt-3, mt-2"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\dashboard\\stock_detalle.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\dashboard\\unificado.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-8, mt-6, mb-4, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\emails\\recordatorio_deuda_amable.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\emails\\recordatorio_deuda_critico.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\emails\\recordatorio_deuda_urgente.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\emails\\tarjeta_bloqueada.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\base_portal.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mt-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\cambiar_password.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mt-1, mb-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\cargar_saldo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mt-1, mb-1, mb-6, mt-6, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\configurar_2fa.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mt-1, mb-1, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\consumos_hijo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\dashboard.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, pt-2, mt-4, mb-1, mt-6, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\estado_recarga.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, pb-2, mb-1, mt-1, mb-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\login.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mt-1, mb-1, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\mis_hijos.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, pt-3, mt-4, mb-1, mb-6, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\notificaciones_saldo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-8, mb-4, mb-2, mt-4, mb-6, mb-0"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\pagos.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mt-1, mb-1, mt-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\pago_cancelado.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mt-1, mb-1, pt-6, mt-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\pago_exitoso.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-8, mt-2, mb-4, mt-1, mb-1, pt-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\perfil.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-1, mb-8, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\portal\\recargar_tarjeta.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, pt-2, mt-4, mt-1, mb-1, mb-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\recargas.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\recuperar_password.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mt-2, mb-4, mb-8, mt-1, mb-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\registro.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-1, mb-1, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\reset_password.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-2, mt-1, mb-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\portal\\restablecer_password.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-1, mb-4, mt-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\portal\\restricciones_hijo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-8, mb-2, mt-4, mt-1, mb-1, mb-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\portal\\terminos_saldo_negativo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-2, mt-4, mt-1, mb-6, mt-6, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\portal\\verificar_2fa.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mt-1, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\shared\\components\\footer.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mt-5, mb-0"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\shared\\components\\messages.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mt-3, mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\shared\\components\\pagination.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-2, mt-4, mb-0",
+        "🌐 CDN Bootstrap/legacy detectado"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\shared\\components\\productos_grid.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-2, mt-2"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\shared\\components\\tarjeta_info.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mt-2, mb-4, mb-2, mt-1, mb-1, mt-3, mb-3"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\shared\\emails\\cuenta_pendiente.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\shared\\emails\\recordatorio_deuda_amable.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\shared\\emails\\recordatorio_deuda_critico.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\shared\\emails\\recordatorio_deuda_urgente.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\shared\\emails\\saldo_bajo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\shared\\emails\\tarjeta_bloqueada.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\shared\\modals\\autorizar_saldo_negativo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: d-none",
+        "🔵 Bootstrap classes: mb-4, mb-2, mt-1, mb-1, mb-3",
+        "🌐 CDN Bootstrap/legacy detectado"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 4
+    },
+    "frontend\\templates\\portal\\widgets\\notificaciones_saldo_widget.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mb-1, mb-6, mt-8, mb-0"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\pages\\dashboard\\dashboard.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mt-4, mb-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\pages\\dashboard\\stock_detalle.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\pages\\dashboard\\unificado.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-8, mt-6, mb-4, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\pages\\dashboard\\ventas_detalle.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\auth\\intentos_login.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mt-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\auth\\login.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8",
+        "🌐 CDN Bootstrap/legacy detectado"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\auth\\logs_auditoria.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mt-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\almuerzos_dashboard.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mt-2, mb-8, mt-4, mb-1, mt-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\gestion\\categorias_lista.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-8, mt-8, mt-2"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\categoria_form.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\facturacion_dashboard.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-2, mt-4, mt-1, mb-1, mt-0, mb-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\facturacion_listado.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-2, mb-2, mt-1, mb-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\facturacion_mensual_almuerzos.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mt-2, mb-8, mt-4, mb-1, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\lista_cargas_pendientes.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-8, mb-0"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\gestion\\lista_pagos_pendientes.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-8, mb-0"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\gestion\\menu_diario.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-2, mt-4, mb-1, mb-6, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\planes_almuerzo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-1, mt-4, mb-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\gestion\\registro_consumo_almuerzo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mt-1, mb-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\suscripciones_almuerzo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mb-1, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\validar_carga.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-8, mb-6, mt-8, mb-0"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\gestion\\validar_pago.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-8, mb-6, mt-8, mb-0"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\gestion\\validar_pagos.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mt-4, mt-1, mb-1, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\ventas_lista.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-2, mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\configurar_2fa.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mt-1, mb-1, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\consumos_hijo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\mis_hijos.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, pt-3, mt-4, mb-1, mb-6, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\registro.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-1, mb-1, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\restricciones_hijo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-8, mb-2, mt-4, mt-1, mb-1, mb-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\portal\\verificar_2fa.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mt-1, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\alertas_sistema.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\alertas_tarjetas_saldo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\base_pos.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: pt-2, mt-6, mt-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\cc_detalle.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mt-8, mb-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\cc_estado_cuenta.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: text-right",
+        "🔵 Bootstrap classes: mb-8, mt-2, mt-4, mt-1, mb-1, mb-6, pt-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\pos\\comisiones_dashboard.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mt-2, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\compras_dashboard.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mt-2, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\conciliacion_pagos.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\configurar_tarifas.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-2, mt-4, mt-1, mb-1, mb-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\pos\\crear_cliente.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-1, mb-4, mt-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\pos\\cuenta_corriente.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-8, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\cuenta_corriente_unificada.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-2, mt-4, mt-1, mb-1, pt-4, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\dashboard.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-8, mb-4, mt-4, mt-1, mt-8, pb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\dashboard_saldos_tiempo_real.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mb-2, mt-4, mb-6, mb-0"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\deuda_proveedores.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\gestionar_clientes.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mt-4, mb-8, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\gestionar_fotos.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mb-1, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\gestionar_grados.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mt-4, mb-8, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\historial.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\pos\\historial_grados.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mt-4, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\historial_recargas.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\pos\\logs_autorizaciones.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-8, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\nueva_compra.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-1, mt-4, mb-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\pos\\pos_bootstrap.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mt-2, mb-0",
+        "🌐 CDN Bootstrap/legacy detectado"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\pos\\proveedores.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\proveedor_detalle.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\recargas.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-8, mb-2, mt-4, mb-6, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\pos\\recepcion_mercaderia.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\reporte_comisiones.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\venta.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-2, pt-2, pt-3, mt-4, mb-6, mt-6, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\venta_modern.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mt-4, mb-8, mb-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\admin\\admin_autorizaciones.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\pos\\admin\\configurar_limites_masivo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-8, mb-6, mt-6, mb-0"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\pos\\almuerzo\\almuerzo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-2, mt-4, mt-1, mb-1, mt-6, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\pos\\almuerzo\\almuerzo_cuentas_mensuales.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\almuerzo\\almuerzo_generar_cuentas.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mt-4, mb-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\almuerzo\\almuerzo_pagar.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-1, mb-8, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\pos\\almuerzo\\almuerzo_reportes.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\almuerzo\\almuerzo_reporte_diario.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\almuerzo\\almuerzo_reporte_estudiante.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mt-1, mb-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\almuerzo\\almuerzo_reporte_mensual.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\almuerzo\\configurar_precio.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mt-1, mb-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\cajas\\apertura_caja.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-2, mt-1, mb-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\cajas\\arqueo_caja.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\cajas\\cajas_dashboard.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mt-2, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\cajas\\cierre_caja.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\inventario\\ajuste_inventario.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-1, mb-1, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\inventario\\alertas_inventario.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\inventario\\inventario_productos.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-8, mb-4, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\inventario\\kardex_producto.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\reportes\\autorizaciones_saldo_negativo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mb-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\reportes\\reportes.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\reportes\\reporte_comisiones.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\ventas\\ajuste_inventario.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-1, mb-1, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\ventas\\alertas_inventario.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\ventas\\comisiones_dashboard.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mt-2, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\ventas\\compras_dashboard.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mt-2, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\ventas\\dashboard.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-8, mb-4, mt-4, mt-1, mt-8, pb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\ventas\\dashboard_saldos_tiempo_real.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mb-2, mt-4, mb-6, mb-0"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\ventas\\dashboard_ventas.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-8, mb-2, mt-0, mb-1, mb-6, mt-6, mb-0"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\pos\\ventas\\dashboard_ventas_mejorado.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-8, mb-2, mb-6, mt-6, mb-0"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\pos\\ventas\\inventario_dashboard.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\ventas\\inventario_productos.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-8, mb-4, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\pos\\ventas\\venta.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-2, pt-2, pt-3, mt-4, mb-6, mt-6, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\auth\\cambiar_password.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mt-1, mb-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\auth\\login.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mt-1, mb-1, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\auth\\recuperar_password.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mt-2, mb-4, mb-8, mt-1, mb-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\auth\\reset_password.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-2, mt-1, mb-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\auth\\restablecer_password.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-1, mb-4, mt-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\portal\\dashboard\\dashboard.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, pt-2, mt-4, mb-1, mt-6, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\payments\\cargar_saldo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mt-1, mb-1, mb-6, mt-6, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\payments\\estado_recarga.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, pb-2, mb-1, mt-1, mb-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\payments\\notificaciones_saldo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-8, mb-4, mb-2, mt-4, mb-6, mb-0"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\payments\\notificaciones_saldo_widget.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-4, mb-8, mb-2, mb-6, mt-6, mb-0"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\portal\\payments\\pagos.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mt-1, mb-1, mt-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\payments\\pago_cancelado.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mt-1, mb-1, pt-6, mt-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\payments\\pago_exitoso.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-8, mt-2, mb-4, mt-1, mb-1, pt-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\payments\\recargar_tarjeta.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, pt-2, mt-4, mt-1, mb-1, mb-6"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\payments\\recargas.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\portal\\payments\\terminos_saldo_negativo.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mt-6, mt-4, mb-4, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\portal\\profile\\perfil.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: row",
+        "🔵 Bootstrap classes: mb-1, mb-8, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 2
+    },
+    "frontend\\templates\\apps\\gestion\\admin\\dashboard.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\clientes\\clientes_lista.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-2, mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\clientes\\clientes_list_paginado.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-8, mb-0"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\clientes\\crear_cliente.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\empleados\\cambiar_contrasena_empleado.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\empleados\\gestionar_empleados.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\empleados\\perfil_empleado.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mb-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\productos\\productos_importar.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-4, mt-1, mb-1, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\productos\\productos_importar_preview.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-4, mt-1"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\productos\\productos_lista.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mb-2, mb-4"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\productos\\productos_list_paginado.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-8, mb-0"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\productos\\producto_form.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-1, mb-1, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\reportes\\facturacion_reporte_cumplimiento.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-4, mb-8, mt-2, mt-4, mt-1, mb-1, mb-6, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    },
+    "frontend\\templates\\apps\\gestion\\reportes\\reportes_almuerzos.html": {
+      "problemas": [
+        "🔵 Bootstrap classes: mb-1, mt-4, mb-8, mt-8"
+      ],
+      "usa_tailwind": true,
+      "total_problemas": 1
+    }
+  }
+}

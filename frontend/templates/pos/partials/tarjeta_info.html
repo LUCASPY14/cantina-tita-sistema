@@ -1,0 +1,190 @@
+{% load static %}
+
+{# Partial HTMX para mostrar información de tarjeta #}
+{# Se actualiza vía HTMX al escanear/buscar una tarjeta #}
+
+{% if tarjeta %}
+    <!-- Tarjeta encontrada -->
+    <div class="bg-gradient-to-br from-secondary via-primary to-warning p-6 rounded-xl shadow-xl text-white relative overflow-hidden"
+         x-data="{ mostrarDetalles: false }">
+        
+        <!-- Patrón decorativo -->
+        <div class="absolute inset-0 opacity-10">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
+            <div class="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>
+        </div>
+        
+        <!-- Contenido principal -->
+        <div class="relative z-10">
+            <!-- Header con foto y nombre -->
+            <div class="flex items-center gap-4 mb-4">
+                {% if tarjeta.estudiante.foto %}
+                    <img src="{{ tarjeta.estudiante.foto.url }}" 
+                         alt="{{ tarjeta.titular }}"
+                         class="w-16 h-16 rounded-full border-4 border-white shadow-lg object-cover">
+                {% else %}
+                    <div class="w-16 h-16 rounded-full bg-white bg-opacity-20 flex items-center justify-center border-4 border-white shadow-lg">
+                        <i class="fas fa-user text-2xl"></i>
+                    </div>
+                {% endif %}
+                
+                <div class="flex-1">
+                    <h3 class="font-bold text-xl">{{ tarjeta.titular }}</h3>
+                    <p class="text-sm opacity-90">
+                        <i class="fas fa-id-card mr-1"></i>
+                        Tarjeta N° {{ tarjeta.numero }}
+                    </p>
+                </div>
+                
+                <!-- Badge de estado -->
+                <div class="badge" 
+                     class:list={[
+                         tarjeta.activa ? 'badge-success' : 'badge-error'
+                     ]}>
+                    {{ tarjeta.activa|yesno:"Activa,Bloqueada" }}
+                </div>
+            </div>
+            
+            <!-- Saldo actual (grande y destacado) -->
+            <div class="bg-white bg-opacity-20 rounded-lg p-4 mb-4 backdrop-blur-sm">
+                <p class="text-sm opacity-80 mb-1">Saldo Disponible</p>
+                <p class="text-3xl font-bold">
+                    {{ tarjeta.saldo|floatformat:0 }} Gs.
+                </p>
+            </div>
+            
+            <!-- Botón toggle detalles -->
+            <button @click="mostrarDetalles = !mostrarDetalles"
+                    class="btn btn-sm btn-ghost text-white hover:bg-white hover:bg-opacity-20 w-full">
+                <span x-text="mostrarDetalles ? 'Ocultar detalles' : 'Ver más detalles'"></span>
+                <i class="fas fa-chevron-down ml-2 transition-transform duration-200"
+                   :class="{ 'rotate-180': mostrarDetalles }"></i>
+            </button>
+            
+            <!-- Detalles expandibles -->
+            <div x-show="mostrarDetalles" 
+                 x-collapse
+                 class="mt-4 space-y-2 text-sm">
+                
+                {% if tarjeta.estudiante.grado %}
+                <div class="flex justify-between">
+                    <span class="opacity-80">Grado:</span>
+                    <span class="font-semibold">{{ tarjeta.estudiante.grado }}</span>
+                </div>
+                {% endif %}
+                
+                {% if tarjeta.estudiante.seccion %}
+                <div class="flex justify-between">
+                    <span class="opacity-80">Sección:</span>
+                    <span class="font-semibold">{{ tarjeta.estudiante.seccion }}</span>
+                </div>
+                {% endif %}
+                
+                <div class="flex justify-between">
+                    <span class="opacity-80">Tipo:</span>
+                    <span class="font-semibold">{{ tarjeta.tipo_tarjeta }}</span>
+                </div>
+                
+                {% if tarjeta.fecha_expiracion %}
+                <div class="flex justify-between">
+                    <span class="opacity-80">Vence:</span>
+                    <span class="font-semibold">{{ tarjeta.fecha_expiracion|date:"d/m/Y" }}</span>
+                </div>
+                {% endif %}
+                
+                <div class="divider my-2 opacity-30"></div>
+                
+                <!-- Últimas transacciones -->
+                {% if tarjeta.ultimas_transacciones %}
+                <div>
+                    <p class="opacity-80 mb-2">Últimas transacciones:</p>
+                    <div class="space-y-1 max-h-32 overflow-y-auto">
+                        {% for tx in tarjeta.ultimas_transacciones %}
+                        <div class="flex justify-between text-xs bg-white bg-opacity-10 rounded p-2">
+                            <span>{{ tx.descripcion }}</span>
+                            <span class="font-semibold">{{ tx.monto|floatformat:0 }} Gs.</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Indicador de saldo bajo -->
+        {% if tarjeta.saldo < 5000 %}
+        <div class="absolute top-2 right-2 z-20">
+            <div class="tooltip tooltip-warning" data-tip="Saldo bajo">
+                <i class="fas fa-exclamation-triangle text-warning text-xl animate-pulse"></i>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Acciones rápidas -->
+    <div class="mt-4 flex gap-2">
+        <button class="btn btn-sm btn-secondary flex-1"
+                hx-get="{% url 'pos:historial_tarjeta' tarjeta.id %}"
+                hx-target="#modal-content"
+                hx-swap="innerHTML">
+            <i class="fas fa-history mr-1"></i>
+            Historial
+        </button>
+        
+        <button class="btn btn-sm btn-warning flex-1"
+                hx-get="{% url 'pos:recargar_tarjeta_form' tarjeta.id %}"
+                hx-target="#modal-content"
+                hx-swap="innerHTML">
+            <i class="fas fa-plus-circle mr-1"></i>
+            Recargar
+        </button>
+    </div>
+
+{% elif error %}
+    <!-- Error al buscar tarjeta -->
+    <div class="alert alert-error shadow-lg">
+        <i class="fas fa-exclamation-circle text-2xl"></i>
+        <div class="flex-1">
+            <h3 class="font-bold">{{ error.titulo|default:"Tarjeta no encontrada" }}</h3>
+            <p class="text-sm">{{ error.mensaje|default:"No se encontró ninguna tarjeta con ese número. Verifica e intenta de nuevo." }}</p>
+        </div>
+    </div>
+    
+    <!-- Opciones -->
+    <div class="mt-4 flex gap-2">
+        <button class="btn btn-sm btn-ghost flex-1"
+                @click="$refs.buscarTarjetaInput.value = ''; $refs.buscarTarjetaInput.focus()">
+            <i class="fas fa-redo mr-1"></i>
+            Intentar de nuevo
+        </button>
+        
+        <button class="btn btn-sm btn-primary flex-1"
+                hx-get="{% url 'pos:nuevo_cliente_form' %}"
+                hx-target="#modal-content"
+                hx-swap="innerHTML">
+            <i class="fas fa-user-plus mr-1"></i>
+            Nuevo Cliente
+        </button>
+    </div>
+
+{% else %}
+    <!-- Estado inicial (sin tarjeta buscada) -->
+    <div class="text-center py-12 px-4">
+        <div class="inline-flex flex-col items-center">
+            <i class="fas fa-credit-card text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
+            <p class="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                Escanea o busca una tarjeta
+            </p>
+            <p class="text-sm text-gray-400 max-w-sm">
+                Ingresa el número de tarjeta en el campo de búsqueda o escanea el código de barras
+            </p>
+            
+            <!-- Botón para cliente genérico -->
+            <button class="btn btn-outline btn-primary mt-6"
+                    @click="seleccionarClienteGenerico()">
+                <i class="fas fa-shopping-bag mr-2"></i>
+                Cliente Genérico (Efectivo)
+            </button>
+        </div>
+    </div>
+{% endif %}

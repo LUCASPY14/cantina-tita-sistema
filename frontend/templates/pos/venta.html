@@ -1,0 +1,606 @@
+{% extends "base_pos.html" %}
+{% load static %}
+
+{% block title %}Venta - POS{% endblock %}
+
+{% block content %}
+<div x-data="ventaPOS()" 
+     @pos:cliente-generico.window="seleccionarClienteGenerico()"
+     @pos:nuevo-cliente.window="abrirModalCliente()"
+     @pos:ver-carrito.window="scrollToCarrito()"
+     @pos:procesar-venta.window="procesarVenta()"
+     @pos:cancelar.window="confirmarCancelar()"
+     class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- COLUMNA IZQUIERDA: Productos y Búsqueda -->
+    <div class="lg:col-span-2 space-y-6">
+        
+        <!-- Barra de búsqueda de productos -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <div class="flex items-center gap-4 mb-4">
+                <div class="flex-1">
+                    <label for="product-search" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-search mr-2"></i>Buscar Producto
+                        <span class="text-xs text-gray-500 ml-2">(F2)</span>
+                    </label>
+                    <div x-data="searchWithDebounce(buscarProductos)" class="relative">
+                        <input 
+                            type="text" 
+                            id="product-search"
+                            x-model="search"
+                            @input="handleSearch"
+                            placeholder="Nombre, código de barra o categoría..."
+                            class="input-pos w-full pl-12"
+                            autocomplete="off"
+                            aria-label="Buscar producto por nombre, código de barras o categoría"
+                            aria-describedby="search-hint">
+                        <span id="search-hint" class="sr-only">Use F2 para enfocar este campo</span>
+                        <i class="fas fa-barcode absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl"></i>
+                        
+                        <!-- Loading indicator -->
+                        <div x-show="loading" 
+                             class="absolute right-4 top-1/2 transform -translate-y-1/2"
+                             role="status"
+                             aria-live="polite">
+                            <div class="spinner"></div>
+                            <span class="sr-only">Buscando productos...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Filtro por categoría -->
+                <div class="w-64">
+                    <label for="category-filter" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-filter mr-2"></i>Categoría
+                    </label>
+                    <select id="category-filter"
+                            x-model="categoriaSeleccionada" 
+                            @change="filtrarPorCategoria()"
+                            class="select select-bordered w-full"
+                            aria-label="Filtrar productos por categoría">
+                        <option value="">Todas</option>
+                        <template x-for="cat in categorias" :key="cat.id">
+                            <option :value="cat.id" x-text="cat.nombre"></option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Grid de Productos -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4 flex items-center justify-between">
+                <span>
+                    <i class="fas fa-box mr-2 text-primary"></i>Productos Disponibles
+                </span>
+                <span class="text-sm text-gray-500" x-text="`${productosFiltrados.length} productos`"></span>
+            </h2>
+            
+            <!-- Loading skeleton -->
+            <div x-show="cargandoProductos" class="product-grid">
+                <template x-for="i in 8" :key="i">
+                    <div class="skeleton h-40"></div>
+                </template>
+            </div>
+            
+            <!-- Grid de productos -->
+            <div x-show="!cargandoProductos" class="product-grid">
+                <template x-for="producto in productosFiltrados" :key="producto.id">
+                    <div class="product-card"
+                         :class="{ 'selected': productoEnCarrito(producto.id) }"
+                         @click="agregarProducto(producto)">
+                        
+                        <!-- Imagen del producto -->
+                        <div class="h-20 flex items-center justify-center mb-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                            <i class="fas fa-utensils text-4xl text-gray-400" x-show="!producto.imagen"></i>
+                            <img :src="producto.imagen" 
+                                 :alt="producto.descripcion"
+                                 class="h-full object-contain"
+                                 x-show="producto.imagen">
+                        </div>
+                        
+                        <!-- Info del producto -->
+                        <div class="flex-1">
+                            <h3 class="font-bold text-sm mb-1 line-clamp-2" x-text="producto.descripcion"></h3>
+                            <p class="text-xs text-gray-500 mb-2">
+                                <template x-if="producto.categoria">
+                                    <span x-text="producto.categoria.nombre"></span>
+                                </template>
+                            </p>
+                            <div class="flex items-center justify-between">
+                                <span class="text-lg font-bold text-primary" 
+                                      x-text="formatearPrecio(producto.precio_venta)"></span>
+                                <span class="badge badge-sm" 
+                                      :class="producto.stock > 10 ? 'badge-success' : 'badge-warning'"
+                                      x-text="`Stock: ${producto.stock}`"></span>
+                            </div>
+                        </div>
+                        
+                        <!-- Badge de cantidad en carrito -->
+                        <template x-if="productoEnCarrito(producto.id)">
+                            <div class="qty-badge" x-text="getCantidadEnCarrito(producto.id)"></div>
+                        </template>
+                    </div>
+                </template>
+                
+                <!-- Mensaje de sin resultados -->
+                <template x-if="productosFiltrados.length === 0 && !cargandoProductos">
+                    <div class="col-span-full text-center py-12 text-gray-500">
+                        <i class="fas fa-box-open text-6xl mb-4 opacity-50"></i>
+                        <p class="text-lg">No se encontraron productos</p>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+    
+    <!-- COLUMNA DERECHA: Carrito y Detalles -->
+    <div class="lg:col-span-1 space-y-6">
+        
+        <!-- Cliente/Tarjeta -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-bold mb-4">
+                <i class="fas fa-user mr-2 text-primary"></i>Cliente
+            </h3>
+            
+            <div x-show="!clienteSeleccionado" class="space-y-3">
+                <!-- Buscar tarjeta -->
+                <input 
+                    type="text"
+                    x-model="numeroTarjeta"
+                    @input.debounce.500ms="buscarTarjeta()"
+                    placeholder="Número de tarjeta..."
+                    class="input input-bordered w-full"
+                    maxlength="10"
+                    aria-label="Ingresar número de tarjeta del cliente"
+                    :aria-invalid="errorTarjeta ? 'true' : 'false'">
+                
+                <div class="flex gap-2">
+                    <button @click="seleccionarClienteGenerico()" 
+                            class="btn btn-outline flex-1"
+                            aria-label="Seleccionar cliente genérico para venta rápida">
+                        <i class="fas fa-user-tag mr-2"></i>Cliente Genérico
+                    </button>
+                    <button @click="abrirModalCliente()" 
+                            class="btn btn-outline btn-primary"
+                            aria-label="Crear nuevo cliente">
+                        <i class="fas fa-user-plus"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Info del cliente/tarjeta seleccionada -->
+            <div x-show="clienteSeleccionado" class="space-y-3">
+                <div class="bg-gradient-to-r from-primary to-secondary text-white rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm opacity-90">Tarjeta Nº</span>
+                        <button @click="limpiarCliente()" 
+                                class="btn btn-ghost btn-xs text-white">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <p class="text-2xl font-bold mb-1" x-text="clienteSeleccionado?.nro_tarjeta"></p>
+                    <p class="text-sm" x-text="clienteSeleccionado?.titular"></p>
+                    <div class="mt-3 pt-3 border-t border-white border-opacity-30">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm opacity-90">Saldo Disponible</span>
+                            <span class="text-xl font-bold" x-text="formatearPrecio(clienteSeleccionado?.saldo || 0)"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Carrito -->
+        <div class="cart-summary" id="cart-section">
+            <h3 class="text-xl font-bold mb-4 flex items-center justify-between">
+                <span>
+                    <i class="fas fa-shopping-cart mr-2 text-primary"></i>Carrito
+                </span>
+                <span class="badge badge-lg badge-primary" x-text="carrito.length"></span>
+            </h3>
+            
+            <!-- Items del carrito -->
+            <div class="space-y-2 mb-4 max-h-60 overflow-y-auto">
+                <template x-for="(item, index) in carrito" :key="index">
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                        <div class="flex items-start justify-between mb-2">
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-sm" x-text="item.producto.descripcion"></h4>
+                                <p class="text-xs text-gray-500" x-text="formatearPrecio(item.producto.precio_venta)"></p>
+                            </div>
+                            <button @click="eliminarDelCarrito(index)" 
+                                    class="btn btn-ghost btn-xs btn-circle text-error">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Control de cantidad -->
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <button @click="item.cantidad > 1 ? item.cantidad-- : eliminarDelCarrito(index)" 
+                                        class="btn btn-sm btn-circle btn-ghost">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <input type="number" 
+                                       x-model.number="item.cantidad"
+                                       @change="validarCantidad(item)"
+                                       min="1"
+                                       :max="item.producto.stock"
+                                       class="input input-sm input-bordered w-16 text-center">
+                                <button @click="item.cantidad < item.producto.stock && item.cantidad++" 
+                                        class="btn btn-sm btn-circle btn-ghost">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <span class="font-bold text-primary" 
+                                  x-text="formatearPrecio(item.producto.precio_venta * item.cantidad)"></span>
+                        </div>
+                    </div>
+                </template>
+                
+                <!-- Carrito vacío -->
+                <template x-if="carrito.length === 0">
+                    <div class="text-center py-8 text-gray-400">
+                        <i class="fas fa-shopping-cart text-4xl mb-2"></i>
+                        <p class="text-sm">Carrito vacío</p>
+                    </div>
+                </template>
+            </div>
+            
+            <!-- Totales -->
+            <div class="border-t-2 border-gray-200 dark:border-gray-600 pt-4 space-y-2">
+                <div class="flex justify-between text-sm">
+                    <span>Subtotal:</span>
+                    <span x-text="formatearPrecio(calcularSubtotal())"></span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span>IVA (10%):</span>
+                    <span x-text="formatearPrecio(calcularIVA())"></span>
+                </div>
+                <div class="flex justify-between text-xl font-bold text-primary">
+                    <span>Total:</span>
+                    <span x-text="formatearPrecio(calcularTotal())"></span>
+                </div>
+            </div>
+            
+            <!-- Botones de acción -->
+            <div class="mt-6 space-y-2">
+                <button 
+                    @click="procesarVenta()"
+                    :disabled="!puedeProcessarVenta() || procesando"
+                    class="btn-pos-success w-full relative overflow-hidden"
+                    :class="{ 'opacity-50 cursor-not-allowed': !puedeProcessarVenta() || procesando }"
+                    aria-label="Procesar venta y cobrar al cliente"
+                    :aria-disabled="!puedeProcessarVenta() || procesando ? 'true' : 'false'">
+                    
+                    <span :class="{ 'invisible': procesando }">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        Procesar Venta
+                        <span class="ml-2 keyboard-hint">Ctrl+Enter</span>
+                    </span>
+                    
+                    <div x-show="procesando" class="absolute inset-0 flex items-center justify-center bg-success">
+                        <div class="spinner"></div>
+                        <span class="ml-2">Procesando...</span>
+                    </div>
+                </button>
+                
+                <button @click="confirmarCancelar()" 
+                        :disabled="carrito.length === 0"
+                        class="btn btn-outline btn-error w-full"
+                        aria-label="Cancelar venta actual">
+                    <i class="fas fa-times-circle mr-2"></i>
+                    Cancelar Venta
+                    <span class="ml-2 keyboard-hint">Esc</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación -->
+<div x-show="mostrarModal" 
+     x-cloak
+     class="modal modal-open"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="modal-title">
+    <div class="modal-box">
+        <h3 id="modal-title" class="font-bold text-lg mb-4" x-text="modalTitulo"></h3>
+        <p class="py-4" x-text="modalMensaje"></p>
+        <div class="modal-action">
+            <button @click="cerrarModal()" class="btn btn-ghost" aria-label="Cancelar acción">Cancelar</button>
+            <button @click="confirmarAccion()" class="btn btn-primary" aria-label="Confirmar acción">Confirmar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function ventaPOS() {
+    return {
+        // Estado
+        productos: [],
+        productosFiltrados: [],
+        categorias: [],
+        carrito: [],
+        clienteSeleccionado: null,
+        numeroTarjeta: '',
+        categoriaSeleccionada: '',
+        cargandoProductos: true,
+        procesando: false,
+        buscandoTarjeta: false,
+        errorTarjeta: false,
+        mostrarModal: false,
+        modalTitulo: '',
+        modalMensaje: '',
+        accionConfirmada: null,
+        
+        // Inicialización
+        async init() {
+            await this.cargarCategorias();
+            await this.cargarProductos();
+            this.cargandoProductos = false;
+        },
+        
+        // Cargar datos
+        async cargarProductos() {
+            try {
+                const response = await fetch('/api/productos/activos/');
+                const data = await response.json();
+                this.productos = data.productos || [];
+                this.productosFiltrados = this.productos;
+            } catch (error) {
+                console.error('Error al cargar productos:', error);
+                posHelpers.notify('Error al cargar productos', 'error');
+            }
+        },
+        
+        async cargarCategorias() {
+            try {
+                const response = await fetch('/api/categorias/');
+                const data = await response.json();
+                this.categorias = data.categorias || [];
+            } catch (error) {
+                console.error('Error al cargar categorías:', error);
+            }
+        },
+        
+        // Búsqueda y filtros
+        buscarProductos(termino) {
+            if (!termino) {
+                this.productosFiltrados = this.filtrarPorCategoria(this.productos);
+                return;
+            }
+            
+            const busqueda = termino.toLowerCase();
+            let resultados = this.productos.filter(p => 
+                p.descripcion.toLowerCase().includes(busqueda) ||
+                (p.codigo_barra && p.codigo_barra.includes(busqueda)) ||
+                (p.categoria && p.categoria.nombre.toLowerCase().includes(busqueda))
+            );
+            
+            this.productosFiltrados = this.filtrarPorCategoria(resultados);
+        },
+        
+        filtrarPorCategoria(productos = null) {
+            const lista = productos || this.productos;
+            if (!this.categoriaSeleccionada) return lista;
+            
+            this.productosFiltrados = lista.filter(p => 
+                p.id_categoria == this.categoriaSeleccionada
+            );
+        },
+        
+        // Carrito
+        agregarProducto(producto) {
+            if (producto.stock <= 0) {
+                posHelpers.notify('Producto sin stock', 'warning');
+                return;
+            }
+            
+            const index = this.carrito.findIndex(item => item.producto.id === producto.id);
+            
+            if (index >= 0) {
+                if (this.carrito[index].cantidad < producto.stock) {
+                    this.carrito[index].cantidad++;
+                    posHelpers.playSound('beep');
+                } else {
+                    posHelpers.notify('Stock insuficiente', 'warning');
+                }
+            } else {
+                this.carrito.push({
+                    producto: producto,
+                    cantidad: 1
+                });
+                posHelpers.playSound('beep');
+            }
+        },
+        
+        eliminarDelCarrito(index) {
+            this.carrito.splice(index, 1);
+        },
+        
+        validarCantidad(item) {
+            if (item.cantidad > item.producto.stock) {
+                item.cantidad = item.producto.stock;
+                posHelpers.notify('Cantidad ajustada al stock disponible', 'warning');
+            }
+            if (item.cantidad < 1) {
+                item.cantidad = 1;
+            }
+        },
+        
+        productoEnCarrito(productoId) {
+            return this.carrito.some(item => item.producto.id === productoId);
+        },
+        
+        getCantidadEnCarrito(productoId) {
+            const item = this.carrito.find(item => item.producto.id === productoId);
+            return item ? item.cantidad : 0;
+        },
+        
+        // Cliente/Tarjeta
+        async buscarTarjeta() {
+            if (!this.numeroTarjeta || this.numeroTarjeta.length < 3) return;
+            
+            this.buscandoTarjeta = true;
+            this.errorTarjeta = false;
+            
+            try {
+                const response = await fetch(`/api/tarjetas/${this.numeroTarjeta}/`);
+                const data = await response.json();
+                
+                if (data.tarjeta) {
+                    this.clienteSeleccionado = data.tarjeta;
+                    posHelpers.playSound('success');
+                } else {
+                    this.errorTarjeta = true;
+                    posHelpers.notify('Tarjeta no encontrada', 'warning');
+                }
+            } catch (error) {
+                console.error('Error al buscar tarjeta:', error);
+                this.errorTarjeta = true;
+                posHelpers.notify('Error al buscar tarjeta', 'error');
+            } finally {
+                this.buscandoTarjeta = false;
+            }
+        },
+        
+        seleccionarClienteGenerico() {
+            this.clienteSeleccionado = {
+                nro_tarjeta: 'GENERICO',
+                titular: 'Cliente Genérico',
+                saldo: 0,
+                tipo: 'generico'
+            };
+            posHelpers.notify('Cliente genérico seleccionado', 'info');
+        },
+        
+        limpiarCliente() {
+            this.clienteSeleccionado = null;
+            this.numeroTarjeta = '';
+        },
+        
+        abrirModalCliente() {
+            // TODO: Implementar modal de creación de cliente
+            posHelpers.notify('Funcionalidad en desarrollo', 'info');
+        },
+        
+        // Cálculos
+        calcularSubtotal() {
+            return this.carrito.reduce((total, item) => 
+                total + (item.producto.precio_venta * item.cantidad), 0
+            );
+        },
+        
+        calcularIVA() {
+            return this.calcularSubtotal() * 0.10;
+        },
+        
+        calcularTotal() {
+            return this.calcularSubtotal() + this.calcularIVA();
+        },
+        
+        // Validaciones
+        puedeProcessarVenta() {
+            return this.carrito.length > 0 && this.clienteSeleccionado;
+        },
+        
+        // Procesar venta
+        async procesarVenta() {
+            if (!this.puedeProcessarVenta() || this.procesando) return;
+            
+            const total = this.calcularTotal();
+            
+            // Validar saldo si es tarjeta
+            if (this.clienteSeleccionado.tipo !== 'generico' && 
+                this.clienteSeleccionado.saldo < total) {
+                posHelpers.notify('Saldo insuficiente en la tarjeta', 'error');
+                return;
+            }
+            
+            this.procesando = true;
+            
+            try {
+                const ventaData = {
+                    cliente: this.clienteSeleccionado,
+                    items: this.carrito.map(item => ({
+                        producto_id: item.producto.id,
+                        cantidad: item.cantidad,
+                        precio_unitario: item.producto.precio_venta
+                    })),
+                    total: total,
+                    metodo_pago: this.clienteSeleccionado.tipo === 'generico' ? 'efectivo' : 'tarjeta'
+                };
+                
+                const response = await fetch('/api/ventas/procesar/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify(ventaData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    posHelpers.playSound('success');
+                    posHelpers.notify('Venta procesada exitosamente', 'success');
+                    
+                    // Limpiar
+                    this.carrito = [];
+                    this.limpiarCliente();
+                    
+                    // Preguntar si quiere imprimir ticket
+                    if (confirm('¿Desea imprimir el ticket?')) {
+                        window.open(`/pos/ticket/${data.venta_id}/`, '_blank');
+                    }
+                } else {
+                    posHelpers.notify(data.error || 'Error al procesar venta', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                posHelpers.notify('Error al procesar venta', 'error');
+            } finally {
+                this.procesando = false;
+            }
+        },
+        
+        confirmarCancelar() {
+            if (this.carrito.length === 0) return;
+            
+            if (confirm('¿Está seguro de cancelar la venta?')) {
+                this.carrito = [];
+                this.limpiarCliente();
+                posHelpers.notify('Venta cancelada', 'info');
+            }
+        },
+        
+        // Helpers
+        formatearPrecio(monto) {
+            return posHelpers.formatPrice(monto);
+        },
+        
+        scrollToCarrito() {
+            document.getElementById('cart-section')?.scrollIntoView({ behavior: 'smooth' });
+        },
+        
+        // Modal
+        cerrarModal() {
+            this.mostrarModal = false;
+        },
+        
+        confirmarAccion() {
+            if (this.accionConfirmada) {
+                this.accionConfirmada();
+            }
+            this.cerrarModal();
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,469 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Reporte de Clientes - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="reporteClientes()" x-init="init()" class="space-y-6">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-users mr-3 text-secondary"></i>
+                Reporte de Clientes
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Análisis de consumo y patrones de compra por cliente
+            </p>
+        </div>
+        
+        <div class="flex gap-2">
+            <button @click="exportarExcel()" class="btn btn-success">
+                <i class="fas fa-file-excel mr-2"></i>
+                Exportar Excel
+            </button>
+            <button @click="exportarPDF()" class="btn btn-error">
+                <i class="fas fa-file-pdf mr-2"></i>
+                Exportar PDF
+            </button>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            
+            <!-- Fecha Desde -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-calendar mr-2"></i>Desde
+                    </span>
+                </label>
+                <input type="date" 
+                       x-model="filtros.fecha_desde"
+                       @change="cargarDatos()"
+                       class="input input-bordered w-full">
+            </div>
+            
+            <!-- Fecha Hasta -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-calendar mr-2"></i>Hasta
+                    </span>
+                </label>
+                <input type="date" 
+                       x-model="filtros.fecha_hasta"
+                       @change="cargarDatos()"
+                       class="input input-bordered w-full">
+            </div>
+            
+            <!-- Grado -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-graduation-cap mr-2"></i>Grado
+                    </span>
+                </label>
+                <select x-model="filtros.grado" 
+                        @change="cargarDatos()"
+                        class="select select-bordered w-full">
+                    <option value="">Todos</option>
+                    <template x-for="grado in grados" :key="grado">
+                        <option :value="grado" x-text="grado"></option>
+                    </template>
+                </select>
+            </div>
+            
+            <!-- Ordenar por -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-sort mr-2"></i>Ordenar por
+                    </span>
+                </label>
+                <select x-model="filtros.ordenar" 
+                        @change="cargarDatos()"
+                        class="select select-bordered w-full">
+                    <option value="consumo">Consumo Total</option>
+                    <option value="compras">Cantidad Compras</option>
+                    <option value="promedio">Gasto Promedio</option>
+                    <option value="ultima_compra">Última Compra</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Cards de Resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        
+        <!-- Total Clientes Activos -->
+        <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-users text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Clientes Activos</p>
+                    <p class="text-3xl font-bold" x-text="resumen.clientes_activos"></p>
+                    <p class="text-sm opacity-80" x-text="'de ' + resumen.clientes_totales + ' totales'"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Consumo Total -->
+        <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-shopping-cart text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Consumo Total</p>
+                    <p class="text-3xl font-bold" x-text="formatearPrecio(resumen.consumo_total)"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Gasto Promedio -->
+        <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-chart-bar text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Gasto Promedio</p>
+                    <p class="text-3xl font-bold" x-text="formatearPrecio(resumen.gasto_promedio)"></p>
+                    <p class="text-sm opacity-80">por cliente</p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Total Compras -->
+        <div class="stat-card bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-receipt text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Total Compras</p>
+                    <p class="text-3xl font-bold" x-text="resumen.total_compras"></p>
+                    <p class="text-sm opacity-80" x-text="(resumen.total_compras / resumen.clientes_activos).toFixed(1) + ' promedio'"></p>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Gráficos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Top 10 Clientes por Consumo -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-trophy mr-2 text-warning"></i>
+                Top 10 Clientes por Consumo
+            </h2>
+            
+            <template x-if="cargando">
+                <div class="skeleton h-64 w-full"></div>
+            </template>
+            
+            <template x-if="!cargando">
+                <div class="space-y-3">
+                    <template x-for="(cliente, index) in topConsumo" :key="cliente.id">
+                        <div>
+                            <div class="flex items-center justify-between text-sm mb-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-lg w-6" 
+                                          :class="{
+                                              'text-yellow-500': index === 0,
+                                              'text-gray-400': index === 1,
+                                              'text-orange-600': index === 2
+                                          }"
+                                          x-text="index + 1"></span>
+                                    <div>
+                                        <p class="font-semibold" x-text="cliente.nombre"></p>
+                                        <p class="text-xs text-gray-500" x-text="cliente.grado + ' - ' + cliente.seccion"></p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-bold text-primary" x-text="formatearPrecio(cliente.consumo)"></p>
+                                    <p class="text-xs text-gray-500" x-text="cliente.compras + ' compras'"></p>
+                                </div>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                                <div class="bg-gradient-to-r from-primary to-secondary h-full transition-all duration-500"
+                                     :style="`width: ${(cliente.consumo / topConsumo[0].consumo * 100)}%`"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Consumo por Grado -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-graduation-cap mr-2 text-secondary"></i>
+                Consumo por Grado
+            </h2>
+            
+            <template x-if="cargando">
+                <div class="skeleton h-64 w-full"></div>
+            </template>
+            
+            <template x-if="!cargando">
+                <div class="space-y-3">
+                    <template x-for="grado in consumoPorGrado" :key="grado.grado">
+                        <div>
+                            <div class="flex items-center justify-between text-sm mb-1">
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-users text-secondary"></i>
+                                    <span class="font-semibold" x-text="grado.grado"></span>
+                                    <span class="text-xs text-gray-500">(<span x-text="grado.cantidad"></span> estudiantes)</span>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-bold text-secondary" x-text="formatearPrecio(grado.total)"></p>
+                                    <p class="text-xs text-gray-500" x-text="grado.porcentaje + '%'"></p>
+                                </div>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                                <div class="bg-gradient-to-r from-secondary to-teal-600 h-full transition-all duration-500"
+                                     :style="`width: ${grado.porcentaje}%`"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Patrones de Consumo -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold mb-4">
+            <i class="fas fa-chart-pie mr-2 text-primary"></i>
+            Patrones de Consumo
+        </h2>
+        
+        <template x-if="cargando">
+            <div class="skeleton h-32 w-full"></div>
+        </template>
+        
+        <template x-if="!cargando">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <p class="text-sm text-gray-500 mb-1">Consumo Diario Promedio</p>
+                    <p class="text-2xl font-bold text-primary" x-text="formatearPrecio(patrones.consumo_diario)"></p>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <p class="text-sm text-gray-500 mb-1">Frecuencia de Compra</p>
+                    <p class="text-2xl font-bold text-secondary" x-text="patrones.frecuencia_promedio.toFixed(1) + ' días'"></p>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <p class="text-sm text-gray-500 mb-1">Ticket Promedio</p>
+                    <p class="text-2xl font-bold text-success" x-text="formatearPrecio(patrones.ticket_promedio)"></p>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <p class="text-sm text-gray-500 mb-1">Horario Pico</p>
+                    <p class="text-2xl font-bold text-warning" x-text="patrones.horario_pico"></p>
+                </div>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Tabla Detallada de Clientes -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="p-6 border-b dark:border-gray-700">
+            <h2 class="text-xl font-bold">
+                <i class="fas fa-table mr-2 text-secondary"></i>
+                Detalle por Cliente
+            </h2>
+        </div>
+        
+        <template x-if="cargando">
+            <div class="p-6">
+                <div class="skeleton h-64 w-full"></div>
+            </div>
+        </template>
+        
+        <template x-if="!cargando">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full" id="tabla-clientes">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Cliente</th>
+                            <th>Grado</th>
+                            <th class="text-right">Compras</th>
+                            <th class="text-right">Consumo Total</th>
+                            <th class="text-right">Gasto Promedio</th>
+                            <th class="text-right">Última Compra</th>
+                            <th class="text-right">Saldo Actual</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="(cliente, index) in clientes" :key="cliente.id">
+                            <tr class="hover">
+                                <td>
+                                    <span class="font-bold" 
+                                          :class="{
+                                              'text-yellow-500': index === 0,
+                                              'text-gray-400': index === 1,
+                                              'text-orange-600': index === 2
+                                          }"
+                                          x-text="index + 1"></span>
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <div class="avatar">
+                                            <div class="w-10 h-10 rounded-full">
+                                                <template x-if="cliente.foto">
+                                                    <img :src="cliente.foto" :alt="cliente.nombre">
+                                                </template>
+                                                <template x-if="!cliente.foto">
+                                                    <div class="bg-gradient-to-br from-secondary to-teal-600 flex items-center justify-center text-white font-bold">
+                                                        <span x-text="cliente.nombre.charAt(0)"></span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold" x-text="cliente.nombre"></p>
+                                            <p class="text-xs text-gray-500">CI: <span x-text="cliente.ci"></span></p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge badge-sm badge-secondary" x-text="cliente.grado + ' ' + cliente.seccion"></span>
+                                </td>
+                                <td class="text-right font-bold" x-text="cliente.cantidad_compras"></td>
+                                <td class="text-right font-bold text-primary" x-text="formatearPrecio(cliente.consumo_total)"></td>
+                                <td class="text-right" x-text="formatearPrecio(cliente.gasto_promedio)"></td>
+                                <td class="text-right text-sm" x-text="cliente.ultima_compra || 'Sin compras'"></td>
+                                <td class="text-right font-bold"
+                                    :class="{
+                                        'text-success': cliente.saldo >= 10000,
+                                        'text-warning': cliente.saldo >= 5000 && cliente.saldo < 10000,
+                                        'text-error': cliente.saldo < 5000
+                                    }"
+                                    x-text="formatearPrecio(cliente.saldo)"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                    <tfoot>
+                        <tr class="font-bold bg-gray-100 dark:bg-gray-700">
+                            <td colspan="3" class="text-right">TOTALES:</td>
+                            <td class="text-right" x-text="resumen.total_compras"></td>
+                            <td class="text-right text-primary" x-text="formatearPrecio(resumen.consumo_total)"></td>
+                            <td class="text-right" x-text="formatearPrecio(resumen.gasto_promedio)"></td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </template>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function reporteClientes() {
+    return {
+        cargando: true,
+        filtros: {
+            fecha_desde: '',
+            fecha_hasta: '',
+            grado: '',
+            ordenar: 'consumo'
+        },
+        grados: ['1°', '2°', '3°', '4°', '5°', '6°', '7°', '8°', '9°'],
+        resumen: {
+            clientes_totales: 0,
+            clientes_activos: 0,
+            consumo_total: 0,
+            gasto_promedio: 0,
+            total_compras: 0
+        },
+        clientes: [],
+        topConsumo: [],
+        consumoPorGrado: [],
+        patrones: {
+            consumo_diario: 0,
+            frecuencia_promedio: 0,
+            ticket_promedio: 0,
+            horario_pico: ''
+        },
+        
+        async init() {
+            // Establecer fechas por defecto (este mes)
+            const hoy = new Date();
+            const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            
+            this.filtros.fecha_desde = this.formatearFecha(primerDia);
+            this.filtros.fecha_hasta = this.formatearFecha(hoy);
+            
+            await this.cargarDatos();
+        },
+        
+        async cargarDatos() {
+            this.cargando = true;
+            
+            try {
+                const params = new URLSearchParams({
+                    fecha_desde: this.filtros.fecha_desde,
+                    fecha_hasta: this.filtros.fecha_hasta,
+                    grado: this.filtros.grado,
+                    ordenar: this.filtros.ordenar
+                });
+                
+                const response = await fetch(`/api/reportes/clientes/?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.resumen = data.resumen || this.resumen;
+                    this.clientes = data.clientes || [];
+                    this.topConsumo = data.top_consumo || [];
+                    this.consumoPorGrado = data.consumo_por_grado || [];
+                    this.patrones = data.patrones || this.patrones;
+                }
+            } catch (error) {
+                console.error('Error al cargar datos:', error);
+                gestionHelpers.notify('Error al cargar reporte', 'error');
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        exportarExcel() {
+            gestionHelpers.exportTableToCSV('tabla-clientes', `reporte_clientes_${this.filtros.fecha_desde}_${this.filtros.fecha_hasta}.csv`);
+        },
+        
+        exportarPDF() {
+            window.open(`/api/reportes/clientes/pdf/?fecha_desde=${this.filtros.fecha_desde}&fecha_hasta=${this.filtros.fecha_hasta}&grado=${this.filtros.grado}`, '_blank');
+        },
+        
+        formatearFecha(fecha) {
+            return fecha.toISOString().split('T')[0];
+        },
+        
+        formatearPrecio(monto) {
+            return gestionHelpers.formatPrice(monto);
+        }
+    }
+}
+</script>
+{% endblock %}

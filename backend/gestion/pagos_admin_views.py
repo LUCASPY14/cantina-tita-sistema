@@ -91,7 +91,7 @@ def validar_pagos_pendientes(request):
         'total_items': total_items,
     }
     
-    return render(request, 'gestion/validar_pagos.html', context)
+    return render(request, 'payments/validate/pagos.html', context)
 
 
 @solo_gerente_o_superior

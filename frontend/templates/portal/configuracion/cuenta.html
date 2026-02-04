@@ -1,0 +1,692 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Configuración de Cuenta - Portal Padres{% endblock %}
+
+{% block content %}
+<div x-data="configCuenta()" x-init="init()" class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-8">
+    <div class="container mx-auto px-4 max-w-4xl">
+        
+        <!-- Header -->
+        <div class="mb-8">
+            <a href="{% url 'portal:dashboard' %}" class="btn btn-ghost mb-4">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Volver al Dashboard
+            </a>
+            
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-user-cog mr-3 text-primary"></i>
+                Configuración de Cuenta
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Administra tu perfil y preferencias
+            </p>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+            
+            <!-- Tab Headers -->
+            <div class="border-b dark:border-gray-700">
+                <div class="flex overflow-x-auto">
+                    <button @click="tabActivo = 'perfil'"
+                            class="px-6 py-4 font-semibold transition-colors whitespace-nowrap"
+                            :class="tabActivo === 'perfil' 
+                                ? 'text-primary border-b-2 border-primary' 
+                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'">
+                        <i class="fas fa-user mr-2"></i>
+                        Perfil
+                    </button>
+                    <button @click="tabActivo = 'seguridad'"
+                            class="px-6 py-4 font-semibold transition-colors whitespace-nowrap"
+                            :class="tabActivo === 'seguridad' 
+                                ? 'text-primary border-b-2 border-primary' 
+                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'">
+                        <i class="fas fa-lock mr-2"></i>
+                        Seguridad
+                    </button>
+                    <button @click="tabActivo = 'hijo'"
+                            class="px-6 py-4 font-semibold transition-colors whitespace-nowrap"
+                            :class="tabActivo === 'hijo' 
+                                ? 'text-primary border-b-2 border-primary' 
+                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'">
+                        <i class="fas fa-child mr-2"></i>
+                        Datos del Hijo
+                    </button>
+                    <button @click="tabActivo = 'preferencias'"
+                            class="px-6 py-4 font-semibold transition-colors whitespace-nowrap"
+                            :class="tabActivo === 'preferencias' 
+                                ? 'text-primary border-b-2 border-primary' 
+                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'">
+                        <i class="fas fa-sliders-h mr-2"></i>
+                        Preferencias
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Tab Content -->
+            <div class="p-6">
+                
+                <!-- Tab Perfil -->
+                <div x-show="tabActivo === 'perfil'" x-transition>
+                    <form @submit.prevent="guardarPerfil()">
+                        
+                        <!-- Foto de Perfil -->
+                        <div class="flex items-center gap-6 mb-6 pb-6 border-b dark:border-gray-700">
+                            <div class="avatar">
+                                <div class="w-24 h-24 rounded-full ring ring-primary ring-offset-2">
+                                    <template x-if="previewFoto">
+                                        <img :src="previewFoto" alt="Foto de perfil">
+                                    </template>
+                                    <template x-if="!previewFoto && usuario.foto">
+                                        <img :src="usuario.foto" alt="Foto de perfil">
+                                    </template>
+                                    <template x-if="!previewFoto && !usuario.foto">
+                                        <div class="w-full h-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                                            <span class="text-3xl text-white font-bold" x-text="usuario.nombre?.charAt(0)"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="font-bold mb-2">Foto de Perfil</h3>
+                                <div class="flex gap-2">
+                                    <label class="btn btn-primary btn-sm">
+                                        <i class="fas fa-upload mr-2"></i>
+                                        Cambiar Foto
+                                        <input type="file" 
+                                               accept="image/*" 
+                                               @change="handleFotoChange($event)"
+                                               class="hidden">
+                                    </label>
+                                    <button type="button" 
+                                            @click="eliminarFoto()"
+                                            x-show="previewFoto || usuario.foto"
+                                            class="btn btn-ghost btn-sm">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2">JPG, PNG. Máximo 2MB</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Datos Personales -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Nombre Completo *</span>
+                                </label>
+                                <input type="text" 
+                                       x-model="formPerfil.nombre"
+                                       class="input input-bordered"
+                                       :class="{'input-error': errores.nombre}"
+                                       required>
+                                <template x-if="errores.nombre">
+                                    <label class="label">
+                                        <span class="label-text-alt text-error" x-text="errores.nombre"></span>
+                                    </label>
+                                </template>
+                            </div>
+                            
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Cédula</span>
+                                </label>
+                                <input type="text" 
+                                       x-model="formPerfil.cedula"
+                                       class="input input-bordered"
+                                       placeholder="12345678">
+                            </div>
+                            
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Email *</span>
+                                </label>
+                                <input type="email" 
+                                       x-model="formPerfil.email"
+                                       class="input input-bordered"
+                                       :class="{'input-error': errores.email}"
+                                       required>
+                                <template x-if="errores.email">
+                                    <label class="label">
+                                        <span class="label-text-alt text-error" x-text="errores.email"></span>
+                                    </label>
+                                </template>
+                            </div>
+                            
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Teléfono</span>
+                                </label>
+                                <input type="tel" 
+                                       x-model="formPerfil.telefono"
+                                       class="input input-bordered"
+                                       placeholder="0981-123456">
+                            </div>
+                        </div>
+                        
+                        <!-- Dirección -->
+                        <div class="form-control mb-6">
+                            <label class="label">
+                                <span class="label-text">Dirección</span>
+                            </label>
+                            <textarea x-model="formPerfil.direccion"
+                                      class="textarea textarea-bordered"
+                                      rows="2"
+                                      placeholder="Dirección completa"></textarea>
+                        </div>
+                        
+                        <!-- Botones -->
+                        <div class="flex justify-end gap-2">
+                            <button type="button" 
+                                    @click="cargarDatos()"
+                                    class="btn btn-ghost">
+                                Cancelar
+                            </button>
+                            <button type="submit" 
+                                    class="btn btn-primary"
+                                    :disabled="guardando">
+                                <i class="fas fa-save mr-2"></i>
+                                <span x-show="!guardando">Guardar Cambios</span>
+                                <span x-show="guardando" class="loading loading-spinner loading-sm"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Tab Seguridad -->
+                <div x-show="tabActivo === 'seguridad'" x-transition>
+                    <form @submit.prevent="cambiarContrasena()">
+                        
+                        <div class="alert alert-info mb-6">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Por seguridad, se requiere tu contraseña actual para hacer cambios.</span>
+                        </div>
+                        
+                        <div class="max-w-md">
+                            <div class="form-control mb-4">
+                                <label class="label">
+                                    <span class="label-text">Contraseña Actual *</span>
+                                </label>
+                                <div class="relative">
+                                    <input :type="mostrarPassword.actual ? 'text' : 'password'" 
+                                           x-model="formPassword.actual"
+                                           class="input input-bordered w-full pr-10"
+                                           :class="{'input-error': errores.password_actual}"
+                                           required>
+                                    <button type="button"
+                                            @click="mostrarPassword.actual = !mostrarPassword.actual"
+                                            class="absolute right-3 top-1/2 -translate-y-1/2">
+                                        <i class="fas" 
+                                           :class="mostrarPassword.actual ? 'fa-eye-slash' : 'fa-eye'"></i>
+                                    </button>
+                                </div>
+                                <template x-if="errores.password_actual">
+                                    <label class="label">
+                                        <span class="label-text-alt text-error" x-text="errores.password_actual"></span>
+                                    </label>
+                                </template>
+                            </div>
+                            
+                            <div class="divider">Nueva Contraseña</div>
+                            
+                            <div class="form-control mb-4">
+                                <label class="label">
+                                    <span class="label-text">Nueva Contraseña *</span>
+                                </label>
+                                <div class="relative">
+                                    <input :type="mostrarPassword.nueva ? 'text' : 'password'" 
+                                           x-model="formPassword.nueva"
+                                           class="input input-bordered w-full pr-10"
+                                           :class="{'input-error': errores.password_nueva}"
+                                           minlength="8"
+                                           required>
+                                    <button type="button"
+                                            @click="mostrarPassword.nueva = !mostrarPassword.nueva"
+                                            class="absolute right-3 top-1/2 -translate-y-1/2">
+                                        <i class="fas" 
+                                           :class="mostrarPassword.nueva ? 'fa-eye-slash' : 'fa-eye'"></i>
+                                    </button>
+                                </div>
+                                <label class="label">
+                                    <span class="label-text-alt">Mínimo 8 caracteres</span>
+                                </label>
+                                <template x-if="errores.password_nueva">
+                                    <label class="label">
+                                        <span class="label-text-alt text-error" x-text="errores.password_nueva"></span>
+                                    </label>
+                                </template>
+                            </div>
+                            
+                            <div class="form-control mb-6">
+                                <label class="label">
+                                    <span class="label-text">Confirmar Nueva Contraseña *</span>
+                                </label>
+                                <div class="relative">
+                                    <input :type="mostrarPassword.confirmar ? 'text' : 'password'" 
+                                           x-model="formPassword.confirmar"
+                                           class="input input-bordered w-full pr-10"
+                                           :class="{'input-error': errores.password_confirmar}"
+                                           required>
+                                    <button type="button"
+                                            @click="mostrarPassword.confirmar = !mostrarPassword.confirmar"
+                                            class="absolute right-3 top-1/2 -translate-y-1/2">
+                                        <i class="fas" 
+                                           :class="mostrarPassword.confirmar ? 'fa-eye-slash' : 'fa-eye'"></i>
+                                    </button>
+                                </div>
+                                <template x-if="errores.password_confirmar">
+                                    <label class="label">
+                                        <span class="label-text-alt text-error" x-text="errores.password_confirmar"></span>
+                                    </label>
+                                </template>
+                            </div>
+                            
+                            <!-- Botones -->
+                            <div class="flex justify-end gap-2">
+                                <button type="button" 
+                                        @click="limpiarFormPassword()"
+                                        class="btn btn-ghost">
+                                    Cancelar
+                                </button>
+                                <button type="submit" 
+                                        class="btn btn-primary"
+                                        :disabled="guardando">
+                                    <i class="fas fa-key mr-2"></i>
+                                    <span x-show="!guardando">Cambiar Contraseña</span>
+                                    <span x-show="guardando" class="loading loading-spinner loading-sm"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Tab Hijo -->
+                <div x-show="tabActivo === 'hijo'" x-transition>
+                    <div class="alert alert-warning mb-6">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Los datos del estudiante solo pueden modificarse en la administración del colegio.</span>
+                    </div>
+                    
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                        <div class="flex items-center gap-6 mb-6">
+                            <div class="avatar">
+                                <div class="w-20 h-20 rounded-full">
+                                    <template x-if="hijo.foto">
+                                        <img :src="hijo.foto" :alt="hijo.nombre">
+                                    </template>
+                                    <template x-if="!hijo.foto">
+                                        <div class="w-full h-full bg-gradient-to-br from-secondary to-teal-600 flex items-center justify-center">
+                                            <span class="text-2xl text-white font-bold" x-text="hijo.nombre?.charAt(0)"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold" x-text="hijo.nombre"></h3>
+                                <p class="text-gray-600 dark:text-gray-400" x-text="hijo.grado + ' - Sección ' + hijo.seccion"></p>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Cédula</p>
+                                <p class="font-semibold" x-text="hijo.cedula || 'N/A'"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Fecha de Nacimiento</p>
+                                <p class="font-semibold" x-text="hijo.fecha_nacimiento || 'N/A'"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Turno</p>
+                                <p class="font-semibold capitalize" x-text="hijo.turno"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Número de Tarjeta</p>
+                                <p class="font-mono font-semibold" x-text="hijo.numero_tarjeta"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab Preferencias -->
+                <div x-show="tabActivo === 'preferencias'" x-transition>
+                    <form @submit.prevent="guardarPreferencias()">
+                        
+                        <h3 class="font-bold text-lg mb-4">Límites de Consumo</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Límite Diario</span>
+                                </label>
+                                <input type="number" 
+                                       x-model="formPreferencias.limite_diario"
+                                       class="input input-bordered"
+                                       min="0"
+                                       step="1000"
+                                       placeholder="Ej: 20000">
+                                <label class="label">
+                                    <span class="label-text-alt">Monto máximo que puede gastar por día</span>
+                                </label>
+                            </div>
+                            
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Límite Semanal</span>
+                                </label>
+                                <input type="number" 
+                                       x-model="formPreferencias.limite_semanal"
+                                       class="input input-bordered"
+                                       min="0"
+                                       step="1000"
+                                       placeholder="Ej: 100000">
+                                <label class="label">
+                                    <span class="label-text-alt">Monto máximo que puede gastar por semana</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="divider"></div>
+                        
+                        <h3 class="font-bold text-lg mb-4">Visualización</h3>
+                        
+                        <div class="space-y-4 mb-6">
+                            <div class="form-control">
+                                <label class="cursor-pointer flex items-center gap-3">
+                                    <input type="checkbox" 
+                                           x-model="formPreferencias.mostrar_fotos_productos"
+                                           class="checkbox checkbox-primary">
+                                    <div>
+                                        <span class="font-semibold">Mostrar fotos de productos</span>
+                                        <p class="text-xs text-gray-500">En el historial y reportes</p>
+                                    </div>
+                                </label>
+                            </div>
+                            
+                            <div class="form-control">
+                                <label class="cursor-pointer flex items-center gap-3">
+                                    <input type="checkbox" 
+                                           x-model="formPreferencias.modo_compacto"
+                                           class="checkbox checkbox-primary">
+                                    <div>
+                                        <span class="font-semibold">Modo compacto</span>
+                                        <p class="text-xs text-gray-500">Tablas más densas, ideal para móviles</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Botones -->
+                        <div class="flex justify-end gap-2">
+                            <button type="button" 
+                                    @click="cargarDatos()"
+                                    class="btn btn-ghost">
+                                Cancelar
+                            </button>
+                            <button type="submit" 
+                                    class="btn btn-primary"
+                                    :disabled="guardando">
+                                <i class="fas fa-save mr-2"></i>
+                                <span x-show="!guardando">Guardar Preferencias</span>
+                                <span x-show="guardando" class="loading loading-spinner loading-sm"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function configCuenta() {
+    return {
+        tabActivo: 'perfil',
+        guardando: false,
+        usuario: {},
+        hijo: {},
+        formPerfil: {
+            nombre: '',
+            cedula: '',
+            email: '',
+            telefono: '',
+            direccion: ''
+        },
+        formPassword: {
+            actual: '',
+            nueva: '',
+            confirmar: ''
+        },
+        formPreferencias: {
+            limite_diario: 0,
+            limite_semanal: 0,
+            mostrar_fotos_productos: true,
+            modo_compacto: false
+        },
+        fotoFile: null,
+        previewFoto: null,
+        mostrarPassword: {
+            actual: false,
+            nueva: false,
+            confirmar: false
+        },
+        errores: {},
+        
+        async init() {
+            await this.cargarDatos();
+        },
+        
+        async cargarDatos() {
+            try {
+                const response = await fetch('/api/portal/configuracion/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.usuario = data.usuario;
+                    this.hijo = data.hijo;
+                    
+                    // Llenar formularios
+                    this.formPerfil = {
+                        nombre: data.usuario.nombre || '',
+                        cedula: data.usuario.cedula || '',
+                        email: data.usuario.email || '',
+                        telefono: data.usuario.telefono || '',
+                        direccion: data.usuario.direccion || ''
+                    };
+                    
+                    this.formPreferencias = {
+                        limite_diario: data.preferencias?.limite_diario || 0,
+                        limite_semanal: data.preferencias?.limite_semanal || 0,
+                        mostrar_fotos_productos: data.preferencias?.mostrar_fotos_productos ?? true,
+                        modo_compacto: data.preferencias?.modo_compacto ?? false
+                    };
+                }
+            } catch (error) {
+                console.error('Error al cargar datos:', error);
+                this.notificar('Error al cargar configuración', 'error');
+            }
+        },
+        
+        handleFotoChange(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Validar tamaño (2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                this.notificar('La imagen debe pesar menos de 2MB', 'error');
+                event.target.value = '';
+                return;
+            }
+            
+            // Validar tipo
+            if (!file.type.startsWith('image/')) {
+                this.notificar('Solo se permiten imágenes', 'error');
+                event.target.value = '';
+                return;
+            }
+            
+            this.fotoFile = file;
+            
+            // Preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.previewFoto = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        },
+        
+        eliminarFoto() {
+            this.fotoFile = null;
+            this.previewFoto = null;
+        },
+        
+        async guardarPerfil() {
+            this.errores = {};
+            this.guardando = true;
+            
+            try {
+                const formData = new FormData();
+                formData.append('nombre', this.formPerfil.nombre);
+                formData.append('cedula', this.formPerfil.cedula);
+                formData.append('email', this.formPerfil.email);
+                formData.append('telefono', this.formPerfil.telefono);
+                formData.append('direccion', this.formPerfil.direccion);
+                
+                if (this.fotoFile) {
+                    formData.append('foto', this.fotoFile);
+                }
+                
+                const response = await fetch('/api/portal/configuracion/perfil/', {
+                    method: 'PUT',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.notificar('Perfil actualizado correctamente', 'success');
+                    await this.cargarDatos();
+                    this.fotoFile = null;
+                    this.previewFoto = null;
+                } else {
+                    this.errores = data.errors || {};
+                    this.notificar(data.error || 'Error al guardar', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                this.notificar('Error al guardar perfil', 'error');
+            } finally {
+                this.guardando = false;
+            }
+        },
+        
+        async cambiarContrasena() {
+            this.errores = {};
+            
+            if (this.formPassword.nueva !== this.formPassword.confirmar) {
+                this.errores.password_confirmar = 'Las contraseñas no coinciden';
+                return;
+            }
+            
+            this.guardando = true;
+            
+            try {
+                const response = await fetch('/api/portal/configuracion/password/', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        password_actual: this.formPassword.actual,
+                        password_nueva: this.formPassword.nueva
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.notificar('Contraseña cambiada correctamente', 'success');
+                    this.limpiarFormPassword();
+                } else {
+                    this.errores = data.errors || {};
+                    this.notificar(data.error || 'Error al cambiar contraseña', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                this.notificar('Error al cambiar contraseña', 'error');
+            } finally {
+                this.guardando = false;
+            }
+        },
+        
+        limpiarFormPassword() {
+            this.formPassword = {
+                actual: '',
+                nueva: '',
+                confirmar: ''
+            };
+            this.errores = {};
+        },
+        
+        async guardarPreferencias() {
+            this.guardando = true;
+            
+            try {
+                const response = await fetch('/api/portal/configuracion/preferencias/', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(this.formPreferencias)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.notificar('Preferencias guardadas correctamente', 'success');
+                } else {
+                    this.notificar(data.error || 'Error al guardar', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                this.notificar('Error al guardar preferencias', 'error');
+            } finally {
+                this.guardando = false;
+            }
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        },
+        
+        notificar(mensaje, tipo = 'info') {
+            // Usar el sistema de notificaciones de Alpine (asumiendo que existe)
+            const event = new CustomEvent('notify', {
+                detail: { message: mensaje, type: tipo }
+            });
+            window.dispatchEvent(event);
+        }
+    }
+}
+</script>
+{% endblock %}

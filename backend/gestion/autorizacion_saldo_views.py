@@ -12,7 +12,8 @@ from django.utils import timezone
 from decimal import Decimal
 import json
 
-from gestion.models import Tarjeta, Empleado, Ventas
+from gestion.models import Tarjeta, Empleado
+from pos.models import Venta as Ventas
 from gestion.permisos import acceso_cajero, solo_administrador, solo_gerente_o_superior
 from gestion.autorizacion_saldo_utils import (
     puede_autorizar_saldo_negativo,

@@ -779,3 +779,64 @@ GERENCIA_EMAIL = config('GERENCIA_EMAIL', default='gerencia@cantina.edu.py')
 
 # URL del sitio para enlaces en emails
 SITE_URL = config('SITE_URL', default='http://localhost:8000')
+
+
+# =============================================================================
+# CONFIGURACIÓN DE API DOCUMENTATION (DRF SPECTACULAR)
+# =============================================================================
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Sistema de Gestión de Cantina API',
+    'DESCRIPTION': '''
+    API completa para el Sistema de Gestión de Cantina Tita.
+    
+    Incluye endpoints para:
+    - 🛒 Gestión de ventas (POS)
+    - 💳 Sistema de tarjetas prepago
+    - 👨‍👩‍👧 Portal de padres
+    - 📊 Reportes y estadísticas
+    - 🏫 Gestión de almuerzos escolares
+    - 💰 Cuenta corriente
+    - 📄 Facturación electrónica SIFEN
+    ''',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'CONTACT': {
+        'name': 'Equipo de Desarrollo',
+        'email': 'dev@cantina-sistema.com',
+    },
+    'LICENSE': {
+        'name': 'MIT License',
+    },
+    'TAGS': [
+        {'name': 'POS - Ventas', 'description': 'Sistema de punto de venta - Operaciones de ventas'},
+        {'name': 'POS - Detalles', 'description': 'Sistema de punto de venta - Detalles de productos vendidos'},
+        {'name': 'POS - Pagos', 'description': 'Sistema de punto de venta - Pagos aplicados a ventas'},
+        {'name': 'Ventas', 'description': 'Operaciones de punto de venta (legacy)'},
+        {'name': 'Productos', 'description': 'Gestión de productos y categorías'},
+        {'name': 'Clientes', 'description': 'Gestión de clientes y tarjetas'},
+        {'name': 'Portal', 'description': 'Portal de padres y tutores'},
+        {'name': 'Reportes', 'description': 'Reportes y estadísticas'},
+        {'name': 'Auth', 'description': 'Autenticación y autorización'},
+    ],
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SORT_OPERATIONS': True,
+}

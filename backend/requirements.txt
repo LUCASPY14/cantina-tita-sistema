@@ -22,7 +22,18 @@ Pillow>=10.0.0
 
 # API y Serialización
 djangorestframework>=3.14.0
+drf-spectacular>=0.27.0
 
 # Utilidades
 pytz>=2023.3
 python-dateutil>=2.8.2
+
+# Testing
+pytest>=7.4.0
+pytest-django>=4.5.2
+pytest-cov>=4.1.0
+pytest-xdist>=3.3.0
+pytest-mock>=3.11.0
+factory-boy>=3.3.0
+faker>=19.0.0
+coverage>=7.3.0

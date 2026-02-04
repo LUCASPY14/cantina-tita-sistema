@@ -1,0 +1,406 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}POS - Cantina Tita{% endblock %}
+
+{% block body_class %}pos-mode{% endblock %}
+
+{% block header_title %}
+<i class="fas fa-cash-register mr-2"></i>Punto de Venta
+{% endblock %}
+
+{% block header_subtitle %}Sistema POS{% endblock %}
+
+{% block extra_styles %}
+<style>
+    /* Estilos específicos para POS */
+    .pos-mode {
+        background: linear-gradient(135deg, #FF6B35 0%, #FFB199 50%, #4ECDC4 100%);
+    }
+    
+    /* Header POS con gradiente distintivo */
+    .pos-header {
+        background: linear-gradient(135deg, #FF6B35, #FF8C61);
+        color: white;
+        box-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
+    }
+    
+    /* Botones grandes para touch */
+    .btn-pos {
+        @apply btn btn-lg touch:h-16 touch:text-lg;
+        min-height: 3.5rem;
+        font-weight: 600;
+        border-radius: 0.75rem;
+    }
+    
+    .btn-pos-primary {
+        @apply btn-pos bg-primary hover:bg-orange-600 text-white;
+        box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+    }
+    
+    .btn-pos-success {
+        @apply btn-pos bg-success hover:bg-green-600 text-white;
+        box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+    }
+    
+    .btn-pos-danger {
+        @apply btn-pos bg-danger hover:bg-red-600 text-white;
+        box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+    }
+    
+    /* Grid de productos optimizado */
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 1rem;
+    }
+    
+    @media (min-width: 640px) {
+        .product-grid {
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        }
+    }
+    
+    @media (min-width: 1024px) {
+        .product-grid {
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        }
+    }
+    
+    /* Cards de productos */
+    .product-card {
+        @apply bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 
+               transform transition-all duration-200
+               hover:scale-105 hover:shadow-2xl
+               active:scale-95
+               cursor-pointer;
+        min-height: 140px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    
+    .product-card.selected {
+        @apply ring-4 ring-primary;
+        box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
+    }
+    
+    /* Carrito de compras flotante */
+    .cart-summary {
+        @apply sticky bottom-4 bg-white dark:bg-gray-800 
+               rounded-2xl shadow-2xl p-6 z-40;
+        border: 3px solid #FF6B35;
+    }
+    
+    /* Input numérico grande para POS */
+    .input-pos {
+        @apply input input-lg input-bordered w-full text-center
+               text-2xl font-bold touch:h-16;
+    }
+    
+    /* Badge de cantidad */
+    .qty-badge {
+        @apply badge badge-lg badge-primary absolute -top-2 -right-2;
+        min-width: 2rem;
+        height: 2rem;
+        font-size: 0.875rem;
+        font-weight: bold;
+    }
+    
+    /* Pantalla de resumen de venta */
+    .sale-summary {
+        @apply bg-gradient-to-br from-white to-gray-50 
+               dark:from-gray-800 dark:to-gray-900
+               rounded-2xl shadow-xl p-6 border-2 border-primary;
+    }
+    
+    /* Keyboard shortcuts hints */
+    .keyboard-hint {
+        @apply inline-flex items-center px-2 py-1 
+               bg-gray-200 dark:bg-gray-700 
+               rounded text-xs font-mono;
+    }
+    
+    /* Modo pantalla completa para POS */
+    .pos-fullscreen .container {
+        max-width: 100%;
+        padding: 0.5rem;
+    }
+    
+    /* Loading overlay para operaciones */
+    .loading-overlay {
+        @apply fixed inset-0 bg-black bg-opacity-50 
+               flex items-center justify-center z-50;
+    }
+    
+    .loading-content {
+        @apply bg-white dark:bg-gray-800 rounded-2xl p-8 
+               text-center shadow-2xl;
+        min-width: 300px;
+    }
+</style>
+{% endblock %}
+
+{% block navigation %}
+<!-- Navegación específica POS -->
+<a href="{% url 'pos:dashboard' %}" 
+   class="btn btn-ghost text-white hover:bg-white hover:bg-opacity-20"
+   aria-label="Dashboard POS">
+    <i class="fas fa-home mr-2"></i>
+    <span class="hidden lg:inline">Inicio</span>
+</a>
+
+<a href="{% url 'pos:venta' %}" 
+   class="btn btn-primary text-white"
+   aria-label="Nueva Venta">
+    <i class="fas fa-cash-register mr-2"></i>
+    <span class="hidden lg:inline">Venta</span>
+</a>
+
+<a href="{% url 'pos:historial' %}" 
+   class="btn btn-ghost text-white hover:bg-white hover:bg-opacity-20"
+   aria-label="Historial">
+    <i class="fas fa-history mr-2"></i>
+    <span class="hidden lg:inline">Historial</span>
+</a>
+
+<a href="{% url 'pos:recargas' %}" 
+   class="btn btn-ghost text-white hover:bg-white hover:bg-opacity-20"
+   aria-label="Recargas">
+    <i class="fas fa-credit-card mr-2"></i>
+    <span class="hidden lg:inline">Recargas</span>
+</a>
+
+<!-- Usuario actual -->
+<div class="dropdown dropdown-end">
+    <label tabindex="0" class="btn btn-ghost btn-circle text-white">
+        <i class="fas fa-user text-xl"></i>
+    </label>
+    <ul tabindex="0" class="dropdown-content menu p-2 shadow-lg bg-white dark:bg-gray-800 rounded-box w-52 mt-2">
+        <li class="menu-title">
+            <span>{{ user.get_full_name|default:user.username }}</span>
+        </li>
+        <li><a href="{% url 'logout' %}"><i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión</a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block mobile_navigation %}
+<div class="p-4 space-y-2">
+    <a href="{% url 'pos:dashboard' %}" class="btn btn-block justify-start">
+        <i class="fas fa-home mr-2"></i>Inicio
+    </a>
+    <a href="{% url 'pos:venta' %}" class="btn btn-block btn-primary justify-start">
+        <i class="fas fa-cash-register mr-2"></i>Nueva Venta
+    </a>
+    <a href="{% url 'pos:historial' %}" class="btn btn-block justify-start">
+        <i class="fas fa-history mr-2"></i>Historial
+    </a>
+    <a href="{% url 'pos:recargas' %}" class="btn btn-block justify-start">
+        <i class="fas fa-credit-card mr-2"></i>Recargas
+    </a>
+    <div class="divider"></div>
+    <a href="{% url 'logout' %}" class="btn btn-block btn-error justify-start">
+        <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Scripts específicos POS -->
+<script>
+    // Sonidos para POS
+    const sounds = {
+        beep: new Howl({ 
+            src: ['/static/sounds/beep.mp3'], 
+            volume: 0.5,
+            onloaderror: () => console.warn('Archivo de sonido beep no encontrado')
+        }),
+        success: new Howl({ 
+            src: ['/static/sounds/success.mp3'], 
+            volume: 0.5,
+            onloaderror: () => console.warn('Archivo de sonido success no encontrado')
+        }),
+        error: new Howl({ 
+            src: ['/static/sounds/error.mp3'], 
+            volume: 0.5,
+            onloaderror: () => console.warn('Archivo de sonido error no encontrado')
+        })
+    };
+    
+    // Funciones globales POS
+    window.posHelpers = {
+        // Reproducir sonido
+        playSound(type) {
+            if (sounds[type]) {
+                sounds[type].play();
+            }
+        },
+        
+        // Formatear precio en Guaraníes
+        formatPrice(amount) {
+            return new Intl.NumberFormat('es-PY', {
+                style: 'currency',
+                currency: 'PYG',
+                minimumFractionDigits: 0
+            }).format(amount);
+        },
+        
+        // Mostrar notificación con sonido
+        notify(message, type = 'info', playSound = true) {
+            // Dispatch evento para Alpine.js
+            window.dispatchEvent(new CustomEvent('show-notification', {
+                detail: { message, type, duration: 3000 }
+            }));
+            
+            // Reproducir sonido correspondiente
+            if (playSound && sounds[type]) {
+                sounds[type].play();
+            }
+        },
+        
+        // Confirmar acción
+        async confirm(message, title = '¿Está seguro?') {
+            return new Promise((resolve) => {
+                // Usar modal de confirmación nativo o Alpine.js modal
+                const result = window.confirm(`${title}\n\n${message}`);
+                resolve(result);
+            });
+        },
+        
+        // Prevenir doble clic en botones de venta
+        preventDoubleClick(button, timeout = 2000) {
+            button.disabled = true;
+            setTimeout(() => {
+                button.disabled = false;
+            }, timeout);
+        }
+    };
+    
+    // Keyboard shortcuts para POS
+    document.addEventListener('keydown', (e) => {
+        // F1 - Cliente genérico
+        if (e.key === 'F1') {
+            e.preventDefault();
+            // Dispatch evento personalizado
+            window.dispatchEvent(new CustomEvent('pos:cliente-generico'));
+        }
+        
+        // F2 - Buscar producto
+        if (e.key === 'F2') {
+            e.preventDefault();
+            const searchInput = document.getElementById('product-search');
+            if (searchInput) searchInput.focus();
+        }
+        
+        // F3 - Nuevo cliente
+        if (e.key === 'F3') {
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent('pos:nuevo-cliente'));
+        }
+        
+        // F4 - Ver carrito
+        if (e.key === 'F4') {
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent('pos:ver-carrito'));
+        }
+        
+        // Enter - Procesar venta (solo si hay items)
+        if (e.key === 'Enter' && e.ctrlKey) {
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent('pos:procesar-venta'));
+        }
+        
+        // Escape - Cancelar/Limpiar
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent('pos:cancelar'));
+        }
+    });
+    
+    // Inicialización
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('🛒 POS Mode activado');
+        console.log('⌨️  Atajos de teclado:');
+        console.log('   F1 - Cliente genérico');
+        console.log('   F2 - Buscar producto');
+        console.log('   F3 - Nuevo cliente');
+        console.log('   F4 - Ver carrito');
+        console.log('   Ctrl+Enter - Procesar venta');
+        console.log('   Esc - Cancelar');
+    });
+</script>
+{% endblock %}
+
+{% block page_scripts %}
+<!-- Inicialización Alpine.js para POS -->
+<script>
+    document.addEventListener('alpine:init', () => {
+        // Componente para gestión de venta POS
+        Alpine.data('posVenta', () => ({
+            carrito: [],
+            total: 0,
+            clienteSeleccionado: null,
+            loading: false,
+            
+            agregarProducto(producto) {
+                const existe = this.carrito.find(p => p.id === producto.id);
+                if (existe) {
+                    existe.cantidad++;
+                } else {
+                    this.carrito.push({ ...producto, cantidad: 1 });
+                }
+                this.calcularTotal();
+                window.posHelpers.playSound('success');
+            },
+            
+            quitarProducto(productoId) {
+                this.carrito = this.carrito.filter(p => p.id !== productoId);
+                this.calcularTotal();
+            },
+            
+            calcularTotal() {
+                this.total = this.carrito.reduce((sum, item) => 
+                    sum + (item.precio * item.cantidad), 0
+                );
+            },
+            
+            limpiarCarrito() {
+                this.carrito = [];
+                this.total = 0;
+                this.clienteSeleccionado = null;
+            }
+        }));
+        
+        // Componente para búsqueda con debounce
+        Alpine.data('searchWithDebounce', (delay = 300) => ({
+            query: '',
+            results: [],
+            searching: false,
+            timeout: null,
+            
+            search() {
+                clearTimeout(this.timeout);
+                this.searching = true;
+                
+                this.timeout = setTimeout(() => {
+                    this.performSearch();
+                }, delay);
+            },
+            
+            async performSearch() {
+                if (!this.query || this.query.length < 2) {
+                    this.results = [];
+                    this.searching = false;
+                    return;
+                }
+                
+                // Aquí iría la llamada AJAX real
+                // Por ahora simulamos
+                await new Promise(resolve => setTimeout(resolve, 100));
+                this.searching = false;
+            }
+        }));
+    });
+</script>
+{% endblock %}

@@ -29,7 +29,7 @@ def dashboard_saldos_tiempo_real(request):
         'fecha_actualizacion': 'Al cargar la página'
     }
     
-    return render(request, 'pos/dashboard_saldos_tiempo_real.html', context)
+    return render(request, 'dashboard/saldos_tiempo_real.html', context)
 
 
 @login_required

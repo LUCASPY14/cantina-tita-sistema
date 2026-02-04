@@ -1,0 +1,471 @@
+{% extends "base_pos.html" %}
+{% load static %}
+
+{% block title %}Historial de Ventas - POS{% endblock %}
+
+{% block content %}
+<div x-data="historialVentas()" x-init="init()" class="space-y-6">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <a href="{% url 'pos:dashboard' %}" class="btn btn-ghost btn-sm mb-2">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Volver al Dashboard
+            </a>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-history mr-3 text-primary"></i>
+                Historial de Ventas
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Consulta de transacciones del POS
+            </p>
+        </div>
+        
+        <button @click="exportarExcel()" class="btn btn-success">
+            <i class="fas fa-file-excel mr-2"></i>
+            Exportar
+        </button>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            
+            <!-- Búsqueda -->
+            <div class="md:col-span-2">
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-search mr-2"></i>Buscar
+                    </span>
+                </label>
+                <input type="text" 
+                       x-model="filtros.busqueda"
+                       @input.debounce.300ms="buscarVentas()"
+                       placeholder="Cliente, tarjeta, producto..."
+                       class="input input-bordered w-full">
+            </div>
+            
+            <!-- Fecha Desde -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-calendar mr-2"></i>Desde
+                    </span>
+                </label>
+                <input type="date" 
+                       x-model="filtros.fecha_desde"
+                       @change="buscarVentas()"
+                       class="input input-bordered w-full">
+            </div>
+            
+            <!-- Fecha Hasta -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-calendar mr-2"></i>Hasta
+                    </span>
+                </label>
+                <input type="date" 
+                       x-model="filtros.fecha_hasta"
+                       @change="buscarVentas()"
+                       class="input input-bordered w-full">
+            </div>
+            
+            <!-- Método de Pago -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-credit-card mr-2"></i>Método
+                    </span>
+                </label>
+                <select x-model="filtros.metodo_pago" 
+                        @change="buscarVentas()"
+                        class="select select-bordered w-full">
+                    <option value="">Todos</option>
+                    <option value="tarjeta">Tarjeta</option>
+                    <option value="efectivo">Efectivo</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Cards de Resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        
+        <!-- Total Ventas -->
+        <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-shopping-cart text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Total Ventas</p>
+                    <p class="text-3xl font-bold" x-text="stats.cantidad_ventas"></p>
+                    <p class="text-lg opacity-80" x-text="formatearPrecio(stats.total_ventas)"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Efectivo -->
+        <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-money-bill-wave text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Efectivo</p>
+                    <p class="text-3xl font-bold" x-text="formatearPrecio(stats.total_efectivo)"></p>
+                    <p class="text-sm opacity-80" x-text="stats.ventas_efectivo + ' ventas'"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Tarjeta -->
+        <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-credit-card text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Tarjeta</p>
+                    <p class="text-3xl font-bold" x-text="formatearPrecio(stats.total_tarjeta)"></p>
+                    <p class="text-sm opacity-80" x-text="stats.ventas_tarjeta + ' ventas'"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Ticket Promedio -->
+        <div class="stat-card bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-chart-line text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Ticket Promedio</p>
+                    <p class="text-3xl font-bold" x-text="formatearPrecio(stats.ticket_promedio)"></p>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Tabla de Ventas -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        
+        <!-- Loading -->
+        <template x-if="cargando">
+            <div class="overflow-x-auto">
+                <table class="table w-full">
+                    <thead>
+                        <tr>
+                            <th>Fecha/Hora</th>
+                            <th>Cliente</th>
+                            <th>Items</th>
+                            <th>Método</th>
+                            <th>Total</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="i in 10" :key="i">
+                            <tr>
+                                <td><div class="skeleton h-4 w-32"></div></td>
+                                <td><div class="skeleton h-4 w-40"></div></td>
+                                <td><div class="skeleton h-4 w-16"></div></td>
+                                <td><div class="skeleton h-4 w-20"></div></td>
+                                <td><div class="skeleton h-4 w-24"></div></td>
+                                <td><div class="skeleton h-4 w-16"></div></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </template>
+        
+        <!-- Tabla con Datos -->
+        <template x-if="!cargando && ventas.length > 0">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full" id="tabla-ventas">
+                    <thead>
+                        <tr>
+                            <th>Fecha/Hora</th>
+                            <th>Cliente</th>
+                            <th>Tarjeta</th>
+                            <th>Items</th>
+                            <th>Método Pago</th>
+                            <th class="text-right">Total</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="venta in ventas" :key="venta.id">
+                            <tr class="hover">
+                                <td class="font-mono text-sm" x-text="venta.fecha_hora"></td>
+                                <td>
+                                    <p class="font-semibold" x-text="venta.cliente_nombre"></p>
+                                    <p class="text-xs text-gray-500" x-text="venta.cliente_grado"></p>
+                                </td>
+                                <td class="font-mono text-sm" x-text="venta.numero_tarjeta"></td>
+                                <td>
+                                    <span class="badge badge-secondary badge-sm" x-text="venta.cantidad_items + ' items'"></span>
+                                </td>
+                                <td>
+                                    <span class="badge badge-sm capitalize" 
+                                          :class="venta.metodo_pago === 'tarjeta' ? 'badge-secondary' : 'badge-success'">
+                                        <i class="fas mr-1" 
+                                           :class="venta.metodo_pago === 'tarjeta' ? 'fa-credit-card' : 'fa-money-bill-wave'"></i>
+                                        <span x-text="venta.metodo_pago"></span>
+                                    </span>
+                                </td>
+                                <td class="text-right font-bold text-primary" x-text="formatearPrecio(venta.total)"></td>
+                                <td class="text-center">
+                                    <button @click="verDetalle(venta)" class="btn btn-ghost btn-xs">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </template>
+        
+        <!-- Empty State -->
+        <template x-if="!cargando && ventas.length === 0">
+            <div class="text-center py-16">
+                <i class="fas fa-receipt text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
+                <p class="text-xl text-gray-500 dark:text-gray-400 mb-2">No se encontraron ventas</p>
+                <p class="text-gray-400 dark:text-gray-500">Intenta ajustar los filtros de búsqueda</p>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Paginación -->
+    <template x-if="!cargando && totalPaginas > 1">
+        <div class="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                Mostrando 
+                <span class="font-semibold" x-text="(paginaActual - 1) * itemsPorPagina + 1"></span>
+                -
+                <span class="font-semibold" x-text="Math.min(paginaActual * itemsPorPagina, totalVentas)"></span>
+                de
+                <span class="font-semibold" x-text="totalVentas"></span>
+                ventas
+            </div>
+            
+            <div class="btn-group">
+                <button @click="cambiarPagina(paginaActual - 1)" 
+                        :disabled="paginaActual === 1"
+                        class="btn btn-sm">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                
+                <template x-for="pagina in paginasVisibles()" :key="pagina">
+                    <button @click="cambiarPagina(pagina)" 
+                            class="btn btn-sm"
+                            :class="{'btn-active': pagina === paginaActual}"
+                            x-text="pagina"></button>
+                </template>
+                
+                <button @click="cambiarPagina(paginaActual + 1)" 
+                        :disabled="paginaActual === totalPaginas"
+                        class="btn btn-sm">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </template>
+    
+    <!-- Modal de Detalle -->
+    <template x-if="ventaSeleccionada">
+        <div class="modal modal-open">
+            <div class="modal-box max-w-2xl">
+                <h3 class="font-bold text-lg mb-4">
+                    <i class="fas fa-receipt mr-2 text-primary"></i>
+                    Detalle de Venta
+                </h3>
+                
+                <!-- Info de la Venta -->
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Fecha y Hora</p>
+                            <p class="font-semibold" x-text="ventaSeleccionada.fecha_hora"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Método de Pago</p>
+                            <span class="badge capitalize" 
+                                  :class="ventaSeleccionada.metodo_pago === 'tarjeta' ? 'badge-secondary' : 'badge-success'">
+                                <span x-text="ventaSeleccionada.metodo_pago"></span>
+                            </span>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Cliente</p>
+                            <p class="font-semibold" x-text="ventaSeleccionada.cliente_nombre"></p>
+                            <p class="text-xs text-gray-500" x-text="ventaSeleccionada.cliente_grado"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Tarjeta</p>
+                            <p class="font-mono font-semibold" x-text="ventaSeleccionada.numero_tarjeta"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Items de la Venta -->
+                <div class="mb-4">
+                    <h4 class="font-bold mb-2">Productos</h4>
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra w-full table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th class="text-right">Precio</th>
+                                    <th class="text-right">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="item in ventaSeleccionada.items" :key="item.id">
+                                    <tr>
+                                        <td x-text="item.producto"></td>
+                                        <td class="text-center" x-text="item.cantidad"></td>
+                                        <td class="text-right" x-text="formatearPrecio(item.precio)"></td>
+                                        <td class="text-right font-semibold" x-text="formatearPrecio(item.subtotal)"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                            <tfoot>
+                                <tr class="font-bold">
+                                    <td colspan="3" class="text-right">TOTAL:</td>
+                                    <td class="text-right text-primary text-lg" x-text="formatearPrecio(ventaSeleccionada.total)"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="modal-action">
+                    <button @click="ventaSeleccionada = null" class="btn">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function historialVentas() {
+    return {
+        cargando: true,
+        ventas: [],
+        ventaSeleccionada: null,
+        filtros: {
+            busqueda: '',
+            fecha_desde: '',
+            fecha_hasta: '',
+            metodo_pago: ''
+        },
+        stats: {
+            cantidad_ventas: 0,
+            total_ventas: 0,
+            total_efectivo: 0,
+            total_tarjeta: 0,
+            ventas_efectivo: 0,
+            ventas_tarjeta: 0,
+            ticket_promedio: 0
+        },
+        paginaActual: 1,
+        totalPaginas: 1,
+        totalVentas: 0,
+        itemsPorPagina: 20,
+        
+        async init() {
+            // Establecer fechas por defecto (hoy)
+            const hoy = new Date();
+            this.filtros.fecha_desde = this.formatearFecha(hoy);
+            this.filtros.fecha_hasta = this.formatearFecha(hoy);
+            
+            await this.buscarVentas();
+        },
+        
+        async buscarVentas() {
+            this.cargando = true;
+            
+            try {
+                const params = new URLSearchParams({
+                    q: this.filtros.busqueda,
+                    fecha_desde: this.filtros.fecha_desde,
+                    fecha_hasta: this.filtros.fecha_hasta,
+                    metodo_pago: this.filtros.metodo_pago,
+                    page: this.paginaActual,
+                    per_page: this.itemsPorPagina
+                });
+                
+                const response = await fetch(`/api/pos/ventas/?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.ventas = data.ventas || [];
+                    this.stats = data.stats || this.stats;
+                    this.totalVentas = data.total || 0;
+                    this.totalPaginas = Math.ceil(this.totalVentas / this.itemsPorPagina);
+                }
+            } catch (error) {
+                console.error('Error al cargar ventas:', error);
+                posHelpers.notify('Error al cargar historial', 'error');
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        cambiarPagina(pagina) {
+            if (pagina >= 1 && pagina <= this.totalPaginas) {
+                this.paginaActual = pagina;
+                this.buscarVentas();
+            }
+        },
+        
+        paginasVisibles() {
+            const paginas = [];
+            const rango = 2;
+            const inicio = Math.max(1, this.paginaActual - rango);
+            const fin = Math.min(this.totalPaginas, this.paginaActual + rango);
+            
+            for (let i = inicio; i <= fin; i++) {
+                paginas.push(i);
+            }
+            return paginas;
+        },
+        
+        verDetalle(venta) {
+            this.ventaSeleccionada = venta;
+        },
+        
+        exportarExcel() {
+            posHelpers.exportTableToCSV('tabla-ventas', `ventas_${this.filtros.fecha_desde}_${this.filtros.fecha_hasta}.csv`);
+        },
+        
+        formatearFecha(fecha) {
+            return fecha.toISOString().split('T')[0];
+        },
+        
+        formatearPrecio(monto) {
+            return posHelpers.formatPrice(monto);
+        }
+    }
+}
+</script>
+{% endblock %}

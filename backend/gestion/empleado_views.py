@@ -93,7 +93,8 @@ def perfil_empleado(request):
     """
     from datetime import date
     from django.db.models import Count, Sum
-    from .models import Ventas, AuditoriaWeb
+    from .models import AuditoriaWeb
+    from pos.models import Venta as Ventas
     
     try:
         empleado = Empleado.objects.select_related('id_rol', 'id_caja').get(

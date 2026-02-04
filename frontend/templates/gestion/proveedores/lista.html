@@ -1,0 +1,738 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Proveedores - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="listaProveedores()" x-init="init()" class="space-y-6">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-truck mr-3 text-secondary"></i>
+                Proveedores
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Gestión de proveedores y contactos
+            </p>
+        </div>
+        
+        <button @click="abrirModalCrear()" class="btn btn-secondary">
+            <i class="fas fa-plus mr-2"></i>
+            Nuevo Proveedor
+        </button>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        
+        <!-- Total Proveedores -->
+        <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-truck text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Total Proveedores</p>
+                    <p class="text-3xl font-bold" x-text="stats.total"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Activos -->
+        <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-check-circle text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Activos</p>
+                    <p class="text-3xl font-bold" x-text="stats.activos"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Total Productos -->
+        <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-box text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Productos Suministrados</p>
+                    <p class="text-3xl font-bold" x-text="stats.total_productos"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Con Deuda -->
+        <div class="stat-card bg-gradient-to-br from-warning to-yellow-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-money-bill-wave text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Deuda Pendiente</p>
+                    <p class="text-2xl font-bold" x-text="formatearPrecio(stats.deuda_total)"></p>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <!-- Búsqueda -->
+            <div class="md:col-span-2">
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-search mr-2"></i>Buscar proveedor
+                    </span>
+                </label>
+                <input type="text" 
+                       x-model="filtros.busqueda"
+                       @input.debounce.300ms="buscarProveedores()"
+                       placeholder="Nombre, RUC, contacto..."
+                       class="input input-bordered w-full">
+            </div>
+            
+            <!-- Solo Activos -->
+            <div class="flex items-end">
+                <label class="cursor-pointer flex items-center gap-2">
+                    <input type="checkbox" 
+                           x-model="filtros.solo_activos"
+                           @change="buscarProveedores()"
+                           class="checkbox checkbox-secondary">
+                    <span class="text-sm font-semibold">Solo proveedores activos</span>
+                </label>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Lista de Proveedores -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        
+        <!-- Loading -->
+        <template x-if="cargando">
+            <div class="overflow-x-auto">
+                <table class="table w-full">
+                    <thead>
+                        <tr>
+                            <th>Proveedor</th>
+                            <th>Contacto</th>
+                            <th>Productos</th>
+                            <th>Deuda</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="i in 8" :key="i">
+                            <tr>
+                                <td><div class="skeleton h-4 w-48"></div></td>
+                                <td><div class="skeleton h-4 w-32"></div></td>
+                                <td><div class="skeleton h-4 w-16"></div></td>
+                                <td><div class="skeleton h-4 w-24"></div></td>
+                                <td><div class="skeleton h-4 w-20"></div></td>
+                                <td><div class="skeleton h-4 w-24"></div></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </template>
+        
+        <!-- Tabla con Datos -->
+        <template x-if="!cargando && proveedores.length > 0">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr>
+                            <th>Proveedor</th>
+                            <th>Contacto</th>
+                            <th class="text-center">Productos</th>
+                            <th class="text-right">Deuda Pendiente</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="proveedor in proveedores" :key="proveedor.id">
+                            <tr class="hover">
+                                <td>
+                                    <div>
+                                        <p class="font-semibold" x-text="proveedor.nombre"></p>
+                                        <p class="text-xs text-gray-500">RUC: <span x-text="proveedor.ruc || 'N/A'"></span></p>
+                                        <template x-if="proveedor.direccion">
+                                            <p class="text-xs text-gray-400" x-text="proveedor.direccion"></p>
+                                        </template>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="space-y-1 text-sm">
+                                        <template x-if="proveedor.contacto_nombre">
+                                            <p class="flex items-center gap-1">
+                                                <i class="fas fa-user text-xs text-gray-400"></i>
+                                                <span x-text="proveedor.contacto_nombre"></span>
+                                            </p>
+                                        </template>
+                                        <template x-if="proveedor.telefono">
+                                            <p class="flex items-center gap-1">
+                                                <i class="fas fa-phone text-xs text-gray-400"></i>
+                                                <span x-text="proveedor.telefono"></span>
+                                            </p>
+                                        </template>
+                                        <template x-if="proveedor.email">
+                                            <p class="flex items-center gap-1">
+                                                <i class="fas fa-envelope text-xs text-gray-400"></i>
+                                                <span x-text="proveedor.email"></span>
+                                            </p>
+                                        </template>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge badge-secondary" x-text="proveedor.cantidad_productos"></span>
+                                </td>
+                                <td class="text-right">
+                                    <span class="font-semibold" 
+                                          :class="proveedor.deuda > 0 ? 'text-warning' : 'text-success'"
+                                          x-text="formatearPrecio(proveedor.deuda)"></span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge badge-sm"
+                                          :class="proveedor.activo ? 'badge-success' : 'badge-error'">
+                                        <span x-text="proveedor.activo ? 'Activo' : 'Inactivo'"></span>
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="dropdown dropdown-left">
+                                        <label tabindex="0" class="btn btn-ghost btn-xs">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </label>
+                                        <ul tabindex="0" class="dropdown-content menu p-2 shadow-lg bg-base-100 rounded-box w-52 z-10">
+                                            <li>
+                                                <a @click.prevent="verDetalles(proveedor)">
+                                                    <i class="fas fa-eye mr-2"></i>Ver Detalles
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a @click.prevent="editarProveedor(proveedor)">
+                                                    <i class="fas fa-edit mr-2"></i>Editar
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a @click.prevent="toggleEstado(proveedor)">
+                                                    <i class="fas mr-2" 
+                                                       :class="proveedor.activo ? 'fa-ban' : 'fa-check-circle'"></i>
+                                                    <span x-text="proveedor.activo ? 'Desactivar' : 'Activar'"></span>
+                                                </a>
+                                            </li>
+                                            <li class="border-t border-gray-200 dark:border-gray-700">
+                                                <a @click.prevent="eliminarProveedor(proveedor)" 
+                                                   class="text-error"
+                                                   :class="{'opacity-50 cursor-not-allowed': proveedor.cantidad_productos > 0}"
+                                                   :disabled="proveedor.cantidad_productos > 0">
+                                                    <i class="fas fa-trash mr-2"></i>Eliminar
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </template>
+        
+        <!-- Empty State -->
+        <template x-if="!cargando && proveedores.length === 0">
+            <div class="text-center py-16">
+                <i class="fas fa-truck text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
+                <p class="text-xl text-gray-500 dark:text-gray-400 mb-2">No se encontraron proveedores</p>
+                <p class="text-gray-400 dark:text-gray-500 mb-6">Comienza agregando tu primer proveedor</p>
+                <button @click="abrirModalCrear()" class="btn btn-secondary">
+                    <i class="fas fa-plus mr-2"></i>
+                    Crear Primer Proveedor
+                </button>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Modal Crear/Editar -->
+    <template x-if="modalAbierto">
+        <div class="modal modal-open">
+            <div class="modal-box max-w-2xl">
+                <h3 class="font-bold text-lg mb-4">
+                    <i class="fas fa-truck mr-2 text-secondary"></i>
+                    <span x-text="proveedorEditando ? 'Editar Proveedor' : 'Nuevo Proveedor'"></span>
+                </h3>
+                
+                <form @submit.prevent="guardarProveedor()" class="space-y-4">
+                    
+                    <!-- Información General -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="form-control md:col-span-2">
+                            <label class="label">
+                                <span class="label-text">Nombre del Proveedor *</span>
+                            </label>
+                            <input type="text" 
+                                   x-model="form.nombre"
+                                   class="input input-bordered"
+                                   :class="{'input-error': errores.nombre}"
+                                   placeholder="Ej: Distribuidora ABC"
+                                   required>
+                            <template x-if="errores.nombre">
+                                <label class="label">
+                                    <span class="label-text-alt text-error" x-text="errores.nombre"></span>
+                                </label>
+                            </template>
+                        </div>
+                        
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">RUC</span>
+                            </label>
+                            <input type="text" 
+                                   x-model="form.ruc"
+                                   class="input input-bordered"
+                                   placeholder="Ej: 80012345-6">
+                        </div>
+                        
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Teléfono</span>
+                            </label>
+                            <input type="tel" 
+                                   x-model="form.telefono"
+                                   class="input input-bordered"
+                                   placeholder="Ej: 0981-123456">
+                        </div>
+                    </div>
+                    
+                    <!-- Contacto -->
+                    <div class="divider">Contacto</div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Nombre del Contacto</span>
+                            </label>
+                            <input type="text" 
+                                   x-model="form.contacto_nombre"
+                                   class="input input-bordered"
+                                   placeholder="Ej: Juan Pérez">
+                        </div>
+                        
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Email</span>
+                            </label>
+                            <input type="email" 
+                                   x-model="form.email"
+                                   class="input input-bordered"
+                                   placeholder="contacto@ejemplo.com">
+                        </div>
+                    </div>
+                    
+                    <!-- Dirección -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Dirección</span>
+                        </label>
+                        <textarea x-model="form.direccion"
+                                  class="textarea textarea-bordered"
+                                  rows="2"
+                                  placeholder="Dirección completa del proveedor"></textarea>
+                    </div>
+                    
+                    <!-- Observaciones -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Observaciones</span>
+                        </label>
+                        <textarea x-model="form.observaciones"
+                                  class="textarea textarea-bordered"
+                                  rows="3"
+                                  placeholder="Notas adicionales sobre el proveedor"></textarea>
+                    </div>
+                    
+                    <!-- Estado -->
+                    <div class="form-control">
+                        <label class="cursor-pointer flex items-center gap-3">
+                            <input type="checkbox" 
+                                   x-model="form.activo"
+                                   class="checkbox checkbox-secondary">
+                            <div>
+                                <span class="font-semibold">Proveedor Activo</span>
+                                <p class="text-xs text-gray-500">Los proveedores inactivos no aparecerán en los listados</p>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <!-- Acciones -->
+                    <div class="modal-action">
+                        <button type="button" @click="cerrarModal()" class="btn">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-secondary">
+                            <i class="fas fa-save mr-2"></i>
+                            <span x-text="proveedorEditando ? 'Guardar Cambios' : 'Crear Proveedor'"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+    
+    <!-- Modal Detalles -->
+    <template x-if="modalDetalles.abierto">
+        <div class="modal modal-open">
+            <div class="modal-box max-w-3xl">
+                <h3 class="font-bold text-lg mb-4">
+                    <i class="fas fa-info-circle mr-2 text-secondary"></i>
+                    Detalles del Proveedor
+                </h3>
+                
+                <div class="space-y-4">
+                    
+                    <!-- Info General -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        <h4 class="font-bold mb-3" x-text="modalDetalles.proveedor?.nombre"></h4>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <p class="text-gray-500">RUC</p>
+                                <p class="font-semibold" x-text="modalDetalles.proveedor?.ruc || 'N/A'"></p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">Estado</p>
+                                <span class="badge"
+                                      :class="modalDetalles.proveedor?.activo ? 'badge-success' : 'badge-error'">
+                                    <span x-text="modalDetalles.proveedor?.activo ? 'Activo' : 'Inactivo'"></span>
+                                </span>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">Teléfono</p>
+                                <p class="font-semibold" x-text="modalDetalles.proveedor?.telefono || 'N/A'"></p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">Email</p>
+                                <p class="font-semibold" x-text="modalDetalles.proveedor?.email || 'N/A'"></p>
+                            </div>
+                            <template x-if="modalDetalles.proveedor?.direccion">
+                                <div class="col-span-2">
+                                    <p class="text-gray-500">Dirección</p>
+                                    <p class="font-semibold" x-text="modalDetalles.proveedor?.direccion"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    
+                    <!-- Productos -->
+                    <div>
+                        <h4 class="font-bold mb-3">Productos Suministrados (<span x-text="modalDetalles.productos?.length || 0"></span>)</h4>
+                        <template x-if="modalDetalles.productos && modalDetalles.productos.length > 0">
+                            <div class="overflow-x-auto max-h-64">
+                                <table class="table table-sm table-zebra w-full">
+                                    <thead>
+                                        <tr>
+                                            <th>Producto</th>
+                                            <th>Categoría</th>
+                                            <th class="text-right">Stock</th>
+                                            <th class="text-right">Precio Costo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="prod in modalDetalles.productos" :key="prod.id">
+                                            <tr>
+                                                <td x-text="prod.nombre"></td>
+                                                <td><span class="badge badge-sm badge-outline" x-text="prod.categoria"></span></td>
+                                                <td class="text-right" x-text="prod.stock + ' ' + prod.unidad"></td>
+                                                <td class="text-right font-semibold" x-text="formatearPrecio(prod.precio_costo)"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+                        <template x-if="!modalDetalles.productos || modalDetalles.productos.length === 0">
+                            <div class="text-center py-8 text-gray-400">
+                                <i class="fas fa-box-open text-3xl mb-2"></i>
+                                <p class="text-sm">No hay productos asociados</p>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <template x-if="modalDetalles.proveedor?.observaciones">
+                        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                            <p class="text-sm font-semibold mb-1">Observaciones:</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300" x-text="modalDetalles.proveedor?.observaciones"></p>
+                        </div>
+                    </template>
+                </div>
+                
+                <div class="modal-action">
+                    <button @click="cerrarModalDetalles()" class="btn">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function listaProveedores() {
+    return {
+        cargando: true,
+        proveedores: [],
+        filtros: {
+            busqueda: '',
+            solo_activos: true
+        },
+        stats: {
+            total: 0,
+            activos: 0,
+            total_productos: 0,
+            deuda_total: 0
+        },
+        modalAbierto: false,
+        proveedorEditando: null,
+        form: {
+            nombre: '',
+            ruc: '',
+            telefono: '',
+            email: '',
+            contacto_nombre: '',
+            direccion: '',
+            observaciones: '',
+            activo: true
+        },
+        errores: {},
+        modalDetalles: {
+            abierto: false,
+            proveedor: null,
+            productos: []
+        },
+        
+        async init() {
+            await this.buscarProveedores();
+        },
+        
+        async buscarProveedores() {
+            this.cargando = true;
+            
+            try {
+                const params = new URLSearchParams({
+                    q: this.filtros.busqueda,
+                    solo_activos: this.filtros.solo_activos
+                });
+                
+                const response = await fetch(`/api/proveedores/?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.proveedores = data.proveedores || [];
+                    this.stats = data.stats || this.stats;
+                }
+            } catch (error) {
+                console.error('Error al cargar proveedores:', error);
+                gestionHelpers.notify('Error al cargar proveedores', 'error');
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        abrirModalCrear() {
+            this.proveedorEditando = null;
+            this.form = {
+                nombre: '',
+                ruc: '',
+                telefono: '',
+                email: '',
+                contacto_nombre: '',
+                direccion: '',
+                observaciones: '',
+                activo: true
+            };
+            this.errores = {};
+            this.modalAbierto = true;
+        },
+        
+        editarProveedor(proveedor) {
+            this.proveedorEditando = proveedor;
+            this.form = {
+                nombre: proveedor.nombre,
+                ruc: proveedor.ruc || '',
+                telefono: proveedor.telefono || '',
+                email: proveedor.email || '',
+                contacto_nombre: proveedor.contacto_nombre || '',
+                direccion: proveedor.direccion || '',
+                observaciones: proveedor.observaciones || '',
+                activo: proveedor.activo
+            };
+            this.errores = {};
+            this.modalAbierto = true;
+        },
+        
+        cerrarModal() {
+            this.modalAbierto = false;
+            this.proveedorEditando = null;
+            this.form = {};
+            this.errores = {};
+        },
+        
+        async guardarProveedor() {
+            this.errores = {};
+            
+            if (!this.form.nombre || this.form.nombre.length < 3) {
+                this.errores.nombre = 'El nombre debe tener al menos 3 caracteres';
+                return;
+            }
+            
+            try {
+                const url = this.proveedorEditando 
+                    ? `/api/proveedores/${this.proveedorEditando.id}/`
+                    : '/api/proveedores/';
+                
+                const method = this.proveedorEditando ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': gestionHelpers.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(this.form)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const mensaje = this.proveedorEditando 
+                        ? 'Proveedor actualizado correctamente'
+                        : 'Proveedor creado correctamente';
+                    gestionHelpers.notify(mensaje, 'success');
+                    this.cerrarModal();
+                    await this.buscarProveedores();
+                } else {
+                    this.errores = data.errors || {};
+                    gestionHelpers.notify(data.error || 'Error al guardar', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                gestionHelpers.notify('Error al guardar proveedor', 'error');
+            }
+        },
+        
+        async verDetalles(proveedor) {
+            try {
+                const response = await fetch(`/api/proveedores/${proveedor.id}/detalle/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.modalDetalles = {
+                        abierto: true,
+                        proveedor: data.proveedor,
+                        productos: data.productos || []
+                    };
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                gestionHelpers.notify('Error al cargar detalles', 'error');
+            }
+        },
+        
+        cerrarModalDetalles() {
+            this.modalDetalles = {
+                abierto: false,
+                proveedor: null,
+                productos: []
+            };
+        },
+        
+        async toggleEstado(proveedor) {
+            const accion = proveedor.activo ? 'desactivar' : 'activar';
+            const confirmado = await gestionHelpers.confirm(
+                `¿${accion.charAt(0).toUpperCase() + accion.slice(1)} proveedor?`,
+                `Esto ${accion}á "${proveedor.nombre}"`
+            );
+            
+            if (!confirmado) return;
+            
+            try {
+                const response = await fetch(`/api/proveedores/${proveedor.id}/toggle-estado/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': gestionHelpers.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify(`Proveedor ${accion}do correctamente`, 'success');
+                    await this.buscarProveedores();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                gestionHelpers.notify('Error al cambiar estado', 'error');
+            }
+        },
+        
+        async eliminarProveedor(proveedor) {
+            if (proveedor.cantidad_productos > 0) {
+                gestionHelpers.notify('No se puede eliminar un proveedor con productos asociados', 'error');
+                return;
+            }
+            
+            const confirmado = await gestionHelpers.confirmDelete(
+                proveedor.nombre,
+                'Esta acción no se puede deshacer'
+            );
+            
+            if (!confirmado) return;
+            
+            try {
+                const response = await fetch(`/api/proveedores/${proveedor.id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': gestionHelpers.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify('Proveedor eliminado correctamente', 'success');
+                    await this.buscarProveedores();
+                } else {
+                    gestionHelpers.notify(data.error || 'Error al eliminar', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                gestionHelpers.notify('Error al eliminar proveedor', 'error');
+            }
+        },
+        
+        formatearPrecio(monto) {
+            return gestionHelpers.formatPrice(monto);
+        }
+    }
+}
+</script>
+{% endblock %}

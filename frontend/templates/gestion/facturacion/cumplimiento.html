@@ -1,0 +1,815 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Cumplimiento Fiscal - Gestión{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div x-data="cumplimientoFiscal()" x-init="inicializar()" class="container mx-auto px-4 py-8">
+    
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-balance-scale mr-3 text-secondary"></i>
+                Cumplimiento Fiscal
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Reportes y libros contables - SET Paraguay
+            </p>
+        </div>
+        
+        <div class="flex gap-2">
+            <button @click="exportarLibroIVA()" class="btn btn-ghost gap-2">
+                <i class="fas fa-file-excel"></i>
+                Libro IVA
+            </button>
+            <button @click="generarInforme()" class="btn btn-secondary text-white gap-2">
+                <i class="fas fa-file-pdf"></i>
+                Informe Mensual
+            </button>
+        </div>
+    </div>
+    
+    <!-- Selector de Período -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">
+                        <i class="fas fa-calendar mr-2"></i>Mes
+                    </span>
+                </label>
+                <select x-model="periodo.mes" @change="cargarDatos()" class="select select-bordered">
+                    <option value="1">Enero</option>
+                    <option value="2">Febrero</option>
+                    <option value="3">Marzo</option>
+                    <option value="4">Abril</option>
+                    <option value="5">Mayo</option>
+                    <option value="6">Junio</option>
+                    <option value="7">Julio</option>
+                    <option value="8">Agosto</option>
+                    <option value="9">Septiembre</option>
+                    <option value="10">Octubre</option>
+                    <option value="11">Noviembre</option>
+                    <option value="12">Diciembre</option>
+                </select>
+            </div>
+            
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">
+                        <i class="fas fa-calendar-alt mr-2"></i>Año
+                    </span>
+                </label>
+                <select x-model="periodo.anio" @change="cargarDatos()" class="select select-bordered">
+                    <template x-for="anio in aniosDisponibles" :key="anio">
+                        <option :value="anio" x-text="anio"></option>
+                    </template>
+                </select>
+            </div>
+            
+            <div class="md:col-span-2 flex items-end gap-2">
+                <button @click="setPeriodoActual()" class="btn btn-outline">
+                    <i class="fas fa-calendar-day mr-2"></i>
+                    Mes Actual
+                </button>
+                <button @click="setPeriodoAnterior()" class="btn btn-outline">
+                    <i class="fas fa-calendar-minus mr-2"></i>
+                    Mes Anterior
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-700 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-file-invoice text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Facturas Emitidas</p>
+            <p class="text-3xl font-bold" x-text="stats.total_facturas || 0"></p>
+            <p class="text-xs opacity-80" x-text="gestionHelpers.formatPrice(stats.total_ventas || 0)"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-coins text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">IVA Débito Fiscal</p>
+            <p class="text-2xl font-bold" x-text="gestionHelpers.formatPrice(stats.iva_debito || 0)"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-warning to-yellow-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-receipt text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">IVA Crédito Fiscal</p>
+            <p class="text-2xl font-bold" x-text="gestionHelpers.formatPrice(stats.iva_credito || 0)"></p>
+        </div>
+        
+        <div class="stat-card text-white"
+             :class="stats.saldo_iva >= 0 ? 'bg-gradient-to-br from-error to-red-600' : 'bg-gradient-to-br from-success to-green-600'">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas text-3xl opacity-80"
+                   :class="stats.saldo_iva >= 0 ? 'fa-hand-holding-usd' : 'fa-piggy-bank'"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1" x-text="stats.saldo_iva >= 0 ? 'A Pagar' : 'A Favor'"></p>
+            <p class="text-2xl font-bold" x-text="gestionHelpers.formatPrice(Math.abs(stats.saldo_iva || 0))"></p>
+        </div>
+    </div>
+    
+    <!-- Tabs de Reportes -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden mb-6">
+        <div class="tabs tabs-boxed bg-gray-100 dark:bg-gray-700 p-2">
+            <a @click="tabActivo = 'resumen'" 
+               :class="{'tab-active': tabActivo === 'resumen'}"
+               class="tab">
+                <i class="fas fa-chart-pie mr-2"></i>Resumen
+            </a>
+            <a @click="tabActivo = 'libro-ventas'" 
+               :class="{'tab-active': tabActivo === 'libro-ventas'}"
+               class="tab">
+                <i class="fas fa-book mr-2"></i>Libro de Ventas
+            </a>
+            <a @click="tabActivo = 'libro-compras'" 
+               :class="{'tab-active': tabActivo === 'libro-compras'}"
+               class="tab">
+                <i class="fas fa-shopping-cart mr-2"></i>Libro de Compras
+            </a>
+            <a @click="tabActivo = 'estadisticas-set'" 
+               :class="{'tab-active': tabActivo === 'estadisticas-set'}"
+               class="tab">
+                <i class="fas fa-server mr-2"></i>Estadísticas SET
+            </a>
+        </div>
+        
+        <div class="p-6">
+            <!-- Tab Resumen -->
+            <div x-show="tabActivo === 'resumen'" x-transition>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- Gráfico IVA por Día -->
+                    <div>
+                        <h3 class="font-bold text-lg mb-4">IVA Débito por Día</h3>
+                        <canvas id="chartIVADiario" height="250"></canvas>
+                    </div>
+                    
+                    <!-- Gráfico Facturación por Tipo IVA -->
+                    <div>
+                        <h3 class="font-bold text-lg mb-4">Facturación por Tipo de IVA</h3>
+                        <canvas id="chartTipoIVA" height="250"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Resumen Mensual Detallado -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Ventas -->
+                    <div class="p-6 bg-blue-50 dark:bg-blue-900 rounded-lg">
+                        <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                            <i class="fas fa-arrow-up text-blue-600"></i>
+                            Ventas del Período
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span>Operaciones Exentas:</span>
+                                <span class="font-mono font-bold" x-text="gestionHelpers.formatPrice(resumen.ventas_exentas || 0)"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Gravadas IVA 5%:</span>
+                                <span class="font-mono font-bold" x-text="gestionHelpers.formatPrice(resumen.ventas_gravadas_5 || 0)"></span>
+                            </div>
+                            <div class="flex justify-between text-sm text-gray-600">
+                                <span class="ml-4">IVA 5%:</span>
+                                <span class="font-mono" x-text="gestionHelpers.formatPrice(resumen.ventas_iva_5 || 0)"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Gravadas IVA 10%:</span>
+                                <span class="font-mono font-bold" x-text="gestionHelpers.formatPrice(resumen.ventas_gravadas_10 || 0)"></span>
+                            </div>
+                            <div class="flex justify-between text-sm text-gray-600">
+                                <span class="ml-4">IVA 10%:</span>
+                                <span class="font-mono" x-text="gestionHelpers.formatPrice(resumen.ventas_iva_10 || 0)"></span>
+                            </div>
+                            <div class="divider my-2"></div>
+                            <div class="flex justify-between text-lg font-bold">
+                                <span>Total Ventas:</span>
+                                <span class="text-success" x-text="gestionHelpers.formatPrice(resumen.total_ventas || 0)"></span>
+                            </div>
+                            <div class="flex justify-between text-lg font-bold text-blue-600">
+                                <span>IVA Débito Fiscal:</span>
+                                <span x-text="gestionHelpers.formatPrice(resumen.total_iva_debito || 0)"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Compras -->
+                    <div class="p-6 bg-green-50 dark:bg-green-900 rounded-lg">
+                        <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                            <i class="fas fa-arrow-down text-green-600"></i>
+                            Compras del Período
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span>Operaciones Exentas:</span>
+                                <span class="font-mono font-bold" x-text="gestionHelpers.formatPrice(resumen.compras_exentas || 0)"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Gravadas IVA 5%:</span>
+                                <span class="font-mono font-bold" x-text="gestionHelpers.formatPrice(resumen.compras_gravadas_5 || 0)"></span>
+                            </div>
+                            <div class="flex justify-between text-sm text-gray-600">
+                                <span class="ml-4">IVA 5%:</span>
+                                <span class="font-mono" x-text="gestionHelpers.formatPrice(resumen.compras_iva_5 || 0)"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Gravadas IVA 10%:</span>
+                                <span class="font-mono font-bold" x-text="gestionHelpers.formatPrice(resumen.compras_gravadas_10 || 0)"></span>
+                            </div>
+                            <div class="flex justify-between text-sm text-gray-600">
+                                <span class="ml-4">IVA 10%:</span>
+                                <span class="font-mono" x-text="gestionHelpers.formatPrice(resumen.compras_iva_10 || 0)"></span>
+                            </div>
+                            <div class="divider my-2"></div>
+                            <div class="flex justify-between text-lg font-bold">
+                                <span>Total Compras:</span>
+                                <span class="text-success" x-text="gestionHelpers.formatPrice(resumen.total_compras || 0)"></span>
+                            </div>
+                            <div class="flex justify-between text-lg font-bold text-green-600">
+                                <span>IVA Crédito Fiscal:</span>
+                                <span x-text="gestionHelpers.formatPrice(resumen.total_iva_credito || 0)"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Liquidación Final -->
+                <div class="mt-6 p-6 rounded-lg"
+                     :class="resumen.saldo_iva >= 0 ? 'bg-red-50 dark:bg-red-900' : 'bg-green-50 dark:bg-green-900'">
+                    <h3 class="font-bold text-xl mb-4">Liquidación del IVA</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="text-center p-4 bg-white dark:bg-gray-800 rounded-lg">
+                            <p class="text-sm text-gray-600 mb-1">IVA Débito Fiscal</p>
+                            <p class="text-2xl font-bold text-blue-600" x-text="gestionHelpers.formatPrice(resumen.total_iva_debito || 0)"></p>
+                        </div>
+                        <div class="text-center p-4 bg-white dark:bg-gray-800 rounded-lg">
+                            <p class="text-sm text-gray-600 mb-1">IVA Crédito Fiscal</p>
+                            <p class="text-2xl font-bold text-green-600" x-text="gestionHelpers.formatPrice(resumen.total_iva_credito || 0)"></p>
+                        </div>
+                        <div class="text-center p-4 bg-white dark:bg-gray-800 rounded-lg">
+                            <p class="text-sm text-gray-600 mb-1" x-text="resumen.saldo_iva >= 0 ? 'Saldo a Pagar' : 'Saldo a Favor'"></p>
+                            <p class="text-3xl font-bold"
+                               :class="resumen.saldo_iva >= 0 ? 'text-error' : 'text-success'"
+                               x-text="gestionHelpers.formatPrice(Math.abs(resumen.saldo_iva || 0))"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab Libro de Ventas -->
+            <div x-show="tabActivo === 'libro-ventas'" x-transition>
+                <div class="mb-4 flex justify-between items-center">
+                    <h3 class="font-bold text-lg">Libro de Ventas - IVA Débito Fiscal</h3>
+                    <button @click="exportarLibroVentas()" class="btn btn-sm btn-secondary">
+                        <i class="fas fa-file-excel mr-2"></i>
+                        Exportar Excel
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="table table-sm table-zebra">
+                        <thead>
+                            <tr class="bg-gray-100 dark:bg-gray-700">
+                                <th>Fecha</th>
+                                <th>N° Factura</th>
+                                <th>CDC</th>
+                                <th>Cliente</th>
+                                <th>RUC</th>
+                                <th class="text-right">Exentas</th>
+                                <th class="text-right">Gravadas 5%</th>
+                                <th class="text-right">IVA 5%</th>
+                                <th class="text-right">Gravadas 10%</th>
+                                <th class="text-right">IVA 10%</th>
+                                <th class="text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-if="libroVentas.length === 0">
+                                <tr>
+                                    <td colspan="11" class="text-center py-8 text-gray-500">
+                                        No hay registros en este período
+                                    </td>
+                                </tr>
+                            </template>
+                            
+                            <template x-for="venta in libroVentas" :key="venta.id">
+                                <tr class="hover">
+                                    <td class="font-mono text-xs" x-text="gestionHelpers.formatDate(venta.fecha)"></td>
+                                    <td class="font-mono text-sm font-bold" x-text="venta.numero_factura"></td>
+                                    <td class="font-mono text-xs truncate max-w-[100px]" x-text="venta.cdc || '-'"></td>
+                                    <td x-text="venta.cliente_nombre"></td>
+                                    <td class="font-mono text-sm" x-text="venta.cliente_ruc || '-'"></td>
+                                    <td class="text-right font-mono text-sm" x-text="gestionHelpers.formatPrice(venta.exentas)"></td>
+                                    <td class="text-right font-mono text-sm" x-text="gestionHelpers.formatPrice(venta.gravadas_5)"></td>
+                                    <td class="text-right font-mono text-sm text-blue-600" x-text="gestionHelpers.formatPrice(venta.iva_5)"></td>
+                                    <td class="text-right font-mono text-sm" x-text="gestionHelpers.formatPrice(venta.gravadas_10)"></td>
+                                    <td class="text-right font-mono text-sm text-blue-600" x-text="gestionHelpers.formatPrice(venta.iva_10)"></td>
+                                    <td class="text-right font-bold" x-text="gestionHelpers.formatPrice(venta.total)"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                        <tfoot x-show="libroVentas.length > 0">
+                            <tr class="bg-gray-100 dark:bg-gray-700 font-bold">
+                                <td colspan="5" class="text-right">TOTALES:</td>
+                                <td class="text-right" x-text="gestionHelpers.formatPrice(totalesLibroVentas.exentas)"></td>
+                                <td class="text-right" x-text="gestionHelpers.formatPrice(totalesLibroVentas.gravadas_5)"></td>
+                                <td class="text-right text-blue-600" x-text="gestionHelpers.formatPrice(totalesLibroVentas.iva_5)"></td>
+                                <td class="text-right" x-text="gestionHelpers.formatPrice(totalesLibroVentas.gravadas_10)"></td>
+                                <td class="text-right text-blue-600" x-text="gestionHelpers.formatPrice(totalesLibroVentas.iva_10)"></td>
+                                <td class="text-right text-success text-lg" x-text="gestionHelpers.formatPrice(totalesLibroVentas.total)"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Tab Libro de Compras -->
+            <div x-show="tabActivo === 'libro-compras'" x-transition>
+                <div class="mb-4 flex justify-between items-center">
+                    <h3 class="font-bold text-lg">Libro de Compras - IVA Crédito Fiscal</h3>
+                    <button @click="exportarLibroCompras()" class="btn btn-sm btn-secondary">
+                        <i class="fas fa-file-excel mr-2"></i>
+                        Exportar Excel
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="table table-sm table-zebra">
+                        <thead>
+                            <tr class="bg-gray-100 dark:bg-gray-700">
+                                <th>Fecha</th>
+                                <th>N° Factura</th>
+                                <th>Proveedor</th>
+                                <th>RUC</th>
+                                <th class="text-right">Exentas</th>
+                                <th class="text-right">Gravadas 5%</th>
+                                <th class="text-right">IVA 5%</th>
+                                <th class="text-right">Gravadas 10%</th>
+                                <th class="text-right">IVA 10%</th>
+                                <th class="text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-if="libroCompras.length === 0">
+                                <tr>
+                                    <td colspan="10" class="text-center py-8 text-gray-500">
+                                        No hay registros en este período
+                                    </td>
+                                </tr>
+                            </template>
+                            
+                            <template x-for="compra in libroCompras" :key="compra.id">
+                                <tr class="hover">
+                                    <td class="font-mono text-xs" x-text="gestionHelpers.formatDate(compra.fecha)"></td>
+                                    <td class="font-mono text-sm font-bold" x-text="compra.numero_factura"></td>
+                                    <td x-text="compra.proveedor_nombre"></td>
+                                    <td class="font-mono text-sm" x-text="compra.proveedor_ruc"></td>
+                                    <td class="text-right font-mono text-sm" x-text="gestionHelpers.formatPrice(compra.exentas)"></td>
+                                    <td class="text-right font-mono text-sm" x-text="gestionHelpers.formatPrice(compra.gravadas_5)"></td>
+                                    <td class="text-right font-mono text-sm text-green-600" x-text="gestionHelpers.formatPrice(compra.iva_5)"></td>
+                                    <td class="text-right font-mono text-sm" x-text="gestionHelpers.formatPrice(compra.gravadas_10)"></td>
+                                    <td class="text-right font-mono text-sm text-green-600" x-text="gestionHelpers.formatPrice(compra.iva_10)"></td>
+                                    <td class="text-right font-bold" x-text="gestionHelpers.formatPrice(compra.total)"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                        <tfoot x-show="libroCompras.length > 0">
+                            <tr class="bg-gray-100 dark:bg-gray-700 font-bold">
+                                <td colspan="4" class="text-right">TOTALES:</td>
+                                <td class="text-right" x-text="gestionHelpers.formatPrice(totalesLibroCompras.exentas)"></td>
+                                <td class="text-right" x-text="gestionHelpers.formatPrice(totalesLibroCompras.gravadas_5)"></td>
+                                <td class="text-right text-green-600" x-text="gestionHelpers.formatPrice(totalesLibroCompras.iva_5)"></td>
+                                <td class="text-right" x-text="gestionHelpers.formatPrice(totalesLibroCompras.gravadas_10)"></td>
+                                <td class="text-right text-green-600" x-text="gestionHelpers.formatPrice(totalesLibroCompras.iva_10)"></td>
+                                <td class="text-right text-success text-lg" x-text="gestionHelpers.formatPrice(totalesLibroCompras.total)"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Tab Estadísticas SET -->
+            <div x-show="tabActivo === 'estadisticas-set'" x-transition>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-check-circle text-3xl opacity-80"></i>
+                        </div>
+                        <p class="text-sm opacity-90 mb-1">Facturas Aprobadas</p>
+                        <p class="text-3xl font-bold" x-text="estadisticasSET.aprobadas || 0"></p>
+                        <p class="text-xs opacity-80" x-text="calcularPorcentaje(estadisticasSET.aprobadas, estadisticasSET.total) + '%'"></p>
+                    </div>
+                    
+                    <div class="stat-card bg-gradient-to-br from-warning to-yellow-600 text-white">
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-clock text-3xl opacity-80"></i>
+                        </div>
+                        <p class="text-sm opacity-90 mb-1">Pendientes</p>
+                        <p class="text-3xl font-bold" x-text="estadisticasSET.pendientes || 0"></p>
+                        <p class="text-xs opacity-80" x-text="calcularPorcentaje(estadisticasSET.pendientes, estadisticasSET.total) + '%'"></p>
+                    </div>
+                    
+                    <div class="stat-card bg-gradient-to-br from-error to-red-600 text-white">
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-times-circle text-3xl opacity-80"></i>
+                        </div>
+                        <p class="text-sm opacity-90 mb-1">Rechazadas</p>
+                        <p class="text-3xl font-bold" x-text="estadisticasSET.rechazadas || 0"></p>
+                        <p class="text-xs opacity-80" x-text="calcularPorcentaje(estadisticasSET.rechazadas, estadisticasSET.total) + '%'"></p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Gráfico de Estados -->
+                    <div>
+                        <h3 class="font-bold text-lg mb-4">Estados de Documentos Electrónicos</h3>
+                        <canvas id="chartEstadosSET" height="250"></canvas>
+                    </div>
+                    
+                    <!-- Tiempos de Respuesta -->
+                    <div>
+                        <h3 class="font-bold text-lg mb-4">Tiempos de Respuesta SET</h3>
+                        <div class="space-y-4">
+                            <div class="p-4 bg-green-50 dark:bg-green-900 rounded-lg">
+                                <p class="text-sm text-gray-600 mb-1">Tiempo Promedio</p>
+                                <p class="text-2xl font-bold" x-text="(estadisticasSET.tiempo_promedio || 0) + 's'"></p>
+                            </div>
+                            <div class="p-4 bg-blue-50 dark:bg-blue-900 rounded-lg">
+                                <p class="text-sm text-gray-600 mb-1">Tasa de Éxito</p>
+                                <div class="flex items-center gap-2">
+                                    <progress class="progress progress-success w-full" 
+                                             :value="estadisticasSET.tasa_exito || 0" 
+                                             max="100"></progress>
+                                    <span class="text-xl font-bold" x-text="(estadisticasSET.tasa_exito || 0) + '%'"></span>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-purple-50 dark:bg-purple-900 rounded-lg">
+                                <p class="text-sm text-gray-600 mb-1">Última Sincronización</p>
+                                <p class="text-lg font-semibold" x-text="gestionHelpers.formatDateTime(estadisticasSET.ultima_sincronizacion)"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Botón de Sincronización -->
+                <div class="mt-6 text-center">
+                    <button @click="sincronizarSET()" 
+                            :disabled="sincronizando"
+                            class="btn btn-lg btn-secondary">
+                        <template x-if="!sincronizando">
+                            <i class="fas fa-sync-alt mr-2"></i>
+                        </template>
+                        <template x-if="sincronizando">
+                            <span class="loading loading-spinner loading-sm mr-2"></span>
+                        </template>
+                        <span x-text="sincronizando ? 'Sincronizando...' : 'Sincronizar con SET'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function cumplimientoFiscal() {
+    return {
+        periodo: {
+            mes: new Date().getMonth() + 1,
+            anio: new Date().getFullYear()
+        },
+        tabActivo: 'resumen',
+        stats: {},
+        resumen: {},
+        libroVentas: [],
+        libroCompras: [],
+        estadisticasSET: {},
+        chartIVADiario: null,
+        chartTipoIVA: null,
+        chartEstadosSET: null,
+        sincronizando: false,
+        
+        get aniosDisponibles() {
+            const currentYear = new Date().getFullYear();
+            return Array.from({length: 5}, (_, i) => currentYear - i);
+        },
+        
+        get totalesLibroVentas() {
+            return this.calcularTotalesLibro(this.libroVentas);
+        },
+        
+        get totalesLibroCompras() {
+            return this.calcularTotalesLibro(this.libroCompras);
+        },
+        
+        async inicializar() {
+            await this.cargarDatos();
+        },
+        
+        async cargarDatos() {
+            await Promise.all([
+                this.cargarResumen(),
+                this.cargarLibroVentas(),
+                this.cargarLibroCompras(),
+                this.cargarEstadisticasSET()
+            ]);
+            
+            this.$nextTick(() => {
+                this.renderCharts();
+            });
+        },
+        
+        async cargarResumen() {
+            try {
+                const response = await fetch(`/api/facturacion/cumplimiento/resumen/?mes=${this.periodo.mes}&anio=${this.periodo.anio}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.stats = data.stats;
+                    this.resumen = data.resumen;
+                }
+            } catch (error) {
+                console.error('Error al cargar resumen:', error);
+                gestionHelpers.notify('Error al cargar resumen', 'error');
+            }
+        },
+        
+        async cargarLibroVentas() {
+            try {
+                const response = await fetch(`/api/facturacion/libro-ventas/?mes=${this.periodo.mes}&anio=${this.periodo.anio}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.libroVentas = data.ventas;
+                }
+            } catch (error) {
+                console.error('Error al cargar libro de ventas:', error);
+            }
+        },
+        
+        async cargarLibroCompras() {
+            try {
+                const response = await fetch(`/api/facturacion/libro-compras/?mes=${this.periodo.mes}&anio=${this.periodo.anio}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.libroCompras = data.compras;
+                }
+            } catch (error) {
+                console.error('Error al cargar libro de compras:', error);
+            }
+        },
+        
+        async cargarEstadisticasSET() {
+            try {
+                const response = await fetch(`/api/facturacion/estadisticas-set/?mes=${this.periodo.mes}&anio=${this.periodo.anio}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.estadisticasSET = data.estadisticas;
+                }
+            } catch (error) {
+                console.error('Error al cargar estadísticas SET:', error);
+            }
+        },
+        
+        renderCharts() {
+            this.renderChartIVADiario();
+            this.renderChartTipoIVA();
+            this.renderChartEstadosSET();
+        },
+        
+        renderChartIVADiario() {
+            const ctx = document.getElementById('chartIVADiario');
+            if (!ctx) return;
+            
+            if (this.chartIVADiario) {
+                this.chartIVADiario.destroy();
+            }
+            
+            this.chartIVADiario = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: this.resumen.iva_por_dia?.map(d => d.dia) || [],
+                    datasets: [{
+                        label: 'IVA Débito',
+                        data: this.resumen.iva_por_dia?.map(d => d.iva) || [],
+                        backgroundColor: 'rgba(79, 70, 229, 0.8)',
+                        borderColor: 'rgb(79, 70, 229)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return gestionHelpers.formatPrice(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        },
+        
+        renderChartTipoIVA() {
+            const ctx = document.getElementById('chartTipoIVA');
+            if (!ctx) return;
+            
+            if (this.chartTipoIVA) {
+                this.chartTipoIVA.destroy();
+            }
+            
+            this.chartTipoIVA = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Exentas', 'IVA 5%', 'IVA 10%'],
+                    datasets: [{
+                        data: [
+                            this.resumen.ventas_exentas || 0,
+                            this.resumen.ventas_gravadas_5 || 0,
+                            this.resumen.ventas_gravadas_10 || 0
+                        ],
+                        backgroundColor: [
+                            'rgba(156, 163, 175, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(34, 197, 94, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgb(156, 163, 175)',
+                            'rgb(59, 130, 246)',
+                            'rgb(34, 197, 94)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        },
+        
+        renderChartEstadosSET() {
+            const ctx = document.getElementById('chartEstadosSET');
+            if (!ctx) return;
+            
+            if (this.chartEstadosSET) {
+                this.chartEstadosSET.destroy();
+            }
+            
+            this.chartEstadosSET = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Aprobadas', 'Pendientes', 'Rechazadas'],
+                    datasets: [{
+                        data: [
+                            this.estadisticasSET.aprobadas || 0,
+                            this.estadisticasSET.pendientes || 0,
+                            this.estadisticasSET.rechazadas || 0
+                        ],
+                        backgroundColor: [
+                            'rgba(34, 197, 94, 0.8)',
+                            'rgba(234, 179, 8, 0.8)',
+                            'rgba(239, 68, 68, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgb(34, 197, 94)',
+                            'rgb(234, 179, 8)',
+                            'rgb(239, 68, 68)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        },
+        
+        calcularTotalesLibro(libro) {
+            return libro.reduce((totales, item) => ({
+                exentas: totales.exentas + (item.exentas || 0),
+                gravadas_5: totales.gravadas_5 + (item.gravadas_5 || 0),
+                iva_5: totales.iva_5 + (item.iva_5 || 0),
+                gravadas_10: totales.gravadas_10 + (item.gravadas_10 || 0),
+                iva_10: totales.iva_10 + (item.iva_10 || 0),
+                total: totales.total + (item.total || 0)
+            }), {
+                exentas: 0,
+                gravadas_5: 0,
+                iva_5: 0,
+                gravadas_10: 0,
+                iva_10: 0,
+                total: 0
+            });
+        },
+        
+        calcularPorcentaje(valor, total) {
+            if (!total) return 0;
+            return Math.round((valor / total) * 100);
+        },
+        
+        setPeriodoActual() {
+            const hoy = new Date();
+            this.periodo.mes = hoy.getMonth() + 1;
+            this.periodo.anio = hoy.getFullYear();
+            this.cargarDatos();
+        },
+        
+        setPeriodoAnterior() {
+            const anterior = new Date(this.periodo.anio, this.periodo.mes - 2, 1);
+            this.periodo.mes = anterior.getMonth() + 1;
+            this.periodo.anio = anterior.getFullYear();
+            this.cargarDatos();
+        },
+        
+        async exportarLibroIVA() {
+            window.open(`/api/facturacion/exportar-libro-iva/?mes=${this.periodo.mes}&anio=${this.periodo.anio}`, '_blank');
+        },
+        
+        async exportarLibroVentas() {
+            window.open(`/api/facturacion/exportar-libro-ventas/?mes=${this.periodo.mes}&anio=${this.periodo.anio}`, '_blank');
+        },
+        
+        async exportarLibroCompras() {
+            window.open(`/api/facturacion/exportar-libro-compras/?mes=${this.periodo.mes}&anio=${this.periodo.anio}`, '_blank');
+        },
+        
+        async generarInforme() {
+            window.open(`/api/facturacion/informe-mensual/?mes=${this.periodo.mes}&anio=${this.periodo.anio}`, '_blank');
+        },
+        
+        async sincronizarSET() {
+            this.sincronizando = true;
+            try {
+                const response = await fetch('/api/facturacion/sincronizar-set/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify('Sincronización completada', 'success');
+                    await this.cargarEstadisticasSET();
+                } else {
+                    gestionHelpers.notify(data.message || 'Error al sincronizar', 'error');
+                }
+            } catch (error) {
+                console.error('Error al sincronizar:', error);
+                gestionHelpers.notify('Error al sincronizar con SET', 'error');
+            } finally {
+                this.sincronizando = false;
+            }
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    }
+}
+</script>
+{% endblock %}

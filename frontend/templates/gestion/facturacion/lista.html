@@ -1,0 +1,837 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Facturación Electrónica - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="listaFacturas()" x-init="cargarFacturas()" class="container mx-auto px-4 py-8">
+    
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-file-invoice-dollar mr-3 text-secondary"></i>
+                Facturación Electrónica (KUDE)
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Sistema de facturación electrónica SET - Paraguay
+            </p>
+        </div>
+        
+        <div class="flex gap-2">
+            <button @click="sincronizarSET()" class="btn btn-ghost gap-2">
+                <i class="fas fa-sync-alt"></i>
+                Sincronizar SET
+            </button>
+            <a href="{% url 'gestion:facturacion_generar' %}" class="btn btn-secondary text-white gap-2">
+                <i class="fas fa-plus"></i>
+                Nueva Factura
+            </a>
+        </div>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
+        <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-700 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-file-invoice text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Total Facturas</p>
+            <p class="text-3xl font-bold" x-text="stats.total_facturas || 0"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-check-circle text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Aprobadas</p>
+            <p class="text-3xl font-bold" x-text="stats.aprobadas || 0"></p>
+            <p class="text-xs opacity-80" x-text="gestionHelpers.formatPrice(stats.monto_aprobadas || 0)"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-warning to-yellow-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-clock text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Pendientes</p>
+            <p class="text-3xl font-bold" x-text="stats.pendientes || 0"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-error to-red-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-times-circle text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Rechazadas</p>
+            <p class="text-3xl font-bold" x-text="stats.rechazadas || 0"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-ban text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Anuladas</p>
+            <p class="text-3xl font-bold" x-text="stats.anuladas || 0"></p>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <!-- Búsqueda -->
+            <div class="form-control md:col-span-2">
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-search mr-2"></i>Buscar
+                    </span>
+                </label>
+                <input type="text" 
+                       x-model="filtros.busqueda" 
+                       @input.debounce.300ms="buscarFacturas()"
+                       placeholder="N° factura, CDC, RUC, cliente..."
+                       class="input input-bordered w-full">
+            </div>
+            
+            <!-- Fecha Desde -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-calendar-alt mr-2"></i>Desde
+                    </span>
+                </label>
+                <input type="date" 
+                       x-model="filtros.fecha_desde"
+                       @change="buscarFacturas()"
+                       class="input input-bordered">
+            </div>
+            
+            <!-- Fecha Hasta -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-calendar-alt mr-2"></i>Hasta
+                    </span>
+                </label>
+                <input type="date" 
+                       x-model="filtros.fecha_hasta"
+                       @change="buscarFacturas()"
+                       class="input input-bordered">
+            </div>
+            
+            <!-- Estado -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-flag mr-2"></i>Estado
+                    </span>
+                </label>
+                <select x-model="filtros.estado" 
+                        @change="buscarFacturas()"
+                        class="select select-bordered">
+                    <option value="">Todos</option>
+                    <option value="borrador">Borrador</option>
+                    <option value="enviada">Enviada</option>
+                    <option value="aprobada">Aprobada</option>
+                    <option value="rechazada">Rechazada</option>
+                    <option value="anulada">Anulada</option>
+                </select>
+            </div>
+            
+            <!-- Tipo de Documento -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-file-alt mr-2"></i>Tipo
+                    </span>
+                </label>
+                <select x-model="filtros.tipo_documento" 
+                        @change="buscarFacturas()"
+                        class="select select-bordered">
+                    <option value="">Todos</option>
+                    <option value="factura">Factura</option>
+                    <option value="nota_credito">Nota de Crédito</option>
+                    <option value="nota_debito">Nota de Débito</option>
+                    <option value="autofactura">Autofactura</option>
+                </select>
+            </div>
+            
+            <!-- Timbrado -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-stamp mr-2"></i>Timbrado
+                    </span>
+                </label>
+                <select x-model="filtros.timbrado" 
+                        @change="buscarFacturas()"
+                        class="select select-bordered">
+                    <option value="">Todos</option>
+                    <template x-for="timbrado in timbrados" :key="timbrado.id">
+                        <option :value="timbrado.id" x-text="timbrado.numero"></option>
+                    </template>
+                </select>
+            </div>
+            
+            <!-- Botones de Período Rápido -->
+            <div class="md:col-span-3 flex flex-wrap gap-2 items-end">
+                <button @click="setPeriodo('hoy')" class="btn btn-sm btn-outline">Hoy</button>
+                <button @click="setPeriodo('semana')" class="btn btn-sm btn-outline">Esta Semana</button>
+                <button @click="setPeriodo('mes')" class="btn btn-sm btn-outline">Este Mes</button>
+                <button @click="limpiarFiltros()" class="btn btn-sm btn-ghost">
+                    <i class="fas fa-times mr-1"></i>Limpiar
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tabla de Facturas -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="table table-zebra w-full">
+                <thead>
+                    <tr class="bg-gray-100 dark:bg-gray-700">
+                        <th class="w-32">N° Factura</th>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th class="w-48">RUC</th>
+                        <th>CDC</th>
+                        <th class="text-right">Total</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-center">SET</th>
+                        <th class="text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-if="facturas.length === 0 && !cargando">
+                        <tr>
+                            <td colspan="9" class="text-center py-12">
+                                <div class="flex flex-col items-center gap-4">
+                                    <i class="fas fa-inbox text-6xl text-gray-300"></i>
+                                    <p class="text-gray-500 text-lg">No se encontraron facturas</p>
+                                    <a href="{% url 'gestion:facturacion_generar' %}" class="btn btn-secondary">
+                                        <i class="fas fa-plus mr-2"></i>
+                                        Crear Primera Factura
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    
+                    <template x-if="cargando">
+                        <tr>
+                            <td colspan="9" class="text-center py-12">
+                                <span class="loading loading-spinner loading-lg text-secondary"></span>
+                                <p class="text-gray-500 mt-4">Cargando facturas...</p>
+                            </td>
+                        </tr>
+                    </template>
+                    
+                    <template x-for="factura in facturas" :key="factura.id">
+                        <tr class="hover">
+                            <td>
+                                <div class="font-mono font-bold text-primary" x-text="factura.numero_factura"></div>
+                                <div class="badge badge-sm badge-ghost" x-text="factura.tipo_documento_display"></div>
+                            </td>
+                            <td class="font-mono text-sm" x-text="gestionHelpers.formatDate(factura.fecha_emision)"></td>
+                            <td>
+                                <p class="font-semibold" x-text="factura.cliente_nombre"></p>
+                                <p class="text-xs text-gray-500" x-text="factura.cliente_razon_social || ''"></p>
+                            </td>
+                            <td class="font-mono text-sm" x-text="factura.cliente_ruc || '-'"></td>
+                            <td>
+                                <template x-if="factura.cdc">
+                                    <div class="tooltip" :data-tip="factura.cdc">
+                                        <div class="font-mono text-xs text-gray-600 truncate max-w-[120px]" x-text="factura.cdc"></div>
+                                        <button @click="copiarCDC(factura.cdc)" class="btn btn-ghost btn-xs">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </template>
+                                <template x-if="!factura.cdc">
+                                    <span class="text-gray-400 text-xs">Sin CDC</span>
+                                </template>
+                            </td>
+                            <td class="text-right font-bold text-lg text-success" x-text="gestionHelpers.formatPrice(factura.total)"></td>
+                            <td class="text-center">
+                                <div class="badge badge-sm" 
+                                     :class="{
+                                         'badge-ghost': factura.estado === 'borrador',
+                                         'badge-info': factura.estado === 'enviada',
+                                         'badge-success': factura.estado === 'aprobada',
+                                         'badge-error': factura.estado === 'rechazada',
+                                         'badge-warning': factura.estado === 'anulada'
+                                     }">
+                                    <i class="fas mr-1" 
+                                       :class="{
+                                           'fa-edit': factura.estado === 'borrador',
+                                           'fa-paper-plane': factura.estado === 'enviada',
+                                           'fa-check-circle': factura.estado === 'aprobada',
+                                           'fa-times-circle': factura.estado === 'rechazada',
+                                           'fa-ban': factura.estado === 'anulada'
+                                       }"></i>
+                                    <span x-text="factura.estado_display"></span>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <template x-if="factura.enviada_set">
+                                    <div class="tooltip" :data-tip="'Enviada: ' + gestionHelpers.formatDateTime(factura.fecha_envio_set)">
+                                        <i class="fas fa-check-circle text-success text-xl"></i>
+                                    </div>
+                                </template>
+                                <template x-if="!factura.enviada_set">
+                                    <i class="fas fa-times-circle text-gray-400"></i>
+                                </template>
+                            </td>
+                            <td>
+                                <div class="flex justify-end gap-1">
+                                    <div class="dropdown dropdown-end">
+                                        <label tabindex="0" class="btn btn-ghost btn-sm">
+                                            <i class="fas fa-download"></i>
+                                        </label>
+                                        <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                                            <li><a @click="descargarPDF(factura)"><i class="fas fa-file-pdf mr-2 text-error"></i>PDF</a></li>
+                                            <li><a @click="descargarXML(factura)"><i class="fas fa-file-code mr-2 text-warning"></i>XML</a></li>
+                                            <li><a @click="descargarQR(factura)"><i class="fas fa-qrcode mr-2"></i>Código QR</a></li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <button @click="verDetalle(factura)" 
+                                            class="btn btn-ghost btn-sm"
+                                            title="Ver detalle">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    
+                                    <template x-if="factura.estado === 'borrador'">
+                                        <button @click="editarFactura(factura)" 
+                                                class="btn btn-ghost btn-sm text-warning"
+                                                title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </template>
+                                    
+                                    <template x-if="factura.estado === 'aprobada'">
+                                        <div class="dropdown dropdown-end">
+                                            <label tabindex="0" class="btn btn-ghost btn-sm">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </label>
+                                            <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                                                <li><a @click="enviarEmail(factura)"><i class="fas fa-envelope mr-2"></i>Enviar Email</a></li>
+                                                <li><a @click="consultarSET(factura)"><i class="fas fa-search mr-2"></i>Consultar en SET</a></li>
+                                                <li class="divider"></li>
+                                                <li><a @click="anularFactura(factura)" class="text-error"><i class="fas fa-ban mr-2"></i>Anular</a></li>
+                                            </ul>
+                                        </div>
+                                    </template>
+                                    
+                                    <template x-if="factura.estado === 'borrador' || factura.estado === 'rechazada'">
+                                        <button @click="enviarSET(factura)" 
+                                                class="btn btn-ghost btn-sm text-success"
+                                                title="Enviar a SET">
+                                            <i class="fas fa-paper-plane"></i>
+                                        </button>
+                                    </template>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginación -->
+        <template x-if="totalPaginas > 1">
+            <div class="flex justify-center items-center gap-2 p-4 border-t">
+                <button @click="cambiarPagina(paginaActual - 1)" 
+                        :disabled="paginaActual === 1"
+                        class="btn btn-sm">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                
+                <span class="text-sm text-gray-600">
+                    Página <span x-text="paginaActual"></span> de <span x-text="totalPaginas"></span>
+                    (<span x-text="stats.total_facturas || 0"></span> facturas)
+                </span>
+                
+                <button @click="cambiarPagina(paginaActual + 1)" 
+                        :disabled="paginaActual === totalPaginas"
+                        class="btn btn-sm">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Modal Detalle de Factura -->
+    <div x-show="modalDetalle" 
+         x-transition
+         class="modal" 
+         :class="{'modal-open': modalDetalle}">
+        <div class="modal-box max-w-5xl">
+            <template x-if="facturaSeleccionada">
+                <div>
+                    <!-- Header -->
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h3 class="font-bold text-2xl">
+                                Factura <span class="text-primary font-mono" x-text="facturaSeleccionada.numero_factura"></span>
+                            </h3>
+                            <p class="text-sm text-gray-600" x-text="gestionHelpers.formatDate(facturaSeleccionada.fecha_emision)"></p>
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="badge badge-lg" 
+                                 :class="{
+                                     'badge-ghost': facturaSeleccionada.estado === 'borrador',
+                                     'badge-info': facturaSeleccionada.estado === 'enviada',
+                                     'badge-success': facturaSeleccionada.estado === 'aprobada',
+                                     'badge-error': facturaSeleccionada.estado === 'rechazada',
+                                     'badge-warning': facturaSeleccionada.estado === 'anulada'
+                                 }">
+                                <span x-text="facturaSeleccionada.estado_display"></span>
+                            </div>
+                            <template x-if="facturaSeleccionada.enviada_set">
+                                <div class="badge badge-success badge-lg">
+                                    <i class="fas fa-check mr-1"></i> SET
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    
+                    <!-- Información Fiscal -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="p-4 bg-blue-50 dark:bg-blue-900 rounded-lg">
+                            <p class="text-xs text-blue-600 dark:text-blue-300 mb-1">Timbrado</p>
+                            <p class="font-mono font-bold" x-text="facturaSeleccionada.timbrado_numero"></p>
+                            <p class="text-xs text-gray-600">
+                                Vence: <span x-text="gestionHelpers.formatDate(facturaSeleccionada.timbrado_vencimiento)"></span>
+                            </p>
+                        </div>
+                        
+                        <div class="p-4 bg-green-50 dark:bg-green-900 rounded-lg">
+                            <p class="text-xs text-green-600 dark:text-green-300 mb-1">CDC</p>
+                            <template x-if="facturaSeleccionada.cdc">
+                                <div>
+                                    <p class="font-mono text-xs truncate" x-text="facturaSeleccionada.cdc"></p>
+                                    <button @click="copiarCDC(facturaSeleccionada.cdc)" class="btn btn-xs btn-ghost mt-1">
+                                        <i class="fas fa-copy mr-1"></i>Copiar
+                                    </button>
+                                </div>
+                            </template>
+                            <template x-if="!facturaSeleccionada.cdc">
+                                <p class="text-gray-400 italic text-sm">No generado</p>
+                            </template>
+                        </div>
+                        
+                        <div class="p-4 bg-purple-50 dark:bg-purple-900 rounded-lg">
+                            <p class="text-xs text-purple-600 dark:text-purple-300 mb-1">Tipo Documento</p>
+                            <p class="font-semibold" x-text="facturaSeleccionada.tipo_documento_display"></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Cliente -->
+                    <div class="mb-6">
+                        <h4 class="font-bold mb-3">Datos del Cliente</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p class="text-xs text-gray-500 mb-1">Nombre / Razón Social</p>
+                                <p class="font-semibold" x-text="facturaSeleccionada.cliente_razon_social || facturaSeleccionada.cliente_nombre"></p>
+                            </div>
+                            <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p class="text-xs text-gray-500 mb-1">RUC</p>
+                                <p class="font-mono font-semibold" x-text="facturaSeleccionada.cliente_ruc || 'Sin RUC'"></p>
+                            </div>
+                            <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p class="text-xs text-gray-500 mb-1">Dirección</p>
+                                <p x-text="facturaSeleccionada.cliente_direccion || '-'"></p>
+                            </div>
+                            <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p class="text-xs text-gray-500 mb-1">Email</p>
+                                <p x-text="facturaSeleccionada.cliente_email || '-'"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Items -->
+                    <div class="mb-6">
+                        <h4 class="font-bold mb-3">Detalle de Items</h4>
+                        <div class="overflow-x-auto">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Descripción</th>
+                                        <th class="text-center">Cant.</th>
+                                        <th class="text-right">Precio Unit.</th>
+                                        <th class="text-right">Exentas</th>
+                                        <th class="text-right">IVA 5%</th>
+                                        <th class="text-right">IVA 10%</th>
+                                        <th class="text-right">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="item in facturaSeleccionada.items" :key="item.id">
+                                        <tr>
+                                            <td x-text="item.descripcion"></td>
+                                            <td class="text-center font-semibold" x-text="item.cantidad"></td>
+                                            <td class="text-right font-mono text-sm" x-text="gestionHelpers.formatPrice(item.precio_unitario)"></td>
+                                            <td class="text-right font-mono text-sm" x-text="gestionHelpers.formatPrice(item.monto_exenta || 0)"></td>
+                                            <td class="text-right font-mono text-sm" x-text="gestionHelpers.formatPrice(item.monto_iva_5 || 0)"></td>
+                                            <td class="text-right font-mono text-sm" x-text="gestionHelpers.formatPrice(item.monto_iva_10 || 0)"></td>
+                                            <td class="text-right font-semibold" x-text="gestionHelpers.formatPrice(item.subtotal)"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Totales -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <template x-if="facturaSeleccionada.observaciones">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i>
+                                    <div>
+                                        <p class="font-semibold">Observaciones:</p>
+                                        <p x-text="facturaSeleccionada.observaciones"></p>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span>Subtotal Exentas:</span>
+                                <span class="font-mono" x-text="gestionHelpers.formatPrice(facturaSeleccionada.total_exentas || 0)"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Subtotal IVA 5%:</span>
+                                <span class="font-mono" x-text="gestionHelpers.formatPrice(facturaSeleccionada.total_iva_5 || 0)"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Subtotal IVA 10%:</span>
+                                <span class="font-mono" x-text="gestionHelpers.formatPrice(facturaSeleccionada.total_iva_10 || 0)"></span>
+                            </div>
+                            <div class="flex justify-between text-sm text-gray-600">
+                                <span>Liquidación IVA 5%:</span>
+                                <span class="font-mono" x-text="gestionHelpers.formatPrice(facturaSeleccionada.liquidacion_iva_5 || 0)"></span>
+                            </div>
+                            <div class="flex justify-between text-sm text-gray-600">
+                                <span>Liquidación IVA 10%:</span>
+                                <span class="font-mono" x-text="gestionHelpers.formatPrice(facturaSeleccionada.liquidacion_iva_10 || 0)"></span>
+                            </div>
+                            <div class="divider my-2"></div>
+                            <div class="flex justify-between text-2xl font-bold">
+                                <span>TOTAL:</span>
+                                <span class="text-success" x-text="gestionHelpers.formatPrice(facturaSeleccionada.total)"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            
+            <div class="modal-action">
+                <button @click="modalDetalle = false" class="btn btn-ghost">
+                    <i class="fas fa-times mr-2"></i>
+                    Cerrar
+                </button>
+                <template x-if="facturaSeleccionada">
+                    <div class="flex gap-2">
+                        <button @click="descargarPDF(facturaSeleccionada)" class="btn btn-error">
+                            <i class="fas fa-file-pdf mr-2"></i>
+                            PDF
+                        </button>
+                        <button @click="descargarXML(facturaSeleccionada)" class="btn btn-warning">
+                            <i class="fas fa-file-code mr-2"></i>
+                            XML
+                        </button>
+                    </div>
+                </template>
+            </div>
+        </div>
+        <div class="modal-backdrop" @click="modalDetalle = false"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function listaFacturas() {
+    return {
+        facturas: [],
+        facturaSeleccionada: null,
+        timbrados: [],
+        stats: {},
+        filtros: {
+            busqueda: '',
+            fecha_desde: '',
+            fecha_hasta: '',
+            estado: '',
+            tipo_documento: '',
+            timbrado: ''
+        },
+        paginaActual: 1,
+        totalPaginas: 1,
+        cargando: false,
+        modalDetalle: false,
+        
+        async cargarFacturas() {
+            this.cargando = true;
+            try {
+                const params = new URLSearchParams({
+                    page: this.paginaActual,
+                    per_page: 30
+                });
+                
+                Object.keys(this.filtros).forEach(key => {
+                    if (this.filtros[key]) {
+                        params.append(key, this.filtros[key]);
+                    }
+                });
+                
+                const response = await fetch(`/api/facturacion/?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.facturas = data.facturas;
+                    this.stats = data.stats || {};
+                    this.timbrados = data.timbrados || [];
+                    this.totalPaginas = data.total_pages || 1;
+                }
+            } catch (error) {
+                console.error('Error al cargar facturas:', error);
+                gestionHelpers.notify('Error al cargar facturas', 'error');
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        buscarFacturas() {
+            this.paginaActual = 1;
+            this.cargarFacturas();
+        },
+        
+        cambiarPagina(pagina) {
+            if (pagina >= 1 && pagina <= this.totalPaginas) {
+                this.paginaActual = pagina;
+                this.cargarFacturas();
+            }
+        },
+        
+        setPeriodo(periodo) {
+            const hoy = new Date();
+            this.filtros.fecha_hasta = this.formatearFecha(hoy);
+            
+            let inicio = new Date();
+            switch(periodo) {
+                case 'hoy':
+                    inicio = new Date(hoy);
+                    break;
+                case 'semana':
+                    inicio.setDate(inicio.getDate() - 7);
+                    break;
+                case 'mes':
+                    inicio.setMonth(inicio.getMonth() - 1);
+                    break;
+            }
+            
+            this.filtros.fecha_desde = this.formatearFecha(inicio);
+            this.buscarFacturas();
+        },
+        
+        limpiarFiltros() {
+            this.filtros = {
+                busqueda: '',
+                fecha_desde: '',
+                fecha_hasta: '',
+                estado: '',
+                tipo_documento: '',
+                timbrado: ''
+            };
+            this.buscarFacturas();
+        },
+        
+        async verDetalle(factura) {
+            try {
+                const response = await fetch(`/api/facturacion/${factura.id}/detalle/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.facturaSeleccionada = data.factura;
+                    this.modalDetalle = true;
+                }
+            } catch (error) {
+                console.error('Error al cargar detalle:', error);
+                gestionHelpers.notify('Error al cargar detalle', 'error');
+            }
+        },
+        
+        editarFactura(factura) {
+            window.location.href = `/gestion/facturacion/${factura.id}/editar/`;
+        },
+        
+        async enviarSET(factura) {
+            if (!await gestionHelpers.confirm(
+                'Enviar factura a SET',
+                `¿Enviar factura ${factura.numero_factura} a la SET?`
+            )) return;
+            
+            try {
+                const response = await fetch(`/api/facturacion/${factura.id}/enviar-set/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify('Factura enviada a SET correctamente', 'success');
+                    this.cargarFacturas();
+                } else {
+                    gestionHelpers.notify(data.message || 'Error al enviar a SET', 'error');
+                }
+            } catch (error) {
+                console.error('Error al enviar a SET:', error);
+                gestionHelpers.notify('Error al enviar a SET', 'error');
+            }
+        },
+        
+        async consultarSET(factura) {
+            try {
+                const response = await fetch(`/api/facturacion/${factura.id}/consultar-set/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify(`Estado SET: ${data.estado_set}`, 'info');
+                    this.cargarFacturas();
+                } else {
+                    gestionHelpers.notify(data.message || 'Error al consultar SET', 'error');
+                }
+            } catch (error) {
+                console.error('Error al consultar SET:', error);
+                gestionHelpers.notify('Error al consultar SET', 'error');
+            }
+        },
+        
+        async sincronizarSET() {
+            if (!await gestionHelpers.confirm(
+                'Sincronizar con SET',
+                'Esto actualizará el estado de todas las facturas enviadas'
+            )) return;
+            
+            try {
+                const response = await fetch(`/api/facturacion/sincronizar-set/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify(`Sincronización completada: ${data.actualizadas} facturas`, 'success');
+                    this.cargarFacturas();
+                } else {
+                    gestionHelpers.notify(data.message || 'Error al sincronizar', 'error');
+                }
+            } catch (error) {
+                console.error('Error al sincronizar:', error);
+                gestionHelpers.notify('Error al sincronizar con SET', 'error');
+            }
+        },
+        
+        async anularFactura(factura) {
+            if (!await gestionHelpers.confirm(
+                'Anular factura',
+                `¿Anular factura ${factura.numero_factura}?\n\nEsta acción generará una nota de crédito.`
+            )) return;
+            
+            try {
+                const response = await fetch(`/api/facturacion/${factura.id}/anular/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify('Factura anulada correctamente', 'success');
+                    this.cargarFacturas();
+                } else {
+                    gestionHelpers.notify(data.message || 'Error al anular factura', 'error');
+                }
+            } catch (error) {
+                console.error('Error al anular factura:', error);
+                gestionHelpers.notify('Error al anular factura', 'error');
+            }
+        },
+        
+        async enviarEmail(factura) {
+            if (!await gestionHelpers.confirm(
+                'Enviar factura por email',
+                `¿Enviar factura ${factura.numero_factura} a ${factura.cliente_email}?`
+            )) return;
+            
+            try {
+                const response = await fetch(`/api/facturacion/${factura.id}/enviar-email/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify('Email enviado correctamente', 'success');
+                } else {
+                    gestionHelpers.notify(data.message || 'Error al enviar email', 'error');
+                }
+            } catch (error) {
+                console.error('Error al enviar email:', error);
+                gestionHelpers.notify('Error al enviar email', 'error');
+            }
+        },
+        
+        descargarPDF(factura) {
+            window.open(`/api/facturacion/${factura.id}/pdf/`, '_blank');
+        },
+        
+        descargarXML(factura) {
+            window.open(`/api/facturacion/${factura.id}/xml/`, '_blank');
+        },
+        
+        descargarQR(factura) {
+            window.open(`/api/facturacion/${factura.id}/qr/`, '_blank');
+        },
+        
+        copiarCDC(cdc) {
+            navigator.clipboard.writeText(cdc).then(() => {
+                gestionHelpers.notify('CDC copiado al portapapeles', 'success');
+            });
+        },
+        
+        formatearFecha(fecha) {
+            return fecha.toISOString().split('T')[0];
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    }
+}
+</script>
+{% endblock %}
