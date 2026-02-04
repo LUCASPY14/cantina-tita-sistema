@@ -1,124 +1,552 @@
-{% extends "portal/base_portal.html" %}
+{% extends "base.html" %}
+{% load static %}
 
-{% block title %}Mis Hijos - Portal de Padres{% endblock %}
+{% block title %}Mis Hijos - Portal Padres{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold text-gray-800">👨‍👩‍👧‍👦 Mis Hijos</h1>
+<div x-data="misHijos()" x-init="init()" class="container mx-auto px-4 py-8">
+    
+    <!-- Header -->
+    <header class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-users mr-3 text-primary" aria-hidden="true"></i>
+                Mis Hijos
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-2">
+                Gestiona las tarjetas y el saldo de tus hijos
+            </p>
+        </div>
+        
+        <button @click="abrirModalAgregar()" 
+                class="btn btn-primary btn-lg"
+                aria-label="Abrir formulario para agregar nuevo hijo">
+            <i class="fas fa-user-plus mr-2" aria-hidden="true"></i>
+            Agregar Hijo
+        </button>
+    </header>
+    
+    <!-- Búsqueda y filtro -->
+    <div class="mb-6" x-show="hijos.length > 0">
+        <input type="text" 
+               x-model="filtroNombre"
+               @input.debounce.300ms="filtrarHijos()"
+               placeholder="Buscar hijo por nombre..."
+               aria-label="Buscar hijo por nombre"
+               class="input input-bordered w-full md:w-96">
     </div>
     
-    {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} mb-4">
-            <span>{{ message }}</span>
-        </div>
-        {% endfor %}
-    {% endif %}
-    
-    {% if hijos %}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {% for hijo in hijos %}
-            <div class="card bg-base-100 shadow-xl">
-                <div class="card-body">
-                    <h2 class="card-title text-primary">
-                        {{ hijo.nombres }} {{ hijo.apellidos }}
-                    </h2>
-                    
-                    <div class="divider my-2"></div>
-                    
-                    <div class="space-y-2">
-                        <p class="text-sm">
-                            <span class="font-semibold">Grado:</span> {{ hijo.grado|default:"No especificado" }}
-                        </p>
-                        <p class="text-sm">
-                            <span class="font-semibold">Sección:</span> {{ hijo.seccion|default:"No especificado" }}
-                        </p>
+    <!-- Grid de hijos -->
+    <template x-if="cargando">
+        <div role="status" aria-live="polite">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="i in 3" :key="i">
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                        <div class="skeleton h-32 w-full mb-4"></div>
+                        <div class="skeleton h-4 w-full mb-2"></div>
+                        <div class="skeleton h-4 w-2/3"></div>
                     </div>
+                </template>
+            </div>
+            <span class="sr-only">Cargando lista de hijos...</span>
+        </div>
+    </template>
+    
+    <template x-if="!cargando">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <template x-for="hijo in hijosFiltrados" :key="hijo.id">
+                <article class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-shadow"
+                         role="article"
+                         :aria-label="`Tarjeta de ${hijo.nombre}`">
                     
-                    <div class="divider my-2">Tarjetas</div>
-                    
-                    {% if hijo.tarjetas.all %}
-                        <div class="space-y-3">
-                            {% for tarjeta in hijo.tarjetas.all %}
-                            <div class="bg-gradient-to-r from-orange-400 to-orange-600 rounded-lg p-4 text-white shadow-md">
-                                <div class="flex justify-between items-center mb-2">
-                                    <span class="text-xs uppercase tracking-wide">Tarjeta Cantina</span>
-                                    <span class="badge badge-sm {{ tarjeta.get_estado_badge }}">
-                                        {{ tarjeta.estado }}
-                                    </span>
-                                </div>
-                                
-                                <div class="font-mono text-lg tracking-wider mb-3">
-                                    {{ tarjeta.nro_tarjeta }}
-                                </div>
-                                
-                                <div class="flex justify-between items-end">
-                                    <div>
-                                        <p class="text-xs opacity-80">Saldo Actual</p>
-                                        <p class="text-2xl font-bold">
-                                            ₲ {{ tarjeta.saldo_actual|floatformat:0 }}
-                                        </p>
-                                    </div>
-                                    
-                                    {% if tarjeta.saldo_actual < tarjeta.saldo_alerta|default:5000 %}
-                                    <div class="badge badge-warning gap-2">
-                                        ⚠️ Saldo Bajo
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                
-                                <div class="mt-4 pt-3 border-t border-white/20">
-                                    <div class="flex justify-between text-xs">
-                                        <span>Vence: {{ tarjeta.fecha_vencimiento|date:"d/m/Y" }}</span>
-                                        <span>Autorizaciรณn: {{ tarjeta.tipo_autorizacion|default:"Estándar" }}</span>
-                                    </div>
+                    <!-- Header card con gradiente -->
+                    <header class="bg-gradient-to-br from-primary to-secondary p-6 text-white relative">
+                        <!-- Badge de estado -->
+                        <div class="absolute top-4 right-4">
+                            <span class="badge" 
+                                  :class="hijo.tarjeta_activa ? 'badge-success' : 'badge-error'"
+                                  :aria-label="hijo.tarjeta_activa ? 'Tarjeta activa' : 'Tarjeta bloqueada'">
+                                <span x-text="hijo.tarjeta_activa ? 'Activa' : 'Bloqueada'"></span>
+                            </span>
+                        </div>
+                        
+                        <!-- Foto y nombre -->
+                        <div class="flex flex-col items-center">
+                            <div class="avatar mb-4">
+                                <div class="w-24 h-24 rounded-full border-4 border-white shadow-lg">
+                                    <template x-if="hijo.foto">
+                                        <img :src="hijo.foto" :alt="hijo.nombre">
+                                    </template>
+                                    <template x-if="!hijo.foto">
+                                        <div class="w-full h-full bg-white bg-opacity-20 flex items-center justify-center">
+                                            <i class="fas fa-child text-4xl" aria-hidden="true"></i>
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
                             
-                            <div class="flex gap-2">
-                                <a href="{% url 'gestion:portal_recargar_tarjeta' tarjeta.nro_tarjeta %}" 
-                                   class="btn btn-sm btn-primary flex-1">
-                                    💳 Recargar
-                                </a>
-                                <a href="{% url 'gestion:portal_movimientos_tarjeta' tarjeta.nro_tarjeta %}" 
-                                   class="btn btn-sm btn-ghost flex-1">
-                                    📊 Movimientos
-                                </a>
-                            </div>
-                            {% endfor %}
+                            <h3 class="text-xl font-bold text-center mb-1" x-text="hijo.nombre"></h3>
+                            <p class="text-sm opacity-90" x-text="hijo.grado + ' - ' + hijo.seccion"></p>
                         </div>
-                    {% else %}
-                        <div class="alert alert-info">
-                            <span>Este hijo no tiene tarjetas asignadas</span>
-                        </div>
-                    {% endif %}
+                    </header>
                     
-                    {% if hijo.tiene_restricciones %}
-                    <div class="mt-4">
-                        <div class="alert alert-warning">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                            <span>Tiene restricciones alimentarias activas</span>
+                    <!-- Cuerpo del card -->
+                    <div class="p-6 space-y-4">
+                        
+                        <!-- Número de tarjeta -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600 dark:text-gray-400">N° Tarjeta:</span>
+                            <span class="font-mono font-semibold" x-text="hijo.numero_tarjeta"></span>
                         </div>
-                        <a href="{% url 'gestion:portal_restricciones_hijo' hijo.id_hijo %}" 
-                           class="btn btn-sm btn-warning w-full mt-2">
-                            Ver Restricciones
-                        </a>
+                        
+                        <!-- Saldo -->
+                        <div class="bg-gradient-to-br from-success/10 to-primary/10 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Saldo Actual</p>
+                            <p class="text-3xl font-bold" 
+                               :class="hijo.saldo < 5000 ? 'text-warning' : 'text-success'"
+                               x-text="formatearPrecio(hijo.saldo)"></p>
+                        </div>
+                        
+                        <!-- Botones de acción -->
+                        <div class="flex gap-2">
+                            <button @click="verHistorial(hijo)" 
+                                    class="btn btn-sm btn-ghost flex-1"
+                                    :aria-label="`Ver historial de transacciones de ${hijo.nombre}`">
+                                <i class="fas fa-history mr-1" aria-hidden="true"></i>
+                                Historial
+                            </button>
+                            
+                            <button @click="recargar(hijo)" 
+                                    class="btn btn-sm btn-primary flex-1"
+                                    :aria-label="`Recargar saldo de ${hijo.nombre}`">
+                                <i class="fas fa-plus-circle mr-1" aria-hidden="true"></i>
+                                Recargar
+                            </button>
+                        </div>
+                        
+                        <!-- Últimas compras -->
+                        <div class="border-t dark:border-gray-700 pt-4">
+                            <p class="text-xs text-gray-500 mb-2">Últimas compras:</p>
+                            <template x-if="hijo.ultimas_compras && hijo.ultimas_compras.length > 0">
+                                <div class="space-y-1">
+                                    <template x-for="compra in hijo.ultimas_compras.slice(0, 3)" :key="compra.id">
+                                        <div class="flex items-center justify-between text-xs">
+                                            <span class="text-gray-600 dark:text-gray-400 truncate" x-text="compra.descripcion"></span>
+                                            <span class="font-semibold ml-2" x-text="formatearPrecio(compra.monto)"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                            <template x-if="!hijo.ultimas_compras || hijo.ultimas_compras.length === 0">
+                                <p class="text-xs text-gray-400 italic">Sin compras recientes</p>
+                            </template>
+                        </div>
                     </div>
-                    {% endif %}
-                </div>
+                </article>
+            </template>
+        </div>
+    </template>
+    
+    <!-- Sin hijos -->
+    <template x-if="!cargando && hijos.length === 0">
+        <div class="text-center py-20">
+            <div class="inline-flex flex-col items-center">
+                <i class="fas fa-child text-8xl text-gray-300 dark:text-gray-600 mb-6" aria-hidden="true"></i>
+                <h2 class="text-2xl font-bold text-gray-600 dark:text-gray-400 mb-4">
+                    Aún no has agregado ningún hijo
+                </h2>
+                <p class="text-gray-500 mb-6 max-w-md">
+                    Agrega a tus hijos para gestionar sus tarjetas, recargar saldo y ver su historial de consumo.
+                </p>
+                <button @click="abrirModalAgregar()" class="btn btn-primary btn-lg">
+                    <i class="fas fa-user-plus mr-2"></i>
+                    Agregar Mi Primer Hijo
+                </button>
             </div>
-            {% endfor %}
         </div>
-    {% else %}
-        <div class="alert alert-info">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <span>No tienes hijos registrados en el sistema</span>
+    </template>
+    
+    <!-- Modal para agregar hijo -->
+    <div x-show="modalAbierto" 
+         @click.self="cerrarModal()"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="modal-agregar-titulo"
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+         x-transition>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <!-- Header -->
+            <div class="sticky top-0 bg-gradient-to-r from-primary to-secondary text-white p-6 flex items-center justify-between">
+                <h2 id="modal-agregar-titulo" class="text-2xl font-bold">
+                    <i class="fas fa-user-plus mr-2" aria-hidden="true"></i>
+                    Agregar Hijo
+                </h2>
+                <button @click="cerrarModal()" 
+                        class="btn btn-sm btn-ghost text-white"
+                        aria-label="Cerrar modal">
+                    <i class="fas fa-times text-xl" aria-hidden="true"></i>
+                </button>
+            </div>
+            
+            <!-- Formulario -->
+            <form @submit.prevent="agregarHijo()" class="p-6 space-y-4">
+                
+                <!-- Número de tarjeta -->
+                <div>
+                    <label for="numero-tarjeta" class="label">
+                        <span class="label-text">Número de Tarjeta *</span>
+                    </label>
+                    <input type="text" 
+                           id="numero-tarjeta"
+                           x-model="formulario.numero_tarjeta"
+                           @input.debounce.500ms="buscarTarjeta()"
+                           required
+                           aria-label="Número de tarjeta del estudiante"
+                           aria-describedby="tarjeta-help"
+                           class="input input-bordered w-full"
+                           placeholder="Escanea o ingresa el número">
+                    <label class="label">
+                        <span id="tarjeta-help" class="label-text-alt text-gray-500">
+                            Escanea el código de barras de la tarjeta
+                        </span>
+                    </label>
+                </div>
+                
+                <!-- Info de la tarjeta (se llena automáticamente) -->
+                <template x-if="tarjetaEncontrada">
+                    <div class="alert alert-success" role="alert" aria-live="polite">
+                        <i class="fas fa-check-circle" aria-hidden="true"></i>
+                        <div>
+                            <p class="font-semibold">Tarjeta encontrada</p>
+                            <p class="text-sm" x-text="`Estudiante: ${tarjetaInfo.nombre}`"></p>
+                        </div>
+                    </div>
+                </template>
+                
+                <template x-if="tarjetaBuscada && !tarjetaEncontrada">
+                    <div class="alert alert-error" role="alert" aria-live="assertive">
+                        <i class="fas fa-times-circle" aria-hidden="true"></i>
+                        <span>Tarjeta no encontrada. Verifica el número.</span>
+                    </div>
+                </template>
+                
+                <!-- Relación -->
+                <div>
+                    <label for="relacion" class="label">
+                        <span class="label-text">Relación *</span>
+                    </label>
+                    <select id="relacion"
+                            x-model="formulario.relacion" 
+                            required
+                            aria-label="Seleccionar relación con el estudiante"
+                            class="select select-bordered w-full">
+                        <option value="">Seleccionar...</option>
+                        <option value="padre">Padre</option>
+                        <option value="madre">Madre</option>
+                        <option value="tutor">Tutor/a</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </div>
+                
+                <!-- Botones -->
+                <div class="flex gap-3 pt-4">
+                    <button type="button" 
+                            @click="cerrarModal()" 
+                            class="btn btn-ghost flex-1"
+                            aria-label="Cancelar y cerrar formulario">
+                        Cancelar
+                    </button>
+                    
+                    <button type="submit" 
+                            class="btn btn-primary flex-1"
+                            :disabled="!tarjetaEncontrada || guardando"
+                            :aria-disabled="!tarjetaEncontrada || guardando ? 'true' : 'false'"
+                            aria-label="Agregar hijo a mi lista">
+                        <template x-if="!guardando">
+                            <span>
+                                <i class="fas fa-save mr-2" aria-hidden="true"></i>
+                                Agregar
+                            </span>
+                        </template>
+                        <template x-if="guardando">
+                            <span role="status" aria-live="polite">
+                                <span class="loading loading-spinner loading-sm mr-2"></span>
+                                <span class="sr-only">Guardando información...</span>
+                                Guardando...
+                            </span>
+                        </template>
+                    </button>
+                </div>
+            </form>
         </div>
-    {% endif %}
+    </div>
+    
+    <!-- Modal de historial -->
+    <div x-show="modalHistorialAbierto" 
+         @click.self="cerrarModalHistorial()"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="modal-historial-titulo"
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+         x-transition>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <!-- Header -->
+            <div class="sticky top-0 bg-gradient-to-r from-secondary to-primary text-white p-6 flex items-center justify-between">
+                <h2 id="modal-historial-titulo" class="text-2xl font-bold">
+                    <i class="fas fa-history mr-2" aria-hidden="true"></i>
+                    Historial de <span x-text="hijoSeleccionado?.nombre"></span>
+                </h2>
+                <button @click="cerrarModalHistorial()" 
+                        class="btn btn-sm btn-ghost text-white"
+                        aria-label="Cerrar modal de historial">
+                    <i class="fas fa-times text-xl" aria-hidden="true"></i>
+                </button>
+            </div>
+            
+            <!-- Contenido -->
+            <div class="p-6">
+                <template x-if="cargandoHistorial">
+                    <div role="status" aria-live="polite">
+                        <div class="space-y-3">
+                            <template x-for="i in 5" :key="i">
+                                <div class="skeleton h-16 w-full"></div>
+                            </template>
+                        </div>
+                        <span class="sr-only">Cargando historial de transacciones...</span>
+                    </div>
+                </template>
+                
+                <template x-if="!cargandoHistorial">
+                    <div class="space-y-3">
+                        <template x-for="tx in historial" :key="tx.id">
+                            <div class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <div class="w-12 h-12 rounded-full flex items-center justify-center"
+                                     :class="tx.tipo === 'recarga' ? 'bg-success bg-opacity-10' : 'bg-primary bg-opacity-10'">
+                                    <i class="fas text-xl"
+                                       :class="tx.tipo === 'recarga' ? 'fa-plus-circle text-success' : 'fa-shopping-bag text-primary'"
+                                       aria-hidden="true"></i>
+                                </div>
+                                
+                                <div class="flex-1">
+                                    <p class="font-semibold" x-text="tx.descripcion"></p>
+                                    <p class="text-sm text-gray-500" x-text="tx.fecha"></p>
+                                </div>
+                                
+                                <div class="text-right">
+                                    <p class="font-bold text-lg"
+                                       :class="tx.tipo === 'recarga' ? 'text-success' : 'text-primary'">
+                                        <span x-text="tx.tipo === 'recarga' ? '+' : '-'"></span>
+                                        <span x-text="formatearPrecio(tx.monto)"></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </template>
+                        
+                        <template x-if="historial.length === 0">
+                            <div class="text-center py-12 text-gray-400">
+                                <i class="fas fa-inbox text-4xl mb-2" aria-hidden="true"></i>
+                                <p>No hay transacciones registradas</p>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function misHijos() {
+    return {
+        cargando: true,
+        hijos: [],
+        hijosFiltrados: [],
+        filtroNombre: '',
+        modalAbierto: false,
+        modalHistorialAbierto: false,
+        guardando: false,
+        cargandoHistorial: false,
+        tarjetaBuscada: false,
+        tarjetaEncontrada: false,
+        tarjetaInfo: {},
+        hijoSeleccionado: null,
+        historial: [],
+        formulario: {
+            numero_tarjeta: '',
+            relacion: ''
+        },
+        
+        async init() {
+            await this.cargarHijos();
+            this.hijosFiltrados = this.hijos;
+            this.cargando = false;
+        },
+        
+        async cargarHijos() {
+            try {
+                const response = await fetch('/api/portal/hijos/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.hijos = data.hijos || [];
+                    this.hijosFiltrados = this.hijos;
+                } else {
+                    this.showNotification('Error al cargar lista de hijos', 'error');
+                }
+            } catch (error) {
+                console.error('Error al cargar hijos:', error);
+                this.showNotification('Error de conexión. Intenta nuevamente.', 'error');
+            }
+        },
+        
+        filtrarHijos() {
+            if (!this.filtroNombre.trim()) {
+                this.hijosFiltrados = this.hijos;
+                return;
+            }
+            
+            const filtro = this.filtroNombre.toLowerCase();
+            this.hijosFiltrados = this.hijos.filter(hijo => 
+                hijo.nombre.toLowerCase().includes(filtro)
+            );
+        },
+        
+        abrirModalAgregar() {
+            this.formulario = {
+                numero_tarjeta: '',
+                relacion: ''
+            };
+            this.tarjetaBuscada = false;
+            this.tarjetaEncontrada = false;
+            this.modalAbierto = true;
+        },
+        
+        cerrarModal() {
+            this.modalAbierto = false;
+        },
+        
+        async buscarTarjeta() {
+            if (this.formulario.numero_tarjeta.length < 5) {
+                this.tarjetaBuscada = false;
+                this.tarjetaEncontrada = false;
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/tarjetas/verificar/${this.formulario.numero_tarjeta}/`);
+                const data = await response.json();
+                
+                this.tarjetaBuscada = true;
+                if (data.success) {
+                    this.tarjetaEncontrada = true;
+                    this.tarjetaInfo = data.tarjeta;
+                } else {
+                    this.tarjetaEncontrada = false;
+                }
+            } catch (error) {
+                console.error('Error al buscar tarjeta:', error);
+                this.tarjetaEncontrada = false;
+            }
+        },
+        
+        async agregarHijo() {
+            // Verificar si ya existe
+            const yaExiste = this.hijos.some(h => h.numero_tarjeta === this.formulario.numero_tarjeta);
+            
+            if (yaExiste) {
+                this.showNotification('Esta tarjeta ya está asociada a tu cuenta', 'warning');
+                return;
+            }
+            
+            this.guardando = true;
+            
+            try {
+                const response = await fetch('/api/portal/hijos/agregar/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(this.formulario)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.showNotification('Hijo agregado exitosamente', 'success');
+                    this.cerrarModal();
+                    await this.cargarHijos();
+                    this.filtrarHijos();
+                } else {
+                    this.showNotification(data.error || 'Error al agregar hijo', 'error');
+                }
+            } catch (error) {
+                console.error('Error al agregar hijo:', error);
+                this.showNotification('Error al agregar hijo', 'error');
+            } finally {
+                this.guardando = false;
+            }
+        },
+        
+        async verHistorial(hijo) {
+            this.hijoSeleccionado = hijo;
+            this.modalHistorialAbierto = true;
+            this.cargandoHistorial = true;
+            
+            try {
+                const response = await fetch(`/api/portal/hijos/${hijo.id}/historial/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.historial = data.historial || [];
+                }
+            } catch (error) {
+                console.error('Error al cargar historial:', error);
+            } finally {
+                this.cargandoHistorial = false;
+            }
+        },
+        
+        cerrarModalHistorial() {
+            this.modalHistorialAbierto = false;
+            this.hijoSeleccionado = null;
+        },
+        
+        recargar(hijo) {
+            window.location.href = `{% url 'portal:recargar' %}?hijo=${hijo.id}`;
+        },
+        
+        formatearPrecio(monto) {
+            return new Intl.NumberFormat('es-PY', {
+                style: 'decimal',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(monto) + ' Gs.';
+        },
+        
+        showNotification(message, type) {
+            window.Alpine.store('notifications').add(message, type);
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    }
+}
+</script>
 {% endblock %}

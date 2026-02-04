@@ -1,268 +1,638 @@
-{% extends "portal/base_portal.html" %}
+{% extends "base.html" %}
+{% load static %}
 
-{% block title %}Recargar Tarjeta - Portal de Padres{% endblock %}
+{% block title %}Recargar Tarjeta - Portal Padres{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8 max-w-2xl">
-    <div class="flex items-center mb-6">
-        <a href="{% url 'gestion:portal_mis_hijos' %}" class="btn btn-ghost btn-sm mr-4">
-            ← Volver
+<div x-data="recargarTarjeta()" x-init="init()" class="container mx-auto px-4 py-8">
+    
+    <!-- Header -->
+    <div class="mb-8">
+        <a href="{% url 'portal:dashboard' %}" 
+           class="btn btn-ghost mb-4"
+           aria-label="Volver al dashboard">
+            <i class="fas fa-arrow-left mr-2" aria-hidden="true"></i>
+            Volver
         </a>
-        <h1 class="text-3xl font-bold text-gray-800">💳 Recargar Saldo</h1>
-    </div>
-    
-    {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} mb-4">
-            <span>{{ message }}</span>
-        </div>
-        {% endfor %}
-    {% endif %}
-    
-    <!-- Info de la tarjeta -->
-    <div class="card bg-gradient-to-r from-orange-400 to-orange-600 text-white shadow-xl mb-6">
-        <div class="card-body">
-            <div class="flex justify-between items-start">
-                <div>
-                    <p class="text-xs uppercase tracking-wide opacity-80">Tarjeta de</p>
-                    <h2 class="text-2xl font-bold mb-2">
-                        {{ hijo.nombres }} {{ hijo.apellidos }}
-                    </h2>
-                    <p class="font-mono text-lg tracking-wider">
-                        {{ tarjeta.nro_tarjeta }}
-                    </p>
-                </div>
-                <div class="text-right">
-                    <p class="text-xs opacity-80">Saldo Actual</p>
-                    <p class="text-3xl font-bold">
-                        ₲ {{ tarjeta.saldo_actual|floatformat:0 }}
-                    </p>
-                </div>
-            </div>
-        </div>
+        
+        <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100">
+            <i class="fas fa-credit-card mr-3 text-primary" aria-hidden="true"></i>
+            Recargar Saldo
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-2">
+            Agrega saldo a la tarjeta de tu hijo de forma rápida y segura
+        </p>
     </div>
     
     <!-- Formulario de recarga -->
-    <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
-            <h3 class="card-title text-xl mb-4">Selecciona el monto a recargar</h3>
+    <div class="max-w-3xl mx-auto">
+        <form @submit.prevent="procesarRecarga()" class="space-y-6">
             
-            <form method="post" id="recargar-form">
-                {% csrf_token %}
+            <!-- Paso 1: Seleccionar Hijo -->
+            <section role="region" 
+                     aria-labelledby="paso1-titulo"
+                     :aria-current="pasoActual === 1 ? 'step' : false"
+                     class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6"
+                     :class="{ 'opacity-50': pasoActual > 1 }">
                 
-                <!-- Montos sugeridos -->
-                <div class="form-control mb-6">
-                    <label class="label">
-                        <span class="label-text font-semibold">Montos sugeridos</span>
-                    </label>
-                    <div class="grid grid-cols-3 gap-3">
-                        {% for monto in montos_sugeridos %}
+                <div class="flex items-center justify-between mb-4">
+                    <h2 id="paso1-titulo" class="text-2xl font-bold">
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white mr-2" aria-hidden="true">1</span>
+                        Seleccionar Hijo
+                    </h2>
+                    <template x-if="pasoActual > 1 && hijoSeleccionado">
                         <button type="button" 
-                                class="btn btn-outline btn-primary monto-btn" 
-                                data-monto="{{ monto }}">
-                            ₲ {{ monto|floatformat:0 }}
+                                @click="pasoActual = 1"
+                                class="btn btn-sm btn-ghost"
+                                aria-label="Cambiar hijo seleccionado">
+                            <i class="fas fa-edit mr-1" aria-hidden="true"></i>Cambiar
                         </button>
-                        {% endfor %}
-                    </div>
+                    </template>
                 </div>
                 
-                <!-- Monto personalizado -->
-                <div class="form-control mb-6">
-                    <label class="label">
-                        <span class="label-text font-semibold">O ingresa un monto personalizado</span>
-                    </label>
-                    <div class="input-group">
-                        <span class="text-lg font-bold px-4 bg-base-200">₲</span>
-                        <input type="number" 
-                               name="monto" 
-                               id="monto-input"
-                               class="input input-bordered w-full" 
-                               placeholder="10.000"
-                               min="1000"
-                               max="1000000"
-                               step="1000"
-                               required>
+                <template x-if="pasoActual === 1 && cargandoHijos">
+                    <div role="status" aria-live="polite">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="skeleton h-24 w-full"></div>
+                            <div class="skeleton h-24 w-full"></div>
+                        </div>
+                        <span class="sr-only">Cargando lista de hijos...</span>
                     </div>
-                    <label class="label">
-                        <span class="label-text-alt">Monto entre 1.000 y 1.000.000 (múltiplo de 1.000)</span>
-                    </label>
-                </div>
+                </template>
                 
-                <!-- Método de pago -->
-                <div class="form-control mb-6">
-                    <label class="label">
-                        <span class="label-text font-semibold">Método de pago</span>
-                    </label>
-                    
-                    <div class="space-y-3">
-                        <!-- MetrePay -->
-                        <label class="cursor-pointer">
-                            <div class="card border-2 border-base-300 hover:border-primary transition-colors">
-                                <div class="card-body flex-row items-center gap-4 p-4">
+                <template x-if="pasoActual === 1 && !cargandoHijos && !cargandoHijos">
+                    <fieldset>
+                        <legend class="sr-only">Seleccionar hijo para recargar</legend>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <template x-for="hijo in hijos" :key="hijo.id">
+                                <label class="cursor-pointer border-2 rounded-lg p-4 transition-all"
+                                       :class="hijoSeleccionado?.id === hijo.id ? 'border-primary bg-primary bg-opacity-5' : 'border-gray-200 dark:border-gray-700 hover:border-primary'"
+                                       :for="`hijo-${hijo.id}`">
                                     <input type="radio" 
-                                           name="metodo_pago" 
-                                           value="metrepay" 
-                                           class="radio radio-primary" 
-                                           checked>
-                                    <div class="flex-1">
-                                        <p class="font-bold">MetrePay</p>
-                                        <p class="text-sm text-gray-600">
-                                            Tarjeta de crédito/débito
-                                        </p>
-                                    </div>
-                                    <div class="badge badge-success">Recomendado</div>
-                                </div>
-                            </div>
-                        </label>
-                        
-                        <!-- Tigo Money -->
-                        <label class="cursor-pointer">
-                            <div class="card border-2 border-base-300 hover:border-primary transition-colors">
-                                <div class="card-body p-4">
-                                    <div class="flex items-center gap-4 mb-3">
-                                        <input type="radio" 
-                                               name="metodo_pago" 
-                                               value="tigo_money" 
-                                               class="radio radio-primary"
-                                               id="radio-tigo">
-                                        <div class="flex-1">
-                                            <p class="font-bold">Tigo Money</p>
-                                            <p class="text-sm text-gray-600">
-                                                Billetera móvil
-                                            </p>
-                                        </div>
+                                           :id="`hijo-${hijo.id}`"
+                                           name="hijo-seleccionado"
+                                           :value="hijo.id"
+                                           @change="seleccionarHijo(hijo)"
+                                           :checked="hijoSeleccionado?.id === hijo.id"
+                                           class="sr-only"
+                                           :aria-label="`Seleccionar a ${hijo.nombre} - Saldo actual ${formatearPrecio(hijo.saldo)}`">
+                                
+                                <div class="flex items-center gap-4">
+                                    <div class="avatar">
+                                        <div class="w-16 h-16 rounded-full">
+                                            <template x-if="hijo.foto">
+                                                <img :src="hijo.foto" :alt="hijo.nombre">
+                                            </template>
+                                            <template x-if="!hijo.foto">
+                                                <div class="w-full h-full bg-primary bg-opacity-20 flex items-center justify-center">
+                                            <i class="fas fa-child text-2xl text-primary" aria-hidden="true"></i>
                                     </div>
                                     
-                                    <div id="tigo-phone-field" class="hidden ml-10">
-                                        <label class="label">
-                                            <span class="label-text text-sm">Número de teléfono Tigo</span>
-                                        </label>
-                                        <input type="tel" 
-                                               name="telefono" 
-                                               id="telefono-input"
-                                               class="input input-bordered input-sm w-full" 
-                                               placeholder="0981123456"
-                                               pattern="0(981|982|983|991|992)[0-9]{6}">
-                                        <label class="label">
-                                            <span class="label-text-alt">Debe comenzar con 0981, 0982, 0983, 0991 o 0992</span>
-                                        </label>
+                                    <div class="flex-1">
+                                        <h3 class="font-bold text-lg" x-text="hijo.nombre"></h3>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">
+                                            Saldo: <span class="font-semibold" x-text="formatearPrecio(hijo.saldo)"></span>
+                                        </p>
                                     </div>
+                                    
+                                    <template x-if="hijoSeleccionado?.id === hijo.id">
+                                        <i class="fas fa-check-circle text-2xl text-primary"></i>
+                                    </template>
                                 </div>
                             </div>
-                        </label>
+                        </template>
                     </div>
+                </template>
+                
+                <template x-if="pasoActual > 1">
+                    <div class="flex items-center gap-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                        <div class="avatar">
+                            <div class="w-16 h-16 rounded-full">
+                                <template x-if="hijoSeleccionado?.foto">
+                                    <img :src="hijoSeleccionado.foto" :alt="hijoSeleccionado.nombre">
+                                </template>
+                                <template x-if="!hijoSeleccionado?.foto">
+                                    <div class="w-full h-full bg-primary bg-opacity-20 flex items-center justify-center">
+                                        <i class="fas fa-child text-2xl text-primary" aria-hidden="true"></i>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="font-bold text-lg" x-text="hijoSeleccionado?.nombre"></p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                Saldo actual: <span class="font-semibold" x-text="formatearPrecio(hijoSeleccionado?.saldo || 0)"></span>
+                            </p>
+                        </div>
+                    </div>
+                </template>
+            </section>
+            
+            <!-- Paso 2: Monto -->
+            <section role="region" 
+                     aria-labelledby="paso2-titulo"
+                     :aria-current="pasoActual === 2 ? 'step' : false"
+                     class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6"
+                     :class="{ 'opacity-50': pasoActual !== 2 && pasoActual !== 3 }"
+                     x-show="hijoSeleccionado">
+                
+                <div class="flex items-center justify-between mb-4">
+                    <h2 id="paso2-titulo" class="text-2xl font-bold">
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white mr-2" aria-hidden="true">2</span>
+                        Monto a Recargar
+                    </h2>
+                    <template x-if="pasoActual === 3">
+                        <button type="button" 
+                                @click="pasoActual = 2"
+                                class="btn btn-sm btn-ghost"
+                                aria-label="Cambiar monto seleccionado">
+                            <i class="fas fa-edit mr-1" aria-hidden="true"></i>Cambiar
+                        </button>
+                    </template>
                 </div>
                 
-                <!-- Resumen -->
-                <div class="alert alert-info mb-6">
-                    <div>
-                        <p class="font-bold">Resumen de la recarga</p>
-                        <p class="text-sm">
-                            Saldo actual: <span class="font-semibold">₲ {{ tarjeta.saldo_actual|floatformat:0 }}</span>
-                        </p>
-                        <p class="text-sm">
-                            A recargar: <span class="font-semibold" id="monto-display">₲ 0</span>
-                        </p>
-                        <p class="text-sm border-t border-white/20 mt-2 pt-2">
-                            Saldo después de recarga: <span class="font-bold" id="saldo-final">₲ {{ tarjeta.saldo_actual|floatformat:0 }}</span>
-                        </p>
+                <template x-if="pasoActual === 2 || pasoActual === 3">
+                    <div class="space-y-4">
+                        
+                        <!-- Montos sugeridos -->
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Montos sugeridos:</span>
+                            </label>
+                            <div class="grid grid-cols-3 md:grid-cols-5 gap-3">
+                                <template x-for="monto in montosSugeridos" :key="monto">
+                                    <button type="button"
+                                            @click="seleccionarMonto(monto)"
+                                            class="btn"
+                                            :class="recarga.monto === monto ? 'btn-primary' : 'btn-outline'">
+                                        <span x-text="formatearPrecio(monto)"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                        
+                        <!-- Monto personalizado -->
+                        <div>
+                            <label for="monto-recarga" class="label">
+                                <span class="label-text">O ingresa un monto personalizado:</span>
+                            </label>
+                            <div class="relative">
+                                <input type="number" 
+                                       id="monto-recarga"
+                                       x-model.number="recarga.monto"
+                                       @input="validarMonto()"
+                                       min="1000"
+                                       step="1000"
+                                       :disabled="pasoActual === 3"
+                                       :aria-invalid="errorMonto ? 'true' : 'false'"
+                                       aria-describedby="monto-help monto-error"
+                                       aria-label="Ingresar monto personalizado para recargar"
+                                       required
+                                       class="input input-bordered w-full text-2xl font-bold text-right pr-16"
+                                       :class="{ 'input-error': errorMonto }"
+                                       placeholder="0">
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg">Gs.</span>
+                            </div>
+                            <label class="label">
+                                <span id="monto-help" class="label-text-alt text-gray-500">Mínimo: 1.000 Gs.</span>
+                            </label>
+                            <div x-show="errorMonto" 
+                                 id="monto-error"
+                                 role="alert"
+                                 class="text-error text-sm mt-1">
+                                El monto mínimo es 1.000 Gs.
+                            </div>
+                        </div>
+                        
+                        <!-- Nuevo saldo estimado -->
+                        <template x-if="recarga.monto > 0">
+                            <div class="bg-gradient-to-br from-success/10 to-primary/10 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Nuevo saldo después de la recarga:</p>
+                                <p class="text-3xl font-bold text-success" 
+                                   x-text="formatearPrecio((hijoSeleccionado?.saldo || 0) + recarga.monto)"></p>
+                            </div>
+                        </template>
                     </div>
-                </div>
+                </template>
+            </section>
+            
+            <!-- Paso 3: Método de Pago -->
+            <section role="region" 
+                     aria-labelledby="paso3-titulo"
+                     :aria-current="pasoActual === 3 ? 'step' : false"
+                     class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6"
+                     :class="{ 'opacity-50': pasoActual !== 3 }"
+                     x-show="hijoSeleccionado && recarga.monto > 0">
                 
-                <!-- Botón -->
-                <div class="form-control">
-                    <button type="submit" class="btn btn-primary btn-lg w-full">
-                        💳 Proceder al Pago
-                    </button>
-                </div>
-            </form>
-        </div>
+                <h2 id="paso3-titulo" class="text-2xl font-bold mb-4">
+                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white mr-2" aria-hidden="true">3</span>
+                    Método de Pago
+                </h2>
+                
+                <template x-if="pasoActual === 3">
+                    <div class="space-y-4">
+                        
+                        <!-- Opciones de pago -->
+                        <fieldset>
+                            <legend class="sr-only">Seleccionar método de pago</legend>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4" role="radiogroup" aria-labelledby="paso3-titulo">
+                                
+                                <!-- Transferencia bancaria -->
+                                <label class="cursor-pointer border-2 rounded-lg p-6 text-center transition-all"
+                                       :class="recarga.metodo_pago === 'transferencia' ? 'border-primary bg-primary bg-opacity-5' : 'border-gray-200 dark:border-gray-700 hover:border-primary'"
+                                       for="metodo-transferencia">
+                                    <input type="radio" 
+                                           id="metodo-transferencia"
+                                           name="metodo-pago"
+                                           value="transferencia"
+                                           x-model="recarga.metodo_pago"
+                                           class="sr-only"
+                                           aria-label="Transferencia bancaria - Inmediato">
+                                    <i class="fas fa-university text-4xl mb-3" 
+                                       :class="recarga.metodo_pago === 'transferencia' ? 'text-primary' : 'text-gray-400'"
+                                       aria-hidden="true"></i>
+                                    <p class="font-bold">Transferencia</p>
+                                    <p class="text-xs text-gray-500 mt-1">Inmediato</p>
+                                </label>
+                                
+                                <!-- Tarjeta de crédito/débito -->
+                                <label class="cursor-pointer border-2 rounded-lg p-6 text-center transition-all"
+                                       :class="recarga.metodo_pago === 'tarjeta' ? 'border-primary bg-primary bg-opacity-5' : 'border-gray-200 dark:border-gray-700 hover:border-primary'"
+                                       for="metodo-tarjeta">
+                                    <input type="radio" 
+                                           id="metodo-tarjeta"
+                                           name="metodo-pago"
+                                           value="tarjeta"
+                                           x-model="recarga.metodo_pago"
+                                           class="sr-only"
+                                           aria-label="Tarjeta de crédito o débito - Instantáneo">
+                                    <i class="fas fa-credit-card text-4xl mb-3" 
+                                       :class="recarga.metodo_pago === 'tarjeta' ? 'text-primary' : 'text-gray-400'"
+                                       aria-hidden="true"></i>
+                                    <p class="font-bold">Tarjeta</p>
+                                    <p class="text-xs text-gray-500 mt-1">Instantáneo</p>
+                                </label>
+                                
+                                <!-- Efectivo (en caja) -->
+                                <label class="cursor-pointer border-2 rounded-lg p-6 text-center transition-all"
+                                       :class="recarga.metodo_pago === 'efectivo' ? 'border-primary bg-primary bg-opacity-5' : 'border-gray-200 dark:border-gray-700 hover:border-primary'"
+                                       for="metodo-efectivo">
+                                    <input type="radio" 
+                                           id="metodo-efectivo"
+                                           name="metodo-pago"
+                                           value="efectivo"
+                                           x-model="recarga.metodo_pago"
+                                           class="sr-only"
+                                           aria-label="Efectivo en caja - Pagar en institución">
+                                    <i class="fas fa-money-bill-wave text-4xl mb-3" 
+                                       :class="recarga.metodo_pago === 'efectivo' ? 'text-primary' : 'text-gray-400'"
+                                       aria-hidden="true"></i>
+                                    <p class="font-bold">Efectivo</p>
+                                    <p class="text-xs text-gray-500 mt-1">En caja</p>
+                                </label>
+                            </div>
+                        </fieldset>
+                        
+                        <!-- Info adicional según método -->
+                        <template x-if="recarga.metodo_pago === 'transferencia'">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle" aria-hidden="true"></i>
+                                <div class="text-sm">
+                                    <p class="font-semibold mb-1">Datos para transferencia:</p>
+                                    <p>Banco: Banco XYZ</p>
+                                    <p>Cuenta: 1234567890</p>
+                                    <p>Titular: Cantina Tita</p>
+                                    <p class="mt-2 text-xs">Envía el comprobante a recargas@cantinatita.com</p>
+                                </div>
+                            </div>
+                        </template>
+                        
+                        <template x-if="recarga.metodo_pago === 'efectivo'">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                                <div class="text-sm">
+                                    <p>La recarga se activará cuando pagues en caja de la institución.</p>
+                                    <p class="mt-1">Presenta este código al cajero: <strong class="font-mono text-lg">PENDING-{{ '{{ request.user.id }}' }}-{{ '{{ now|date:"ymdHis" }}' }}</strong></p>
+                                </div>
+                            </div>
+                        </template>
+                        
+                        <!-- Resumen final -->
+                        <div class="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg space-y-3">
+                            <h3 class="font-bold text-lg mb-3">Resumen de Recarga</h3>
+                            
+                            <div class="flex justify-between">
+                                <span class="text-gray-600 dark:text-gray-400">Estudiante:</span>
+                                <span class="font-semibold" x-text="hijoSeleccionado?.nombre"></span>
+                            </div>
+                            
+                            <div class="flex justify-between">
+                                <span class="text-gray-600 dark:text-gray-400">Monto:</span>
+                                <span class="font-semibold text-primary text-xl" x-text="formatearPrecio(recarga.monto)"></span>
+                            </div>
+                            
+                            <div class="flex justify-between">
+                                <span class="text-gray-600 dark:text-gray-400">Método de pago:</span>
+                                <span class="font-semibold capitalize" x-text="recarga.metodo_pago"></span>
+                            </div>
+                            
+                            <div class="divider my-2"></div>
+                            
+                            <div class="flex justify-between text-lg">
+                                <span class="text-gray-600 dark:text-gray-400">Nuevo saldo:</span>
+                                <span class="font-bold text-success text-2xl" 
+                                      x-text="formatearPrecio((hijoSeleccionado?.saldo || 0) + recarga.monto)"></span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </section>
+            
+            <!-- Botones de navegación -->
+            <div class="flex gap-4">
+                <button type="button" 
+                        @click="retroceder()"
+                        x-show="pasoActual > 1"
+                        class="btn btn-ghost flex-1"
+                        :aria-label="pasoActual === 2 ? 'Volver al paso 1: Seleccionar hijo' : 'Volver al paso 2: Seleccionar monto'">
+                    <i class="fas fa-arrow-left mr-2" aria-hidden="true"></i>
+                    Anterior
+                </button>
+                
+                <button type="button" 
+                        @click="avanzar()"
+                        x-show="pasoActual < 3"
+                        class="btn btn-primary flex-1"
+                        :disabled="!puedeAvanzar()"
+                        :aria-disabled="!puedeAvanzar() ? 'true' : 'false'"
+                        :aria-label="pasoActual === 1 ? 'Continuar al paso 2: Seleccionar monto' : 'Continuar al paso 3: Método de pago'">
+                    Siguiente
+                    <i class="fas fa-arrow-right ml-2" aria-hidden="true"></i>
+                </button>
+                
+                <button type="button" 
+                        @click="mostrarModalConfirmacion()"
+                        x-show="pasoActual === 3"
+                        class="btn btn-primary flex-1"
+                        :disabled="!recarga.metodo_pago"
+                        :aria-disabled="!recarga.metodo_pago ? 'true' : 'false'"
+                        aria-label="Revisar y confirmar recarga">
+                    <i class="fas fa-check-circle mr-2" aria-hidden="true"></i>
+                    Confirmar Recarga
+                </button>
+            </div>
+        </form>
     </div>
     
-    <!-- Información adicional -->
-    <div class="alert alert-warning mt-6">
-        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-        <div>
-            <p class="font-bold">Importante</p>
-            <p class="text-sm">El saldo se acreditará automáticamente una vez confirmado el pago.</p>
-            <p class="text-sm">Recibirás una notificación cuando la recarga esté completa.</p>
+    <!-- Modal de confirmación final -->
+    <div x-show="modalConfirmacion" 
+         @click.self="cerrarModalConfirmacion()"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="modal-confirmacion-titulo"
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+         x-transition>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-primary to-secondary text-white p-6">
+                <h3 id="modal-confirmacion-titulo" class="text-2xl font-bold">
+                    <i class="fas fa-question-circle mr-2" aria-hidden="true"></i>
+                    ¿Confirmar esta recarga?
+                </h3>
+            </div>
+            
+            <!-- Contenido -->
+            <div class="p-6 space-y-4">
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Estudiante:</span>
+                        <span class="font-semibold" x-text="hijoSeleccionado?.nombre"></span>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Saldo actual:</span>
+                        <span class="font-semibold" x-text="formatearPrecio(hijoSeleccionado?.saldo || 0)"></span>
+                    </div>
+                    
+                    <div class="divider my-2"></div>
+                    
+                    <div class="flex justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Monto a recargar:</span>
+                        <span class="font-semibold text-primary text-xl" x-text="formatearPrecio(recarga.monto)"></span>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Método de pago:</span>
+                        <span class="font-semibold capitalize" x-text="recarga.metodo_pago"></span>
+                    </div>
+                    
+                    <div class="divider my-2"></div>
+                    
+                    <div class="flex justify-between text-lg">
+                        <span class="text-gray-600 dark:text-gray-400">Nuevo saldo:</span>
+                        <span class="font-bold text-success text-2xl" 
+                              x-text="formatearPrecio((hijoSeleccionado?.saldo || 0) + recarga.monto)"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botones -->
+            <div class="flex gap-3 p-6 pt-0">
+                <button type="button" 
+                        @click="cerrarModalConfirmacion()" 
+                        class="btn btn-ghost flex-1"
+                        aria-label="Cancelar y volver a revisar">
+                    Cancelar
+                </button>
+                
+                <button type="button" 
+                        @click="procesarRecarga()" 
+                        class="btn btn-primary flex-1"
+                        :disabled="procesando"
+                        :aria-disabled="procesando ? 'true' : 'false'"
+                        aria-label="Confirmar y procesar recarga">
+                    <template x-if="!procesando">
+                        <span>
+                            <i class="fas fa-check-circle mr-2" aria-hidden="true"></i>
+                            Sí, confirmar
+                        </span>
+                    </template>
+                    <template x-if="procesando">
+                        <span role="status" aria-live="polite">
+                            <span class="loading loading-spinner loading-sm mr-2"></span>
+                            <span class="sr-only">Procesando recarga...</span>
+                            Procesando...
+                        </span>
+                    </template>
+                </button>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block page_scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const saldoActual = {{ tarjeta.saldo_actual }};
-    const montoInput = document.getElementById('monto-input');
-    const montoDisplay = document.getElementById('monto-display');
-    const saldoFinal = document.getElementById('saldo-final');
-    const montoBtns = document.querySelectorAll('.monto-btn');
-    const radioTigo = document.getElementById('radio-tigo');
-    const tigoPhoneField = document.getElementById('tigo-phone-field');
-    const telefonoInput = document.getElementById('telefono-input');
-    
-    // Actualizar resumen
-    function actualizarResumen() {
-        const monto = parseInt(montoInput.value) || 0;
-        montoDisplay.textContent = `₲ ${monto.toLocaleString('es-PY')}`;
-        saldoFinal.textContent = `₲ ${(saldoActual + monto).toLocaleString('es-PY')}`;
-    }
-    
-    // Botones de monto sugerido
-    montoBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const monto = this.dataset.monto;
-            montoInput.value = monto;
-            actualizarResumen();
+function recargarTarjeta() {
+    return {
+        pasoActual: 1,
+        hijos: [],
+        hijoSeleccionado: null,
+        procesando: false,
+        cargandoHijos: false,
+        modalConfirmacion: false,
+        errorMonto: false,
+        montosSugeridos: [5000, 10000, 20000, 50000, 100000],
+        recarga: {
+            monto: 0,
+            metodo_pago: ''
+        },
+        
+        async init() {
+            this.cargandoHijos = true;
+            await this.cargarHijos();
+            this.cargandoHijos = false;
             
-            // Highlight del botón seleccionado
-            montoBtns.forEach(b => b.classList.remove('btn-active'));
-            this.classList.add('btn-active');
-        });
-    });
-    
-    // Cambio manual de monto
-    montoInput.addEventListener('input', actualizarResumen);
-    
-    // Mostrar/ocultar campo de teléfono Tigo
-    document.querySelectorAll('input[name="metodo_pago"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            if (this.value === 'tigo_money') {
-                tigoPhoneField.classList.remove('hidden');
-                telefonoInput.required = true;
-            } else {
-                tigoPhoneField.classList.add('hidden');
-                telefonoInput.required = false;
+            // Si hay un hijo pre-seleccionado en la URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const hijoId = urlParams.get('hijo');
+            if (hijoId) {
+                const hijo = this.hijos.find(h => h.id == hijoId);
+                if (hijo) {
+                    this.seleccionarHijo(hijo);
+                }
             }
-        });
-    });
-    
-    // Validación del formulario
-    document.getElementById('recargar-form').addEventListener('submit', function(e) {
-        const monto = parseInt(montoInput.value) || 0;
+        },
         
-        if (monto < 1000) {
-            e.preventDefault();
-            alert('El monto mínimo es 1.000 Guaraníes');
-            return false;
+        async cargarHijos() {
+            try {
+                const response = await fetch('/api/portal/hijos/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.hijos = data.hijos || [];
+                } else {
+                    this.showNotification('Error al cargar lista de hijos', 'error');
+                }
+            } catch (error) {
+                console.error('Error al cargar hijos:', error);
+                this.showNotification('Error de conexión. Por favor, recarga la página.', 'error');
+            }
+        },
+        
+        validarMonto() {
+            this.errorMonto = this.recarga.monto > 0 && this.recarga.monto < 1000;
+        },
+        
+        mostrarModalConfirmacion() {
+            if (!this.puedeAvanzar()) return;
+            this.modalConfirmacion = true;
+        },
+        
+        cerrarModalConfirmacion() {
+            this.modalConfirmacion = false;
+        },
+        
+        seleccionarHijo(hijo) {
+            this.hijoSeleccionado = hijo;
+            if (this.pasoActual === 1) {
+                this.avanzar();
+            }
+        },
+        
+        seleccionarMonto(monto) {
+            this.recarga.monto = monto;
+        },
+        
+        puedeAvanzar() {
+            switch(this.pasoActual) {
+                case 1:
+                    return this.hijoSeleccionado !== null;
+                case 2:
+                    return this.recarga.monto >= 1000;
+                case 3:
+                    return this.recarga.metodo_pago !== '';
+                default:
+                    return false;
+            }
+        },
+        
+        avanzar() {
+            if (this.puedeAvanzar() && this.pasoActual < 3) {
+                this.pasoActual++;
+            }
+        },
+        
+        retroceder() {
+            if (this.pasoActual > 1) {
+                this.pasoActual--;
+            }
+        },
+        
+        async procesarRecarga() {
+            this.procesando = true;
+            this.modalConfirmacion = false;
+            
+            try {
+                const response = await fetch('/api/portal/recargas/procesar/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        hijo_id: this.hijoSeleccionado.id,
+                        monto: this.recarga.monto,
+                        metodo_pago: this.recarga.metodo_pago
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.showNotification('Recarga procesada exitosamente', 'success');
+                    setTimeout(() => {
+                        window.location.href = '{% url "portal:dashboard" %}';
+                    }, 2000);
+                } else {
+                    this.showNotification(data.error || 'Error al procesar la recarga', 'error');
+                }
+            } catch (error) {
+                console.error('Error al procesar recarga:', error);
+                this.showNotification('Error al procesar la recarga', 'error');
+            } finally {
+                this.procesando = false;
+            }
+        },
+        
+        formatearPrecio(monto) {
+            return new Intl.NumberFormat('es-PY', {
+                style: 'decimal',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(monto) + ' Gs.';
+        },
+        
+        showNotification(message, type) {
+            window.Alpine.store('notifications').add(message, type);
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
         }
-        
-        if (monto > 1000000) {
-            e.preventDefault();
-            alert('El monto máximo es 1.000.000 Guaraníes');
-            return false;
-        }
-        
-        if (monto % 1000 !== 0) {
-            e.preventDefault();
-            alert('El monto debe ser múltiplo de 1.000');
-            return false;
-        }
-        
-        return true;
-    });
-});
+    }
+}
 </script>
 {% endblock %}
