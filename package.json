@@ -10,6 +10,7 @@
     "test": "cd backend && python manage.py test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.1",
     "concurrently": "^8.2.2"
   }
 }

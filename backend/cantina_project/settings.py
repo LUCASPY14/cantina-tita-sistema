@@ -12,22 +12,29 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
-from decouple import config
+from decouple import Config, RepositoryEnv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Configurar python-decouple para buscar .env en el directorio correcto
+ENV_PATH = BASE_DIR.parent / 'entorno' / '.env'
+config = Config(RepositoryEnv(str(ENV_PATH)) if ENV_PATH.exists() else None)
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-)!g6f^48yj^#%45t2bx6$twir*zf)dxvg7l2c535b#srsct#+c')
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver', '192.168.100.10']
+# ALLOWED_HOSTS - Configuración dinámica desde variable de entorno
+# En desarrollo: localhost,127.0.0.1,testserver
+# En producción: tu-dominio.com,www.tu-dominio.com,IP-servidor
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,testserver,192.168.100.10').split(',')
 
 # CSRF Trusted Origins (para requests POST desde frontend)
 CSRF_TRUSTED_ORIGINS = [
@@ -738,17 +745,32 @@ LOGGING = {
     },
 }
 
-# Configuración de seguridad HTTPS
-# NOTA: Comentadas temporalmente para pruebas con HTTP
-# DESCOMENTAR cuando tengas certificado SSL instalado
-# SECURE_SSL_REDIRECT = True
-# SESSION_COOKIE_SECURE = True
-# CSRF_COOKIE_SECURE = True
-# SECURE_HSTS_SECONDS = 31536000  # 1 año
-# SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-# SECURE_BROWSER_XSS_FILTER = True
-# SECURE_CONTENT_TYPE_NOSNIFF = True  # Ya está activado
-# X_FRAME_OPTIONS = 'DENY'  # Ya está configurado
+# =============================================================================
+# CONFIGURACIÓN DE SEGURIDAD HTTPS/SSL
+# =============================================================================
+# Estas configuraciones se activan automáticamente en producción cuando:
+# 1. Tienes certificado SSL instalado
+# 2. Configuras las variables en .env.production
+
+# Redireccionar HTTP a HTTPS (solo en producción con SSL)
+SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
+
+# Cookies seguras (solo HTTPS)
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool)
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
+
+# HTTP Strict Transport Security (HSTS)
+# Valor en segundos: 31536000 = 1 año, 0 = desactivado
+SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=0, cast=int)
+
+if SECURE_HSTS_SECONDS > 0:
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+# Protecciones adicionales (siempre activas)
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
 
 
 # Archivos estáticos para producción
