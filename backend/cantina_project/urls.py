@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.auth import views as auth_views
 from gestion import cliente_views
 from gestion.cantina_admin import cantina_admin_site
 from gestion.auth_views import CustomLoginView, CustomLogoutView, dashboard_redirect
@@ -85,6 +86,30 @@ urlpatterns = [
     path('logout/', CustomLogoutView.as_view(), name='logout'),
     path('', dashboard_redirect, name='home'),
     
+    # Password Reset (recuperación de contraseña)
+    path('password-reset/', 
+         auth_views.PasswordResetView.as_view(
+             template_name='auth/password_reset.html',
+             email_template_name='auth/password_reset_email.html',
+             subject_template_name='auth/password_reset_subject.txt',
+         ), 
+         name='password_reset'),
+    path('password-reset/done/', 
+         auth_views.PasswordResetDoneView.as_view(
+             template_name='auth/password_reset_done.html'
+         ), 
+         name='password_reset_done'),
+    path('password-reset-confirm/<uidb64>/<token>/', 
+         auth_views.PasswordResetConfirmView.as_view(
+             template_name='auth/password_reset_confirm.html'
+         ), 
+         name='password_reset_confirm'),
+    path('password-reset-complete/', 
+         auth_views.PasswordResetCompleteView.as_view(
+             template_name='auth/password_reset_complete.html'
+         ), 
+         name='password_reset_complete'),
+    
     # Admin personalizado
     path('admin/', cantina_admin_site.urls),
     
@@ -123,10 +148,6 @@ urlpatterns = [
     path('reportes/', include('gestion.urls')),
 ]
 
-# Django Debug Toolbar (solo en modo DEBUG)
+# Servir archivos media en desarrollo
 if settings.DEBUG:
-    urlpatterns += [
-        path('__debug__/', include('debug_toolbar.urls')),
-    ]
-    # Servir archivos media en desarrollo
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

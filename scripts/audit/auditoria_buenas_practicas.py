@@ -20,7 +20,7 @@ import ast
 from pathlib import Path
 from collections import defaultdict, Counter
 import django
-
+import datetime
 # Configurar Django
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.append(str(BASE_DIR))
@@ -381,7 +381,7 @@ class CodigoAnalyzer:
             with open(gitignore_file, 'r') as f:
                 gitignore_content = f.read()
             
-            critical_ignores = ['.env', '*.pyc', '__pycache__', 'db.sqlite3']
+            critical_ignores = ['.env', '*.pyc', '__pycache__', '']
             missing_ignores = [item for item in critical_ignores if item not in gitignore_content]
             
             if missing_ignores:

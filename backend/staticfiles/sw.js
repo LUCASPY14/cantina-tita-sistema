@@ -12,6 +12,7 @@ const STATIC_ASSETS = [
     '/pos/',
     '/pos/dashboard/',
     '/static/manifest.json',
+    '/static/offline.html',
     // CDNs importantes
     'https://unpkg.com/htmx.org@1.9.10',
     'https://unpkg.com/alpinejs@3.13.3/dist/cdn.min.js',
@@ -195,6 +196,15 @@ async function fetchAndCache(request) {
         
     } catch (error) {
         console.log('[SW] Fetch failed:', error);
+        
+        // Si es navegación HTML, mostrar página offline
+        if (request.mode === 'navigate') {
+            const offlinePage = await caches.match('/static/offline.html');
+            if (offlinePage) {
+                return offlinePage;
+            }
+        }
+        
         return offlineResponse();
     }
 }

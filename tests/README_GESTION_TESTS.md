@@ -72,7 +72,7 @@ class ManagedModel(models.Model):
 if 'test' in sys.argv:
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
+            'ENGINE': 'django.db.backends.',
             'NAME': ':memory:',
         }
     }

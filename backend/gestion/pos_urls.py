@@ -15,4 +15,9 @@ urlpatterns = [
     path('inventario/productos/', pos_views.inventario_dashboard, name='inventario_productos'),
     path('cuenta-corriente/', pos_views.cuenta_corriente, name='cuenta_corriente'),
     path('reportes/', pos_views.reportes, name='reportes'),
+    
+    # Nuevas rutas POS
+    path('historial/', pos_views.historial_ventas, name='historial'),
+    path('cierre-caja/', pos_views.cierre_caja, name='cierre_caja'),
+    path('clientes/', pos_views.gestionar_clientes, name='gestionar_clientes'),
 ]

@@ -162,7 +162,7 @@ class Venta(models.Model):
     )
 
     class Meta:
-        managed = 'test' not in sys.argv  # True para tests, False para producción
+        managed = False  # Gestion es el propietario de estas tablas
         db_table = 'ventas'
         verbose_name = 'Venta'
         verbose_name_plural = 'Ventas'
@@ -272,7 +272,7 @@ class DetalleVenta(models.Model):
     )
 
     class Meta:
-        managed = 'test' not in sys.argv  # True para tests, False para producción
+        managed = False  # Gestion es el propietario de estas tablas
         db_table = 'detalle_venta'
         verbose_name = 'Detalle de Venta'
         verbose_name_plural = 'Detalles de Venta'
@@ -391,7 +391,7 @@ class PagoVenta(models.Model):
     )
 
     class Meta:
-        managed = 'test' not in sys.argv  # True para tests, False para producción
+        managed = False  # Gestion es el propietario de estas tablas
         db_table = 'pagos_venta'
         verbose_name = 'Pago de Venta'
         verbose_name_plural = 'Pagos de Venta'

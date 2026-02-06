@@ -597,3 +597,107 @@ def validar_pago_action(request):
         'title': 'Validar Pago',
     }
     return render(request, 'apps/validacion/validar-pago.html', context)
+
+
+# ============ PORTAL DE PADRES - VISTAS STUB ============
+
+def portal_registro(request):
+    """Vista de registro para el portal de padres"""
+    messages.info(request, 'El registro de padres está temporalmente deshabilitado. Contacte al administrador.')
+    return redirect('clientes:portal_login')
+
+
+def portal_login(request):
+    """Redirige al login de clientes"""
+    return redirect('clientes:portal_login')
+
+
+def portal_logout(request):
+    """Redirige al logout de clientes"""
+    return redirect('clientes:portal_logout')
+
+
+def portal_dashboard(request):
+    """Redirige al dashboard de clientes"""
+    return redirect('clientes:portal_dashboard')
+
+
+def portal_verificar_2fa(request):
+    """Vista stub para 2FA"""
+    messages.info(request, '2FA no configurado aún')
+    return redirect('clientes:portal_dashboard')
+
+
+def portal_activar_2fa(request):
+    """Vista stub para activar 2FA"""
+    messages.info(request, '2FA no configurado aún')
+    return redirect('clientes:portal_dashboard')
+
+
+def portal_deshabilitar_2fa(request):
+    """Vista stub para deshabilitar 2FA"""
+    messages.info(request, '2FA no configurado aún')
+    return redirect('clientes:portal_dashboard')
+
+
+def portal_restablecer_password(request):
+    """Vista stub para restablecer password"""
+    messages.info(request, 'Función no disponible aún')
+    return redirect('clientes:portal_login')
+
+
+def portal_revocar_terminos(request):
+    """Vista stub para revocar términos"""
+    messages.info(request, 'Función no disponible aún')
+    return redirect('clientes:portal_dashboard')
+
+
+def portal_mis_hijos(request):
+    """Redirige a la vista de clientes"""
+    return redirect('clientes:portal_dashboard')
+
+
+def portal_consumos_hijo(request, hijo_id):
+    """Vista stub para consumos de hijo"""
+    return redirect('clientes:portal_dashboard')
+
+
+def portal_restricciones_hijo(request, hijo_id):
+    """Vista stub para restricciones de hijo"""
+    return redirect('clientes:portal_dashboard')
+
+
+def portal_cargar_saldo(request):
+    """Vista stub para cargar saldo"""
+    return redirect('clientes:portal_cargar_saldo')
+
+
+def portal_pagos(request):
+    """Vista stub para pagos"""
+    return redirect('clientes:portal_dashboard')
+
+
+def portal_recargas(request):
+    """Vista stub para recargas"""
+    return redirect('clientes:portal_recargas')
+
+
+def portal_recargar_tarjeta(request):
+    """Vista stub para recargar tarjeta"""
+    return redirect('clientes:portal_cargar_saldo')
+
+
+def portal_notificaciones_saldo(request):
+    """Vista stub para notificaciones de saldo"""
+    return redirect('clientes:portal_dashboard')
+
+
+def api_portal_movimientos(request, tarjeta_id):
+    """API stub para movimientos"""
+    return JsonResponse({'error': 'Not implemented'}, status=501)
+
+
+def api_portal_saldo(request, tarjeta_id):
+    """API stub para saldo"""
+    return JsonResponse({'error': 'Not implemented'}, status=501)
+

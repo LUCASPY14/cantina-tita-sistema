@@ -1,4 +1,3 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="es" x-data="{ darkMode: $persist(false) }" :class="{ 'dark': darkMode }">
 <head>
@@ -46,12 +45,12 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#FF6B35',      // Naranja Cantina Tita
-                        secondary: '#4ECDC4',    // Turquesa
-                        accent: '#f59e0b',       // Ámbar
-                        success: '#2ECC71',      // Verde
-                        warning: '#F39C12',      // Naranja warning
-                        danger: '#E74C3C',       // Rojo
+                        primary: '#FF6B35',
+                        secondary: '#4ECDC4',
+                        accent: '#f59e0b',
+                        success: '#2ECC71',
+                        warning: '#F39C12',
+                        danger: '#E74C3C',
                         'gray-light': '#f8fafc',
                         'gray-dark': '#1e293b'
                     },
@@ -150,16 +149,26 @@
         
         /* Botones mejorados */
         .btn-enhanced {
-            @apply transform transition-all duration-200
-                   hover:scale-105 hover:shadow-xl
-                   active:scale-95;
+            transform: translateZ(0);
+            transition: all 200ms ease;
+        }
+        .btn-enhanced:hover {
+            transform: scale(1.05);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .btn-enhanced:active {
+            transform: scale(0.95);
         }
         
         /* Cards interactivas */
         .card-interactive {
-            @apply transform transition-all duration-300
-                   hover:shadow-2xl hover:-translate-y-1
-                   cursor-pointer;
+            transform: translateZ(0);
+            transition: all 300ms ease;
+            cursor: pointer;
+        }
+        .card-interactive:hover {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transform: translateY(-4px);
         }
         
         /* Loading spinner personalizado */
@@ -178,7 +187,13 @@
         
         /* Skeleton loader */
         .skeleton {
-            @apply animate-pulse bg-gray-300 dark:bg-gray-700 rounded;
+            background-color: #d1d5db;
+            border-radius: 0.25rem;
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        .dark .skeleton {
+            background-color: #374151;
         }
         
         /* Toast notifications - posicionamiento */
@@ -203,10 +218,9 @@
                 max-width: calc(100% - 1rem);
             }
         }
-        
-        {% block extra_styles %}{% endblock %}
     </style>
     
+    {% block extra_styles %}{% endblock %}
     {% block extra_head %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
@@ -238,13 +252,6 @@
                     <nav class="hidden md:flex items-center space-x-4">
                         {% block navigation %}
                         {% endblock %}
-                        
-                        <!-- Dark mode toggle -->
-                        <button @click="darkMode = !darkMode" 
-                                class="btn btn-circle btn-ghost"
-                                aria-label="Cambiar tema">
-                            <i class="fas" :class="darkMode ? 'fa-sun text-yellow-400' : 'fa-moon text-gray-600'"></i>
-                        </button>
                     </nav>
                     
                     <!-- Mobile menu button -->
@@ -384,7 +391,6 @@
         // Soporte para eventos de notificación desde cualquier parte
         document.addEventListener('notify', (event) => {
             const { message, type = 'info', duration = 3000 } = event.detail;
-            // Alpine.js manejará esto automáticamente
             window.dispatchEvent(new CustomEvent('show-notification', { 
                 detail: { message, type, duration } 
             }));

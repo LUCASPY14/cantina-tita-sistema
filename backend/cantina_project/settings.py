@@ -66,7 +66,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'django_filters',
     'corsheaders',
-    'debug_toolbar',
+    # 'debug_toolbar',  # Deshabilitado en producción
     'django_recaptcha',
     'gestion',
     'pos',
@@ -95,8 +95,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     # Clickjacking protection
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # Debug toolbar (solo en modo DEBUG)
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
+    # Debug toolbar (deshabilitado en producción)
+    # 'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 # =============================================================================
 # DEBUG TOOLBAR CONFIGURATION

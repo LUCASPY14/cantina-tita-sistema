@@ -39,7 +39,7 @@ def venta(request):
         'title': 'Nueva Venta',
         'productos': productos
     }
-    return render(request, 'apps/pos/ventas/nueva_venta.html', context)
+    return render(request, 'pos/venta.html', context)
 
 @login_required
 def recargas(request):
@@ -52,3 +52,21 @@ def cuenta_corriente(request):
     """Cuenta corriente"""
     context = {'title': 'Cuenta Corriente'}
     return render(request, 'apps/pos/cuenta_corriente/index.html', context)
+
+@login_required
+def historial_ventas(request):
+    """Historial de ventas"""
+    context = {'title': 'Historial de Ventas'}
+    return render(request, 'pos/historial_ventas.html', context)
+
+@login_required
+def cierre_caja(request):
+    """Cierre de caja"""
+    context = {'title': 'Cierre de Caja'}
+    return render(request, 'pos/cierre_caja.html', context)
+
+@login_required
+def gestionar_clientes(request):
+    """Gestionar clientes"""
+    context = {'title': 'Gestionar Clientes'}
+    return render(request, 'pos/gestionar_clientes.html', context)

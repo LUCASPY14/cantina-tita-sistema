@@ -87,22 +87,46 @@
         <!-- Formulario con validación Alpine.js -->
         <form method="post" 
               action="{% url 'login' %}"
-              x-data="formValidation({
-                  username: {
-                      value: '',
-                      rules: [
-                          ValidationRules.required('El usuario es requerido'),
-                          ValidationRules.minLength(3, 'Mínimo 3 caracteres')
-                      ]
+              x-data="{
+                  loading: false,
+                  showPassword: false,
+                  fields: {
+                      username: { value: '', error: '' },
+                      password: { value: '', error: '' }
                   },
-                  password: {
-                      value: '',
-                      rules: [
-                          ValidationRules.required('La contraseña es requerida'),
-                          ValidationRules.minLength(4, 'Mínimo 4 caracteres')
-                      ]
+                  get isValid() {
+                      return this.fields.username.value.length >= 3 && 
+                             this.fields.password.value.length >= 4;
+                  },
+                  validateField(fieldName) {
+                      if (fieldName === 'username') {
+                          if (!this.fields.username.value) {
+                              this.fields.username.error = 'El usuario es requerido';
+                          } else if (this.fields.username.value.length < 3) {
+                              this.fields.username.error = 'Mínimo 3 caracteres';
+                          } else {
+                              this.fields.username.error = '';
+                          }
+                      }
+                      if (fieldName === 'password') {
+                          if (!this.fields.password.value) {
+                              this.fields.password.error = 'La contraseña es requerida';
+                          } else if (this.fields.password.value.length < 4) {
+                              this.fields.password.error = 'Mínimo 4 caracteres';
+                          } else {
+                              this.fields.password.error = '';
+                          }
+                      }
+                  },
+                  handleSubmit() {
+                      this.validateField('username');
+                      this.validateField('password');
+                      if (this.isValid) {
+                          this.loading = true;
+                          $el.submit();
+                      }
                   }
-              })"
+              }"
               @submit.prevent="handleSubmit"
               novalidate>
             
@@ -195,9 +219,7 @@
             <button 
                 type="submit"
                 :disabled="loading || !isValid"
-                class="btn btn-primary btn-block btn-lg gap-2 relative overflow-hidden"
-                x-data="{ loading: false }"
-                @click="loading = true">
+                class="btn btn-primary btn-block btn-lg gap-2 relative overflow-hidden">
                 
                 <!-- Texto normal -->
                 <span :class="{ 'invisible': loading }">
@@ -215,17 +237,17 @@
             
             <!-- Enlaces adicionales -->
             <div class="mt-6 text-center space-y-2">
-                <a href="{% url 'password_reset' %}" 
-                   class="link link-primary text-sm">
-                    ¿Olvidó su contraseña?
-                </a>
+                <p class="text-sm text-gray-500">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Para recuperar contraseña, contacte al administrador
+                </p>
                 
                 <div class="divider text-xs text-gray-500">O</div>
                 
-                <a href="{% url 'portal:registro' %}" 
+                <a href="/clientes/login/" 
                    class="btn btn-outline btn-block gap-2">
-                    <i class="fas fa-user-plus"></i>
-                    Registrarse como Padre/Tutor
+                    <i class="fas fa-user-circle"></i>
+                    Portal de Padres
                 </a>
             </div>
         </form>
@@ -248,36 +270,14 @@
 
 {% block page_scripts %}
 <script>
-    // Script específico para login
+    // Auto-focus en el primer campo
     document.addEventListener('DOMContentLoaded', () => {
         console.log('🔐 Página de login cargada');
         
-        // Auto-focus en el primer campo con error
-        const errorInput = document.querySelector('.input-error');
-        if (errorInput) {
-            errorInput.focus();
+        const firstInput = document.getElementById('username');
+        if (firstInput) {
+            firstInput.focus();
         }
-        
-        // Agregar data adicional a Alpine
-        Alpine.data('loginForm', () => ({
-            showPassword: false,
-            
-            handleSubmit() {
-                if (this.isValid) {
-                    this.loading = true;
-                    this.$el.submit();
-                } else {
-                    // Mostrar notificación de campos inválidos
-                    window.dispatchEvent(new CustomEvent('show-notification', {
-                        detail: {
-                            message: 'Por favor complete todos los campos correctamente',
-                            type: 'warning',
-                            duration: 3000
-                        }
-                    }));
-                }
-            }
-        }));
     });
 </script>
 {% endblock %}

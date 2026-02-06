@@ -5,7 +5,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import VentaViewSet, DetalleVentaViewSet, PagoVentaViewSet
 
-app_name = 'pos'
+app_name = 'pos_api'
 
 # Router para ViewSets
 router = DefaultRouter()

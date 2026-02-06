@@ -32,7 +32,7 @@ def actualizar_gitignore():
         '.env.local',
         '',
         '# Database',
-        'db.sqlite3',
+        '',
         '*.db',
         '',
         '# Media files',

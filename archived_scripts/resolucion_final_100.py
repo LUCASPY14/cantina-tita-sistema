@@ -15,7 +15,7 @@ def configurar_django():
             DEBUG=True,
             DATABASES={
                 'default': {
-                    'ENGINE': 'django.db.backends.sqlite3',
+                    'ENGINE': 'django.db.backends.',
                     'NAME': ':memory:',
                 }
             },
