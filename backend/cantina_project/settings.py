@@ -18,7 +18,7 @@ from decouple import Config, RepositoryEnv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Configurar python-decouple para buscar .env en el directorio correcto
-ENV_PATH = BASE_DIR.parent / 'entorno' / '.env'
+ENV_PATH = BASE_DIR.parent / '.env'
 config = Config(RepositoryEnv(str(ENV_PATH)) if ENV_PATH.exists() else None)
 
 
@@ -184,11 +184,13 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': config('DB_NAME', default='cantinatitadb'),
         'USER': config('DB_USER', default='root'),
-        'PASSWORD': config('DB_PASSWORD'),
+        'PASSWORD': config('DB_PASSWORD', default='L01G05S33Vice.42'),
         'HOST': config('DB_HOST', default='localhost'),
         'PORT': config('DB_PORT', default='3306'),
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'charset': 'utf8mb4',
+            'use_unicode': True,
         }
     }
 }
