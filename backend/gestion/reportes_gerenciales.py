@@ -15,9 +15,10 @@ from openpyxl.styles import Font, Alignment, PatternFill, Border, Side, numbers
 from openpyxl.utils import get_column_letter
 from openpyxl.chart import BarChart, PieChart, LineChart, Reference
 
+from pos.models import Venta as Ventas, DetalleVenta, PagoVenta as PagosVenta
 from gestion.models import (
-    Ventas, DetalleVenta, Compras, CargasSaldo, ConsumoTarjeta,
-    PagosVenta, PagosProveedores, StockUnico, Producto,
+    Compras, CargasSaldo, ConsumoTarjeta,
+    PagosProveedores, StockUnico, Producto,
     Cliente, Empleado, TransaccionOnline
 )
 

@@ -6,7 +6,7 @@ from .clientes import *
 from .productos import *
 from .empleados import *
 from .tarjetas import *
-from .ventas import *
+from .ventas import *  # Modelos auxiliares
 from .compras import *
 from .fiscal import *
 from .almuerzos import *
@@ -38,8 +38,8 @@ __all__ = [
     # Tarjetas
     'Tarjeta', 'ConsumoTarjeta', 'CargasSaldo',
     
-    # Ventas
-    'Ventas', 'DetalleVenta', 'PagosVenta', 'AplicacionPagosVentas',
+    # Ventas - Modelos auxiliares (núcleo está en pos app)
+    'AplicacionPagosVentas',
     'DetalleComisionVenta', 'NotasCreditoCliente', 'DetalleNota',
     'AutorizacionSaldoNegativo',
     

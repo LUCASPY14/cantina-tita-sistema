@@ -6,9 +6,8 @@ Convierte modelos Django a JSON y viceversa
 from rest_framework import serializers
 from decimal import Decimal
 from django.db.models import Sum, Count
+from pos.models import Venta as Ventas, DetalleVenta, PagoVenta as PagosVenta
 from .models import (
-    # Ventas
-    Ventas, DetalleVenta, PagosVenta,
     # Productos
     Producto, Categoria, StockUnico, PreciosPorLista,
     # Clientes y Tarjetas
@@ -65,7 +64,7 @@ class ProductoListSerializer(serializers.ModelSerializer):
     def get_stock_actual(self, obj):
         try:
             stock = StockUnico.objects.get(id_producto=obj)
-            return float(stock.stock_actual)
+            return float(stock.cantidad)
         except StockUnico.DoesNotExist:
             return 0.0
     
@@ -97,7 +96,7 @@ class ProductoDetailSerializer(serializers.ModelSerializer):
         try:
             stock = StockUnico.objects.get(id_producto=obj)
             return {
-                'stock_actual': float(stock.stock_actual),
+                'stock_actual': float(stock.cantidad),
                 'fecha_actualizacion': stock.fecha_ultima_actualizacion
             }
         except StockUnico.DoesNotExist:
@@ -325,12 +324,12 @@ class StockSerializer(serializers.ModelSerializer):
     class Meta:
         model = StockUnico
         fields = ['id_producto', 'producto_codigo', 'producto_descripcion',
-                  'stock_actual', 'stock_minimo', 'fecha_ultima_actualizacion',
+                  'cantidad', 'stock_minimo', 'fecha_ultima_actualizacion',
                   'alerta_stock_bajo']
     
     def get_alerta_stock_bajo(self, obj):
         if obj.id_producto:
-            return obj.stock_actual < obj.id_producto.stock_minimo
+            return obj.cantidad < obj.id_producto.stock_minimo
         return False
 
 

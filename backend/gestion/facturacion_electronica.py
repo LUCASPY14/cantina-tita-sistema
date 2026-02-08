@@ -22,8 +22,9 @@ from django.utils import timezone
 from django.conf import settings
 import requests
 
+from pos.models import Venta as Ventas, DetalleVenta
 from .models import (
-    Ventas, DetalleVenta, DatosFacturacionElect, Timbrados,
+    DatosFacturacionElect, Timbrados,
     DatosEmpresa, Cliente, Producto
 )
 

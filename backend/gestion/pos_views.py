@@ -12,11 +12,12 @@ from django.utils import timezone
 from decimal import Decimal
 import json
 
+from pos.models import Venta as Ventas, DetalleVenta, PagoVenta as PagosVenta
 from gestion.models import (
-    Producto, Tarjeta, Ventas, DetalleVenta, 
+    Producto, Tarjeta,
     ConsumoTarjeta, Empleado, StockUnico, Cliente, Hijo,
     CargasSaldo, Proveedor, Categoria, Cajas, CierresCaja,
-    MediosPago, TiposPago, PagosVenta, ConciliacionPagos,
+    MediosPago, TiposPago, ConciliacionPagos,
     Compras, DetalleCompra, MovimientosStock,
     TarifasComision, DetalleComisionVenta, ListaPrecios, TipoCliente,
     TipoRolGeneral, DocumentosTributarios, Timbrados,

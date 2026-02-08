@@ -23,10 +23,11 @@ from gestion.permisos import acceso_cajero, solo_administrador, solo_gerente_o_s
 
 from .models import (
     Cliente, UsuariosWebClientes, UsuarioPortal, Hijo, Tarjeta, CargasSaldo,
-    Ventas, DetalleVenta, SuscripcionesAlmuerzo, RegistroConsumoAlmuerzo,
+    SuscripcionesAlmuerzo, RegistroConsumoAlmuerzo,
     PagosAlmuerzoMensual, ListaPrecios, TipoCliente, IntentoLogin,
     TiposPago, Empleado
 )
+from pos.models import Venta as Ventas, DetalleVenta
 from .seguridad_utils import (
     registrar_intento_login, verificar_rate_limit, registrar_auditoria,
     generar_token_recuperacion, verificar_token_recuperacion, marcar_token_usado,

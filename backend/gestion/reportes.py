@@ -29,12 +29,13 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
+from pos.models import Venta as Ventas, DetalleVenta, PagoVenta as PagosVenta
 from gestion.models import (
-    Ventas, DetalleVenta, Producto, Cliente, Tarjeta,
+    Producto, Cliente, Tarjeta,
     ConsumoTarjeta, CargasSaldo, StockUnico, VistaStockAlerta,
     VistaSaldoClientes, Proveedor,
     Empleado, Categoria, Compras,
-    PagosVenta, PagosProveedores, AplicacionPagosVentas, AplicacionPagosCompras,
+    PagosProveedores, AplicacionPagosVentas, AplicacionPagosCompras,
     NotasCreditoCliente, NotasCreditoProveedor
 )
 

@@ -32,9 +32,10 @@ from reportlab.graphics.barcode import code128
 from reportlab.graphics.shapes import Drawing
 from reportlab.graphics import renderPDF
 
+from pos.models import Venta as Ventas, DetalleVenta, PagoVenta as PagosVenta
 from .models import (
     Producto, StockUnico, Cliente, Hijo, Tarjeta, MediosPago,
-    Ventas, DetalleVenta, PagosVenta, Empleado, TiposPago, TipoCliente, ListaPrecios,
+    Empleado, TiposPago, TipoCliente, ListaPrecios,
     TarifasComision, DetalleComisionVenta, CierresCaja,
     RestriccionesHijos, ProductoAlergeno
 )

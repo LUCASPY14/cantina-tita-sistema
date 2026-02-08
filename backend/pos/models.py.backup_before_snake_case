@@ -52,12 +52,12 @@ class Venta(models.Model):
 
     # Campos de identificación
     id_venta = models.BigAutoField(
-        db_column='id_venta',
+        db_column='ID_Venta',
         primary_key=True,
         verbose_name='ID Venta'
     )
     nro_factura_venta = models.BigIntegerField(
-        db_column='nro_factura_venta',
+        db_column='Nro_Factura_Venta',
         null=True,
         blank=True,
         verbose_name='Número de Factura'
@@ -67,14 +67,14 @@ class Venta(models.Model):
     id_cliente = models.ForeignKey(
         Cliente,
         on_delete=models.PROTECT,
-        db_column='id_cliente',
+        db_column='ID_Cliente',
         related_name='ventas_pos',  # Cambio para evitar conflicto
         verbose_name='Cliente'
     )
     id_hijo = models.ForeignKey(
         Hijo,
         on_delete=models.PROTECT,
-        db_column='id_hijo',
+        db_column='ID_Hijo',
         blank=True,
         null=True,
         verbose_name='Hijo'
@@ -84,29 +84,29 @@ class Venta(models.Model):
     id_tipo_pago = models.ForeignKey(
         TiposPago,
         on_delete=models.PROTECT,
-        db_column='id_tipo_pago',
+        db_column='ID_Tipo_Pago',
         verbose_name='Tipo de Pago'
     )
     id_empleado_cajero = models.ForeignKey(
         Empleado,
         on_delete=models.PROTECT,
-        db_column='id_empleado_cajero',
+        db_column='ID_Empleado_Cajero',
         related_name='ventas_pos_como_cajero',  # Cambio para evitar conflicto
         verbose_name='Cajero'
     )
     
     # Fechas y montos
     fecha = models.DateTimeField(
-        db_column='fecha',
+        db_column='Fecha',
         default=timezone.now,
         verbose_name='Fecha'
     )
     monto_total = models.BigIntegerField(
-        db_column='monto_total',
+        db_column='Monto_Total',
         verbose_name='Monto Total (Gs.)'
     )
     saldo_pendiente = models.BigIntegerField(
-        db_column='saldo_pendiente',
+        db_column='Saldo_Pendiente',
         blank=True,
         null=True,
         verbose_name='Saldo Pendiente (Gs.)'
@@ -114,21 +114,21 @@ class Venta(models.Model):
     
     # Estados
     estado_pago = models.CharField(
-        db_column='estado_pago',
+        db_column='Estado_Pago',
         max_length=10,
         choices=ESTADO_PAGO_CHOICES,
         default='PENDIENTE',
         verbose_name='Estado de Pago'
     )
     estado = models.CharField(
-        db_column='estado',
+        db_column='Estado',
         max_length=10,
         choices=ESTADO_CHOICES,
         default='PROCESADO',
         verbose_name='Estado'
     )
     tipo_venta = models.CharField(
-        db_column='tipo_venta',
+        db_column='Tipo_Venta',
         max_length=20,
         choices=TIPO_VENTA_CHOICES,
         verbose_name='Tipo de Venta'
@@ -138,7 +138,7 @@ class Venta(models.Model):
     autorizado_por = models.ForeignKey(
         Empleado,
         on_delete=models.PROTECT,
-        db_column='autorizado_por',
+        db_column='Autorizado_Por',
         related_name='ventas_pos_autorizadas',  # Cambio para evitar conflicto
         blank=True,
         null=True,
@@ -146,7 +146,7 @@ class Venta(models.Model):
         help_text='Supervisor que autorizó la venta a crédito con saldo insuficiente'
     )
     motivo_credito = models.TextField(
-        db_column='motivo_credito',
+        db_column='Motivo_Credito',
         blank=True,
         null=True,
         verbose_name='Motivo del Crédito',
@@ -155,14 +155,14 @@ class Venta(models.Model):
     
     # Facturación legal
     genera_factura_legal = models.BooleanField(
-        db_column='genera_factura_legal',
+        db_column='Genera_Factura_Legal',
         default=False,
         verbose_name='Genera Factura Legal',
         help_text='True si la venta genera factura contable (solo pagos con medios externos)'
     )
 
     class Meta:
-        managed = True  # Gestion es el propietario de estas tablas
+        managed = False  # Gestion es el propietario de estas tablas
         db_table = 'ventas'
         verbose_name = 'Venta'
         verbose_name_plural = 'Ventas'
@@ -238,41 +238,41 @@ class DetalleVenta(models.Model):
     '''
     
     id_detalle = models.BigAutoField(
-        db_column='id_detalle',
+        db_column='ID_Detalle',
         primary_key=True,
         verbose_name='ID Detalle'
     )
     id_venta = models.ForeignKey(
         Venta,
         on_delete=models.CASCADE,
-        db_column='id_venta',
+        db_column='ID_Venta',
         related_name='detalles',
         verbose_name='Venta'
     )
     id_producto = models.ForeignKey(
         Producto,
         on_delete=models.PROTECT,
-        db_column='id_producto',
+        db_column='ID_Producto',
         related_name='detalles_venta_pos',  # Cambio para evitar conflicto
         verbose_name='Producto'
     )
     cantidad = models.DecimalField(
-        db_column='cantidad',
+        db_column='Cantidad',
         max_digits=10,
         decimal_places=3,
         verbose_name='Cantidad'
     )
     precio_unitario = models.BigIntegerField(
-        db_column='precio_unitario',
+        db_column='Precio_Unitario',
         verbose_name='Precio Unitario (Gs.)'
     )
     subtotal_total = models.BigIntegerField(
-        db_column='subtotal_total',
+        db_column='Subtotal_Total',
         verbose_name='Subtotal (Gs.)'
     )
 
     class Meta:
-        managed = True  # Gestion es el propietario de estas tablas
+        managed = False  # Gestion es el propietario de estas tablas
         db_table = 'detalle_venta'
         verbose_name = 'Detalle de Venta'
         verbose_name_plural = 'Detalles de Venta'
@@ -333,27 +333,27 @@ class PagoVenta(models.Model):
     ]
     
     id_pago_venta = models.BigAutoField(
-        db_column='id_pago_venta',
+        db_column='ID_Pago_Venta',
         primary_key=True,
         verbose_name='ID Pago'
     )
     id_venta = models.ForeignKey(
         Venta,
         on_delete=models.CASCADE,
-        db_column='id_venta',
+        db_column='ID_Venta',
         related_name='pagos',
         verbose_name='Venta'
     )
     id_medio_pago = models.ForeignKey(
         MediosPago,
         on_delete=models.PROTECT,
-        db_column='id_medio_pago',
+        db_column='ID_Medio_Pago',
         verbose_name='Medio de Pago'
     )
     id_cierre = models.ForeignKey(
         CierresCaja,
         on_delete=models.PROTECT,
-        db_column='id_cierre',
+        db_column='ID_Cierre',
         blank=True,
         null=True,
         verbose_name='Cierre de Caja'
@@ -361,29 +361,29 @@ class PagoVenta(models.Model):
     nro_tarjeta_usada = models.ForeignKey(
         Tarjeta,
         on_delete=models.PROTECT,
-        db_column='nro_tarjeta_usada',
+        db_column='Nro_Tarjeta_Usada',
         blank=True,
         null=True,
         verbose_name='Tarjeta Utilizada'
     )
     monto_aplicado = models.BigIntegerField(
-        db_column='monto_aplicado',
+        db_column='Monto_Aplicado',
         verbose_name='Monto Aplicado (Gs.)'
     )
     referencia_transaccion = models.CharField(
-        db_column='referencia_transaccion',
+        db_column='Referencia_Transaccion',
         max_length=100,
         blank=True,
         null=True,
         verbose_name='Referencia de Transacción'
     )
     fecha_pago = models.DateTimeField(
-        db_column='fecha_pago',
+        db_column='Fecha_Pago',
         default=timezone.now,
         verbose_name='Fecha de Pago'
     )
     estado = models.CharField(
-        db_column='estado',
+        db_column='Estado',
         max_length=10,
         choices=ESTADO_CHOICES,
         default='PROCESADO',
@@ -391,7 +391,7 @@ class PagoVenta(models.Model):
     )
 
     class Meta:
-        managed = True  # Gestion es el propietario de estas tablas
+        managed = False  # Gestion es el propietario de estas tablas
         db_table = 'pagos_venta'
         verbose_name = 'Pago de Venta'
         verbose_name_plural = 'Pagos de Venta'

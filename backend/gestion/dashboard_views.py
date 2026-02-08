@@ -12,9 +12,10 @@ import psutil
 import os
 
 from gestion.models import (
-    Ventas, Producto, StockUnico, Tarjeta, CargasSaldo,
-    ConsumoTarjeta, Cliente, AlertasSistema, DetalleVenta, MovimientosStock, Categoria
+    Producto, StockUnico, Tarjeta, CargasSaldo,
+    ConsumoTarjeta, Cliente, AlertasSistema, MovimientosStock, Categoria
 )
+from pos.models import Venta as Ventas, DetalleVenta
 from gestion.permisos import solo_gerente_o_superior
 
 

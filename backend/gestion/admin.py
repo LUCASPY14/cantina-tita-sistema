@@ -65,19 +65,12 @@ class TarjetaAdmin(admin.ModelAdmin):
         return f"₲ {obj.saldo_actual:,.0f}"
     saldo_display.short_description = 'Saldo Actual'
 
-# Configuración para Ventas
-@admin.register(Ventas)
-class VentasAdmin(admin.ModelAdmin):
-    list_display = ('id_venta', 'id_cliente', 'total_display', 'id_tipo_pago', 'fecha', 'id_empleado_cajero')
-    list_filter = ('id_tipo_pago', 'fecha', 'estado')
-    search_fields = ('id_cliente__nombres', 'id_cliente__apellidos')
-    ordering = ('-fecha',)
-    date_hierarchy = 'fecha'
-    readonly_fields = ('fecha',)
-    
-    def total_display(self, obj):
-        return f"₲ {obj.monto_total:,.0f}"
-    total_display.short_description = 'Total'
+# ========================================================================
+# ⚠️  VENTAS ADMIN DEPRECADO - MIGRADO A pos APP  
+# ========================================================================
+# La configuración admin para Ventas/DetalleVenta/PagoVenta ahora está
+# en pos/admin.py para mantener separación de responsabilidades
+# ========================================================================
 
 # Configuración para CargasSaldo
 @admin.register(CargasSaldo)

@@ -4,7 +4,7 @@ from django.db import models
 from .base import ManagedModel
 from .productos import Producto
 from .catalogos import Categoria
-from .ventas import Ventas
+from pos.models import Venta as Ventas  # MIGRADO: Usar modelo de pos app
 
 class Promocion(ManagedModel):
     '''Tabla promociones - Sistema de promociones y descuentos'''

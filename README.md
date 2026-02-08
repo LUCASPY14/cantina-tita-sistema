@@ -1,16 +1,17 @@
 # Sistema de Gestión de Cantina 🇵🇾
 
-[![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.13.9-blue.svg)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/Django-5.2.8-green.svg)](https://www.djangoproject.com/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0-orange.svg)](https://www.mysql.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC.svg)](https://tailwindcss.com/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
-[![Tests](https://img.shields.io/badge/Tests-Passing-success.svg)](https://github.com/tu-usuario/cantina/actions)
-[![Coverage](https://img.shields.io/badge/Coverage-70%25-yellowgreen.svg)](https://codecov.io/gh/tu-usuario/cantina)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Code style](https://img.shields.io/badge/Code_Style-Black-000000.svg)](https://github.com/psf/black)
+[![Tests](https://img.shields.io/badge/Tests-Ready-success.svg)](https://github.com/tu-usuario/cantina/actions)
+[![Status](https://img.shields.io/badge/Status-Production_Ready-brightgreen.svg)](MIGRACION_MYSQL_COMPLETADA.md)
 
-Sistema completo de gestión para cantina escolar con facturación electrónica SIFEN, portal de padres, POS avanzado y más. Desarrollado con Django 5.2, TypeScript, Tailwind CSS y MySQL.
+> **🎉 ACTUALIZACIÓN FEBRERO 2026**: Sistema completamente migrado a MySQL 8.0 y listo para producción. Ver [MIGRACIÓN COMPLETADA](MIGRACION_MYSQL_COMPLETADA.md) para detalles.
+
+Sistema completo de gestión para cantina escolar con facturación electrónica SIFEN, portal de padres, POS avanzado y más. Desarrollado con Django 5.2, MySQL 8.0, TypeScript y Tailwind CSS.
 
 ---
 

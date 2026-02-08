@@ -4,7 +4,7 @@ from django.db import models
 from .base import ManagedModel
 from .clientes import Hijo
 from .tarjetas import Tarjeta
-from .ventas import Ventas
+from pos.models import Venta as Ventas  # MIGRADO: Usar modelo de pos app
 from .empleados import Empleado
 
 class TipoAlmuerzo(ManagedModel):

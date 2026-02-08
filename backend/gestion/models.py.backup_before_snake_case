@@ -126,31 +126,31 @@ class TipoRolGeneral(models.Model):
 
 class Cliente(models.Model):
     '''Tabla clientes - Clientes existentes en la BD'''
-    id_cliente = models.AutoField(db_column='id_cliente', primary_key=True)
+    id_cliente = models.AutoField(db_column='ID_Cliente', primary_key=True)
     id_lista = models.ForeignKey(
         ListaPrecios, 
         on_delete=models.PROTECT, 
-        db_column='id_lista'
+        db_column='ID_Lista'
     )
     id_tipo_cliente = models.ForeignKey(
         TipoCliente, 
         on_delete=models.PROTECT, 
-        db_column='id_tipo_cliente'
+        db_column='ID_Tipo_Cliente'
     )
-    nombres = models.CharField(db_column='nombres', max_length=100)
-    apellidos = models.CharField(db_column='apellidos', max_length=100)
-    razon_social = models.CharField(db_column='razon_social', max_length=255, blank=True, null=True)
-    ruc_ci = models.CharField(db_column='ruc_ci', max_length=20, unique=True)
-    direccion = models.CharField(db_column='direccion', max_length=255, blank=True, null=True)
-    ciudad = models.CharField(db_column='ciudad', max_length=100, blank=True, null=True)
-    telefono = models.CharField(db_column='telefono', max_length=20, blank=True, null=True)
-    email = models.EmailField(db_column='email', blank=True, null=True)
-    limite_credito = models.DecimalField(db_column='limite_credito', max_digits=12, decimal_places=2, blank=True, null=True)
-    activo = models.BooleanField(db_column='activo', default=True)
-    fecha_registro = models.DateTimeField(db_column='fecha_registro', auto_now_add=True)
+    nombres = models.CharField(db_column='Nombres', max_length=100)
+    apellidos = models.CharField(db_column='Apellidos', max_length=100)
+    razon_social = models.CharField(db_column='Razon_Social', max_length=255, blank=True, null=True)
+    ruc_ci = models.CharField(db_column='Ruc_CI', max_length=20, unique=True)
+    direccion = models.CharField(db_column='Direccion', max_length=255, blank=True, null=True)
+    ciudad = models.CharField(db_column='Ciudad', max_length=100, blank=True, null=True)
+    telefono = models.CharField(db_column='Telefono', max_length=20, blank=True, null=True)
+    email = models.EmailField(db_column='Email', blank=True, null=True)
+    limite_credito = models.DecimalField(db_column='Limite_Credito', max_digits=12, decimal_places=2, blank=True, null=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
+    fecha_registro = models.DateTimeField(db_column='Fecha_Registro', auto_now_add=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'clientes'
         verbose_name = 'Cliente'
         verbose_name_plural = 'Clientes'
@@ -165,24 +165,24 @@ class Cliente(models.Model):
 
 class Hijo(models.Model):
     '''Tabla hijos - Hijos de clientes para control de almuerzos'''
-    id_hijo = models.AutoField(db_column='id_hijo', primary_key=True)
+    id_hijo = models.AutoField(db_column='ID_Hijo', primary_key=True)
     id_cliente_responsable = models.ForeignKey(
         Cliente,
         on_delete=models.PROTECT,
-        db_column='id_cliente_responsable',
+        db_column='ID_Cliente_Responsable',
         related_name='hijos'
     )
-    nombre = models.CharField(db_column='nombre', max_length=100)
-    apellido = models.CharField(db_column='apellido', max_length=100)
-    fecha_nacimiento = models.DateField(db_column='fecha_nacimiento', blank=True, null=True)
-    grado = models.CharField(db_column='grado', max_length=50, blank=True, null=True)
-    restricciones_compra = models.TextField(db_column='restricciones_compra', blank=True, null=True)
-    foto_perfil = models.CharField(db_column='foto_perfil', max_length=255, blank=True, null=True)
-    fecha_foto = models.DateTimeField(db_column='fecha_foto', blank=True, null=True)
-    activo = models.BooleanField(db_column='activo', default=True)
+    nombre = models.CharField(db_column='Nombre', max_length=100)
+    apellido = models.CharField(db_column='Apellido', max_length=100)
+    fecha_nacimiento = models.DateField(db_column='Fecha_Nacimiento', blank=True, null=True)
+    grado = models.CharField(db_column='Grado', max_length=50, blank=True, null=True)
+    restricciones_compra = models.TextField(db_column='Restricciones_Compra', blank=True, null=True)
+    foto_perfil = models.CharField(db_column='Foto_Perfil', max_length=255, blank=True, null=True)
+    fecha_foto = models.DateTimeField(db_column='Fecha_Foto', blank=True, null=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'hijos'
         verbose_name = 'Hijo'
         verbose_name_plural = 'Hijos'
@@ -208,47 +208,47 @@ class RestriccionesHijos(models.Model):
         ('Crítica', 'Crítica'),
     ]
     
-    id_restriccion = models.AutoField(db_column='id_restriccion', primary_key=True)
+    id_restriccion = models.AutoField(db_column='ID_Restriccion', primary_key=True)
     id_hijo = models.ForeignKey(
         Hijo,
         on_delete=models.CASCADE,
-        db_column='id_hijo',
+        db_column='ID_Hijo',
         related_name='restricciones'
     )
     tipo_restriccion = models.CharField(
-        db_column='tipo_restriccion',
+        db_column='Tipo_Restriccion',
         max_length=100,
         help_text='Tipo: Celíaco, Intolerancia lactosa, Alergia maní, Vegetariano, etc.'
     )
     descripcion = models.TextField(
-        db_column='descripcion',
+        db_column='Descripcion',
         blank=True,
         null=True,
         help_text='Descripción detallada de la restricción'
     )
     observaciones = models.TextField(
-        db_column='observaciones',
+        db_column='Observaciones',
         blank=True,
         null=True,
         help_text='Observaciones adicionales o ingredientes específicos a evitar'
     )
     severidad = models.CharField(
-        db_column='severidad',
+        db_column='Severidad',
         max_length=20,
         choices=SEVERIDAD_CHOICES,
         default='Moderada'
     )
     requiere_autorizacion = models.BooleanField(
-        db_column='requiere_autorizacion',
+        db_column='Requiere_Autorizacion',
         default=True,
         help_text='Si requiere autorización para consumir productos restringidos'
     )
-    fecha_registro = models.DateTimeField(db_column='fecha_registro', auto_now_add=True)
-    fecha_ultima_actualizacion = models.DateTimeField(db_column='fecha_ultima_actualizacion', auto_now=True)
-    activo = models.BooleanField(db_column='activo', default=True)
+    fecha_registro = models.DateTimeField(db_column='Fecha_Registro', auto_now_add=True)
+    fecha_ultima_actualizacion = models.DateTimeField(db_column='Fecha_Ultima_Actualizacion', auto_now=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'restricciones_hijos'
         verbose_name = 'Restricción Alimentaria'
         verbose_name_plural = 'Restricciones Alimentarias'
@@ -266,18 +266,18 @@ class Tarjeta(models.Model):
         ('Vencida', 'Vencida'),
     ]
 
-    nro_tarjeta = models.CharField(db_column='nro_tarjeta', max_length=20, primary_key=True)
+    nro_tarjeta = models.CharField(db_column='Nro_Tarjeta', max_length=20, primary_key=True)
     id_hijo = models.OneToOneField(
         Hijo,
         on_delete=models.PROTECT,
-        db_column='id_hijo',
+        db_column='ID_Hijo',
         unique=True
     )
-    saldo_actual = models.BigIntegerField(db_column='saldo_actual', default=0)
-    estado = models.CharField(db_column='estado', max_length=20, choices=ESTADO_CHOICES, default='Activa')
-    fecha_vencimiento = models.DateField(db_column='fecha_vencimiento', blank=True, null=True)
-    saldo_alerta = models.DecimalField(db_column='saldo_alerta', max_digits=10, decimal_places=2, blank=True, null=True)
-    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
+    saldo_actual = models.BigIntegerField(db_column='Saldo_Actual', default=0)
+    estado = models.CharField(db_column='Estado', max_length=20, choices=ESTADO_CHOICES, default='Activa')
+    fecha_vencimiento = models.DateField(db_column='Fecha_Vencimiento', blank=True, null=True)
+    saldo_alerta = models.DecimalField(db_column='Saldo_Alerta', max_digits=10, decimal_places=2, blank=True, null=True)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
     
     # Campos para autorización de saldo negativo
     permite_saldo_negativo = models.BooleanField(
@@ -303,7 +303,7 @@ class Tarjeta(models.Model):
     )
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'tarjetas'
         verbose_name = 'Tarjeta'
         verbose_name_plural = 'Tarjetas'
@@ -316,31 +316,31 @@ class Tarjeta(models.Model):
 
 class Producto(models.Model):
     '''Tabla productos - Productos existentes en la BD'''
-    id_producto = models.AutoField(db_column='id_producto', primary_key=True)
+    id_producto = models.AutoField(db_column='ID_Producto', primary_key=True)
     id_categoria = models.ForeignKey(
         Categoria, 
         on_delete=models.PROTECT, 
-        db_column='id_categoria',
+        db_column='ID_Categoria',
         related_name='productos'
     )
     id_unidad_de_medida = models.ForeignKey(
         UnidadMedida, 
         on_delete=models.PROTECT, 
-        db_column='id_unidad_de_medida'
+        db_column='ID_Unidad_de_Medida'
     )
     id_impuesto = models.ForeignKey(
         Impuesto, 
         on_delete=models.PROTECT, 
-        db_column='id_impuesto'
+        db_column='ID_Impuesto'
     )
-    codigo_barra = models.CharField(db_column='codigo_barra', max_length=50, unique=True, blank=True, null=True)
-    descripcion = models.CharField(db_column='descripcion', max_length=255)
-    stock_minimo = models.DecimalField(db_column='stock_minimo', max_digits=10, decimal_places=3, blank=True, null=True)
-    permite_stock_negativo = models.BooleanField(db_column='permite_stock_negativo', default=False, help_text='Permite que el producto tenga stock negativo (ej: almuerzos preparados bajo demanda)')
-    activo = models.BooleanField(db_column='activo', default=True)
+    codigo_barra = models.CharField(db_column='Codigo_Barra', max_length=50, unique=True, blank=True, null=True)
+    descripcion = models.CharField(db_column='Descripcion', max_length=255)
+    stock_minimo = models.DecimalField(db_column='Stock_Minimo', max_digits=10, decimal_places=3, blank=True, null=True)
+    permite_stock_negativo = models.BooleanField(db_column='Permite_Stock_Negativo', default=False, help_text='Permite que el producto tenga stock negativo (ej: almuerzos preparados bajo demanda)')
+    activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'productos'
         verbose_name = 'Producto'
         verbose_name_plural = 'Productos'
@@ -354,15 +354,15 @@ class StockUnico(models.Model):
     id_producto = models.OneToOneField(
         Producto, 
         on_delete=models.CASCADE, 
-        db_column='id_producto',
+        db_column='ID_Producto',
         primary_key=True,
         related_name='stock'
     )
-    stock_actual = models.DecimalField(db_column='stock_actual', max_digits=10, decimal_places=3)
-    fecha_ultima_actualizacion = models.DateTimeField(db_column='fecha_ultima_actualizacion', auto_now=True)
+    stock_actual = models.DecimalField(db_column='Stock_Actual', max_digits=10, decimal_places=3)
+    fecha_ultima_actualizacion = models.DateTimeField(db_column='Fecha_Ultima_Actualizacion', auto_now=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'stock_unico'
         verbose_name = 'Stock'
         verbose_name_plural = 'Stock de Productos'
@@ -375,18 +375,18 @@ class StockUnico(models.Model):
 
 class Proveedor(models.Model):
     '''Tabla proveedores'''
-    id_proveedor = models.AutoField(db_column='id_proveedor', primary_key=True)
-    ruc = models.CharField(db_column='ruc', max_length=20, unique=True)
-    razon_social = models.CharField(db_column='razon_social', max_length=255)
-    telefono = models.CharField(db_column='telefono', max_length=20, blank=True, null=True)
-    email = models.EmailField(db_column='email', blank=True, null=True)
-    direccion = models.CharField(db_column='direccion', max_length=255, blank=True, null=True)
-    ciudad = models.CharField(db_column='ciudad', max_length=100, blank=True, null=True)
-    activo = models.BooleanField(db_column='activo', default=True)
-    fecha_registro = models.DateTimeField(db_column='fecha_registro', auto_now_add=True)
+    id_proveedor = models.AutoField(db_column='ID_Proveedor', primary_key=True)
+    ruc = models.CharField(db_column='RUC', max_length=20, unique=True)
+    razon_social = models.CharField(db_column='Razon_Social', max_length=255)
+    telefono = models.CharField(db_column='Telefono', max_length=20, blank=True, null=True)
+    email = models.EmailField(db_column='Email', blank=True, null=True)
+    direccion = models.CharField(db_column='Direccion', max_length=255, blank=True, null=True)
+    ciudad = models.CharField(db_column='Ciudad', max_length=100, blank=True, null=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
+    fecha_registro = models.DateTimeField(db_column='Fecha_Registro', auto_now_add=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'proveedores'
         verbose_name = 'Proveedor'
         verbose_name_plural = 'Proveedores'
@@ -399,27 +399,27 @@ class Proveedor(models.Model):
 
 class Empleado(models.Model):
     '''Tabla empleados'''
-    id_empleado = models.AutoField(db_column='id_empleado', primary_key=True)
+    id_empleado = models.AutoField(db_column='ID_Empleado', primary_key=True)
     id_rol = models.ForeignKey(
         TipoRolGeneral, 
         on_delete=models.PROTECT, 
-        db_column='id_rol'
+        db_column='ID_Rol'
     )
-    nombre = models.CharField(db_column='nombre', max_length=100)
-    apellido = models.CharField(db_column='apellido', max_length=100)
-    usuario = models.CharField(db_column='usuario', max_length=50, unique=True)
-    contrasena_hash = models.CharField(db_column='contrasena_hash', max_length=60)
-    fecha_ingreso = models.DateTimeField(db_column='fecha_ingreso', auto_now_add=True)
-    direccion = models.CharField(db_column='direccion', max_length=255, blank=True, null=True)
-    ciudad = models.CharField(db_column='ciudad', max_length=100, blank=True, null=True)
-    pais = models.CharField(db_column='pais', max_length=100, blank=True, null=True)
-    telefono = models.CharField(db_column='telefono', max_length=20, blank=True, null=True)
-    email = models.EmailField(db_column='email', blank=True, null=True)
-    activo = models.BooleanField(db_column='activo', default=True)
-    fecha_baja = models.DateTimeField(db_column='fecha_baja', blank=True, null=True)
+    nombre = models.CharField(db_column='Nombre', max_length=100)
+    apellido = models.CharField(db_column='Apellido', max_length=100)
+    usuario = models.CharField(db_column='Usuario', max_length=50, unique=True)
+    contrasena_hash = models.CharField(db_column='Contrasena_Hash', max_length=60)
+    fecha_ingreso = models.DateTimeField(db_column='Fecha_Ingreso', auto_now_add=True)
+    direccion = models.CharField(db_column='Direccion', max_length=255, blank=True, null=True)
+    ciudad = models.CharField(db_column='Ciudad', max_length=100, blank=True, null=True)
+    pais = models.CharField(db_column='Pais', max_length=100, blank=True, null=True)
+    telefono = models.CharField(db_column='Telefono', max_length=20, blank=True, null=True)
+    email = models.EmailField(db_column='Email', blank=True, null=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
+    fecha_baja = models.DateTimeField(db_column='Fecha_Baja', blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'empleados'
         verbose_name = 'Empleado'
         verbose_name_plural = 'Empleados'
@@ -436,18 +436,18 @@ class Empleado(models.Model):
 
 class DatosEmpresa(models.Model):
     '''Tabla datos_empresa - Información de la empresa'''
-    id_empresa = models.IntegerField(db_column='id_empresa', primary_key=True)
-    ruc = models.CharField(db_column='ruc', max_length=20)
-    razon_social = models.CharField(db_column='razon_social', max_length=255)
-    direccion = models.CharField(db_column='direccion', max_length=255, blank=True, null=True)
-    ciudad = models.CharField(db_column='ciudad', max_length=100, blank=True, null=True)
-    pais = models.CharField(db_column='pais', max_length=100, blank=True, null=True)
-    telefono = models.CharField(db_column='telefono', max_length=20, blank=True, null=True)
-    email = models.CharField(db_column='email', max_length=100, blank=True, null=True)
-    activo = models.IntegerField(db_column='activo', blank=True, null=True)
+    id_empresa = models.IntegerField(db_column='ID_Empresa', primary_key=True)
+    ruc = models.CharField(db_column='RUC', max_length=20)
+    razon_social = models.CharField(db_column='Razon_Social', max_length=255)
+    direccion = models.CharField(db_column='Direccion', max_length=255, blank=True, null=True)
+    ciudad = models.CharField(db_column='Ciudad', max_length=100, blank=True, null=True)
+    pais = models.CharField(db_column='Pais', max_length=100, blank=True, null=True)
+    telefono = models.CharField(db_column='Telefono', max_length=20, blank=True, null=True)
+    email = models.CharField(db_column='Email', max_length=100, blank=True, null=True)
+    activo = models.IntegerField(db_column='Activo', blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'datos_empresa'
         verbose_name = 'Datos de la Empresa'
         verbose_name_plural = 'Datos de la Empresa'
@@ -460,23 +460,23 @@ class DatosEmpresa(models.Model):
 
 class PreciosPorLista(models.Model):
     '''Tabla precios_por_lista - Precios de productos por lista'''
-    id_precio = models.AutoField(db_column='id_precio', primary_key=True)
+    id_precio = models.AutoField(db_column='ID_Precio', primary_key=True)
     id_producto = models.ForeignKey(
         Producto,
         on_delete=models.CASCADE,
-        db_column='id_producto',
+        db_column='ID_Producto',
         related_name='precios'
     )
     id_lista = models.ForeignKey(
         ListaPrecios,
         on_delete=models.CASCADE,
-        db_column='id_lista'
+        db_column='ID_Lista'
     )
-    precio_unitario_neto = models.BigIntegerField(db_column='precio_unitario_neto')
-    fecha_vigencia = models.DateTimeField(db_column='fecha_vigencia', blank=True, null=True)
+    precio_unitario_neto = models.BigIntegerField(db_column='Precio_Unitario_Neto')
+    fecha_vigencia = models.DateTimeField(db_column='Fecha_Vigencia', blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'precios_por_lista'
         verbose_name = 'Precio por Lista'
         verbose_name_plural = 'Precios por Lista'
@@ -488,25 +488,25 @@ class PreciosPorLista(models.Model):
 
 class CostosHistoricos(models.Model):
     '''Tabla costos_historicos - Historial de costos de productos'''
-    id_costo_historico = models.BigAutoField(db_column='id_costo_historico', primary_key=True)
+    id_costo_historico = models.BigAutoField(db_column='ID_Costo_Historico', primary_key=True)
     id_producto = models.ForeignKey(
         Producto,
         on_delete=models.CASCADE,
-        db_column='id_producto',
+        db_column='ID_Producto',
         related_name='costos_historicos'
     )
     id_compra = models.ForeignKey(
         'Compras',
         on_delete=models.SET_NULL,
-        db_column='id_compra',
+        db_column='ID_Compra',
         blank=True,
         null=True
     )
-    costo_unitario_neto = models.DecimalField(db_column='costo_unitario_neto', max_digits=10, decimal_places=2)
-    fecha_compra = models.DateTimeField(db_column='fecha_compra')
+    costo_unitario_neto = models.DecimalField(db_column='Costo_Unitario_Neto', max_digits=10, decimal_places=2)
+    fecha_compra = models.DateTimeField(db_column='Fecha_Compra')
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'costos_historicos'
         verbose_name = 'Costo Histórico'
         verbose_name_plural = 'Costos Históricos'
@@ -517,27 +517,27 @@ class CostosHistoricos(models.Model):
 
 class HistoricoPrecios(models.Model):
     '''Tabla historico_precios - Historial de cambios de precios'''
-    id_historico = models.BigAutoField(db_column='id_historico', primary_key=True)
+    id_historico = models.BigAutoField(db_column='ID_Historico', primary_key=True)
     id_precio = models.ForeignKey(
         PreciosPorLista,
         on_delete=models.CASCADE,
-        db_column='id_precio'
+        db_column='ID_Precio'
     )
-    id_producto = models.IntegerField(db_column='id_producto')
-    id_lista = models.IntegerField(db_column='id_lista')
-    precio_anterior = models.DecimalField(db_column='precio_anterior', max_digits=10, decimal_places=2)
-    precio_nuevo = models.DecimalField(db_column='precio_nuevo', max_digits=10, decimal_places=2)
-    fecha_cambio = models.DateTimeField(db_column='fecha_cambio')
+    id_producto = models.IntegerField(db_column='ID_Producto')
+    id_lista = models.IntegerField(db_column='ID_Lista')
+    precio_anterior = models.DecimalField(db_column='Precio_Anterior', max_digits=10, decimal_places=2)
+    precio_nuevo = models.DecimalField(db_column='Precio_Nuevo', max_digits=10, decimal_places=2)
+    fecha_cambio = models.DateTimeField(db_column='Fecha_Cambio')
     id_empleado_modifico = models.ForeignKey(
         Empleado,
         on_delete=models.SET_NULL,
-        db_column='id_empleado_modifico',
+        db_column='ID_Empleado_Modifico',
         blank=True,
         null=True
     )
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'historico_precios'
         verbose_name = 'Histórico de Precio'
         verbose_name_plural = 'Históricos de Precios'
@@ -550,27 +550,27 @@ class HistoricoPrecios(models.Model):
 
 class Compras(models.Model):
     '''Tabla compras - Compras a proveedores'''
-    id_compra = models.BigAutoField(db_column='id_compra', primary_key=True)
+    id_compra = models.BigAutoField(db_column='ID_Compra', primary_key=True)
     id_proveedor = models.ForeignKey(
         Proveedor,
         on_delete=models.PROTECT,
-        db_column='id_proveedor',
+        db_column='ID_Proveedor',
         related_name='compras'
     )
-    fecha = models.DateTimeField(db_column='fecha')
-    monto_total = models.DecimalField(db_column='monto_total', max_digits=12, decimal_places=2)
-    saldo_pendiente = models.DecimalField(db_column='saldo_pendiente', max_digits=12, decimal_places=2, blank=True, null=True)
+    fecha = models.DateTimeField(db_column='Fecha')
+    monto_total = models.DecimalField(db_column='Monto_Total', max_digits=12, decimal_places=2)
+    saldo_pendiente = models.DecimalField(db_column='Saldo_Pendiente', max_digits=12, decimal_places=2, blank=True, null=True)
     estado_pago = models.CharField(
-        db_column='estado_pago',
+        db_column='Estado_Pago',
         max_length=10,
         choices=[('PENDIENTE', 'Pendiente'), ('PARCIAL', 'Parcial'), ('PAGADA', 'Pagada')],
         default='PENDIENTE'
     )
-    nro_factura = models.CharField(db_column='nro_factura', max_length=50, blank=True, null=True)
-    observaciones = models.TextField(db_column='observaciones', blank=True, null=True)
+    nro_factura = models.CharField(db_column='Nro_Factura', max_length=50, blank=True, null=True)
+    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'compras'
         verbose_name = 'Compra'
         verbose_name_plural = 'Compras'
@@ -581,25 +581,25 @@ class Compras(models.Model):
 
 class DetalleCompra(models.Model):
     '''Tabla detalle_compra - Detalle de productos comprados'''
-    id_detalle = models.BigAutoField(db_column='id_detalle', primary_key=True)
+    id_detalle = models.BigAutoField(db_column='ID_Detalle', primary_key=True)
     # id_compra = models.ForeignKey(  # COMENTADO: Modelo CompraProveedor no existe
     #     Compras,
     #     on_delete=models.CASCADE,
-    #     db_column='id_compra',
+    #     db_column='ID_Compra',
     #     related_name='detalles'
     # )
     id_producto = models.ForeignKey(
         Producto,
         on_delete=models.PROTECT,
-        db_column='id_producto'
+        db_column='ID_Producto'
     )
-    costo_unitario_neto = models.DecimalField(db_column='costo_unitario_neto', max_digits=10, decimal_places=2)
-    cantidad = models.DecimalField(db_column='cantidad', max_digits=8, decimal_places=3)
-    subtotal_neto = models.DecimalField(db_column='subtotal_neto', max_digits=12, decimal_places=2)
-    monto_iva = models.DecimalField(db_column='monto_iva', max_digits=10, decimal_places=2, blank=True, null=True)
+    costo_unitario_neto = models.DecimalField(db_column='Costo_Unitario_Neto', max_digits=10, decimal_places=2)
+    cantidad = models.DecimalField(db_column='Cantidad', max_digits=8, decimal_places=3)
+    subtotal_neto = models.DecimalField(db_column='Subtotal_Neto', max_digits=12, decimal_places=2)
+    monto_iva = models.DecimalField(db_column='Monto_IVA', max_digits=10, decimal_places=2, blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'detalle_compra'
         verbose_name = 'Detalle de Compra'
         verbose_name_plural = 'Detalles de Compra'
@@ -617,29 +617,29 @@ class NotasCreditoProveedor(models.Model):
         ('ANULADA', 'Anulada'),
     ]
 
-    id_nota_proveedor = models.BigAutoField(db_column='id_nota_proveedor', primary_key=True)
-    nro_factura_compra = models.BigIntegerField(db_column='nro_factura_compra', blank=True, null=True)
+    id_nota_proveedor = models.BigAutoField(db_column='ID_Nota_Proveedor', primary_key=True)
+    nro_factura_compra = models.BigIntegerField(db_column='Nro_Factura_Compra', blank=True, null=True)
     id_proveedor = models.ForeignKey(
         Proveedor,
         on_delete=models.PROTECT,
-        db_column='id_proveedor',
+        db_column='ID_Proveedor',
         related_name='notas_credito'
     )
     # id_compra_original = models.ForeignKey(  # COMENTADO: Modelo CompraProveedor no existe
     #     Compras,
     #     on_delete=models.SET_NULL,
-    #     db_column='id_compra_original',
+    #     db_column='ID_Compra_Original',
     #     blank=True,
     #     null=True
     # )
-    fecha = models.DateTimeField(db_column='fecha')
-    monto_total = models.DecimalField(db_column='monto_total', max_digits=12, decimal_places=2)
-    observacion = models.CharField(db_column='observacion', max_length=255, blank=True, null=True)
-    estado = models.CharField(db_column='estado', max_length=10, choices=ESTADO_CHOICES, default='EMITIDA')
-    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
+    fecha = models.DateTimeField(db_column='Fecha')
+    monto_total = models.DecimalField(db_column='Monto_Total', max_digits=12, decimal_places=2)
+    observacion = models.CharField(db_column='Observacion', max_length=255, blank=True, null=True)
+    estado = models.CharField(db_column='Estado', max_length=10, choices=ESTADO_CHOICES, default='EMITIDA')
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'notas_credito_proveedor'
         verbose_name = 'Nota de Crédito Proveedor'
         verbose_name_plural = 'Notas de Crédito Proveedores'
@@ -650,24 +650,24 @@ class NotasCreditoProveedor(models.Model):
 
 class DetalleNotaCreditoProveedor(models.Model):
     '''Tabla detalle_nota_credito_proveedor - Detalle de notas de crédito a proveedores'''
-    id_detalle_nc_proveedor = models.BigAutoField(db_column='id_detalle_nc_proveedor', primary_key=True)
+    id_detalle_nc_proveedor = models.BigAutoField(db_column='ID_Detalle_NC_Proveedor', primary_key=True)
     id_nota_proveedor = models.ForeignKey(
         NotasCreditoProveedor,
         on_delete=models.CASCADE,
-        db_column='id_nota_proveedor',
+        db_column='ID_Nota_Proveedor',
         related_name='detalles'
     )
     id_producto = models.ForeignKey(
         Producto,
         on_delete=models.PROTECT,
-        db_column='id_producto'
+        db_column='ID_Producto'
     )
-    cantidad = models.DecimalField(db_column='cantidad', max_digits=10, decimal_places=3)
-    precio_unitario = models.DecimalField(db_column='precio_unitario', max_digits=12, decimal_places=2)
-    subtotal = models.DecimalField(db_column='subtotal', max_digits=12, decimal_places=2)
+    cantidad = models.DecimalField(db_column='Cantidad', max_digits=10, decimal_places=3)
+    precio_unitario = models.DecimalField(db_column='Precio_Unitario', max_digits=12, decimal_places=2)
+    subtotal = models.DecimalField(db_column='Subtotal', max_digits=12, decimal_places=2)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'detalle_nota_credito_proveedor'
         verbose_name = 'Detalle NC Proveedor'
         verbose_name_plural = 'Detalles NC Proveedores'
@@ -678,16 +678,16 @@ class DetalleNotaCreditoProveedor(models.Model):
 
 class CargasSaldo(models.Model):
     '''Tabla cargas_saldo - Cargas de saldo a tarjetas'''
-    id_carga = models.BigAutoField(db_column='id_carga', primary_key=True)
+    id_carga = models.BigAutoField(db_column='ID_Carga', primary_key=True)
     nro_tarjeta = models.ForeignKey(
         Tarjeta,
         on_delete=models.PROTECT,
-        db_column='nro_tarjeta'
+        db_column='Nro_Tarjeta'
     )
     id_cliente_origen = models.ForeignKey(
         Cliente,
         on_delete=models.PROTECT,
-        db_column='id_cliente_origen',
+        db_column='ID_Cliente_Origen',
         related_name='cargas_origen',
         blank=True,
         null=True
@@ -695,13 +695,13 @@ class CargasSaldo(models.Model):
     id_nota = models.ForeignKey(
         'NotasCreditoCliente',
         on_delete=models.PROTECT,
-        db_column='id_nota',
+        db_column='ID_Nota',
         blank=True,
         null=True
     )
-    fecha_carga = models.DateTimeField(db_column='fecha_carga')
-    monto_cargado = models.DecimalField(db_column='monto_cargado', max_digits=10, decimal_places=2)
-    referencia = models.CharField(db_column='referencia', max_length=100, blank=True, null=True)
+    fecha_carga = models.DateTimeField(db_column='Fecha_Carga')
+    monto_cargado = models.DecimalField(db_column='Monto_Cargado', max_digits=10, decimal_places=2)
+    referencia = models.CharField(db_column='Referencia', max_length=100, blank=True, null=True)
 
     # Campos adicionales para integración MetrePay
     estado = models.CharField(
@@ -740,7 +740,7 @@ class CargasSaldo(models.Model):
     )
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'cargas_saldo'
         verbose_name = 'Carga de Saldo'
         verbose_name_plural = 'Cargas de Saldo'
@@ -756,17 +756,17 @@ class UsuariosWebClientes(models.Model):
     id_cliente = models.OneToOneField(
         Cliente,
         on_delete=models.CASCADE,
-        db_column='id_cliente',
+        db_column='ID_Cliente',
         primary_key=True,
         related_name='usuario_web'
     )
-    usuario = models.CharField(db_column='usuario', max_length=50, unique=True)
-    contrasena_hash = models.CharField(db_column='contrasena_hash', max_length=128)
-    ultimo_acceso = models.DateTimeField(db_column='ultimo_acceso', blank=True, null=True)
-    activo = models.BooleanField(db_column='activo', default=True)
+    usuario = models.CharField(db_column='Usuario', max_length=50, unique=True)
+    contrasena_hash = models.CharField(db_column='Contrasena_Hash', max_length=128)
+    ultimo_acceso = models.DateTimeField(db_column='Ultimo_Acceso', blank=True, null=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'usuarios_web_clientes'
         verbose_name = 'Usuario Web Cliente'
         verbose_name_plural = 'Usuarios Web Clientes'
@@ -779,14 +779,14 @@ class UsuariosWebClientes(models.Model):
 
 class PuntosExpedicion(models.Model):
     '''Tabla puntos_expedicion - Puntos de expedición de documentos fiscales'''
-    id_punto = models.AutoField(db_column='id_punto', primary_key=True)
-    codigo_establecimiento = models.CharField(db_column='codigo_establecimiento', max_length=3)
-    codigo_punto_expedicion = models.CharField(db_column='codigo_punto_expedicion', max_length=3)
-    descripcion_ubicacion = models.CharField(db_column='descripcion_ubicacion', max_length=100, blank=True, null=True)
-    activo = models.BooleanField(db_column='activo', default=True)
+    id_punto = models.AutoField(db_column='ID_Punto', primary_key=True)
+    codigo_establecimiento = models.CharField(db_column='Codigo_Establecimiento', max_length=3)
+    codigo_punto_expedicion = models.CharField(db_column='Codigo_Punto_Expedicion', max_length=3)
+    descripcion_ubicacion = models.CharField(db_column='Descripcion_Ubicacion', max_length=100, blank=True, null=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'puntos_expedicion'
         verbose_name = 'Punto de Expedición'
         verbose_name_plural = 'Puntos de Expedición'
@@ -805,22 +805,22 @@ class Timbrados(models.Model):
         ('Nota Débito', 'Nota Débito'),
     ]
 
-    nro_timbrado = models.IntegerField(db_column='nro_timbrado', primary_key=True)
+    nro_timbrado = models.IntegerField(db_column='Nro_Timbrado', primary_key=True)
     id_punto = models.ForeignKey(
         PuntosExpedicion,
         on_delete=models.PROTECT,
-        db_column='id_punto'
+        db_column='ID_Punto'
     )
-    tipo_documento = models.CharField(db_column='tipo_documento', max_length=12, choices=TIPO_DOCUMENTO_CHOICES)
-    fecha_inicio = models.DateField(db_column='fecha_inicio')
-    fecha_fin = models.DateField(db_column='fecha_fin')
-    nro_inicial = models.IntegerField(db_column='nro_inicial')
-    nro_final = models.IntegerField(db_column='nro_final')
-    es_electronico = models.BooleanField(db_column='es_electronico', default=False)
-    activo = models.BooleanField(db_column='activo', default=True)
+    tipo_documento = models.CharField(db_column='Tipo_Documento', max_length=12, choices=TIPO_DOCUMENTO_CHOICES)
+    fecha_inicio = models.DateField(db_column='Fecha_Inicio')
+    fecha_fin = models.DateField(db_column='Fecha_Fin')
+    nro_inicial = models.IntegerField(db_column='Nro_Inicial')
+    nro_final = models.IntegerField(db_column='Nro_Final')
+    es_electronico = models.BooleanField(db_column='Es_Electronico', default=False)
+    activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'timbrados'
         verbose_name = 'Timbrado'
         verbose_name_plural = 'Timbrados'
@@ -831,23 +831,23 @@ class Timbrados(models.Model):
 
 class DocumentosTributarios(models.Model):
     '''Tabla documentos_tributarios - Documentos tributarios emitidos'''
-    id_documento = models.BigAutoField(db_column='id_documento', primary_key=True)
+    id_documento = models.BigAutoField(db_column='ID_Documento', primary_key=True)
     nro_timbrado = models.ForeignKey(
         Timbrados,
         on_delete=models.PROTECT,
-        db_column='nro_timbrado'
+        db_column='Nro_Timbrado'
     )
-    nro_secuencial = models.IntegerField(db_column='nro_secuencial')
-    fecha_emision = models.DateTimeField(db_column='fecha_emision')
-    monto_total = models.BigIntegerField(db_column='monto_total')
-    monto_exento = models.DecimalField(db_column='monto_exento', max_digits=12, decimal_places=2, blank=True, null=True)
-    monto_gravado_5 = models.DecimalField(db_column='monto_gravado_5', max_digits=12, decimal_places=2, blank=True, null=True)
-    monto_iva_5 = models.DecimalField(db_column='monto_iva_5', max_digits=10, decimal_places=2, blank=True, null=True)
-    monto_gravado_10 = models.DecimalField(db_column='monto_gravado_10', max_digits=12, decimal_places=2, blank=True, null=True)
-    monto_iva_10 = models.DecimalField(db_column='monto_iva_10', max_digits=10, decimal_places=2, blank=True, null=True)
+    nro_secuencial = models.IntegerField(db_column='Nro_Secuencial')
+    fecha_emision = models.DateTimeField(db_column='Fecha_Emision')
+    monto_total = models.BigIntegerField(db_column='Monto_Total')
+    monto_exento = models.DecimalField(db_column='Monto_Exento', max_digits=12, decimal_places=2, blank=True, null=True)
+    monto_gravado_5 = models.DecimalField(db_column='Monto_Gravado_5', max_digits=12, decimal_places=2, blank=True, null=True)
+    monto_iva_5 = models.DecimalField(db_column='Monto_IVA_5', max_digits=10, decimal_places=2, blank=True, null=True)
+    monto_gravado_10 = models.DecimalField(db_column='Monto_Gravado_10', max_digits=12, decimal_places=2, blank=True, null=True)
+    monto_iva_10 = models.DecimalField(db_column='Monto_IVA_10', max_digits=10, decimal_places=2, blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'documentos_tributarios'
         verbose_name = 'Documento Tributario'
         verbose_name_plural = 'Documentos Tributarios'
@@ -862,18 +862,18 @@ class DatosFacturacionElect(models.Model):
     id_documento = models.OneToOneField(
         DocumentosTributarios,
         on_delete=models.CASCADE,
-        db_column='id_documento',
+        db_column='ID_Documento',
         primary_key=True
     )
-    cdc = models.CharField(db_column='cdc', max_length=44, unique=True)
-    url_kude = models.CharField(db_column='url_ku_de', max_length=255, blank=True, null=True)
-    xml_transmitido = models.TextField(db_column='xml_transmitido', blank=True, null=True)
-    estado_sifen = models.CharField(db_column='estado_sifen', max_length=9, blank=True, null=True)
-    fecha_envio = models.DateTimeField(db_column='fecha_envio', blank=True, null=True)
-    fecha_respuesta = models.DateTimeField(db_column='fecha_respuesta', blank=True, null=True)
+    cdc = models.CharField(db_column='CDC', max_length=44, unique=True)
+    url_kude = models.CharField(db_column='URL_KuDE', max_length=255, blank=True, null=True)
+    xml_transmitido = models.TextField(db_column='XML_Transmitido', blank=True, null=True)
+    estado_sifen = models.CharField(db_column='Estado_SIFEN', max_length=9, blank=True, null=True)
+    fecha_envio = models.DateTimeField(db_column='Fecha_Envio', blank=True, null=True)
+    fecha_respuesta = models.DateTimeField(db_column='Fecha_Respuesta', blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'datos_facturacion_elect'
         verbose_name = 'Datos Facturación Electrónica'
         verbose_name_plural = 'Datos Facturación Electrónica'
@@ -887,13 +887,13 @@ class DatosFacturacionFisica(models.Model):
     id_documento = models.OneToOneField(
         DocumentosTributarios,
         on_delete=models.CASCADE,
-        db_column='id_documento',
+        db_column='ID_Documento',
         primary_key=True
     )
-    nro_preimpreso_interno = models.CharField(db_column='nro_preimpreso_interno', max_length=20, unique=True)
+    nro_preimpreso_interno = models.CharField(db_column='Nro_Preimpreso_Interno', max_length=20, unique=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'datos_facturacion_fisica'
         verbose_name = 'Datos Facturación Física'
         verbose_name_plural = 'Datos Facturación Física'
@@ -912,46 +912,46 @@ class MovimientosStock(models.Model):
         ('Ajuste', 'Ajuste'),
     ]
 
-    id_movimientostock = models.BigAutoField(db_column='id_movimiento_stock', primary_key=True)
+    id_movimientostock = models.BigAutoField(db_column='ID_MovimientoStock', primary_key=True)
     id_producto = models.ForeignKey(
         Producto,
         on_delete=models.PROTECT,
-        db_column='id_producto',
+        db_column='ID_Producto',
         related_name='movimientos'
     )
     id_empleado_autoriza = models.ForeignKey(
         Empleado,
         on_delete=models.PROTECT,
-        db_column='id_empleado_autoriza'
+        db_column='ID_Empleado_Autoriza'
     )
     id_venta = models.ForeignKey(
-        'pos.Venta',  # CORREGIDO: Modelo movido a pos app
+        'Ventas',
         on_delete=models.SET_NULL,
-        db_column='id_venta',
+        db_column='ID_Venta',
         blank=True,
         null=True
     )
     # id_compra = models.ForeignKey(  # COMENTADO: Modelo CompraProveedor no existe
     #     Compras,
     #     on_delete=models.SET_NULL,
-    #     db_column='id_compra',
+    #     db_column='ID_Compra',
     #     blank=True,
     #     null=True
     # )
-    fecha_hora = models.DateTimeField(db_column='fecha_hora')
-    tipo_movimiento = models.CharField(db_column='tipo_movimiento', max_length=7, choices=TIPO_MOVIMIENTO_CHOICES)
-    cantidad = models.DecimalField(db_column='cantidad', max_digits=10, decimal_places=3)
+    fecha_hora = models.DateTimeField(db_column='Fecha_Hora')
+    tipo_movimiento = models.CharField(db_column='Tipo_Movimiento', max_length=7, choices=TIPO_MOVIMIENTO_CHOICES)
+    cantidad = models.DecimalField(db_column='Cantidad', max_digits=10, decimal_places=3)
     stock_resultante = models.DecimalField(
-        db_column='stock_resultante', 
+        db_column='Stock_Resultante', 
         max_digits=10, 
         decimal_places=3,
         default=0,
         help_text='Se calcula automáticamente por el trigger trg_stock_unico_after_movement'
     )
-    referencia_documento = models.CharField(db_column='referencia_documento', max_length=50, blank=True, null=True)
+    referencia_documento = models.CharField(db_column='Referencia_Documento', max_length=50, blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'movimientos_stock'
         verbose_name = 'Movimiento de Stock'
         verbose_name_plural = 'Movimientos de Stock'
@@ -976,19 +976,19 @@ class AjustesInventario(models.Model):
         ('Rechazado', 'Rechazado'),
     ]
 
-    id_ajuste = models.BigAutoField(db_column='id_ajuste', primary_key=True)
+    id_ajuste = models.BigAutoField(db_column='ID_Ajuste', primary_key=True)
     id_empleado_responsable = models.ForeignKey(
         Empleado,
         on_delete=models.PROTECT,
-        db_column='id_empleado_responsable'
+        db_column='ID_Empleado_Responsable'
     )
-    fecha_hora = models.DateTimeField(db_column='fecha_hora')
-    tipo_ajuste = models.CharField(db_column='tipo_ajuste', max_length=8, choices=TIPO_AJUSTE_CHOICES)
-    motivo = models.CharField(db_column='motivo', max_length=255)
-    estado = models.CharField(db_column='estado', max_length=10, choices=ESTADO_CHOICES)
+    fecha_hora = models.DateTimeField(db_column='Fecha_Hora')
+    tipo_ajuste = models.CharField(db_column='Tipo_Ajuste', max_length=8, choices=TIPO_AJUSTE_CHOICES)
+    motivo = models.CharField(db_column='Motivo', max_length=255)
+    estado = models.CharField(db_column='Estado', max_length=10, choices=ESTADO_CHOICES)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'ajustes_inventario'
         verbose_name = 'Ajuste de Inventario'
         verbose_name_plural = 'Ajustes de Inventario'
@@ -999,27 +999,27 @@ class AjustesInventario(models.Model):
 
 class DetalleAjuste(models.Model):
     '''Tabla detalle_ajuste - Detalle de ajustes de inventario'''
-    id_detalle = models.BigAutoField(db_column='id_detalle', primary_key=True)
+    id_detalle = models.BigAutoField(db_column='ID_Detalle', primary_key=True)
     id_ajuste = models.ForeignKey(
         AjustesInventario,
         on_delete=models.CASCADE,
-        db_column='id_ajuste',
+        db_column='ID_Ajuste',
         related_name='detalles'
     )
     id_producto = models.ForeignKey(
         Producto,
         on_delete=models.PROTECT,
-        db_column='id_producto'
+        db_column='ID_Producto'
     )
     id_movimientostock = models.OneToOneField(
         MovimientosStock,
         on_delete=models.CASCADE,
-        db_column='id_movimiento_stock'
+        db_column='ID_MovimientoStock'
     )
-    cantidad_ajustada = models.DecimalField(db_column='cantidad_ajustada', max_digits=8, decimal_places=3)
+    cantidad_ajustada = models.DecimalField(db_column='Cantidad_Ajustada', max_digits=8, decimal_places=3)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'detalle_ajuste'
         verbose_name = 'Detalle de Ajuste'
         verbose_name_plural = 'Detalles de Ajuste'
@@ -1033,12 +1033,12 @@ class DetalleAjuste(models.Model):
 
 class TiposPago(models.Model):
     '''Tabla tipos_pago - Tipos de pago'''
-    id_tipo_pago = models.AutoField(db_column='id_tipo_pago', primary_key=True)
-    descripcion = models.CharField(db_column='descripcion', max_length=50, unique=True)
-    activo = models.BooleanField(db_column='activo', default=True)
+    id_tipo_pago = models.AutoField(db_column='ID_Tipo_Pago', primary_key=True)
+    descripcion = models.CharField(db_column='Descripcion', max_length=50, unique=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'tipos_pago'
         verbose_name = 'Tipo de Pago'
         verbose_name_plural = 'Tipos de Pago'
@@ -1049,14 +1049,14 @@ class TiposPago(models.Model):
 
 class MediosPago(models.Model):
     '''Tabla medios_pago - Medios de pago'''
-    id_medio_pago = models.AutoField(db_column='id_medio_pago', primary_key=True)
-    descripcion = models.CharField(db_column='descripcion', max_length=50, unique=True)
-    genera_comision = models.BooleanField(db_column='genera_comision', default=False)
-    requiere_validacion = models.BooleanField(db_column='requiere_validacion', default=False)
-    activo = models.BooleanField(db_column='activo', default=True)
+    id_medio_pago = models.AutoField(db_column='ID_Medio_Pago', primary_key=True)
+    descripcion = models.CharField(db_column='Descripcion', max_length=50, unique=True)
+    genera_comision = models.BooleanField(db_column='Genera_Comision', default=False)
+    requiere_validacion = models.BooleanField(db_column='Requiere_Validacion', default=False)
+    activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'medios_pago'
         verbose_name = 'Medio de Pago'
         verbose_name_plural = 'Medios de Pago'
@@ -1067,21 +1067,21 @@ class MediosPago(models.Model):
 
 class TarifasComision(models.Model):
     '''Tabla tarifas_comision - Tarifas de comisión por medio de pago'''
-    id_tarifa = models.AutoField(db_column='id_tarifa', primary_key=True)
+    id_tarifa = models.AutoField(db_column='ID_Tarifa', primary_key=True)
     id_medio_pago = models.ForeignKey(
         MediosPago,
         on_delete=models.CASCADE,
-        db_column='id_medio_pago',
+        db_column='ID_Medio_Pago',
         related_name='tarifas'
     )
-    fecha_inicio_vigencia = models.DateTimeField(db_column='fecha_inicio_vigencia')
-    fecha_fin_vigencia = models.DateTimeField(db_column='fecha_fin_vigencia', blank=True, null=True)
-    porcentaje_comision = models.DecimalField(db_column='porcentaje_comision', max_digits=5, decimal_places=4)
-    monto_fijo_comision = models.DecimalField(db_column='monto_fijo_comision', max_digits=10, decimal_places=2, blank=True, null=True)
-    activo = models.BooleanField(db_column='activo', default=True)
+    fecha_inicio_vigencia = models.DateTimeField(db_column='Fecha_Inicio_Vigencia')
+    fecha_fin_vigencia = models.DateTimeField(db_column='Fecha_Fin_Vigencia', blank=True, null=True)
+    porcentaje_comision = models.DecimalField(db_column='Porcentaje_Comision', max_digits=5, decimal_places=4)
+    monto_fijo_comision = models.DecimalField(db_column='Monto_Fijo_Comision', max_digits=10, decimal_places=2, blank=True, null=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'tarifas_comision'
         verbose_name = 'Tarifa de Comisión'
         verbose_name_plural = 'Tarifas de Comisión'
@@ -1092,13 +1092,13 @@ class TarifasComision(models.Model):
 
 class Cajas(models.Model):
     '''Tabla cajas - Cajas de punto de venta'''
-    id_caja = models.AutoField(db_column='id_caja', primary_key=True)
-    nombre_caja = models.CharField(db_column='nombre_caja', max_length=50)
-    ubicacion = models.CharField(db_column='ubicacion', max_length=100, blank=True, null=True)
-    activo = models.IntegerField(db_column='activo', blank=True, null=True)
+    id_caja = models.AutoField(db_column='ID_Caja', primary_key=True)
+    nombre_caja = models.CharField(db_column='Nombre_Caja', max_length=50)
+    ubicacion = models.CharField(db_column='Ubicacion', max_length=100, blank=True, null=True)
+    activo = models.IntegerField(db_column='Activo', blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'cajas'
         verbose_name = 'Caja'
         verbose_name_plural = 'Cajas'
@@ -1109,26 +1109,26 @@ class Cajas(models.Model):
 
 class CierresCaja(models.Model):
     '''Tabla cierres_caja - Cierres de caja'''
-    id_cierre = models.BigAutoField(db_column='id_cierre', primary_key=True)
+    id_cierre = models.BigAutoField(db_column='ID_Cierre', primary_key=True)
     id_caja = models.ForeignKey(
         Cajas,
         on_delete=models.PROTECT,
-        db_column='id_caja'
+        db_column='ID_Caja'
     )
     id_empleado = models.ForeignKey(
         Empleado,
         on_delete=models.PROTECT,
-        db_column='id_empleado'
+        db_column='ID_Empleado'
     )
-    fecha_hora_apertura = models.DateTimeField(db_column='fecha_hora_apertura')
-    fecha_hora_cierre = models.DateTimeField(db_column='fecha_hora_cierre', blank=True, null=True)
-    monto_inicial = models.DecimalField(db_column='monto_inicial', max_digits=10, decimal_places=2, blank=True, null=True)
-    monto_contado_fisico = models.DecimalField(db_column='monto_contado_fisico', max_digits=10, decimal_places=2, blank=True, null=True)
-    diferencia_efectivo = models.DecimalField(db_column='diferencia_efectivo', max_digits=10, decimal_places=2, blank=True, null=True)
-    estado = models.CharField(db_column='estado', max_length=7, blank=True, null=True)
+    fecha_hora_apertura = models.DateTimeField(db_column='Fecha_Hora_Apertura')
+    fecha_hora_cierre = models.DateTimeField(db_column='Fecha_Hora_Cierre', blank=True, null=True)
+    monto_inicial = models.DecimalField(db_column='Monto_Inicial', max_digits=10, decimal_places=2, blank=True, null=True)
+    monto_contado_fisico = models.DecimalField(db_column='Monto_Contado_Fisico', max_digits=10, decimal_places=2, blank=True, null=True)
+    diferencia_efectivo = models.DecimalField(db_column='Diferencia_Efectivo', max_digits=10, decimal_places=2, blank=True, null=True)
+    estado = models.CharField(db_column='Estado', max_length=7, blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'cierres_caja'
         verbose_name = 'Cierre de Caja'
         verbose_name_plural = 'Cierres de Caja'
@@ -1161,32 +1161,32 @@ class CierresCaja(models.Model):
 
 class PagosProveedores(models.Model):
     '''Tabla pagos_proveedores - Pagos realizados a proveedores'''
-    id_pago_proveedor = models.BigAutoField(db_column='id_pago_proveedor', primary_key=True)
+    id_pago_proveedor = models.BigAutoField(db_column='ID_Pago_Proveedor', primary_key=True)
     # id_compra = models.ForeignKey(  # COMENTADO: Modelo CompraProveedor no existe
     #     Compras,
     #     on_delete=models.PROTECT,
-    #     db_column='id_compra',
+    #     db_column='ID_Compra',
     #     related_name='pagos'
     # )
-    monto_aplicado = models.DecimalField(db_column='monto_aplicado', max_digits=12, decimal_places=2)
-    fecha_pago = models.DateTimeField(db_column='fecha_pago')
+    monto_aplicado = models.DecimalField(db_column='Monto_Aplicado', max_digits=12, decimal_places=2)
+    fecha_pago = models.DateTimeField(db_column='Fecha_Pago')
     id_medio_pago = models.ForeignKey(
         MediosPago,
         on_delete=models.PROTECT,
-        db_column='id_medio_pago'
+        db_column='ID_Medio_Pago'
     )
-    referencia_transaccion = models.CharField(db_column='referencia_transaccion', max_length=100, blank=True, null=True)
+    referencia_transaccion = models.CharField(db_column='Referencia_Transaccion', max_length=100, blank=True, null=True)
     estado = models.CharField(
-        db_column='estado',
+        db_column='Estado',
         max_length=10,
         choices=[('PROCESADO', 'Procesado'), ('ANULADO', 'Anulado')],
         default='PROCESADO'
     )
-    observaciones = models.TextField(db_column='observaciones', blank=True, null=True)
-    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
+    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'pagos_proveedores'
         verbose_name = 'Pago a Proveedor'
         verbose_name_plural = 'Pagos a Proveedores'
@@ -1197,21 +1197,21 @@ class PagosProveedores(models.Model):
 
 class AplicacionPagosVentas(models.Model):
     '''Tabla aplicacion_pagos_ventas - Aplicación de pagos a ventas'''
-    id_aplicacion = models.BigAutoField(db_column='id_aplicacion', primary_key=True)
+    id_aplicacion = models.BigAutoField(db_column='ID_Aplicacion', primary_key=True)
     # id_pago_venta = models.ForeignKey(  # COMENTADO: Modelo Venta no existe en gestion
     #     PagosVenta,
     #     on_delete=models.CASCADE,
-    #     db_column='id_pago_venta'
+    #     db_column='ID_Pago_Venta'
     # )
     # id_venta = models.ForeignKey(  # COMENTADO: Modelo Venta no existe en gestion
     #     Ventas,
     #     on_delete=models.CASCADE,
-    #     db_column='id_venta'
+    #     db_column='ID_Venta'
     # )
-    monto_aplicado = models.BigIntegerField(db_column='monto_aplicado')
+    monto_aplicado = models.BigIntegerField(db_column='Monto_Aplicado')
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'aplicacion_pagos_ventas'
         verbose_name = 'Aplicación de Pago a Venta'
         verbose_name_plural = 'Aplicaciones de Pagos a Ventas'
@@ -1222,21 +1222,21 @@ class AplicacionPagosVentas(models.Model):
 
 class AplicacionPagosCompras(models.Model):
     '''Tabla aplicacion_pagos_compras - Aplicación de pagos a compras'''
-    id_aplicacion = models.BigAutoField(db_column='id_aplicacion', primary_key=True)
+    id_aplicacion = models.BigAutoField(db_column='ID_Aplicacion', primary_key=True)
     id_pago_proveedor = models.ForeignKey(
         PagosProveedores,
         on_delete=models.CASCADE,
-        db_column='id_pago_proveedor'
+        db_column='ID_Pago_Proveedor'
     )
     # id_compra = models.ForeignKey(  # COMENTADO: Modelo CompraProveedor no existe
     #     Compras,
     #     on_delete=models.CASCADE,
-    #     db_column='id_compra'
+    #     db_column='ID_Compra'
     # )
-    monto_aplicado = models.DecimalField(db_column='monto_aplicado', max_digits=12, decimal_places=2)
+    monto_aplicado = models.DecimalField(db_column='Monto_Aplicado', max_digits=12, decimal_places=2)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'aplicacion_pagos_compras'
         verbose_name = 'Aplicación de Pago a Compra'
         verbose_name_plural = 'Aplicaciones de Pagos a Compras'
@@ -1247,23 +1247,23 @@ class AplicacionPagosCompras(models.Model):
 
 class DetalleComisionVenta(models.Model):
     '''Tabla detalle_comision_venta - Comisiones por medio de pago'''
-    id_detalle_comision = models.BigAutoField(db_column='id_detalle_comision', primary_key=True)
+    id_detalle_comision = models.BigAutoField(db_column='ID_Detalle_Comision', primary_key=True)
     # id_pago_venta = models.ForeignKey(  # COMENTADO: Modelo Venta no existe en gestion
     #     PagosVenta,
     #     on_delete=models.CASCADE,
-    #     db_column='id_pago_venta',
+    #     db_column='ID_Pago_Venta',
     #     related_name='comisiones'
     # )
     id_tarifa = models.ForeignKey(
         TarifasComision,
         on_delete=models.PROTECT,
-        db_column='id_tarifa'
+        db_column='ID_Tarifa'
     )
-    monto_comision_calculada = models.DecimalField(db_column='monto_comision_calculada', max_digits=10, decimal_places=2)
-    porcentaje_aplicado = models.DecimalField(db_column='porcentaje_aplicado', max_digits=5, decimal_places=4)
+    monto_comision_calculada = models.DecimalField(db_column='Monto_Comision_Calculada', max_digits=10, decimal_places=2)
+    porcentaje_aplicado = models.DecimalField(db_column='Porcentaje_Aplicado', max_digits=5, decimal_places=4)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'detalle_comision_venta'
         verbose_name = 'Detalle de Comisión'
         verbose_name_plural = 'Detalles de Comisión'
@@ -1274,19 +1274,19 @@ class DetalleComisionVenta(models.Model):
 
 class ConciliacionPagos(models.Model):
     '''Tabla conciliacion_pagos - Conciliación de pagos con entidades'''
-    id_conciliacion = models.BigAutoField(db_column='id_conciliacion', primary_key=True)
+    id_conciliacion = models.BigAutoField(db_column='ID_Conciliacion', primary_key=True)
     id_pago_venta = models.OneToOneField(
         PagosVenta,
         on_delete=models.CASCADE,
-        db_column='id_pago_venta'
+        db_column='ID_Pago_Venta'
     )
-    fecha_acreditacion = models.DateTimeField(db_column='fecha_acreditacion', blank=True, null=True)
-    monto_acreditado = models.DecimalField(db_column='monto_acreditado', max_digits=10, decimal_places=2, blank=True, null=True)
-    estado = models.CharField(db_column='estado', max_length=10, blank=True, null=True)
-    observaciones = models.TextField(db_column='observaciones', blank=True, null=True)
+    fecha_acreditacion = models.DateTimeField(db_column='Fecha_Acreditacion', blank=True, null=True)
+    monto_acreditado = models.DecimalField(db_column='Monto_Acreditado', max_digits=10, decimal_places=2, blank=True, null=True)
+    estado = models.CharField(db_column='Estado', max_length=10, blank=True, null=True)
+    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'conciliacion_pagos'
         verbose_name = 'Conciliación de Pago'
         verbose_name_plural = 'Conciliaciones de Pagos'
@@ -1305,28 +1305,28 @@ class NotasCreditoCliente(models.Model):
         ('Anulada', 'Anulada'),
     ]
 
-    id_nota = models.BigAutoField(db_column='id_nota', primary_key=True)
-    nro_factura_venta = models.BigIntegerField(db_column='nro_factura_venta')
+    id_nota = models.BigAutoField(db_column='ID_Nota', primary_key=True)
+    nro_factura_venta = models.BigIntegerField(db_column='Nro_Factura_Venta')
     id_cliente = models.ForeignKey(
         Cliente,
         on_delete=models.PROTECT,
-        db_column='id_cliente',
+        db_column='ID_Cliente',
         related_name='notas_credito'
     )
-    id_venta_original = models.ForeignKey(  # CORREGIDO: Referencia a pos.Venta
-        'pos.Venta',  # CAMBIADO: Referencia corregida
+    id_venta_original = models.ForeignKey(  # COMENTADO: Modelo Venta no existe en gestion
+        'gestion.Ventas',  # CAMBIADO: Referencia por string
         on_delete=models.SET_NULL,
-        db_column='id_venta_original',
+        db_column='ID_Venta_Original',
         blank=True,
         null=True
     )
-    fecha = models.DateTimeField(db_column='fecha')
-    monto_total = models.DecimalField(db_column='monto_total', max_digits=12, decimal_places=2)
-    observacion = models.CharField(db_column='observacion', max_length=255, blank=True, null=True)
-    estado = models.CharField(db_column='estado', max_length=8, choices=ESTADO_CHOICES, blank=True, null=True)
+    fecha = models.DateTimeField(db_column='Fecha')
+    monto_total = models.DecimalField(db_column='Monto_Total', max_digits=12, decimal_places=2)
+    observacion = models.CharField(db_column='Observacion', max_length=255, blank=True, null=True)
+    estado = models.CharField(db_column='Estado', max_length=8, choices=ESTADO_CHOICES, blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'notas_credito_cliente'
         verbose_name = 'Nota de Crédito Cliente'
         verbose_name_plural = 'Notas de Crédito Cliente'
@@ -1337,24 +1337,24 @@ class NotasCreditoCliente(models.Model):
 
 class DetalleNota(models.Model):
     '''Tabla detalle_nota - Detalle de notas de crédito'''
-    id_detalle = models.BigAutoField(db_column='id_detalle', primary_key=True)
+    id_detalle = models.BigAutoField(db_column='ID_Detalle', primary_key=True)
     id_nota = models.ForeignKey(
         NotasCreditoCliente,
         on_delete=models.CASCADE,
-        db_column='id_nota',
+        db_column='ID_Nota',
         related_name='detalles'
     )
     id_producto = models.ForeignKey(
         Producto,
         on_delete=models.PROTECT,
-        db_column='id_producto'
+        db_column='ID_Producto'
     )
-    cantidad = models.DecimalField(db_column='cantidad', max_digits=8, decimal_places=3)
-    precio_unitario = models.DecimalField(db_column='precio_unitario', max_digits=10, decimal_places=2)
-    subtotal = models.DecimalField(db_column='subtotal', max_digits=12, decimal_places=2)
+    cantidad = models.DecimalField(db_column='Cantidad', max_digits=8, decimal_places=3)
+    precio_unitario = models.DecimalField(db_column='Precio_Unitario', max_digits=10, decimal_places=2)
+    subtotal = models.DecimalField(db_column='Subtotal', max_digits=12, decimal_places=2)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'detalle_nota'
         verbose_name = 'Detalle de Nota de Crédito'
         verbose_name_plural = 'Detalles de Notas de Crédito'
@@ -1368,16 +1368,16 @@ class DetalleNota(models.Model):
 
 class PlanesAlmuerzo(models.Model):
     '''Tabla planes_almuerzo - Planes de almuerzo disponibles'''
-    id_plan_almuerzo = models.AutoField(db_column='id_plan_almuerzo', primary_key=True)
-    nombre_plan = models.CharField(db_column='nombre_plan', max_length=100, unique=True)
-    descripcion = models.TextField(db_column='descripcion', blank=True, null=True)
-    precio_mensual = models.DecimalField(db_column='precio_mensual', max_digits=10, decimal_places=2)
-    dias_semana_incluidos = models.CharField(db_column='dias_semana_incluidos', max_length=60)
-    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', blank=True, null=True)
-    activo = models.BooleanField(db_column='activo', default=True)
+    id_plan_almuerzo = models.AutoField(db_column='ID_Plan_Almuerzo', primary_key=True)
+    nombre_plan = models.CharField(db_column='Nombre_Plan', max_length=100, unique=True)
+    descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
+    precio_mensual = models.DecimalField(db_column='Precio_Mensual', max_digits=10, decimal_places=2)
+    dias_semana_incluidos = models.CharField(db_column='Dias_Semana_Incluidos', max_length=60)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', blank=True, null=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'planes_almuerzo'
         verbose_name = 'Plan de Almuerzo'
         verbose_name_plural = 'Planes de Almuerzo'
@@ -1394,24 +1394,24 @@ class SuscripcionesAlmuerzo(models.Model):
         ('Cancelada', 'Cancelada'),
     ]
 
-    id_suscripcion = models.BigAutoField(db_column='id_suscripcion', primary_key=True)
+    id_suscripcion = models.BigAutoField(db_column='ID_Suscripcion', primary_key=True)
     id_hijo = models.ForeignKey(
         Hijo,
         on_delete=models.PROTECT,
-        db_column='id_hijo',
+        db_column='ID_Hijo',
         related_name='suscripciones'
     )
     id_plan_almuerzo = models.ForeignKey(
         PlanesAlmuerzo,
         on_delete=models.PROTECT,
-        db_column='id_plan_almuerzo'
+        db_column='ID_Plan_Almuerzo'
     )
-    fecha_inicio = models.DateField(db_column='fecha_inicio')
-    fecha_fin = models.DateField(db_column='fecha_fin', blank=True, null=True)
-    estado = models.CharField(db_column='estado', max_length=10, choices=ESTADO_CHOICES, blank=True, null=True)
+    fecha_inicio = models.DateField(db_column='Fecha_Inicio')
+    fecha_fin = models.DateField(db_column='Fecha_Fin', blank=True, null=True)
+    estado = models.CharField(db_column='Estado', max_length=10, choices=ESTADO_CHOICES, blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'suscripciones_almuerzo'
         verbose_name = 'Suscripción de Almuerzo'
         verbose_name_plural = 'Suscripciones de Almuerzo'
@@ -1429,27 +1429,27 @@ class PagosAlmuerzoMensual(models.Model):
         ('Vencido', 'Vencido'),
     ]
 
-    id_pago_almuerzo = models.BigAutoField(db_column='id_pago_almuerzo', primary_key=True)
+    id_pago_almuerzo = models.BigAutoField(db_column='ID_Pago_Almuerzo', primary_key=True)
     id_suscripcion = models.ForeignKey(
         SuscripcionesAlmuerzo,
         on_delete=models.PROTECT,
-        db_column='id_suscripcion',
+        db_column='ID_Suscripcion',
         related_name='pagos'
     )
-    fecha_pago = models.DateTimeField(db_column='fecha_pago')
-    monto_pagado = models.DecimalField(db_column='monto_pagado', max_digits=10, decimal_places=2)
-    mes_pagado = models.DateField(db_column='mes_pagado')
+    fecha_pago = models.DateTimeField(db_column='Fecha_Pago')
+    monto_pagado = models.DecimalField(db_column='Monto_Pagado', max_digits=10, decimal_places=2)
+    mes_pagado = models.DateField(db_column='Mes_Pagado')
     id_venta = models.OneToOneField(
-        'pos.Venta',  # CORREGIDO: Modelo movido a pos app
+        Ventas,
         on_delete=models.SET_NULL,
-        db_column='id_venta',
+        db_column='ID_Venta',
         blank=True,
         null=True
     )
-    estado = models.CharField(db_column='estado', max_length=9, choices=ESTADO_CHOICES, blank=True, null=True)
+    estado = models.CharField(db_column='Estado', max_length=9, choices=ESTADO_CHOICES, blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'pagos_almuerzo_mensual'
         verbose_name = 'Pago de Almuerzo Mensual'
         verbose_name_plural = 'Pagos de Almuerzo Mensual'
@@ -1476,18 +1476,18 @@ class AlertasSistema(models.Model):
         ('Resuelta', 'Resuelta'),
     ]
 
-    id_alerta = models.BigAutoField(db_column='id_alerta', primary_key=True)
-    tipo = models.CharField(db_column='tipo', max_length=30, choices=TIPO_CHOICES)
-    mensaje = models.CharField(db_column='mensaje', max_length=500)
-    fecha_creacion = models.DateTimeField(db_column='fecha_creacion')
-    fecha_leida = models.DateTimeField(db_column='fecha_leida', blank=True, null=True)
-    estado = models.CharField(db_column='estado', max_length=9, choices=ESTADO_CHOICES, blank=True, null=True)
-    id_empleado_resuelve = models.BigIntegerField(db_column='id_empleado_resuelve', blank=True, null=True)
-    fecha_resolucion = models.DateTimeField(db_column='fecha_resolucion', blank=True, null=True)
-    observaciones = models.TextField(db_column='observaciones', blank=True, null=True)
+    id_alerta = models.BigAutoField(db_column='ID_Alerta', primary_key=True)
+    tipo = models.CharField(db_column='Tipo', max_length=30, choices=TIPO_CHOICES)
+    mensaje = models.CharField(db_column='Mensaje', max_length=500)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion')
+    fecha_leida = models.DateTimeField(db_column='Fecha_Leida', blank=True, null=True)
+    estado = models.CharField(db_column='Estado', max_length=9, choices=ESTADO_CHOICES, blank=True, null=True)
+    id_empleado_resuelve = models.BigIntegerField(db_column='ID_Empleado_Resuelve', blank=True, null=True)
+    fecha_resolucion = models.DateTimeField(db_column='Fecha_Resolucion', blank=True, null=True)
+    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'alertas_sistema'
         verbose_name = 'Alerta del Sistema'
         verbose_name_plural = 'Alertas del Sistema'
@@ -1510,27 +1510,27 @@ class SolicitudesNotificacion(models.Model):
         ('Fallida', 'Fallida'),
     ]
 
-    id_solicitud = models.BigAutoField(db_column='id_solicitud', primary_key=True)
+    id_solicitud = models.BigAutoField(db_column='ID_Solicitud', primary_key=True)
     id_cliente = models.ForeignKey(
         Cliente,
         on_delete=models.CASCADE,
-        db_column='id_cliente',
+        db_column='ID_Cliente',
         related_name='notificaciones'
     )
     nro_tarjeta = models.ForeignKey(
         Tarjeta,
         on_delete=models.CASCADE,
-        db_column='nro_tarjeta'
+        db_column='Nro_Tarjeta'
     )
-    saldo_alerta = models.DecimalField(db_column='saldo_alerta', max_digits=10, decimal_places=2)
-    mensaje = models.CharField(db_column='mensaje', max_length=255)
-    destino = models.CharField(db_column='destino', max_length=8, choices=DESTINO_CHOICES)
-    estado = models.CharField(db_column='estado', max_length=9, choices=ESTADO_CHOICES, blank=True, null=True)
-    fecha_solicitud = models.DateTimeField(db_column='fecha_solicitud')
-    fecha_envio = models.DateTimeField(db_column='fecha_envio', blank=True, null=True)
+    saldo_alerta = models.DecimalField(db_column='Saldo_Alerta', max_digits=10, decimal_places=2)
+    mensaje = models.CharField(db_column='Mensaje', max_length=255)
+    destino = models.CharField(db_column='Destino', max_length=8, choices=DESTINO_CHOICES)
+    estado = models.CharField(db_column='Estado', max_length=9, choices=ESTADO_CHOICES, blank=True, null=True)
+    fecha_solicitud = models.DateTimeField(db_column='Fecha_Solicitud')
+    fecha_envio = models.DateTimeField(db_column='Fecha_Envio', blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'solicitudes_notificacion'
         verbose_name = 'Solicitud de Notificación'
         verbose_name_plural = 'Solicitudes de Notificación'
@@ -1543,23 +1543,23 @@ class SolicitudesNotificacion(models.Model):
 
 class AuditoriaEmpleados(models.Model):
     '''Tabla auditoria_empleados - Auditoría de acciones de empleados'''
-    id_auditoria = models.BigAutoField(db_column='id_auditoria', primary_key=True)
+    id_auditoria = models.BigAutoField(db_column='ID_Auditoria', primary_key=True)
     id_empleado = models.ForeignKey(
         Empleado,
         on_delete=models.SET_NULL,
-        db_column='id_empleado',
+        db_column='ID_Empleado',
         related_name='auditorias',
         null=True,
         blank=True
     )
-    fecha_cambio = models.DateTimeField(db_column='fecha_cambio')
-    campo_modificado = models.CharField(db_column='campo_modificado', max_length=50)
-    valor_anterior = models.TextField(db_column='valor_anterior', blank=True, null=True)
-    valor_nuevo = models.TextField(db_column='valor_nuevo', blank=True, null=True)
-    ip_origen = models.CharField(db_column='ip_origen', max_length=45, blank=True, null=True)
+    fecha_cambio = models.DateTimeField(db_column='Fecha_Cambio')
+    campo_modificado = models.CharField(db_column='Campo_Modificado', max_length=50)
+    valor_anterior = models.TextField(db_column='Valor_Anterior', blank=True, null=True)
+    valor_nuevo = models.TextField(db_column='Valor_Nuevo', blank=True, null=True)
+    ip_origen = models.CharField(db_column='IP_Origen', max_length=45, blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'auditoria_empleados'
         verbose_name = 'Auditoría de Empleado'
         verbose_name_plural = 'Auditorías de Empleados'
@@ -1570,23 +1570,23 @@ class AuditoriaEmpleados(models.Model):
 
 class AuditoriaUsuariosWeb(models.Model):
     '''Tabla auditoria_usuarios_web - Auditoría de usuarios web'''
-    id_auditoria = models.BigAutoField(db_column='id_auditoria', primary_key=True)
+    id_auditoria = models.BigAutoField(db_column='ID_Auditoria', primary_key=True)
     id_cliente = models.ForeignKey(
         Cliente,
         on_delete=models.SET_NULL,
-        db_column='id_cliente',
+        db_column='ID_Cliente',
         related_name='auditorias_web',
         null=True,
         blank=True
     )
-    fecha_cambio = models.DateTimeField(db_column='fecha_cambio')
-    campo_modificado = models.CharField(db_column='campo_modificado', max_length=50)
-    valor_anterior = models.TextField(db_column='valor_anterior', blank=True, null=True)
-    valor_nuevo = models.TextField(db_column='valor_nuevo', blank=True, null=True)
-    ip_origen = models.CharField(db_column='ip_origen', max_length=45, blank=True, null=True)
+    fecha_cambio = models.DateTimeField(db_column='Fecha_Cambio')
+    campo_modificado = models.CharField(db_column='Campo_Modificado', max_length=50)
+    valor_anterior = models.TextField(db_column='Valor_Anterior', blank=True, null=True)
+    valor_nuevo = models.TextField(db_column='Valor_Nuevo', blank=True, null=True)
+    ip_origen = models.CharField(db_column='IP_Origen', max_length=45, blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'auditoria_usuarios_web'
         verbose_name = 'Auditoría de Usuario Web'
         verbose_name_plural = 'Auditorías de Usuarios Web'
@@ -1597,28 +1597,28 @@ class AuditoriaUsuariosWeb(models.Model):
 
 class AuditoriaComisiones(models.Model):
     '''Tabla auditoria_comisiones - Auditoría de cálculos de comisiones'''
-    id_auditoria = models.BigAutoField(db_column='id_auditoria', primary_key=True)
+    id_auditoria = models.BigAutoField(db_column='ID_Auditoria', primary_key=True)
     id_tarifa = models.ForeignKey(
         TarifasComision,
         on_delete=models.SET_NULL,
-        db_column='id_tarifa',
+        db_column='ID_Tarifa',
         null=True,
         blank=True
     )
-    fecha_cambio = models.DateTimeField(db_column='fecha_cambio')
-    campo_modificado = models.CharField(db_column='campo_modificado', max_length=50)
-    valor_anterior = models.DecimalField(db_column='valor_anterior', max_digits=10, decimal_places=4, blank=True, null=True)
-    valor_nuevo = models.DecimalField(db_column='valor_nuevo', max_digits=10, decimal_places=4, blank=True, null=True)
+    fecha_cambio = models.DateTimeField(db_column='Fecha_Cambio')
+    campo_modificado = models.CharField(db_column='Campo_Modificado', max_length=50)
+    valor_anterior = models.DecimalField(db_column='Valor_Anterior', max_digits=10, decimal_places=4, blank=True, null=True)
+    valor_nuevo = models.DecimalField(db_column='Valor_Nuevo', max_digits=10, decimal_places=4, blank=True, null=True)
     id_empleado_modifico = models.ForeignKey(
         Empleado,
         on_delete=models.SET_NULL,
-        db_column='id_empleado_modifico',
+        db_column='ID_Empleado_Modifico',
         blank=True,
         null=True
     )
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'auditoria_comisiones'
         verbose_name = 'Auditoría de Comisión'
         verbose_name_plural = 'Auditorías de Comisiones'
@@ -1632,19 +1632,19 @@ class AuditoriaComisiones(models.Model):
 
 class VistaStockAlerta(models.Model):
     '''Vista v_stock_alerta - Productos con stock bajo'''
-    id_producto = models.IntegerField(db_column='id_producto', primary_key=True)
-    codigo_barra = models.CharField(db_column='codigo_barra', max_length=50, blank=True, null=True)
-    descripcion = models.CharField(db_column='descripcion', max_length=255)
-    categoria = models.CharField(db_column='categoria', max_length=100)
-    stock_actual = models.DecimalField(db_column='stock_actual', max_digits=10, decimal_places=3)
-    stock_minimo = models.DecimalField(db_column='stock_minimo', max_digits=10, decimal_places=3)
-    diferencia = models.DecimalField(db_column='diferencia', max_digits=11, decimal_places=3)
-    nivel_alerta = models.CharField(db_column='nivel_alerta', max_length=7)
-    fecha_ultima_actualizacion = models.DateTimeField(db_column='fecha_ultima_actualizacion', blank=True, null=True)
-    unidad_medida = models.CharField(db_column='unidad_medida', max_length=50)
+    id_producto = models.IntegerField(db_column='ID_Producto', primary_key=True)
+    codigo_barra = models.CharField(db_column='Codigo_Barra', max_length=50, blank=True, null=True)
+    descripcion = models.CharField(db_column='Descripcion', max_length=255)
+    categoria = models.CharField(db_column='Categoria', max_length=100)
+    stock_actual = models.DecimalField(db_column='Stock_Actual', max_digits=10, decimal_places=3)
+    stock_minimo = models.DecimalField(db_column='Stock_Minimo', max_digits=10, decimal_places=3)
+    diferencia = models.DecimalField(db_column='Diferencia', max_digits=11, decimal_places=3)
+    nivel_alerta = models.CharField(db_column='Nivel_Alerta', max_length=7)
+    fecha_ultima_actualizacion = models.DateTimeField(db_column='Fecha_Ultima_Actualizacion', blank=True, null=True)
+    unidad_medida = models.CharField(db_column='Unidad_Medida', max_length=50)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_stock_alerta'
         verbose_name = 'Alerta de Stock'
         verbose_name_plural = 'Alertas de Stock'
@@ -1655,18 +1655,18 @@ class VistaStockAlerta(models.Model):
 
 class VistaSaldoClientes(models.Model):
     '''Vista v_saldo_clientes - Saldos de cuenta corriente'''
-    id_cliente = models.IntegerField(db_column='id_cliente', primary_key=True)
-    nombres = models.CharField(db_column='nombres', max_length=100)
-    apellidos = models.CharField(db_column='apellidos', max_length=100)
+    id_cliente = models.IntegerField(db_column='ID_Cliente', primary_key=True)
+    nombres = models.CharField(db_column='Nombres', max_length=100)
+    apellidos = models.CharField(db_column='Apellidos', max_length=100)
     nombre_completo = models.CharField(db_column='nombre_completo', max_length=201)
-    ruc_ci = models.CharField(db_column='ruc_ci', max_length=20)
+    ruc_ci = models.CharField(db_column='Ruc_CI', max_length=20)
     tipo_cliente = models.CharField(db_column='tipo_cliente', max_length=50)
     saldo_actual = models.DecimalField(db_column='saldo_actual', max_digits=30, decimal_places=2)
     ultima_actualizacion = models.DateField(db_column='ultima_actualizacion', blank=True, null=True)
     total_movimientos = models.BigIntegerField(db_column='total_movimientos')
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_saldo_clientes'
         verbose_name = 'Saldo de Cliente'
         verbose_name_plural = 'Saldos de Clientes'
@@ -1798,29 +1798,29 @@ class VistaSaldoClientes(models.Model):
 
 class ConsumoTarjeta(models.Model):
     '''Tabla consumos_tarjeta - Historial de consumos con tarjeta'''
-    id_consumo = models.BigAutoField(db_column='id_consumo', primary_key=True)
+    id_consumo = models.BigAutoField(db_column='ID_Consumo', primary_key=True)
     nro_tarjeta = models.ForeignKey(
         Tarjeta,
         on_delete=models.PROTECT,
-        db_column='nro_tarjeta',
+        db_column='Nro_Tarjeta',
         related_name='consumos'
     )
-    fecha_consumo = models.DateTimeField(db_column='fecha_consumo')
-    monto_consumido = models.DecimalField(db_column='monto_consumido', max_digits=10, decimal_places=2)
-    detalle = models.CharField(db_column='detalle', max_length=200, blank=True, null=True)
-    saldo_anterior = models.DecimalField(db_column='saldo_anterior', max_digits=10, decimal_places=2)
-    saldo_posterior = models.DecimalField(db_column='saldo_posterior', max_digits=10, decimal_places=2)
+    fecha_consumo = models.DateTimeField(db_column='Fecha_Consumo')
+    monto_consumido = models.DecimalField(db_column='Monto_Consumido', max_digits=10, decimal_places=2)
+    detalle = models.CharField(db_column='Detalle', max_length=200, blank=True, null=True)
+    saldo_anterior = models.DecimalField(db_column='Saldo_Anterior', max_digits=10, decimal_places=2)
+    saldo_posterior = models.DecimalField(db_column='Saldo_Posterior', max_digits=10, decimal_places=2)
     id_empleado_registro = models.ForeignKey(
         'Empleado',
         on_delete=models.SET_NULL,
-        db_column='id_empleado_registro',
+        db_column='ID_Empleado_Registro',
         blank=True,
         null=True,
         related_name='consumos_registrados'
     )
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'consumos_tarjeta'
         verbose_name = 'Consumo con Tarjeta'
         verbose_name_plural = 'Consumos con Tarjeta'
@@ -1836,22 +1836,22 @@ class ConsumoTarjeta(models.Model):
 
 class VistaVentasDiaDetallado(models.Model):
     '''Vista v_ventas_dia_detallado - Ventas con detalles completos'''
-    id_venta = models.BigIntegerField(db_column='id_venta', primary_key=True)
-    fecha = models.DateTimeField(db_column='fecha')
-    monto_total = models.BigIntegerField(db_column='monto_total')
-    nombres = models.CharField(db_column='nombres', max_length=100)
-    apellidos = models.CharField(db_column='apellidos', max_length=100)
-    cliente_completo = models.CharField(db_column='cliente_completo', max_length=201)
-    empleado = models.CharField(db_column='empleado', max_length=100)
-    nro_timbrado = models.IntegerField(db_column='nro_timbrado')
-    nro_secuencial = models.IntegerField(db_column='nro_secuencial')
-    cantidad_items = models.BigIntegerField(db_column='cantidad_items')
-    productos = models.TextField(db_column='productos')
-    total_pagado = models.DecimalField(db_column='total_pagado', max_digits=32, decimal_places=0)
-    saldo_pendiente = models.DecimalField(db_column='saldo_pendiente', max_digits=33, decimal_places=0)
+    id_venta = models.BigIntegerField(db_column='ID_Venta', primary_key=True)
+    fecha = models.DateTimeField(db_column='Fecha')
+    monto_total = models.BigIntegerField(db_column='Monto_Total')
+    nombres = models.CharField(db_column='Nombres', max_length=100)
+    apellidos = models.CharField(db_column='Apellidos', max_length=100)
+    cliente_completo = models.CharField(db_column='Cliente_Completo', max_length=201)
+    empleado = models.CharField(db_column='Empleado', max_length=100)
+    nro_timbrado = models.IntegerField(db_column='Nro_Timbrado')
+    nro_secuencial = models.IntegerField(db_column='Nro_Secuencial')
+    cantidad_items = models.BigIntegerField(db_column='Cantidad_Items')
+    productos = models.TextField(db_column='Productos')
+    total_pagado = models.DecimalField(db_column='Total_Pagado', max_digits=32, decimal_places=0)
+    saldo_pendiente = models.DecimalField(db_column='Saldo_Pendiente', max_digits=33, decimal_places=0)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_ventas_dia_detallado'
         verbose_name = 'Vista: Ventas del Día Detallado'
         verbose_name_plural = 'Vista: Ventas del Día Detallado'
@@ -1865,23 +1865,23 @@ class VistaConsumosEstudiante(models.Model):
     id_hijo = models.ForeignKey(
         Hijo,
         on_delete=models.DO_NOTHING,
-        db_column='id_hijo',
+        db_column='ID_Hijo',
         primary_key=True,
         related_name='consumos_vista'
     )
-    estudiante = models.CharField(db_column='estudiante', max_length=202)
-    responsable_nombre = models.CharField(db_column='responsable_nombre', max_length=100)
-    responsable_apellido = models.CharField(db_column='responsable_apellido', max_length=100)
-    nro_tarjeta = models.CharField(db_column='nro_tarjeta', max_length=20)
-    saldo_actual = models.BigIntegerField(db_column='saldo_actual')
-    total_consumos = models.BigIntegerField(db_column='total_consumos')
-    total_consumido = models.DecimalField(db_column='total_consumido', max_digits=32, decimal_places=2)
-    ultimo_consumo = models.DateTimeField(db_column='ultimo_consumo')
-    total_recargas = models.BigIntegerField(db_column='total_recargas')
-    total_recargado = models.DecimalField(db_column='total_recargado', max_digits=32, decimal_places=2)
+    estudiante = models.CharField(db_column='Estudiante', max_length=202)
+    responsable_nombre = models.CharField(db_column='Responsable_Nombre', max_length=100)
+    responsable_apellido = models.CharField(db_column='Responsable_Apellido', max_length=100)
+    nro_tarjeta = models.CharField(db_column='Nro_Tarjeta', max_length=20)
+    saldo_actual = models.BigIntegerField(db_column='Saldo_Actual')
+    total_consumos = models.BigIntegerField(db_column='Total_Consumos')
+    total_consumido = models.DecimalField(db_column='Total_Consumido', max_digits=32, decimal_places=2)
+    ultimo_consumo = models.DateTimeField(db_column='Ultimo_Consumo')
+    total_recargas = models.BigIntegerField(db_column='Total_Recargas')
+    total_recargado = models.DecimalField(db_column='Total_Recargado', max_digits=32, decimal_places=2)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_consumos_estudiante'
         verbose_name = 'Vista: Consumos por Hijo'
         verbose_name_plural = 'Vista: Consumos por Hijo'
@@ -1897,15 +1897,15 @@ class VistaConsumosEstudiante(models.Model):
 
 class VistaStockCriticoAlertas(models.Model):
     '''Vista v_stock_critico_alertas - Productos con stock crítico'''
-    id_producto = models.IntegerField(db_column='id_producto', primary_key=True)
-    codigo_barra = models.CharField(db_column='codigo_barra', max_length=50)
-    descripcion = models.CharField(db_column='descripcion', max_length=255)
-    categoria = models.CharField(db_column='categoria', max_length=100)
-    stock_actual = models.DecimalField(db_column='stock_actual', max_digits=10, decimal_places=3)
-    stock_minimo = models.DecimalField(db_column='stock_minimo', max_digits=10, decimal_places=3)
+    id_producto = models.IntegerField(db_column='ID_Producto', primary_key=True)
+    codigo_barra = models.CharField(db_column='Codigo_Barra', max_length=50)
+    descripcion = models.CharField(db_column='Descripcion', max_length=255)
+    categoria = models.CharField(db_column='Categoria', max_length=100)
+    stock_actual = models.DecimalField(db_column='Stock_Actual', max_digits=10, decimal_places=3)
+    stock_minimo = models.DecimalField(db_column='Stock_Minimo', max_digits=10, decimal_places=3)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_stock_critico_alertas'
         verbose_name = 'Vista: Stock Crítico'
         verbose_name_plural = 'Vista: Stock Crítico'
@@ -1916,24 +1916,24 @@ class VistaStockCriticoAlertas(models.Model):
 
 class VistaRecargasHistorial(models.Model):
     '''Vista v_recargas_historial - Historial de recargas'''
-    id_carga = models.BigIntegerField(db_column='id_carga', primary_key=True)
-    fecha_carga = models.DateTimeField(db_column='fecha_carga')
-    monto_cargado = models.DecimalField(db_column='monto_cargado', max_digits=10, decimal_places=2)
-    nro_tarjeta = models.CharField(db_column='nro_tarjeta', max_length=20)
+    id_carga = models.BigIntegerField(db_column='ID_Carga', primary_key=True)
+    fecha_carga = models.DateTimeField(db_column='Fecha_Carga')
+    monto_cargado = models.DecimalField(db_column='Monto_Cargado', max_digits=10, decimal_places=2)
+    nro_tarjeta = models.CharField(db_column='Nro_Tarjeta', max_length=20)
     id_hijo = models.ForeignKey(
         Hijo,
         on_delete=models.DO_NOTHING,
-        db_column='id_hijo',
+        db_column='ID_Hijo',
         related_name='recargas_vista'
     )
-    estudiante = models.CharField(db_column='estudiante', max_length=202)
-    responsable = models.CharField(db_column='responsable', max_length=201)
-    telefono = models.CharField(db_column='telefono', max_length=20)
-    empleado_registro = models.CharField(db_column='empleado_registro', max_length=100)
-    saldo_actual_tarjeta = models.BigIntegerField(db_column='saldo_actual_tarjeta')
+    estudiante = models.CharField(db_column='Estudiante', max_length=202)
+    responsable = models.CharField(db_column='Responsable', max_length=201)
+    telefono = models.CharField(db_column='Telefono', max_length=20)
+    empleado_registro = models.CharField(db_column='Empleado_Registro', max_length=100)
+    saldo_actual_tarjeta = models.BigIntegerField(db_column='Saldo_Actual_Tarjeta')
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_recargas_historial'
         verbose_name = 'Vista: Historial de Recargas'
         verbose_name_plural = 'Vista: Historial de Recargas'
@@ -1949,20 +1949,20 @@ class VistaRecargasHistorial(models.Model):
 
 class VistaResumenCajaDiario(models.Model):
     '''Vista v_resumen_caja_diario - Resumen financiero diario'''
-    fecha = models.DateField(db_column='fecha', primary_key=True)
-    total_ventas = models.BigIntegerField(db_column='total_ventas')
-    monto_total_ventas = models.DecimalField(db_column='monto_total_ventas', max_digits=32, decimal_places=0)
-    total_recargas = models.BigIntegerField(db_column='total_recargas')
-    monto_total_recargas = models.DecimalField(db_column='monto_total_recargas', max_digits=32, decimal_places=2)
-    total_ingresos_dia = models.DecimalField(db_column='total_ingresos_dia', max_digits=33, decimal_places=2)
-    total_transacciones_pago = models.BigIntegerField(db_column='total_transacciones_pago')
-    total_efectivo = models.DecimalField(db_column='total_efectivo', max_digits=32, decimal_places=0)
-    total_tarjeta_debito = models.DecimalField(db_column='total_tarjeta_debito', max_digits=32, decimal_places=0)
-    total_tarjeta_credito = models.DecimalField(db_column='total_tarjeta_credito', max_digits=32, decimal_places=0)
-    total_transferencias = models.DecimalField(db_column='total_transferencias', max_digits=32, decimal_places=0)
+    fecha = models.DateField(db_column='Fecha', primary_key=True)
+    total_ventas = models.BigIntegerField(db_column='Total_Ventas')
+    monto_total_ventas = models.DecimalField(db_column='Monto_Total_Ventas', max_digits=32, decimal_places=0)
+    total_recargas = models.BigIntegerField(db_column='Total_Recargas')
+    monto_total_recargas = models.DecimalField(db_column='Monto_Total_Recargas', max_digits=32, decimal_places=2)
+    total_ingresos_dia = models.DecimalField(db_column='Total_Ingresos_Dia', max_digits=33, decimal_places=2)
+    total_transacciones_pago = models.BigIntegerField(db_column='Total_Transacciones_Pago')
+    total_efectivo = models.DecimalField(db_column='Total_Efectivo', max_digits=32, decimal_places=0)
+    total_tarjeta_debito = models.DecimalField(db_column='Total_Tarjeta_Debito', max_digits=32, decimal_places=0)
+    total_tarjeta_credito = models.DecimalField(db_column='Total_Tarjeta_Credito', max_digits=32, decimal_places=0)
+    total_transferencias = models.DecimalField(db_column='Total_Transferencias', max_digits=32, decimal_places=0)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_resumen_caja_diario'
         verbose_name = 'Vista: Resumen de Caja Diario'
         verbose_name_plural = 'Vista: Resumen de Caja Diario'
@@ -1973,20 +1973,20 @@ class VistaResumenCajaDiario(models.Model):
 
 class VistaNotasCreditoDetallado(models.Model):
     '''Vista v_notas_credito_detallado - Notas de crédito con detalles'''
-    id_nota = models.BigIntegerField(db_column='id_nota', primary_key=True)
-    fecha = models.DateTimeField(db_column='fecha')
-    monto_total = models.DecimalField(db_column='monto_total', max_digits=12, decimal_places=2)
-    estado = models.CharField(db_column='estado', max_length=20)
-    observacion = models.CharField(db_column='observacion', max_length=255, blank=True, null=True)
-    cliente = models.CharField(db_column='cliente', max_length=201)
-    venta_original = models.BigIntegerField(db_column='venta_original', blank=True, null=True)
-    fecha_venta_original = models.DateTimeField(db_column='fecha_venta_original', blank=True, null=True)
-    monto_venta_original = models.DecimalField(db_column='monto_venta_original', max_digits=12, decimal_places=2, blank=True, null=True)
-    cantidad_items = models.IntegerField(db_column='cantidad_items')
-    productos = models.TextField(db_column='productos', blank=True, null=True)
+    id_nota = models.BigIntegerField(db_column='ID_Nota', primary_key=True)
+    fecha = models.DateTimeField(db_column='Fecha')
+    monto_total = models.DecimalField(db_column='Monto_Total', max_digits=12, decimal_places=2)
+    estado = models.CharField(db_column='Estado', max_length=20)
+    observacion = models.CharField(db_column='Observacion', max_length=255, blank=True, null=True)
+    cliente = models.CharField(db_column='Cliente', max_length=201)
+    venta_original = models.BigIntegerField(db_column='Venta_Original', blank=True, null=True)
+    fecha_venta_original = models.DateTimeField(db_column='Fecha_Venta_Original', blank=True, null=True)
+    monto_venta_original = models.DecimalField(db_column='Monto_Venta_Original', max_digits=12, decimal_places=2, blank=True, null=True)
+    cantidad_items = models.IntegerField(db_column='Cantidad_Items')
+    productos = models.TextField(db_column='Productos', blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_notas_credito_detallado'
         verbose_name = 'Vista: Notas de Crédito Detallado'
         verbose_name_plural = 'Vista: Notas de Crédito Detallado'
@@ -2001,18 +2001,18 @@ class VistaNotasCreditoDetallado(models.Model):
 
 class TipoAlmuerzo(models.Model):
     '''Tabla tipos_almuerzo - Catálogo de tipos de almuerzo'''
-    id_tipo_almuerzo = models.AutoField(db_column='id_tipo_almuerzo', primary_key=True)
-    nombre = models.CharField(db_column='nombre', max_length=100)
-    descripcion = models.TextField(db_column='descripcion', blank=True, null=True)
-    precio_unitario = models.DecimalField(db_column='precio_unitario', max_digits=10, decimal_places=2)
-    incluye_plato_principal = models.BooleanField(db_column='incluye_plato_principal', default=True)
-    incluye_postre = models.BooleanField(db_column='incluye_postre', default=False)
-    incluye_bebida = models.BooleanField(db_column='incluye_bebida', default=False)
-    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
-    activo = models.BooleanField(db_column='activo', default=True)
+    id_tipo_almuerzo = models.AutoField(db_column='ID_Tipo_Almuerzo', primary_key=True)
+    nombre = models.CharField(db_column='Nombre', max_length=100)
+    descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
+    precio_unitario = models.DecimalField(db_column='Precio_Unitario', max_digits=10, decimal_places=2)
+    incluye_plato_principal = models.BooleanField(db_column='Incluye_Plato_Principal', default=True)
+    incluye_postre = models.BooleanField(db_column='Incluye_Postre', default=False)
+    incluye_bebida = models.BooleanField(db_column='Incluye_Bebida', default=False)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'tipos_almuerzo'
         verbose_name = 'Tipo de Almuerzo'
         verbose_name_plural = 'Tipos de Almuerzo'
@@ -2038,16 +2038,16 @@ class TipoAlmuerzo(models.Model):
 
 class RegistroConsumoAlmuerzo(models.Model):
     '''Tabla registro_consumo_almuerzo - Registro diario de almuerzos'''
-    id_registro_consumo = models.BigAutoField(db_column='id_registro_consumo', primary_key=True)
+    id_registro_consumo = models.BigAutoField(db_column='ID_Registro_Consumo', primary_key=True)
     id_hijo = models.ForeignKey(
         Hijo,
         on_delete=models.PROTECT,
-        db_column='id_hijo'
+        db_column='ID_Hijo'
     )
     nro_tarjeta = models.ForeignKey(
         Tarjeta,
         on_delete=models.PROTECT,
-        db_column='nro_tarjeta',
+        db_column='Nro_Tarjeta',
         blank=True,
         null=True,
         related_name='registros_almuerzo'
@@ -2055,18 +2055,18 @@ class RegistroConsumoAlmuerzo(models.Model):
     id_tipo_almuerzo = models.ForeignKey(
         TipoAlmuerzo,
         on_delete=models.PROTECT,
-        db_column='id_tipo_almuerzo',
+        db_column='ID_Tipo_Almuerzo',
         blank=True,
         null=True
     )
-    fecha_consumo = models.DateField(db_column='fecha_consumo', auto_now_add=True)
-    costo_almuerzo = models.DecimalField(db_column='costo_almuerzo', max_digits=10, decimal_places=2, blank=True, null=True)
-    marcado_en_cuenta = models.BooleanField(db_column='marcado_en_cuenta', default=False)
-    id_suscripcion = models.BigIntegerField(db_column='id_suscripcion', blank=True, null=True)
-    hora_registro = models.TimeField(db_column='hora_registro', auto_now_add=True)
+    fecha_consumo = models.DateField(db_column='Fecha_Consumo', auto_now_add=True)
+    costo_almuerzo = models.DecimalField(db_column='Costo_Almuerzo', max_digits=10, decimal_places=2, blank=True, null=True)
+    marcado_en_cuenta = models.BooleanField(db_column='Marcado_En_Cuenta', default=False)
+    id_suscripcion = models.BigIntegerField(db_column='ID_Suscripcion', blank=True, null=True)
+    hora_registro = models.TimeField(db_column='Hora_Registro', auto_now_add=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'registro_consumo_almuerzo'
         verbose_name = 'Registro de Almuerzo'
         verbose_name_plural = 'Registros de Almuerzos'
@@ -2089,25 +2089,25 @@ class CuentaAlmuerzoMensual(models.Model):
         ('PAGADO', 'Pagado'),
     ]
 
-    id_cuenta = models.BigAutoField(db_column='id_cuenta', primary_key=True)
+    id_cuenta = models.BigAutoField(db_column='ID_Cuenta', primary_key=True)
     id_hijo = models.ForeignKey(
         Hijo,
         on_delete=models.PROTECT,
-        db_column='id_hijo'
+        db_column='ID_Hijo'
     )
-    anio = models.IntegerField(db_column='anio')
-    mes = models.SmallIntegerField(db_column='mes')
-    cantidad_almuerzos = models.IntegerField(db_column='cantidad_almuerzos', default=0)
-    monto_total = models.DecimalField(db_column='monto_total', max_digits=10, decimal_places=2, default=0)
-    forma_cobro = models.CharField(db_column='forma_cobro', max_length=20, choices=FORMA_COBRO_CHOICES)
-    monto_pagado = models.DecimalField(db_column='monto_pagado', max_digits=10, decimal_places=2, default=0)
-    estado = models.CharField(db_column='estado', max_length=10, choices=ESTADO_CHOICES, default='PENDIENTE')
-    fecha_generacion = models.DateField(db_column='fecha_generacion')
-    fecha_actualizacion = models.DateTimeField(db_column='fecha_actualizacion', auto_now=True)
-    observaciones = models.TextField(db_column='observaciones', blank=True, null=True)
+    anio = models.IntegerField(db_column='Anio')
+    mes = models.SmallIntegerField(db_column='Mes')
+    cantidad_almuerzos = models.IntegerField(db_column='Cantidad_Almuerzos', default=0)
+    monto_total = models.DecimalField(db_column='Monto_Total', max_digits=10, decimal_places=2, default=0)
+    forma_cobro = models.CharField(db_column='Forma_Cobro', max_length=20, choices=FORMA_COBRO_CHOICES)
+    monto_pagado = models.DecimalField(db_column='Monto_Pagado', max_digits=10, decimal_places=2, default=0)
+    estado = models.CharField(db_column='Estado', max_length=10, choices=ESTADO_CHOICES, default='PENDIENTE')
+    fecha_generacion = models.DateField(db_column='Fecha_Generacion')
+    fecha_actualizacion = models.DateTimeField(db_column='Fecha_Actualizacion', auto_now=True)
+    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'cuentas_almuerzo_mensual'
         verbose_name = 'Cuenta Mensual de Almuerzo'
         verbose_name_plural = 'Cuentas Mensuales de Almuerzo'
@@ -2138,28 +2138,28 @@ class PagoCuentaAlmuerzo(models.Model):
         ('OTRO', 'Otro'),
     ]
 
-    id_pago = models.BigAutoField(db_column='id_pago', primary_key=True)
+    id_pago = models.BigAutoField(db_column='ID_Pago', primary_key=True)
     id_cuenta = models.ForeignKey(
         CuentaAlmuerzoMensual,
         on_delete=models.PROTECT,
-        db_column='id_cuenta',
+        db_column='ID_Cuenta',
         related_name='pagos'
     )
-    fecha_pago = models.DateTimeField(db_column='fecha_pago', auto_now_add=True)
-    medio_pago = models.CharField(db_column='medio_pago', max_length=15, choices=MEDIO_PAGO_CHOICES)
-    monto = models.DecimalField(db_column='monto', max_digits=10, decimal_places=2)
-    referencia = models.CharField(db_column='referencia', max_length=50, blank=True, null=True)
-    observaciones = models.TextField(db_column='observaciones', blank=True, null=True)
+    fecha_pago = models.DateTimeField(db_column='Fecha_Pago', auto_now_add=True)
+    medio_pago = models.CharField(db_column='Medio_Pago', max_length=15, choices=MEDIO_PAGO_CHOICES)
+    monto = models.DecimalField(db_column='Monto', max_digits=10, decimal_places=2)
+    referencia = models.CharField(db_column='Referencia', max_length=50, blank=True, null=True)
+    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
     id_empleado_registro = models.ForeignKey(
         'Empleado',
         on_delete=models.SET_NULL,
-        db_column='id_empleado_registro',
+        db_column='ID_Empleado_Registro',
         blank=True,
         null=True
     )
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'pagos_cuentas_almuerzo'
         verbose_name = 'Pago de Cuenta de Almuerzo'
         verbose_name_plural = 'Pagos de Cuentas de Almuerzo'
@@ -2175,23 +2175,23 @@ class PagoCuentaAlmuerzo(models.Model):
 
 class VistaAlmuerzosDiarios(models.Model):
     '''Vista v_almuerzos_diarios - Almuerzos registrados con detalles'''
-    id_registro_consumo = models.BigIntegerField(db_column='id_registro_consumo', primary_key=True)
-    fecha_consumo = models.DateField(db_column='fecha_consumo')
-    hora_registro = models.TimeField(db_column='hora_registro')
-    id_hijo = models.IntegerField(db_column='id_hijo')
-    estudiante = models.CharField(db_column='estudiante', max_length=202)
-    responsable_nombre = models.CharField(db_column='responsable_nombre', max_length=100)
-    responsable_apellido = models.CharField(db_column='responsable_apellido', max_length=100)
-    nro_tarjeta = models.CharField(db_column='nro_tarjeta', max_length=20, blank=True, null=True)
-    tipo_almuerzo = models.CharField(db_column='tipo_almuerzo', max_length=100, blank=True, null=True)
-    descripcion_almuerzo = models.TextField(db_column='descripcion_almuerzo', blank=True, null=True)
-    costo_almuerzo = models.DecimalField(db_column='costo_almuerzo', max_digits=10, decimal_places=2, blank=True, null=True)
-    marcado_en_cuenta = models.BooleanField(db_column='marcado_en_cuenta')
-    origen = models.CharField(db_column='origen', max_length=11)
-    id_suscripcion = models.BigIntegerField(db_column='id_suscripcion', blank=True, null=True)
+    id_registro_consumo = models.BigIntegerField(db_column='ID_Registro_Consumo', primary_key=True)
+    fecha_consumo = models.DateField(db_column='Fecha_Consumo')
+    hora_registro = models.TimeField(db_column='Hora_Registro')
+    id_hijo = models.IntegerField(db_column='ID_Hijo')
+    estudiante = models.CharField(db_column='Estudiante', max_length=202)
+    responsable_nombre = models.CharField(db_column='Responsable_Nombre', max_length=100)
+    responsable_apellido = models.CharField(db_column='Responsable_Apellido', max_length=100)
+    nro_tarjeta = models.CharField(db_column='Nro_Tarjeta', max_length=20, blank=True, null=True)
+    tipo_almuerzo = models.CharField(db_column='Tipo_Almuerzo', max_length=100, blank=True, null=True)
+    descripcion_almuerzo = models.TextField(db_column='Descripcion_Almuerzo', blank=True, null=True)
+    costo_almuerzo = models.DecimalField(db_column='Costo_Almuerzo', max_digits=10, decimal_places=2, blank=True, null=True)
+    marcado_en_cuenta = models.BooleanField(db_column='Marcado_En_Cuenta')
+    origen = models.CharField(db_column='Origen', max_length=11)
+    id_suscripcion = models.BigIntegerField(db_column='ID_Suscripcion', blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_almuerzos_diarios'
         verbose_name = 'Vista: Almuerzos Diarios'
         verbose_name_plural = 'Vista: Almuerzos Diarios'
@@ -2202,26 +2202,26 @@ class VistaAlmuerzosDiarios(models.Model):
 
 class VistaCuentasAlmuerzoDetallado(models.Model):
     '''Vista v_cuentas_almuerzo_detallado - Cuentas mensuales con detalles'''
-    id_cuenta = models.BigIntegerField(db_column='id_cuenta', primary_key=True)
-    id_hijo = models.IntegerField(db_column='id_hijo')
-    estudiante = models.CharField(db_column='estudiante', max_length=202)
-    responsable_nombre = models.CharField(db_column='responsable_nombre', max_length=100)
-    responsable_apellido = models.CharField(db_column='responsable_apellido', max_length=100)
-    responsable_telefono = models.CharField(db_column='responsable_telefono', max_length=20, blank=True, null=True)
-    anio = models.IntegerField(db_column='anio')
-    mes = models.SmallIntegerField(db_column='mes')
-    cantidad_almuerzos = models.IntegerField(db_column='cantidad_almuerzos')
-    monto_total = models.DecimalField(db_column='monto_total', max_digits=10, decimal_places=2)
-    forma_cobro = models.CharField(db_column='forma_cobro', max_length=20)
-    monto_pagado = models.DecimalField(db_column='monto_pagado', max_digits=10, decimal_places=2)
-    saldo_pendiente = models.DecimalField(db_column='saldo_pendiente', max_digits=11, decimal_places=2)
-    estado = models.CharField(db_column='estado', max_length=10)
-    fecha_generacion = models.DateField(db_column='fecha_generacion')
-    fecha_actualizacion = models.DateTimeField(db_column='fecha_actualizacion')
-    cantidad_pagos = models.BigIntegerField(db_column='cantidad_pagos')
+    id_cuenta = models.BigIntegerField(db_column='ID_Cuenta', primary_key=True)
+    id_hijo = models.IntegerField(db_column='ID_Hijo')
+    estudiante = models.CharField(db_column='Estudiante', max_length=202)
+    responsable_nombre = models.CharField(db_column='Responsable_Nombre', max_length=100)
+    responsable_apellido = models.CharField(db_column='Responsable_Apellido', max_length=100)
+    responsable_telefono = models.CharField(db_column='Responsable_Telefono', max_length=20, blank=True, null=True)
+    anio = models.IntegerField(db_column='Anio')
+    mes = models.SmallIntegerField(db_column='Mes')
+    cantidad_almuerzos = models.IntegerField(db_column='Cantidad_Almuerzos')
+    monto_total = models.DecimalField(db_column='Monto_Total', max_digits=10, decimal_places=2)
+    forma_cobro = models.CharField(db_column='Forma_Cobro', max_length=20)
+    monto_pagado = models.DecimalField(db_column='Monto_Pagado', max_digits=10, decimal_places=2)
+    saldo_pendiente = models.DecimalField(db_column='Saldo_Pendiente', max_digits=11, decimal_places=2)
+    estado = models.CharField(db_column='Estado', max_length=10)
+    fecha_generacion = models.DateField(db_column='Fecha_Generacion')
+    fecha_actualizacion = models.DateTimeField(db_column='Fecha_Actualizacion')
+    cantidad_pagos = models.BigIntegerField(db_column='Cantidad_Pagos')
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_cuentas_almuerzo_detallado'
         verbose_name = 'Vista: Cuentas de Almuerzo Detallado'
         verbose_name_plural = 'Vista: Cuentas de Almuerzo Detallado'
@@ -2232,17 +2232,17 @@ class VistaCuentasAlmuerzoDetallado(models.Model):
 
 class VistaReporteMensualSeparado(models.Model):
     '''Vista v_reporte_mensual_separado - Reporte mensual: almuerzos vs tarjeta'''
-    id_hijo = models.IntegerField(db_column='id_hijo', primary_key=True)
-    estudiante = models.CharField(db_column='estudiante', max_length=202)
-    nro_tarjeta = models.CharField(db_column='nro_tarjeta', max_length=20, blank=True, null=True)
-    saldo_tarjeta_actual = models.BigIntegerField(db_column='saldo_tarjeta_actual', blank=True, null=True)
-    almuerzos_mes_actual = models.DecimalField(db_column='almuerzos_mes_actual', max_digits=23, decimal_places=0)
-    total_almuerzos_mes = models.DecimalField(db_column='total_almuerzos_mes', max_digits=32, decimal_places=2)
-    consumos_tarjeta_mes = models.DecimalField(db_column='consumos_tarjeta_mes', max_digits=32, decimal_places=2)
-    cargas_tarjeta_mes = models.DecimalField(db_column='cargas_tarjeta_mes', max_digits=32, decimal_places=2)
+    id_hijo = models.IntegerField(db_column='ID_Hijo', primary_key=True)
+    estudiante = models.CharField(db_column='Estudiante', max_length=202)
+    nro_tarjeta = models.CharField(db_column='Nro_Tarjeta', max_length=20, blank=True, null=True)
+    saldo_tarjeta_actual = models.BigIntegerField(db_column='Saldo_Tarjeta_Actual', blank=True, null=True)
+    almuerzos_mes_actual = models.DecimalField(db_column='Almuerzos_Mes_Actual', max_digits=23, decimal_places=0)
+    total_almuerzos_mes = models.DecimalField(db_column='Total_Almuerzos_Mes', max_digits=32, decimal_places=2)
+    consumos_tarjeta_mes = models.DecimalField(db_column='Consumos_Tarjeta_Mes', max_digits=32, decimal_places=2)
+    cargas_tarjeta_mes = models.DecimalField(db_column='Cargas_Tarjeta_Mes', max_digits=32, decimal_places=2)
 
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'v_reporte_mensual_separado'
         verbose_name = 'Vista: Reporte Mensual Separado'
         verbose_name_plural = 'Vista: Reportes Mensuales Separados'
@@ -2263,32 +2263,32 @@ class TarjetaAutorizacion(models.Model):
         ('CAJERO', 'Cajero'),
     ]
     
-    id_tarjeta_autorizacion = models.AutoField(db_column='id_tarjeta_autorizacion', primary_key=True)
-    codigo_barra = models.CharField(db_column='codigo_barra', max_length=50, unique=True)
+    id_tarjeta_autorizacion = models.AutoField(db_column='ID_Tarjeta_Autorizacion', primary_key=True)
+    codigo_barra = models.CharField(db_column='Codigo_Barra', max_length=50, unique=True)
     id_empleado = models.ForeignKey(
         'Empleado',
         on_delete=models.SET_NULL,
-        db_column='id_empleado',
+        db_column='ID_Empleado',
         blank=True,
         null=True
     )
     tipo_autorizacion = models.CharField(
-        db_column='tipo_autorizacion',
+        db_column='Tipo_Autorizacion',
         max_length=15,
         choices=TIPO_AUTORIZACION_CHOICES,
         default='ADMIN'
     )
-    puede_anular_almuerzos = models.BooleanField(db_column='puede_anular_almuerzos', default=True)
-    puede_anular_ventas = models.BooleanField(db_column='puede_anular_ventas', default=True)
-    puede_anular_recargas = models.BooleanField(db_column='puede_anular_recargas', default=True)
-    puede_modificar_precios = models.BooleanField(db_column='puede_modificar_precios', default=False)
-    activo = models.BooleanField(db_column='activo', default=True)
-    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
-    fecha_vencimiento = models.DateField(db_column='fecha_vencimiento', blank=True, null=True)
-    observaciones = models.TextField(db_column='observaciones', blank=True, null=True)
+    puede_anular_almuerzos = models.BooleanField(db_column='Puede_Anular_Almuerzos', default=True)
+    puede_anular_ventas = models.BooleanField(db_column='Puede_Anular_Ventas', default=True)
+    puede_anular_recargas = models.BooleanField(db_column='Puede_Anular_Recargas', default=True)
+    puede_modificar_precios = models.BooleanField(db_column='Puede_Modificar_Precios', default=False)
+    activo = models.BooleanField(db_column='Activo', default=True)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    fecha_vencimiento = models.DateField(db_column='Fecha_Vencimiento', blank=True, null=True)
+    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'tarjetas_autorizacion'
         verbose_name = 'Tarjeta de Autorización'
         verbose_name_plural = 'Tarjetas de Autorización'
@@ -2331,32 +2331,32 @@ class LogAutorizacion(models.Model):
         ('ERROR', 'Error'),
     ]
     
-    id_log = models.BigAutoField(db_column='id_log', primary_key=True)
+    id_log = models.BigAutoField(db_column='ID_Log', primary_key=True)
     id_tarjeta_autorizacion = models.ForeignKey(
         TarjetaAutorizacion,
         on_delete=models.CASCADE,
-        db_column='id_tarjeta_autorizacion'
+        db_column='ID_Tarjeta_Autorizacion'
     )
-    codigo_barra = models.CharField(db_column='codigo_barra', max_length=50)
+    codigo_barra = models.CharField(db_column='Codigo_Barra', max_length=50)
     tipo_operacion = models.CharField(
-        db_column='tipo_operacion',
+        db_column='Tipo_Operacion',
         max_length=20,
         choices=TIPO_OPERACION_CHOICES
     )
-    id_registro_afectado = models.BigIntegerField(db_column='id_registro_afectado', blank=True, null=True)
-    descripcion = models.TextField(db_column='descripcion', blank=True, null=True)
-    id_usuario = models.IntegerField(db_column='id_usuario', blank=True, null=True)
-    fecha_hora = models.DateTimeField(db_column='fecha_hora', auto_now_add=True)
-    ip_origen = models.CharField(db_column='ip_origen', max_length=45, blank=True, null=True)
+    id_registro_afectado = models.BigIntegerField(db_column='ID_Registro_Afectado', blank=True, null=True)
+    descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
+    id_usuario = models.IntegerField(db_column='ID_Usuario', blank=True, null=True)
+    fecha_hora = models.DateTimeField(db_column='Fecha_Hora', auto_now_add=True)
+    ip_origen = models.CharField(db_column='IP_Origen', max_length=45, blank=True, null=True)
     resultado = models.CharField(
-        db_column='resultado',
+        db_column='Resultado',
         max_length=15,
         choices=RESULTADO_CHOICES,
         default='EXITOSO'
     )
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'log_autorizaciones'
         verbose_name = 'Log de Autorización'
         verbose_name_plural = 'Logs de Autorizaciones'
@@ -2406,7 +2406,7 @@ class AutorizacionSaldoNegativo(models.Model):
     regularizado = models.BooleanField(db_column='regularizado', default=False)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv
         db_table = 'autorizacion_saldo_negativo'
         verbose_name = 'Autorización de Saldo Negativo'
         verbose_name_plural = 'Autorizaciones de Saldo Negativo'
@@ -2426,16 +2426,16 @@ class AutorizacionSaldoNegativo(models.Model):
 
 class Grado(models.Model):
     '''Tabla grados - Catálogo de niveles educativos'''
-    id_grado = models.AutoField(db_column='id_grado', primary_key=True)
-    nombre_grado = models.CharField(db_column='nombre_grado', max_length=50, unique=True)
-    nivel = models.IntegerField(db_column='nivel')
-    orden_visualizacion = models.IntegerField(db_column='orden_visualizacion')
-    es_ultimo_grado = models.BooleanField(db_column='es_ultimo_grado', default=False)
-    activo = models.BooleanField(db_column='activo', default=True)
-    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
+    id_grado = models.AutoField(db_column='ID_Grado', primary_key=True)
+    nombre_grado = models.CharField(db_column='Nombre_Grado', max_length=50, unique=True)
+    nivel = models.IntegerField(db_column='Nivel')
+    orden_visualizacion = models.IntegerField(db_column='Orden_Visualizacion')
+    es_ultimo_grado = models.BooleanField(db_column='Es_Ultimo_Grado', default=False)
+    activo = models.BooleanField(db_column='Activo', default=True)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'grados'
         verbose_name = 'Grado'
         verbose_name_plural = 'Grados'
@@ -2452,7 +2452,7 @@ class Grado(models.Model):
         ).first()
         return siguiente    
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'grados'
         verbose_name = 'Grado'
         verbose_name_plural = 'Grados'
@@ -2479,28 +2479,28 @@ class HistorialGradoHijo(models.Model):
         ('REINGRESO', 'Reingreso'),
     ]
     
-    id_historial = models.AutoField(db_column='id_historial', primary_key=True)
+    id_historial = models.AutoField(db_column='ID_Historial', primary_key=True)
     id_hijo = models.ForeignKey(
         Hijo,
         on_delete=models.CASCADE,
-        db_column='id_hijo',
+        db_column='ID_Hijo',
         related_name='historial_grados'
     )
-    grado_anterior = models.CharField(db_column='grado_anterior', max_length=50, blank=True, null=True)
-    grado_nuevo = models.CharField(db_column='grado_nuevo', max_length=50)
-    anio_escolar = models.IntegerField(db_column='anio_escolar')
-    fecha_cambio = models.DateTimeField(db_column='fecha_cambio', auto_now_add=True)
+    grado_anterior = models.CharField(db_column='Grado_Anterior', max_length=50, blank=True, null=True)
+    grado_nuevo = models.CharField(db_column='Grado_Nuevo', max_length=50)
+    anio_escolar = models.IntegerField(db_column='Anio_Escolar')
+    fecha_cambio = models.DateTimeField(db_column='Fecha_Cambio', auto_now_add=True)
     motivo = models.CharField(
-        db_column='motivo',
+        db_column='Motivo',
         max_length=20,
         choices=MOTIVO_CHOICES,
         default='PROMOCION'
     )
-    usuario_registro = models.CharField(db_column='usuario_registro', max_length=100, blank=True, null=True)
-    observaciones = models.TextField(db_column='observaciones', blank=True, null=True)
+    usuario_registro = models.CharField(db_column='Usuario_Registro', max_length=100, blank=True, null=True)
+    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'historial_grados_hijos'
         verbose_name = 'Historial de Grado'
         verbose_name_plural = 'Historial de Grados'
@@ -2514,17 +2514,17 @@ class HistorialGradoHijo(models.Model):
 
 class IntentoLogin(models.Model):
     '''Tabla intentos_login - Rate limiting y seguridad'''
-    id_intento = models.AutoField(db_column='id_intento', primary_key=True)
-    usuario = models.CharField(db_column='usuario', max_length=100)
-    ip_address = models.CharField(db_column='ip_address', max_length=45)
-    ciudad = models.CharField(db_column='ciudad', max_length=100, blank=True, null=True)
-    pais = models.CharField(db_column='pais', max_length=100, blank=True, null=True)
-    fecha_intento = models.DateTimeField(db_column='fecha_intento')
-    exitoso = models.BooleanField(db_column='exitoso', default=False)
-    motivo_fallo = models.CharField(db_column='motivo_fallo', max_length=100, blank=True, null=True)
+    id_intento = models.AutoField(db_column='ID_Intento', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    ip_address = models.CharField(db_column='IP_Address', max_length=45)
+    ciudad = models.CharField(db_column='Ciudad', max_length=100, blank=True, null=True)
+    pais = models.CharField(db_column='Pais', max_length=100, blank=True, null=True)
+    fecha_intento = models.DateTimeField(db_column='Fecha_Intento')
+    exitoso = models.BooleanField(db_column='Exitoso', default=False)
+    motivo_fallo = models.CharField(db_column='Motivo_Fallo', max_length=100, blank=True, null=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'intentos_login'
         verbose_name = 'Intento de Login'
         verbose_name_plural = 'Intentos de Login'
@@ -2549,26 +2549,26 @@ class AuditoriaOperacion(models.Model):
         ('FALLIDO', 'Fallido'),
     ]
     
-    id_auditoria = models.AutoField(db_column='id_auditoria', primary_key=True)
-    usuario = models.CharField(db_column='usuario', max_length=100)
-    tipo_usuario = models.CharField(db_column='tipo_usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
-    id_usuario = models.IntegerField(db_column='id_usuario', blank=True, null=True)
-    operacion = models.CharField(db_column='operacion', max_length=100)
-    tabla_afectada = models.CharField(db_column='tabla_afectada', max_length=100, blank=True, null=True)
-    id_registro = models.IntegerField(db_column='id_registro', blank=True, null=True)
-    descripcion = models.TextField(db_column='descripcion', blank=True, null=True)
-    datos_anteriores = models.JSONField(db_column='datos_anteriores', blank=True, null=True)
-    datos_nuevos = models.JSONField(db_column='datos_nuevos', blank=True, null=True)
-    ip_address = models.CharField(db_column='ip_address', max_length=45, blank=True, null=True)
-    ciudad = models.CharField(db_column='ciudad', max_length=100, blank=True, null=True)
-    pais = models.CharField(db_column='pais', max_length=100, blank=True, null=True)
-    user_agent = models.TextField(db_column='user_agent', blank=True, null=True)
-    fecha_operacion = models.DateTimeField(db_column='fecha_operacion')
-    resultado = models.CharField(db_column='resultado', max_length=20, choices=RESULTADO_CHOICES)
-    mensaje_error = models.TextField(db_column='mensaje_error', blank=True, null=True)
+    id_auditoria = models.AutoField(db_column='ID_Auditoria', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    id_usuario = models.IntegerField(db_column='ID_Usuario', blank=True, null=True)
+    operacion = models.CharField(db_column='Operacion', max_length=100)
+    tabla_afectada = models.CharField(db_column='Tabla_Afectada', max_length=100, blank=True, null=True)
+    id_registro = models.IntegerField(db_column='ID_Registro', blank=True, null=True)
+    descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
+    datos_anteriores = models.JSONField(db_column='Datos_Anteriores', blank=True, null=True)
+    datos_nuevos = models.JSONField(db_column='Datos_Nuevos', blank=True, null=True)
+    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
+    ciudad = models.CharField(db_column='Ciudad', max_length=100, blank=True, null=True)
+    pais = models.CharField(db_column='Pais', max_length=100, blank=True, null=True)
+    user_agent = models.TextField(db_column='User_Agent', blank=True, null=True)
+    fecha_operacion = models.DateTimeField(db_column='Fecha_Operacion')
+    resultado = models.CharField(db_column='Resultado', max_length=20, choices=RESULTADO_CHOICES)
+    mensaje_error = models.TextField(db_column='Mensaje_Error', blank=True, null=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'auditoria_operaciones'
         verbose_name = 'Auditoría de Operación'
         verbose_name_plural = 'Auditoría de Operaciones'
@@ -2581,21 +2581,21 @@ class AuditoriaOperacion(models.Model):
 
 class TokenRecuperacion(models.Model):
     '''Tabla tokens_recuperacion - Tokens para reset de contraseña'''
-    id_token = models.AutoField(db_column='id_token', primary_key=True)
+    id_token = models.AutoField(db_column='ID_Token', primary_key=True)
     id_cliente = models.ForeignKey(
         Cliente,
         on_delete=models.CASCADE,
-        db_column='id_cliente'
+        db_column='ID_Cliente'
     )
-    token = models.CharField(db_column='token', max_length=64, unique=True)
-    fecha_creacion = models.DateTimeField(db_column='fecha_creacion')
-    fecha_expiracion = models.DateTimeField(db_column='fecha_expiracion')
-    usado = models.BooleanField(db_column='usado', default=False)
-    fecha_uso = models.DateTimeField(db_column='fecha_uso', blank=True, null=True)
-    ip_solicitud = models.CharField(db_column='ip_solicitud', max_length=45, blank=True, null=True)
+    token = models.CharField(db_column='Token', max_length=64, unique=True)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion')
+    fecha_expiracion = models.DateTimeField(db_column='Fecha_Expiracion')
+    usado = models.BooleanField(db_column='Usado', default=False)
+    fecha_uso = models.DateTimeField(db_column='Fecha_Uso', blank=True, null=True)
+    ip_solicitud = models.CharField(db_column='IP_Solicitud', max_length=45, blank=True, null=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'tokens_recuperacion'
         verbose_name = 'Token de Recuperación'
         verbose_name_plural = 'Tokens de Recuperación'
@@ -2612,18 +2612,18 @@ class BloqueoCuenta(models.Model):
         ('CLIENTE_WEB', 'Cliente Web'),
     ]
     
-    id_bloqueo = models.AutoField(db_column='id_bloqueo', primary_key=True)
-    usuario = models.CharField(db_column='usuario', max_length=100)
-    tipo_usuario = models.CharField(db_column='tipo_usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
-    motivo = models.CharField(db_column='motivo', max_length=255)
-    fecha_bloqueo = models.DateTimeField(db_column='fecha_bloqueo')
-    fecha_desbloqueo = models.DateTimeField(db_column='fecha_desbloqueo', blank=True, null=True)
-    bloqueado_por = models.CharField(db_column='bloqueado_por', max_length=100, blank=True, null=True)
-    ip_address = models.CharField(db_column='ip_address', max_length=45, blank=True, null=True)
-    activo = models.BooleanField(db_column='activo', default=True)
+    id_bloqueo = models.AutoField(db_column='ID_Bloqueo', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    motivo = models.CharField(db_column='Motivo', max_length=255)
+    fecha_bloqueo = models.DateTimeField(db_column='Fecha_Bloqueo')
+    fecha_desbloqueo = models.DateTimeField(db_column='Fecha_Desbloqueo', blank=True, null=True)
+    bloqueado_por = models.CharField(db_column='Bloqueado_Por', max_length=100, blank=True, null=True)
+    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'bloqueos_cuenta'
         verbose_name = 'Bloqueo de Cuenta'
         verbose_name_plural = 'Bloqueos de Cuentas'
@@ -2642,20 +2642,20 @@ class PatronAcceso(models.Model):
         ('ADMIN', 'Administrador'),
     ]
     
-    id_patron = models.AutoField(db_column='id_patron', primary_key=True)
-    usuario = models.CharField(db_column='usuario', max_length=100)
-    tipo_usuario = models.CharField(db_column='tipo_usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
-    ip_address = models.CharField(db_column='ip_address', max_length=45)
-    horario_inicio = models.TimeField(db_column='horario_inicio', blank=True, null=True)
-    horario_fin = models.TimeField(db_column='horario_fin', blank=True, null=True)
-    dias_semana = models.CharField(db_column='dias_semana', max_length=50, blank=True, null=True)  # JSON
-    primera_deteccion = models.DateTimeField(db_column='primera_deteccion')
-    ultima_deteccion = models.DateTimeField(db_column='ultima_deteccion')
-    frecuencia_accesos = models.IntegerField(db_column='frecuencia_accesos', default=1)
-    es_habitual = models.BooleanField(db_column='es_habitual', default=False)
+    id_patron = models.AutoField(db_column='ID_Patron', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    ip_address = models.CharField(db_column='IP_Address', max_length=45)
+    horario_inicio = models.TimeField(db_column='Horario_Inicio', blank=True, null=True)
+    horario_fin = models.TimeField(db_column='Horario_Fin', blank=True, null=True)
+    dias_semana = models.CharField(db_column='Dias_Semana', max_length=50, blank=True, null=True)  # JSON
+    primera_deteccion = models.DateTimeField(db_column='Primera_Deteccion')
+    ultima_deteccion = models.DateTimeField(db_column='Ultima_Deteccion')
+    frecuencia_accesos = models.IntegerField(db_column='Frecuencia_Accesos', default=1)
+    es_habitual = models.BooleanField(db_column='Es_Habitual', default=False)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'patrones_acceso'
         verbose_name = 'Patrón de Acceso'
         verbose_name_plural = 'Patrones de Acceso'
@@ -2680,17 +2680,17 @@ class AnomaliaDetectada(models.Model):
         ('ALTO', 'Alto'),
     ]
     
-    id_anomalia = models.AutoField(db_column='id_anomalia', primary_key=True)
-    usuario = models.CharField(db_column='usuario', max_length=100)
-    tipo_anomalia = models.CharField(db_column='tipo_anomalia', max_length=30, choices=TIPO_ANOMALIA_CHOICES)
-    ip_address = models.CharField(db_column='ip_address', max_length=45, blank=True, null=True)
-    fecha_deteccion = models.DateTimeField(db_column='fecha_deteccion')
-    descripcion = models.TextField(db_column='descripcion', blank=True, null=True)
-    nivel_riesgo = models.CharField(db_column='nivel_riesgo', max_length=10, choices=NIVEL_RIESGO_CHOICES, default='MEDIO')
-    notificado = models.BooleanField(db_column='notificado', default=False)
+    id_anomalia = models.AutoField(db_column='ID_Anomalia', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    tipo_anomalia = models.CharField(db_column='Tipo_Anomalia', max_length=30, choices=TIPO_ANOMALIA_CHOICES)
+    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
+    fecha_deteccion = models.DateTimeField(db_column='Fecha_Deteccion')
+    descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
+    nivel_riesgo = models.CharField(db_column='Nivel_Riesgo', max_length=10, choices=NIVEL_RIESGO_CHOICES, default='MEDIO')
+    notificado = models.BooleanField(db_column='Notificado', default=False)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'anomalias_detectadas'
         verbose_name = 'Anomalía Detectada'
         verbose_name_plural = 'Anomalías Detectadas'
@@ -2708,18 +2708,18 @@ class SesionActiva(models.Model):
         ('ADMIN', 'Administrador'),
     ]
     
-    id_sesion = models.AutoField(db_column='id_sesion', primary_key=True)
-    usuario = models.CharField(db_column='usuario', max_length=100)
-    tipo_usuario = models.CharField(db_column='tipo_usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
-    session_key = models.CharField(db_column='session_key', max_length=255, unique=True)
-    ip_address = models.CharField(db_column='ip_address', max_length=45, blank=True, null=True)
-    user_agent = models.TextField(db_column='user_agent', blank=True, null=True)
-    fecha_inicio = models.DateTimeField(db_column='fecha_inicio')
-    ultima_actividad = models.DateTimeField(db_column='ultima_actividad')
-    activa = models.BooleanField(db_column='activa', default=True)
+    id_sesion = models.AutoField(db_column='ID_Sesion', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    session_key = models.CharField(db_column='Session_Key', max_length=255, unique=True)
+    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
+    user_agent = models.TextField(db_column='User_Agent', blank=True, null=True)
+    fecha_inicio = models.DateTimeField(db_column='Fecha_Inicio')
+    ultima_actividad = models.DateTimeField(db_column='Ultima_Actividad')
+    activa = models.BooleanField(db_column='Activa', default=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'sesiones_activas'
         verbose_name = 'Sesión Activa'
         verbose_name_plural = 'Sesiones Activas'
@@ -2738,18 +2738,18 @@ class Autenticacion2Fa(models.Model):
         ('CLIENTE_WEB', 'Cliente Web'),
     ]
     
-    id_2fa = models.AutoField(db_column='id_2_fa', primary_key=True)
-    usuario = models.CharField(db_column='usuario', max_length=100)
-    tipo_usuario = models.CharField(db_column='tipo_usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
-    secret_key = models.CharField(db_column='secret_key', max_length=32, help_text='Clave secreta TOTP codificada en Base32')
-    backup_codes = models.TextField(db_column='backup_codes', blank=True, null=True, help_text='Códigos de respaldo JSON (array de strings hasheados)')
-    habilitado = models.BooleanField(db_column='habilitado', default=False, help_text='Si el usuario tiene 2FA activo')
-    fecha_activacion = models.DateTimeField(db_column='fecha_activacion', blank=True, null=True, help_text='Cuando se activó por primera vez')
-    ultima_verificacion = models.DateTimeField(db_column='ultima_verificacion', blank=True, null=True, help_text='Último uso exitoso del código')
-    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
+    id_2fa = models.AutoField(db_column='ID_2FA', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    secret_key = models.CharField(db_column='Secret_Key', max_length=32, help_text='Clave secreta TOTP codificada en Base32')
+    backup_codes = models.TextField(db_column='Backup_Codes', blank=True, null=True, help_text='Códigos de respaldo JSON (array de strings hasheados)')
+    habilitado = models.BooleanField(db_column='Habilitado', default=False, help_text='Si el usuario tiene 2FA activo')
+    fecha_activacion = models.DateTimeField(db_column='Fecha_Activacion', blank=True, null=True, help_text='Cuando se activó por primera vez')
+    ultima_verificacion = models.DateTimeField(db_column='Ultima_Verificacion', blank=True, null=True, help_text='Último uso exitoso del código')
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'autenticacion_2fa'
         verbose_name = 'Autenticación 2FA'
         verbose_name_plural = 'Autenticaciones 2FA'
@@ -2779,17 +2779,17 @@ class RestriccionHoraria(models.Model):
         ('DOMINGO', 'Domingo'),
     ]
     
-    id_restriccion = models.AutoField(db_column='id_restriccion', primary_key=True)
-    usuario = models.CharField(db_column='usuario', max_length=100, blank=True, null=True, help_text='Usuario específico (NULL = aplica a tipo_usuario)')
-    tipo_usuario = models.CharField(db_column='tipo_usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
-    dia_semana = models.CharField(db_column='dia_semana', max_length=20, choices=DIA_SEMANA_CHOICES)
-    hora_inicio = models.TimeField(db_column='hora_inicio', help_text='Hora de inicio permitida')
-    hora_fin = models.TimeField(db_column='hora_fin', help_text='Hora de fin permitida')
-    activo = models.BooleanField(db_column='activo', default=True, help_text='Si la restricción está activa')
-    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
+    id_restriccion = models.AutoField(db_column='ID_Restriccion', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100, blank=True, null=True, help_text='Usuario específico (NULL = aplica a tipo_usuario)')
+    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    dia_semana = models.CharField(db_column='Dia_Semana', max_length=20, choices=DIA_SEMANA_CHOICES)
+    hora_inicio = models.TimeField(db_column='Hora_Inicio', help_text='Hora de inicio permitida')
+    hora_fin = models.TimeField(db_column='Hora_Fin', help_text='Hora de fin permitida')
+    activo = models.BooleanField(db_column='Activo', default=True, help_text='Si la restricción está activa')
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'restricciones_horarias'
         verbose_name = 'Restricción Horaria'
         verbose_name_plural = 'Restricciones Horarias'
@@ -2813,19 +2813,19 @@ class Intento2Fa(models.Model):
         ('BACKUP', 'Código de Respaldo'),
     ]
     
-    id_intento = models.AutoField(db_column='id_intento', primary_key=True)
-    usuario = models.CharField(db_column='usuario', max_length=100)
-    tipo_usuario = models.CharField(db_column='tipo_usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
-    ip_address = models.CharField(db_column='ip_address', max_length=45, blank=True, null=True)
-    ciudad = models.CharField(db_column='ciudad', max_length=100, blank=True, null=True)
-    pais = models.CharField(db_column='pais', max_length=100, blank=True, null=True)
-    codigo_ingresado = models.CharField(db_column='codigo_ingresado', max_length=10, blank=True, null=True)
-    exitoso = models.BooleanField(db_column='exitoso', default=False)
-    tipo_codigo = models.CharField(db_column='tipo_codigo', max_length=10, choices=TIPO_CODIGO_CHOICES, blank=True, null=True)
-    fecha_intento = models.DateTimeField(db_column='fecha_intento', auto_now_add=True)
+    id_intento = models.AutoField(db_column='ID_Intento', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
+    ciudad = models.CharField(db_column='Ciudad', max_length=100, blank=True, null=True)
+    pais = models.CharField(db_column='Pais', max_length=100, blank=True, null=True)
+    codigo_ingresado = models.CharField(db_column='Codigo_Ingresado', max_length=10, blank=True, null=True)
+    exitoso = models.BooleanField(db_column='Exitoso', default=False)
+    tipo_codigo = models.CharField(db_column='Tipo_Codigo', max_length=10, choices=TIPO_CODIGO_CHOICES, blank=True, null=True)
+    fecha_intento = models.DateTimeField(db_column='Fecha_Intento', auto_now_add=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'intentos_2fa'
         verbose_name = 'Intento 2FA'
         verbose_name_plural = 'Intentos 2FA'
@@ -2839,16 +2839,16 @@ class Intento2Fa(models.Model):
 
 class RenovacionSesion(models.Model):
     '''Tabla renovaciones_sesion - Auditoría de renovaciones de tokens'''
-    id_renovacion = models.AutoField(db_column='id_renovacion', primary_key=True)
-    usuario = models.CharField(db_column='usuario', max_length=100)
-    session_key_anterior = models.CharField(db_column='session_key_anterior', max_length=255, blank=True, null=True)
-    session_key_nuevo = models.CharField(db_column='session_key_nuevo', max_length=255, blank=True, null=True)
-    ip_address = models.CharField(db_column='ip_address', max_length=45, blank=True, null=True)
-    user_agent = models.TextField(db_column='user_agent', blank=True, null=True)
-    fecha_renovacion = models.DateTimeField(db_column='fecha_renovacion', auto_now_add=True)
+    id_renovacion = models.AutoField(db_column='ID_Renovacion', primary_key=True)
+    usuario = models.CharField(db_column='Usuario', max_length=100)
+    session_key_anterior = models.CharField(db_column='Session_Key_Anterior', max_length=255, blank=True, null=True)
+    session_key_nuevo = models.CharField(db_column='Session_Key_Nuevo', max_length=255, blank=True, null=True)
+    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
+    user_agent = models.TextField(db_column='User_Agent', blank=True, null=True)
+    fecha_renovacion = models.DateTimeField(db_column='Fecha_Renovacion', auto_now_add=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'renovaciones_sesion'
         verbose_name = 'Renovación de Sesión'
         verbose_name_plural = 'Renovaciones de Sesión'
@@ -2871,32 +2871,32 @@ class Alergeno(models.Model):
         ('BAJO', 'Bajo'),
     ]
     
-    id_alergeno = models.AutoField(db_column='id_alergeno', primary_key=True)
-    nombre = models.CharField(db_column='nombre', max_length=100, unique=True)
-    descripcion = models.TextField(db_column='descripcion', blank=True, null=True)
+    id_alergeno = models.AutoField(db_column='ID_Alergeno', primary_key=True)
+    nombre = models.CharField(db_column='Nombre', max_length=100, unique=True)
+    descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
     palabras_clave = models.JSONField(
-        db_column='palabras_clave',
+        db_column='Palabras_Clave',
         help_text='Array de palabras clave para búsqueda (ej: ["maní", "peanut", "cacahuete"])'
     )
     nivel_severidad = models.CharField(
-        db_column='nivel_severidad',
+        db_column='Nivel_Severidad',
         max_length=10,
         choices=SEVERIDAD_CHOICES,
         default='MEDIO'
     )
     icono = models.CharField(
-        db_column='icono',
+        db_column='Icono',
         max_length=10,
         blank=True,
         null=True,
         help_text='Emoji representativo (ej: 🥜, 🥛, 🌾)'
     )
-    activo = models.BooleanField(db_column='activo', default=True)
-    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
-    usuario_creacion = models.CharField(db_column='usuario_creacion', max_length=100, blank=True, null=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    usuario_creacion = models.CharField(db_column='Usuario_Creacion', max_length=100, blank=True, null=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'alergenos'
         verbose_name = 'Alérgeno'
         verbose_name_plural = 'Alérgenos'
@@ -2909,30 +2909,30 @@ class Alergeno(models.Model):
 
 class ProductoAlergeno(models.Model):
     '''Tabla producto_alergenos - Relación entre productos y alérgenos'''
-    id_producto_alergeno = models.AutoField(db_column='id_producto_alergeno', primary_key=True)
+    id_producto_alergeno = models.AutoField(db_column='ID_Producto_Alergeno', primary_key=True)
     id_producto = models.ForeignKey(
         'Producto',
         on_delete=models.CASCADE,
-        db_column='id_producto',
+        db_column='ID_Producto',
         related_name='alergenos_producto'
     )
     id_alergeno = models.ForeignKey(
         Alergeno,
         on_delete=models.CASCADE,
-        db_column='id_alergeno',
+        db_column='ID_Alergeno',
         related_name='productos_con_alergeno'
     )
     contiene = models.BooleanField(
-        db_column='contiene',
+        db_column='Contiene',
         default=True,
         help_text='True: Contiene el alérgeno. False: Puede contener trazas'
     )
-    observaciones = models.TextField(db_column='observaciones', blank=True, null=True)
-    fecha_registro = models.DateTimeField(db_column='fecha_registro', auto_now_add=True)
-    usuario_registro = models.CharField(db_column='usuario_registro', max_length=100, blank=True, null=True)
+    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
+    fecha_registro = models.DateTimeField(db_column='Fecha_Registro', auto_now_add=True)
+    usuario_registro = models.CharField(db_column='Usuario_Registro', max_length=100, blank=True, null=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'producto_alergenos'
         verbose_name = 'Producto-Alérgeno'
         verbose_name_plural = 'Productos-Alérgenos'
@@ -2964,79 +2964,79 @@ class Promocion(models.Model):
         ('ESTUDIANTE_GRADO', 'Grado de Estudiante'),
     ]
     
-    id_promocion = models.AutoField(db_column='id_promocion', primary_key=True)
-    nombre = models.CharField(db_column='nombre', max_length=200)
-    descripcion = models.TextField(db_column='descripcion', blank=True, null=True)
+    id_promocion = models.AutoField(db_column='ID_Promocion', primary_key=True)
+    nombre = models.CharField(db_column='Nombre', max_length=200)
+    descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
     tipo_promocion = models.CharField(
-        db_column='tipo_promocion',
+        db_column='Tipo_Promocion',
         max_length=25,
         choices=TIPO_CHOICES
     )
     valor_descuento = models.DecimalField(
-        db_column='valor_descuento',
+        db_column='Valor_Descuento',
         max_digits=10,
         decimal_places=2,
         help_text='Porcentaje (10.00 = 10%) o monto fijo (5000 = Gs. 5000)'
     )
-    fecha_inicio = models.DateField(db_column='fecha_inicio')
-    fecha_fin = models.DateField(db_column='fecha_fin', blank=True, null=True)
-    hora_inicio = models.TimeField(db_column='hora_inicio', blank=True, null=True)
-    hora_fin = models.TimeField(db_column='hora_fin', blank=True, null=True)
+    fecha_inicio = models.DateField(db_column='Fecha_Inicio')
+    fecha_fin = models.DateField(db_column='Fecha_Fin', blank=True, null=True)
+    hora_inicio = models.TimeField(db_column='Hora_Inicio', blank=True, null=True)
+    hora_fin = models.TimeField(db_column='Hora_Fin', blank=True, null=True)
     dias_semana = models.JSONField(
-        db_column='dias_semana',
+        db_column='Dias_Semana',
         blank=True,
         null=True,
         help_text='Array de días [1=Lun, 2=Mar, 3=Mie, 4=Jue, 5=Vie, 6=Sab, 7=Dom]'
     )
     aplica_a = models.CharField(
-        db_column='aplica_a',
+        db_column='Aplica_A',
         max_length=20,
         choices=APLICA_CHOICES
     )
     min_cantidad = models.IntegerField(
-        db_column='min_cantidad',
+        db_column='Min_Cantidad',
         default=1,
         help_text='Cantidad mínima de productos para aplicar'
     )
     monto_minimo = models.DecimalField(
-        db_column='monto_minimo',
+        db_column='Monto_Minimo',
         max_digits=10,
         decimal_places=2,
         default=0,
         help_text='Monto mínimo de compra para aplicar'
     )
     max_usos_cliente = models.IntegerField(
-        db_column='max_usos_cliente',
+        db_column='Max_Usos_Cliente',
         blank=True,
         null=True,
         help_text='Máximo de usos por cliente/estudiante'
     )
     max_usos_total = models.IntegerField(
-        db_column='max_usos_total',
+        db_column='Max_Usos_Total',
         blank=True,
         null=True,
         help_text='Máximo de usos totales'
     )
-    usos_actuales = models.IntegerField(db_column='usos_actuales', default=0)
-    requiere_codigo = models.BooleanField(db_column='requiere_codigo', default=False)
+    usos_actuales = models.IntegerField(db_column='Usos_Actuales', default=0)
+    requiere_codigo = models.BooleanField(db_column='Requiere_Codigo', default=False)
     codigo_promocion = models.CharField(
-        db_column='codigo_promocion',
+        db_column='Codigo_Promocion',
         max_length=50,
         blank=True,
         null=True,
         unique=True
     )
     prioridad = models.IntegerField(
-        db_column='prioridad',
+        db_column='Prioridad',
         default=1,
         help_text='Orden de aplicación (1=Mayor prioridad)'
     )
-    activo = models.BooleanField(db_column='activo', default=True)
-    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
-    usuario_creacion = models.CharField(db_column='usuario_creacion', max_length=100, blank=True, null=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    usuario_creacion = models.CharField(db_column='Usuario_Creacion', max_length=100, blank=True, null=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'promociones'
         verbose_name = 'Promoción'
         verbose_name_plural = 'Promociones'
@@ -3048,22 +3048,22 @@ class Promocion(models.Model):
 
 class ProductoPromocion(models.Model):
     '''Tabla productos_promocion - Productos incluidos en promoción'''
-    id_producto_promocion = models.AutoField(db_column='id_producto_promocion', primary_key=True)
+    id_producto_promocion = models.AutoField(db_column='ID_Producto_Promocion', primary_key=True)
     id_promocion = models.ForeignKey(
         Promocion,
         on_delete=models.CASCADE,
-        db_column='id_promocion',
+        db_column='ID_Promocion',
         related_name='productos_promocion'
     )
     id_producto = models.ForeignKey(
         'Producto',
         on_delete=models.CASCADE,
-        db_column='id_producto',
+        db_column='ID_Producto',
         related_name='promociones_producto'
     )
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'productos_promocion'
         verbose_name = 'Producto en Promoción'
         verbose_name_plural = 'Productos en Promoción'
@@ -3075,22 +3075,22 @@ class ProductoPromocion(models.Model):
 
 class CategoriaPromocion(models.Model):
     '''Tabla categorias_promocion - Categorías incluidas en promoción'''
-    id_categoria_promocion = models.AutoField(db_column='id_categoria_promocion', primary_key=True)
+    id_categoria_promocion = models.AutoField(db_column='ID_Categoria_Promocion', primary_key=True)
     id_promocion = models.ForeignKey(
         Promocion,
         on_delete=models.CASCADE,
-        db_column='id_promocion',
+        db_column='ID_Promocion',
         related_name='categorias_promocion'
     )
     id_categoria = models.ForeignKey(
         Categoria,
         on_delete=models.CASCADE,
-        db_column='id_categoria',
+        db_column='ID_Categoria',
         related_name='promociones_categoria'
     )
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'categorias_promocion'
         verbose_name = 'Categoría en Promoción'
         verbose_name_plural = 'Categorías en Promoción'
@@ -3102,28 +3102,28 @@ class CategoriaPromocion(models.Model):
 
 class PromocionAplicada(models.Model):
     '''Tabla promociones_aplicadas - Registro de promociones aplicadas en ventas'''
-    id_aplicacion = models.AutoField(db_column='id_aplicacion', primary_key=True)
+    id_aplicacion = models.AutoField(db_column='ID_Aplicacion', primary_key=True)
 # id_venta = models.ForeignKey(  # COMENTADO: Modelo Venta no existe en gestion
         'Ventas',
         on_delete=models.CASCADE,
-        db_column='id_venta',
+        db_column='ID_Venta',
         related_name='promociones_aplicadas'
     )
     id_promocion = models.ForeignKey(
         Promocion,
         on_delete=models.PROTECT,
-        db_column='id_promocion',
+        db_column='ID_Promocion',
         related_name='aplicaciones'
     )
     monto_descontado = models.DecimalField(
-        db_column='monto_descontado',
+        db_column='Monto_Descontado',
         max_digits=10,
         decimal_places=2
     )
-    fecha_aplicacion = models.DateTimeField(db_column='fecha_aplicacion', auto_now_add=True)
+    fecha_aplicacion = models.DateTimeField(db_column='Fecha_Aplicacion', auto_now_add=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv  # True para tests, False para producción
         db_table = 'promociones_aplicadas'
         verbose_name = 'Promoción Aplicada'
         verbose_name_plural = 'Promociones Aplicadas'
@@ -3142,19 +3142,19 @@ class UsuarioPortal(models.Model):
     Usuario del portal web de padres
     Permite a los padres acceder al portal con email/contraseña
     """
-    id_usuario_portal = models.AutoField(db_column='id_usuario_portal', primary_key=True)
+    id_usuario_portal = models.AutoField(db_column='ID_Usuario_Portal', primary_key=True)
     cliente = models.OneToOneField(
         Cliente,
         on_delete=models.CASCADE,
-        db_column='id_cliente',
+        db_column='ID_Cliente',
         related_name='usuario_portal'
     )
-    email = models.EmailField(db_column='email', unique=True, max_length=255)
-    password_hash = models.CharField(db_column='password_hash', max_length=255)
-    email_verificado = models.BooleanField(db_column='email_verificado', default=False)
-    fecha_registro = models.DateTimeField(db_column='fecha_registro', auto_now_add=True)
-    ultimo_acceso = models.DateTimeField(db_column='ultimo_acceso', null=True, blank=True)
-    activo = models.BooleanField(db_column='activo', default=True)
+    email = models.EmailField(db_column='Email', unique=True, max_length=255)
+    password_hash = models.CharField(db_column='Password_Hash', max_length=255)
+    email_verificado = models.BooleanField(db_column='Email_Verificado', default=False)
+    fecha_registro = models.DateTimeField(db_column='Fecha_Registro', auto_now_add=True)
+    ultimo_acceso = models.DateTimeField(db_column='Ultimo_Acceso', null=True, blank=True)
+    activo = models.BooleanField(db_column='Activo', default=True)
     
     class Meta:
         managed = True
@@ -3175,19 +3175,19 @@ class TokenVerificacion(models.Model):
         ('password_reset', 'Recuperación de Contraseña'),
     ]
     
-    id_token = models.AutoField(db_column='id_token', primary_key=True)
+    id_token = models.AutoField(db_column='ID_Token', primary_key=True)
     usuario_portal = models.ForeignKey(
         UsuarioPortal,
         on_delete=models.CASCADE,
-        db_column='id_usuario_portal',
+        db_column='ID_Usuario_Portal',
         related_name='tokens'
     )
-    token = models.CharField(db_column='token', max_length=100, unique=True)
-    tipo = models.CharField(db_column='tipo', max_length=50, choices=TIPO_CHOICES)
-    expira_en = models.DateTimeField(db_column='expira_en')
-    usado = models.BooleanField(db_column='usado', default=False)
-    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
-    fecha_uso = models.DateTimeField(db_column='fecha_uso', null=True, blank=True)
+    token = models.CharField(db_column='Token', max_length=100, unique=True)
+    tipo = models.CharField(db_column='Tipo', max_length=50, choices=TIPO_CHOICES)
+    expira_en = models.DateTimeField(db_column='Expira_En')
+    usado = models.BooleanField(db_column='Usado', default=False)
+    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    fecha_uso = models.DateTimeField(db_column='Fecha_Uso', null=True, blank=True)
     
     class Meta:
         managed = True
@@ -3220,11 +3220,11 @@ class TransaccionOnline(models.Model):
         ('tigo_money', 'Tigo Money'),
     ]
     
-    id_transaccion = models.AutoField(db_column='id_transaccion', primary_key=True)
+    id_transaccion = models.AutoField(db_column='ID_Transaccion', primary_key=True)
     nro_tarjeta = models.ForeignKey(
         'Tarjeta',
         on_delete=models.SET_NULL,
-        db_column='nro_tarjeta',
+        db_column='Nro_Tarjeta',
         to_field='nro_tarjeta',
         related_name='transacciones_online',
         null=True,
@@ -3233,20 +3233,20 @@ class TransaccionOnline(models.Model):
     usuario_portal = models.ForeignKey(
         UsuarioPortal,
         on_delete=models.SET_NULL,
-        db_column='id_usuario_portal',
+        db_column='ID_Usuario_Portal',
         related_name='transacciones',
         null=True,
         blank=True
     )
-    monto = models.BigIntegerField(db_column='monto')
-    metodo_pago = models.CharField(db_column='metodo_pago', max_length=20, choices=METODO_PAGO_CHOICES)
-    estado = models.CharField(db_column='estado', max_length=20, choices=ESTADO_CHOICES, default='pendiente')
-    referencia_pago = models.CharField(db_column='referencia_pago', max_length=255, null=True, blank=True)
-    id_transaccion_externa = models.CharField(db_column='id_transaccion_externa', max_length=255, null=True, blank=True)
-    datos_extra = models.TextField(db_column='datos_extra', null=True, blank=True)
-    fecha_transaccion = models.DateTimeField(db_column='fecha_transaccion')
-    creado_en = models.DateTimeField(db_column='creado_en', auto_now_add=True)
-    actualizado_en = models.DateTimeField(db_column='actualizado_en', auto_now=True)
+    monto = models.BigIntegerField(db_column='Monto')
+    metodo_pago = models.CharField(db_column='Metodo_Pago', max_length=20, choices=METODO_PAGO_CHOICES)
+    estado = models.CharField(db_column='Estado', max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    referencia_pago = models.CharField(db_column='Referencia_Pago', max_length=255, null=True, blank=True)
+    id_transaccion_externa = models.CharField(db_column='ID_Transaccion_Externa', max_length=255, null=True, blank=True)
+    datos_extra = models.TextField(db_column='Datos_Extra', null=True, blank=True)
+    fecha_transaccion = models.DateTimeField(db_column='Fecha_Transaccion')
+    creado_en = models.DateTimeField(db_column='Creado_En', auto_now_add=True)
+    actualizado_en = models.DateTimeField(db_column='Actualizado_En', auto_now=True)
     
     class Meta:
         managed = True
@@ -3272,20 +3272,20 @@ class Notificacion(models.Model):
         ('info_general', 'Información General'),
     ]
     
-    id_notificacion = models.AutoField(db_column='id_notificacion', primary_key=True)
+    id_notificacion = models.AutoField(db_column='ID_Notificacion', primary_key=True)
     usuario_portal = models.ForeignKey(
         UsuarioPortal,
         on_delete=models.CASCADE,
-        db_column='id_usuario_portal',
+        db_column='ID_Usuario_Portal',
         related_name='notificaciones'
     )
-    tipo = models.CharField(db_column='tipo', max_length=50, choices=TIPO_CHOICES)
-    titulo = models.CharField(db_column='titulo', max_length=255)
-    mensaje = models.TextField(db_column='mensaje')
-    leida = models.BooleanField(db_column='leida', default=False)
-    fecha_envio = models.DateTimeField(db_column='fecha_envio', default=timezone.now)
-    fecha_lectura = models.DateTimeField(db_column='fecha_lectura', null=True, blank=True)
-    creado_en = models.DateTimeField(db_column='creado_en', auto_now_add=True)
+    tipo = models.CharField(db_column='Tipo', max_length=50, choices=TIPO_CHOICES)
+    titulo = models.CharField(db_column='Titulo', max_length=255)
+    mensaje = models.TextField(db_column='Mensaje')
+    leida = models.BooleanField(db_column='Leida', default=False)
+    fecha_envio = models.DateTimeField(db_column='Fecha_Envio', default=timezone.now)
+    fecha_lectura = models.DateTimeField(db_column='Fecha_Lectura', null=True, blank=True)
+    creado_en = models.DateTimeField(db_column='Creado_En', auto_now_add=True)
     
     class Meta:
         managed = True
@@ -3310,18 +3310,18 @@ class PreferenciaNotificacion(models.Model):
     """
     Preferencias de notificación de los usuarios del portal
     """
-    id_preferencia = models.AutoField(db_column='id_preferencia', primary_key=True)
+    id_preferencia = models.AutoField(db_column='ID_Preferencia', primary_key=True)
     usuario_portal = models.ForeignKey(
         UsuarioPortal,
         on_delete=models.CASCADE,
-        db_column='id_usuario_portal',
+        db_column='ID_Usuario_Portal',
         related_name='preferencias_notificacion'
     )
-    tipo_notificacion = models.CharField(db_column='tipo_notificacion', max_length=50)
-    email_activo = models.BooleanField(db_column='email_activo', default=True)
-    push_activo = models.BooleanField(db_column='push_activo', default=True)
-    creado_en = models.DateTimeField(db_column='creado_en', auto_now_add=True)
-    actualizado_en = models.DateTimeField(db_column='actualizado_en', auto_now=True)
+    tipo_notificacion = models.CharField(db_column='Tipo_Notificacion', max_length=50)
+    email_activo = models.BooleanField(db_column='Email_Activo', default=True)
+    push_activo = models.BooleanField(db_column='Push_Activo', default=True)
+    creado_en = models.DateTimeField(db_column='Creado_En', auto_now_add=True)
+    actualizado_en = models.DateTimeField(db_column='Actualizado_En', auto_now=True)
     
     class Meta:
         managed = True
@@ -3381,7 +3381,7 @@ class AutorizacionSaldoNegativo(models.Model):
     regularizado = models.BooleanField(db_column='regularizado', default=False)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv
         db_table = 'autorizacion_saldo_negativo'
         verbose_name = 'Autorización de Saldo Negativo'
         verbose_name_plural = 'Autorizaciones de Saldo Negativo'
@@ -3428,7 +3428,7 @@ class NotificacionSaldo(models.Model):
     fecha_envio = models.DateTimeField(db_column='fecha_envio', blank=True, null=True)
     
     class Meta:
-        managed = True
+        managed = 'test' not in sys.argv
         db_table = 'notificacion_saldo'
         verbose_name = 'Notificación de Saldo'
         verbose_name_plural = 'Notificaciones de Saldo'

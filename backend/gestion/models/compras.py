@@ -216,7 +216,7 @@ class ConciliacionPagos(ManagedModel):
     '''Tabla conciliacion_pagos - Conciliación de pagos con entidades'''
     id_conciliacion = models.BigAutoField(db_column='ID_Conciliacion', primary_key=True)
     id_pago_venta = models.OneToOneField(
-            'gestion.PagosVenta',  # CAMBIADO: referencia correcta a la app gestion
+            'pos.PagoVenta',  # ACTUALIZADO: referencia al modelo migrado en pos app
         on_delete=models.CASCADE,
         db_column='ID_Pago_Venta'
     )

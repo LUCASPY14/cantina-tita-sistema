@@ -187,7 +187,7 @@ class MovimientosStock(ManagedModel):
         db_column='ID_Empleado_Autoriza'
     )
     id_venta = models.ForeignKey(
-        'gestion.Ventas',  # CAMBIADO: referencia correcta a la app gestion
+        'pos.Venta',  # ACTUALIZADO: referencia al modelo migrado en pos app
         on_delete=models.SET_NULL,
         db_column='ID_Venta',
         blank=True,

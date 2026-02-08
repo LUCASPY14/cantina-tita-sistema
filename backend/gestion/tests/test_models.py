@@ -8,9 +8,10 @@ from decimal import Decimal
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 
+from pos.models import Venta as Ventas, PagoVenta as PagosVenta
 from gestion.models import (
-    Cliente, Ventas, Compras, Proveedor, 
-    PagosVenta, AplicacionPagosVentas,
+    Cliente, Compras, Proveedor, 
+    AplicacionPagosVentas,
     Empleado, TiposPago
 )
 

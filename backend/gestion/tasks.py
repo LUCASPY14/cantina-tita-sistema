@@ -314,7 +314,8 @@ def tarea_reporte_diario_gerencia():
     
     Se ejecuta diariamente a las 21:00
     """
-    from gestion.models import Venta, CargaSaldo, AutorizacionSaldoNegativo, Tarjeta
+    from pos.models import Venta
+    from gestion.models import CargasSaldo, AutorizacionSaldoNegativo, Tarjeta
     from django.db.models import Sum, Count
     
     logger.info("📧 Generando reporte diario para gerencia...")
