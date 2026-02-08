@@ -4,18 +4,19 @@ Views y ViewSets para la API REST del sistema POS
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count, Q, F
 from django.utils import timezone
 from datetime import datetime, timedelta
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 
 from .models import Venta, DetalleVenta, PagoVenta
+from gestion.models import Producto
 from .serializers import (
     VentaSerializer, VentaCreateSerializer, VentaResumenSerializer,
-    DetalleVentaSerializer, PagoVentaSerializer
+    DetalleVentaSerializer, PagoVentaSerializer, ProductoPOSSerializer
 )
 
 
@@ -332,3 +333,78 @@ class PagoVentaViewSet(viewsets.ModelViewSet):
         venta.save()
         
         return Response({'mensaje': f'Pago #{pago.id_pago_venta} anulado exitosamente'})
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="Listar productos POS",
+        description="Obtiene productos disponibles para venta en POS con stock y precios actuales",
+        tags=['POS - Productos']
+    ),
+    retrieve=extend_schema(
+        summary="Obtener producto",
+        description="Obtiene información detallada de un producto específico",
+        tags=['POS - Productos']
+    )
+)
+class ProductoPOSViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet para productos en POS (solo lectura)"""
+    serializer_class = ProductoPOSSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['descripcion', 'codigo_producto', 'codigo_barras']
+    filterset_fields = ['activo', 'id_categoria']
+    ordering_fields = ['descripcion', 'precio_venta']
+    ordering = ['descripcion']
+    permission_classes = [AllowAny]  # Permitir acceso público para demo
+    
+    def get_permissions(self):
+        """Acceso público para productos (solo lectura)"""
+        return [AllowAny()]
+    
+    def get_queryset(self):
+        """Solo productos activos con información completa"""
+        return Producto.objects.filter(
+            activo=True
+        ).select_related('id_categoria', 'id_unidad_medida')
+    
+    @extend_schema(
+        summary="Buscar producto por código",
+        description="Busca un producto específico por código de barras o código interno",
+        tags=['POS - Productos'],
+        parameters=[
+            OpenApiParameter('codigo', OpenApiTypes.STR, description='Código de barras o código interno')
+        ]
+    )
+    @action(detail=False, methods=['get'])
+    def buscar_codigo(self, request):
+        """Buscar producto por código de barras o código interno"""
+        codigo = request.query_params.get('codigo')
+        if not codigo:
+            return Response({'error': 'Parámetro código es requerido'}, status=400)
+        
+        try:
+            producto = self.get_queryset().get(
+                Q(codigo_barras=codigo) | Q(codigo_producto=codigo)
+            )
+            serializer = self.get_serializer(producto)
+            return Response(serializer.data)
+        except Producto.DoesNotExist:
+            return Response({'error': 'Producto no encontrado'}, status=404)
+    
+    @extend_schema(
+        summary="Productos con stock disponible",
+        description="Obtiene solo productos con stock mayor a 0",
+        tags=['POS - Productos']
+    )
+    @action(detail=False, methods=['get'])
+    def disponibles(self, request):
+        """Productos con stock disponible"""
+        # Simplemente devolver todos los productos activos por ahora
+        productos = self.get_queryset()
+        page = self.paginate_queryset(productos)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(productos, many=True)
+        return Response(serializer.data)

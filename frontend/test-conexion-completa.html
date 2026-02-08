@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Conexión Backend-Frontend</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-6">
+                🔗 Test Conexión Backend-Frontend
+            </h1>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Backend Status -->
+                <div class="border rounded-lg p-4">
+                    <h2 class="text-xl font-semibold mb-3">🗄️ Backend Django</h2>
+                    <div id="backend-status" class="mb-3">
+                        <span class="text-yellow-600">⏳ Verificando...</span>
+                    </div>
+                    <button onclick="testBackend()" 
+                            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                        Probar Backend
+                    </button>
+                </div>
+
+                <!-- API Status -->
+                <div class="border rounded-lg p-4">
+                    <h2 class="text-xl font-semibold mb-3">🔌 API POS</h2>
+                    <div id="api-status" class="mb-3">
+                        <span class="text-yellow-600">⏳ Verificando...</span>
+                    </div>
+                    <button onclick="testAPI()" 
+                            class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+                        Probar API
+                    </button>
+                </div>
+            </div>
+
+            <!-- Resultados -->
+            <div class="mt-6">
+                <h3 class="text-lg font-semibold mb-3">📊 Resultados de las Pruebas</h3>
+                <div id="test-results" class="bg-gray-50 rounded p-4 min-h-32 overflow-auto">
+                    <p class="text-gray-500">Los resultados de las pruebas aparecerán aquí...</p>
+                </div>
+            </div>
+
+            <!-- Botones de Navegación -->
+            <div class="mt-6 flex gap-4">
+                <a href="/pos-completo.html" 
+                   class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg">
+                    🎯 Ir al Sistema POS
+                </a>
+                <a href="http://localhost:8000/admin/" 
+                   target="_blank"
+                   class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg">
+                    ⚙️ Admin Django
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let testResults = [];
+        
+        function addResult(test, status, message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            testResults.push({ timestamp, test, status, message, data });
+            updateResults();
+        }
+        
+        function updateResults() {
+            const container = document.getElementById('test-results');
+            container.innerHTML = testResults.map(result => `
+                <div class="mb-2 p-2 rounded ${result.status === 'success' ? 'bg-green-100' : result.status === 'error' ? 'bg-red-100' : 'bg-yellow-100'}">
+                    <span class="font-mono text-sm text-gray-600">[${result.timestamp}]</span>
+                    <span class="font-semibold">${result.test}:</span>
+                    <span class="${result.status === 'success' ? 'text-green-700' : result.status === 'error' ? 'text-red-700' : 'text-yellow-700'}">
+                        ${result.message}
+                    </span>
+                    ${result.data ? `<pre class="text-xs mt-1 text-gray-600">${JSON.stringify(result.data, null, 2).substring(0, 200)}...</pre>` : ''}
+                </div>
+            `).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        async function testBackend() {
+            const statusEl = document.getElementById('backend-status');
+            statusEl.innerHTML = '<span class="text-yellow-600">⏳ Probando...</span>';
+            
+            try {
+                const response = await fetch('http://localhost:8000/', {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                if (response.ok) {
+                    statusEl.innerHTML = '<span class="text-green-600">✅ Backend OK</span>';
+                    addResult('Backend Django', 'success', `Status ${response.status} - Backend funcionando correctamente`);
+                } else {
+                    statusEl.innerHTML = '<span class="text-red-600">❌ Backend Error</span>';
+                    addResult('Backend Django', 'error', `Status ${response.status} - Error en backend`);
+                }
+            } catch (error) {
+                statusEl.innerHTML = '<span class="text-red-600">❌ Backend No Disponible</span>';
+                addResult('Backend Django', 'error', `Error de conexión: ${error.message}`);
+            }
+        }
+        
+        async function testAPI() {
+            const statusEl = document.getElementById('api-status');
+            statusEl.innerHTML = '<span class="text-yellow-600">⏳ Probando...</span>';
+            
+            try {
+                const response = await fetch('/api/pos/productos/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    statusEl.innerHTML = '<span class="text-green-600">✅ API OK</span>';
+                    addResult('API POS', 'success', `${data.length || data.count || 0} productos encontrados`, data);
+                } else {
+                    statusEl.innerHTML = '<span class="text-red-600">❌ API Error</span>';
+                    addResult('API POS', 'error', `Status ${response.status} - Error en API`);
+                }
+            } catch (error) {
+                statusEl.innerHTML = '<span class="text-red-600">❌ API No Disponible</span>';
+                addResult('API POS', 'error', `Error de conexión: ${error.message}`);
+            }
+        }
+        
+        // Ejecutar pruebas automáticamente al cargar
+        window.addEventListener('DOMContentLoaded', function() {
+            addResult('Sistema', 'info', 'Iniciando pruebas de conexión...');
+            setTimeout(() => {
+                testBackend();
+                setTimeout(() => testAPI(), 1000);
+            }, 500);
+        });
+    </script>
+</body>
+</html>

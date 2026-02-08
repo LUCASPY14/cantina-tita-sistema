@@ -14,6 +14,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'src/main.ts'),
         pos: resolve(__dirname, 'src/pos.ts'),
+        'pos-complete': resolve(__dirname, 'src/pos-complete.ts'),
         portal: resolve(__dirname, 'src/portal.ts'),
         admin: resolve(__dirname, 'src/admin.ts'),
         // CSS
@@ -42,8 +43,8 @@ export default defineConfig({
   
   // Servidor de desarrollo
   server: {
-    port: 3000,
-    host: '0.0.0.0',
+    port: 5173,
+    host: '0.0.0.0', 
     cors: true,
     // Proxy para API Django
     proxy: {

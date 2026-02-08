@@ -1,6 +1,6 @@
 // Cliente API simplificado para evitar errores de tipos
 export class APIClient {
-  private baseURL = '/api'
+  private baseURL = import.meta.env.DEV ? '/api' : 'http://localhost:8000/api'
   private token: string | null = null
   
   constructor() {

@@ -1,13 +1,22 @@
 {
   "scripts": {
-    "dev": "python dev_server.py",
-    "dev:backend": "cd backend && python manage.py runserver",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" --names \"BACKEND,FRONTEND\" --prefix-colors \"green,blue\"",
+    "dev:backend": "cd backend && ..\\.venv\\Scripts\\activate && python manage.py runserver 8000",
     "dev:frontend": "cd frontend && npm run dev",
+    "dev:only-backend": "cd backend && ..\\.venv\\Scripts\\activate && python manage.py runserver 8000",
+    "dev:only-frontend": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build",
+    "build:watch": "cd frontend && npm run build:watch",
     "install": "cd frontend && npm install",
-    "setup": "npm run install && cd backend && pip install -r requirements.txt",
+    "install:frontend": "cd frontend && npm install",
+    "install:backend": "cd backend && pip install -r requirements.txt",
+    "setup": "npm run install:frontend && npm run install:backend",
     "typecheck": "cd frontend && npm run typecheck",
-    "test": "cd backend && python manage.py test"
+    "test": "cd backend && python manage.py test",
+    "test:frontend": "cd frontend && npm run test",
+    "clean": "cd frontend && npm run clean",
+    "lint": "cd frontend && npm run lint",
+    "check": "cd backend && ..\\.venv\\Scripts\\activate && python manage.py check"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.1",

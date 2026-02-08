@@ -1,4 +1,4 @@
-// Tipos de API simplificados
+// Tipos de API completos para Sistema POS
 export interface Usuario {
   id: number
   username: string
@@ -17,28 +17,87 @@ export interface Cliente {
 }
 
 export interface Producto {
-  id: number
-  nombre: string
-  precio: number
-  stock_actual: number
-  categoria?: string
+  id_producto: number
+  codigo_producto: string
+  codigo_barras?: string
+  descripcion: string
+  precio_venta: number
+  precio_display: string
+  stock: number
+  stock_minimo: number
+  stock_status: 'sin_stock' | 'stock_bajo' | 'disponible'
+  id_categoria: number
+  categoria_nombre: string
+  unidad_medida: string
   activo: boolean
+  fecha_vencimiento?: string
+  imagen?: string
 }
 
-export interface Venta {
-  id: number
-  numero: string
-  cliente?: Cliente
-  items: VentaItem[]
-  total: number
-  fecha: string
-}
-
-export interface VentaItem {
+export interface CarritoItem {
   producto: Producto
   cantidad: number
   precio_unitario: number
   subtotal: number
+}
+
+export interface VentaItem {
+  id_detalle?: number
+  id_producto: number
+  producto_nombre?: string
+  producto_codigo?: string
+  cantidad: number
+  precio_unitario: number
+  subtotal_total: number
+}
+
+export interface Venta {
+  id_venta: number
+  nro_factura_venta?: number
+  id_cliente: number
+  cliente_nombre?: string
+  id_empleado_cajero: number
+  cajero_nombre?: string
+  fecha: string
+  monto_total: number
+  saldo_pendiente?: number
+  estado_pago: 'PENDIENTE' | 'PARCIAL' | 'PAGADA'
+  estado: 'PROCESADO' | 'ANULADO'
+  tipo_venta: 'CONTADO' | 'CREDITO'
+  detalles?: VentaItem[]
+  total_pagado?: number
+  porcentaje_pagado?: number
+}
+
+export interface PagoVenta {
+  id_pago_venta: number
+  id_venta: number
+  id_medio_pago: number
+  medio_pago_nombre?: string
+  monto_aplicado: number
+  referencia_transaccion?: string
+  fecha_pago: string
+  estado: string
+}
+
+export interface Categoria {
+  id_categoria: number
+  descripcion: string
+  activo: boolean
+}
+
+export interface MedioPago {
+  id_medio_pago: number
+  nombre_medio_pago: string
+  requiere_referencia: boolean
+  activo: boolean
+}
+
+export interface Empleado {
+  id_empleado: number
+  nombre_completo: string
+  cargo?: string
+  activo: boolean
 }
 
 export interface Almuerzo {

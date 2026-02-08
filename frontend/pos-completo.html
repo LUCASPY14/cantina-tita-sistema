@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema POS Completo - Cantina Tita</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Estilos específicos del POS */
+        .pos-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .pos-card {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .btn-pos {
+            @apply px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform;
+        }
+        
+        .btn-pos:hover {
+            transform: translateY(-1px);
+        }
+        
+        .producto-card {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .producto-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .carrito-item {
+            animation: slideInRight 0.3s ease-out;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .loading-spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .keyboard-shortcuts {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .shortcut-key {
+            @apply inline-block px-2 py-1 text-xs bg-gray-200 rounded-md mr-1;
+        }
+    </style>
+</head>
+<body class="pos-container">
+    <div class="container mx-auto px-4 py-6" x-data="posSistema()" x-init="init()">
+        
+        <!-- Header del POS -->
+        <div class="pos-card rounded-2xl p-6 mb-6 shadow-2xl">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 flex items-center">
+                        <i class="fas fa-cash-register mr-3 text-blue-600"></i>
+                        Sistema POS - Cantina Tita
+                    </h1>
+                    <p class="text-gray-600 mt-1">Punto de Venta Integrado</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-2xl font-bold text-green-600" x-text="'Gs. ' + totalCarrito.toLocaleString()"></div>
+                    <div class="text-sm text-gray-500">Total Carrito</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de estadísticas -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="pos-card rounded-xl p-6 shadow-lg">
+                <div class="flex items-center">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-700">Ventas Hoy</h3>
+                        <p class="text-3xl font-bold text-green-600" x-text="estadisticas.ventasHoy"></p>
+                    </div>
+                    <i class="fas fa-chart-line text-3xl text-green-500"></i>
+                </div>
+            </div>
+            
+            <div class="pos-card rounded-xl p-6 shadow-lg">
+                <div class="flex items-center">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-700">Recaudado Hoy</h3>
+                        <p class="text-xl font-bold text-blue-600" x-text="'Gs. ' + estadisticas.montoHoy.toLocaleString()"></p>
+                    </div>
+                    <i class="fas fa-money-bill-wave text-3xl text-blue-500"></i>
+                </div>
+            </div>
+            
+            <div class="pos-card rounded-xl p-6 shadow-lg">
+                <div class="flex items-center">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-700">Items en Carrito</h3>
+                        <p class="text-3xl font-bold text-purple-600" x-text="cantidadItems"></p>
+                    </div>
+                    <i class="fas fa-shopping-cart text-3xl text-purple-500"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenido principal del POS -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Columna izquierda: Productos -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- Barra de búsqueda -->
+                <div class="pos-card rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center gap-4">
+                        <div class="flex-1 relative">
+                            <input 
+                                type="text" 
+                                id="product-search"
+                                x-model="busqueda"
+                                @keyup.enter="buscarProductos(busqueda)"
+                                placeholder="Buscar producto por nombre, código o código de barras... (F2)"
+                                class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
+                                autocomplete="off">
+                            <span class="absolute left-4 top-1/2 transform -translate-y-1/2">
+                                <i class="fas fa-search text-gray-400 text-xl"></i>
+                            </span>
+                        </div>
+                        <button 
+                            @click="buscarProductos(busqueda)"
+                            class="btn-pos bg-blue-600 text-white hover:bg-blue-700">
+                            <i class="fas fa-search mr-2"></i>Buscar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Grid de productos -->
+                <div class="pos-card rounded-xl p-6 shadow-lg">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-box-open mr-2"></i>Productos Disponibles
+                    </h2>
+                    
+                    <!-- Loader -->
+                    <div x-show="loading" class="text-center py-12">
+                        <div class="loading-spinner mx-auto mb-4"></div>
+                        <p class="text-gray-600">Cargando productos...</p>
+                    </div>
+                    
+                    <!-- Error -->
+                    <div x-show="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        <span x-text="error"></span>
+                    </div>
+                    
+                    <!-- Lista de productos -->
+                    <div x-show="!loading && productos.length === 0 && !busqueda" 
+                         class="text-center py-12 text-gray-500">
+                        <i class="fas fa-box text-6xl mb-4"></i>
+                        <p>No hay productos disponibles</p>
+                    </div>
+                    
+                    <div x-show="!loading && productos.length === 0 && busqueda" 
+                         class="text-center py-12 text-gray-500">
+                        <i class="fas fa-search text-6xl mb-4"></i>
+                        <p>No se encontraron productos</p>
+                        <button @click="busqueda = ''; buscarProductos('')" 
+                                class="mt-4 btn-pos bg-gray-500 text-white hover:bg-gray-600">
+                            Ver todos los productos
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" x-show="!loading && productos.length > 0">
+                        <template x-for="producto in productos" :key="producto.id_producto">
+                            <div class="producto-card pos-card rounded-lg p-4 shadow-md border"
+                                 @click="agregarProducto(producto)">
+                                
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="flex-1">
+                                        <h3 class="font-semibold text-gray-800" x-text="producto.descripcion"></h3>
+                                        <p class="text-sm text-gray-600" x-text="producto.codigo_producto"></p>
+                                        <p class="text-sm text-gray-500" x-text="producto.categoria_nombre"></p>
+                                    </div>
+                                    <div class="flex flex-col items-end">
+                                        <span class="text-lg font-bold text-green-600" x-text="producto.precio_display"></span>
+                                        <div class="flex items-center mt-1">
+                                            <span class="text-xs px-2 py-1 rounded-full"
+                                                  :class="{
+                                                      'bg-red-100 text-red-800': producto.stock_status === 'sin_stock',
+                                                      'bg-yellow-100 text-yellow-800': producto.stock_status === 'stock_bajo',
+                                                      'bg-green-100 text-green-800': producto.stock_status === 'disponible'
+                                                  }">
+                                                Stock: <span x-text="producto.stock"></span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button class="w-full btn-pos bg-blue-600 text-white hover:bg-blue-700"
+                                        :disabled="producto.stock <= 0">
+                                    <i class="fas fa-plus mr-2"></i>
+                                    <span x-show="producto.stock > 0">Agregar al Carrito</span>
+                                    <span x-show="producto.stock <= 0">Sin Stock</span>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna derecha: Carrito -->
+            <div class="lg:col-span-1 space-y-6">
+                
+                <!-- Carrito de compras -->
+                <div class="pos-card rounded-xl p-6 shadow-lg sticky top-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800">
+                            <i class="fas fa-shopping-cart mr-2"></i>Carrito
+                        </h2>
+                        <button @click="nuevaVenta()" 
+                                x-show="!carritoVacio"
+                                class="text-red-600 hover:text-red-800 text-sm">
+                            <i class="fas fa-trash mr-1"></i>Limpiar
+                        </button>
+                    </div>
+                    
+                    <!-- Carrito vacío -->
+                    <div x-show="carritoVacio" class="text-center py-12 text-gray-500">
+                        <i class="fas fa-shopping-cart text-6xl mb-4 opacity-50"></i>
+                        <p>Carrito vacío</p>
+                        <p class="text-sm mt-2">Agregue productos para empezar</p>
+                    </div>
+                    
+                    <!-- Items del carrito -->
+                    <div x-show="!carritoVacio" class="max-h-96 overflow-y-auto space-y-3">
+                        <template x-for="(item, index) in carrito" :key="index">
+                            <div class="carrito-item bg-gray-50 rounded-lg p-3 border">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1">
+                                        <h4 class="font-semibold text-sm" x-text="item.producto.descripcion"></h4>
+                                        <p class="text-xs text-gray-600" x-text="'Gs. ' + item.precio_unitario.toLocaleString() + ' c/u'"></p>
+                                    </div>
+                                    <button @click="removerProducto(index)" 
+                                            class="text-red-600 hover:text-red-800 ml-2">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                
+                                <div class="flex items-center justify-between mt-2">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-sm">Cant:</span>
+                                        <input type="number" 
+                                               x-model.number="item.cantidad"
+                                               @change="sistema?.actualizarCantidadItem(index, parseInt($event.target.value))"
+                                               min="1" 
+                                               :max="item.producto.stock"
+                                               class="w-16 px-2 py-1 border rounded text-center text-sm">
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="font-bold text-green-600" x-text="'Gs. ' + item.subtotal.toLocaleString()"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <!-- Total y botones -->
+                    <div x-show="!carritoVacio" class="mt-6 pt-4 border-t">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-lg font-semibold">TOTAL:</span>
+                            <span class="text-2xl font-bold text-green-600" x-text="'Gs. ' + totalCarrito.toLocaleString()"></span>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <button @click="procesarVenta()" 
+                                    :disabled="loading"
+                                    class="w-full btn-pos bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span x-show="!loading">
+                                    <i class="fas fa-check-circle mr-2"></i>Procesar Venta (F12)
+                                </span>
+                                <span x-show="loading" class="flex items-center justify-center">
+                                    <div class="loading-spinner mr-2"></div>Procesando...
+                                </span>
+                            </button>
+                            
+                            <button @click="nuevaVenta()" 
+                                    class="w-full btn-pos bg-red-600 text-white hover:bg-red-700">
+                                <i class="fas fa-times-circle mr-2"></i>Cancelar (ESC)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ataljos de teclado (info) -->
+        <div class="keyboard-shortcuts">
+            <div class="pos-card rounded-lg p-3 shadow-lg text-xs">
+                <h4 class="font-semibold mb-2">Atajos de Teclado:</h4>
+                <div class="space-y-1">
+                    <div><span class="shortcut-key">F1</span> Nueva Venta</div>
+                    <div><span class="shortcut-key">F2</span> Buscar Producto</div>
+                    <div><span class="shortcut-key">F12</span> Procesar Venta</div>
+                    <div><span class="shortcut-key">ESC</span> Cancelar</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de confirmación (opcional - se puede agregar más adelante) -->
+        <div x-show="false" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="pos-card rounded-2xl p-8 max-w-md mx-4">
+                <h3 class="text-xl font-bold mb-4">Confirmar Venta</h3>
+                <p class="text-gray-600 mb-6">¿Procesar venta por <span class="font-bold text-green-600">Gs. 15,000</span>?</p>
+                <div class="flex space-x-4">
+                    <button class="flex-1 btn-pos bg-green-600 text-white hover:bg-green-700">Confirmar</button>
+                    <button class="flex-1 btn-pos bg-gray-500 text-white hover:bg-gray-600">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script type="module">
+        // Importar y configurar el sistema POS
+        import { crearComponentePOS } from './src/pos-complete.ts'
+        
+        // Registrar el componente global para Alpine.js
+        window.posSistema = crearComponentePOS()
+        
+        // Evento cuando el DOM está listo
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Sistema POS Completo cargado')
+            
+            // Configurar eventos globales
+            window.addEventListener('venta:procesada', function(e) {
+                // Mostrar notificación de éxito
+                alert('✅ Venta procesada exitosamente!\n\nID: ' + e.detail.id_venta)
+            })
+
+            window.addEventListener('error', function(e) {
+                // Mostrar notificación de error
+                console.error('Error POS:', e.detail)
+            })
+        })
+    </script>
+</body>
+</html>
