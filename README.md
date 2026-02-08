@@ -4,14 +4,15 @@
 [![Django](https://img.shields.io/badge/Django-5.2.8-green.svg)](https://www.djangoproject.com/)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0-orange.svg)](https://www.mysql.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
+[![Alpine.js](https://img.shields.io/badge/Alpine.js-3.13-8BC34A.svg)](https://alpinejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC.svg)](https://tailwindcss.com/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
 [![Tests](https://img.shields.io/badge/Tests-Ready-success.svg)](https://github.com/tu-usuario/cantina/actions)
-[![Status](https://img.shields.io/badge/Status-Production_Ready-brightgreen.svg)](MIGRACION_MYSQL_COMPLETADA.md)
+[![Status](https://img.shields.io/badge/Status-Production_Ready-brightgreen.svg)](SISTEMA_POS_COMPLETADO.md)
 
-> **🎉 ACTUALIZACIÓN FEBRERO 2026**: Sistema completamente migrado a MySQL 8.0 y listo para producción. Ver [MIGRACIÓN COMPLETADA](MIGRACION_MYSQL_COMPLETADA.md) para detalles.
+> **🚀 ACTUALIZACIÓN FEBRERO 2026**: Sistema POS completamente integrado y funcional. MySQL 8.0, Django API REST, y frontend TypeScript/Alpine.js en producción. Ver [SISTEMA POS COMPLETADO](SISTEMA_POS_COMPLETADO.md) para detalles.
 
-Sistema completo de gestión para cantina escolar con facturación electrónica SIFEN, portal de padres, POS avanzado y más. Desarrollado con Django 5.2, MySQL 8.0, TypeScript y Tailwind CSS.
+Sistema completo de gestión para cantina escolar con **Sistema POS Avanzado**, facturación electrónica SIFEN, portal de padres, y más. Desarrollado con Django 5.2, MySQL 8.0, TypeScript, Alpine.js y Tailwind CSS.
 
 ---
 
@@ -27,6 +28,40 @@ Sistema completo de gestión para cantina escolar con facturación electrónica 
 - [Documentación](#-documentación)
 - [Contribuir](#-contribuir)
 - [Licencia](#-licencia)
+
+---
+
+## 🎯 Sistema POS Integrado
+
+**¡NUEVO!** Sistema de Punto de Venta completamente funcional con integración tiempo real:
+
+### 🌟 Características Destacadas
+- **⚡ Interfaz Reactiva**: TypeScript + Alpine.js con actualizaciones en tiempo real  
+- **🔍 Búsqueda Inteligente**: Por código de barras, nombre, o categoría
+- **🛒 Carrito Dinámico**: Agregar/quitar productos con cálculos automáticos
+- **📊 Dashboard**: Estadísticas de ventas y stock en vivo
+- **⌨️ Shortcuts**: Teclas F1-F12 para operaciones rápidas
+- **📱 Responsive**: Funciona en desktop, tablet y móvil
+
+### 🚀 Inicio Rápido POS
+```bash
+# Iniciar sistema completo (Windows)
+.\iniciar_desarrollo.ps1
+
+# Iniciar sistema completo (Linux/Mac)  
+chmod +x iniciar_desarrollo.sh && ./iniciar_desarrollo.sh
+
+# Acceder al POS
+# 🌐 http://localhost:5173/pos-completo.html
+```
+
+### 🔗 URLs del Sistema
+| Servicio | URL | Descripción |
+|----------|-----|-------------|
+| **🎯 POS Sistema** | http://localhost:5173/pos-completo.html | **Sistema Principal** |
+| **🧪 Test Conexión** | http://localhost:5173/test-conexion-completa.html | Verificar APIs |
+| **🗄️ Backend** | http://localhost:8000 | Django Admin |
+| **🔌 API REST** | http://localhost:8000/api/pos/ | Endpoints JSON |
 
 ---
 
