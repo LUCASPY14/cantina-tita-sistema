@@ -12,6 +12,8 @@
 {% block header_subtitle %}Sistema POS{% endblock %}
 
 {% block extra_styles %}
+<!-- CSS mejorado para POS -->
+<link rel="stylesheet" href="{% static 'css/pos-enhanced.css' %}">
 <style>
     /* Estilos específicos para POS */
     .pos-mode {
@@ -51,60 +53,160 @@
     /* Grid de productos optimizado */
     .product-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 1rem;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 1.25rem;
+        padding: 0.5rem;
     }
     
-    @media (min-width: 640px) {
+    @media (min-width: 480px) {
         .product-grid {
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1.5rem;
+        }
+    }
+    
+    @media (min-width: 768px) {
+        .product-grid {
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         }
     }
     
     @media (min-width: 1024px) {
         .product-grid {
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
         }
     }
     
     /* Cards de productos */
     .product-card {
         @apply bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 
-               transform transition-all duration-200
-               hover:scale-105 hover:shadow-2xl
-               active:scale-95
-               cursor-pointer;
-        min-height: 140px;
+               transform transition-all duration-300 ease-out
+               hover:scale-105 hover:shadow-2xl hover:-translate-y-2
+               active:scale-95 active:transition-none
+               cursor-pointer border border-transparent
+               hover:border-primary/20;
+        min-height: 160px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
+        position: relative;
+        backdrop-filter: blur(10px);
+    }
+    
+    .product-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 0.75rem;
+        background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(78, 205, 196, 0.1));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    }
+    
+    .product-card:hover::before {
+        opacity: 1;
     }
     
     .product-card.selected {
-        @apply ring-4 ring-primary;
-        box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
+        @apply ring-4 ring-primary/50 border-primary;
+        box-shadow: 0 8px 32px rgba(255, 107, 53, 0.3), 0 0 0 1px rgba(255, 107, 53, 0.2);
+        animation: pulse-glow 2s infinite;
     }
     
-    /* Carrito de compras flotante */
+    .product-card.adding {
+        animation: add-to-cart 0.6s ease-out;
+    }
+    
+    @keyframes add-to-cart {
+        0% { transform: scale(1); }
+        25% { transform: scale(1.1); }
+        50% { transform: scale(1.05); box-shadow: 0 8px 32px rgba(46, 204, 113, 0.4); }
+        100% { transform: scale(1); }
+    }
+    
+    @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 8px 32px rgba(255, 107, 53, 0.3); }
+        50% { box-shadow: 0 8px 32px rgba(255, 107, 53, 0.6); }
+    }
+    
+    /* Carrito de compras flotante mejorado */
     .cart-summary {
         @apply sticky bottom-4 bg-white dark:bg-gray-800 
-               rounded-2xl shadow-2xl p-6 z-40;
-        border: 3px solid #FF6B35;
+               rounded-2xl shadow-2xl p-6 z-40
+               border-2 border-primary/20
+               backdrop-filter-none;
+        background: linear-gradient(135deg, 
+                    rgba(255, 255, 255, 0.95) 0%, 
+                    rgba(255, 255, 255, 0.9) 100%);
+        backdrop-filter: blur(20px);
+        transition: all 0.3s ease;
+    }
+    
+    .dark .cart-summary {
+        background: linear-gradient(135deg, 
+                    rgba(31, 41, 55, 0.95) 0%, 
+                    rgba(31, 41, 55, 0.9) 100%);
+    }
+    
+    .cart-summary:has(.cart-items:not(:empty)) {
+        @apply border-primary;
+        box-shadow: 0 20px 40px rgba(255, 107, 53, 0.2), 
+                   0 0 0 1px rgba(255, 107, 53, 0.1);
     }
     
     /* Input numérico grande para POS */
     .input-pos {
         @apply input input-lg input-bordered w-full text-center
-               text-2xl font-bold touch:h-16;
+               text-xl font-bold touch:h-16 
+               focus:ring-4 focus:ring-primary/20
+               transition-all duration-200;
     }
     
-    /* Badge de cantidad */
+    .input-pos:focus {
+        @apply border-primary shadow-lg;
+        transform: scale(1.02);
+    }
+    
+    /* Estados de loading mejorados */
+    .skeleton {
+        background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s infinite;
+        border-radius: 0.75rem;
+    }
+    
+    @keyframes skeleton-loading {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+    
+    .dark .skeleton {
+        background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+        background-size: 200% 100%;
+    }
+    
+    /* Badge de cantidad mejorado */
     .qty-badge {
-        @apply badge badge-lg badge-primary absolute -top-2 -right-2;
-        min-width: 2rem;
-        height: 2rem;
+        @apply badge badge-lg badge-primary absolute -top-2 -right-2
+               animate-bounce;
+        min-width: 2.5rem;
+        height: 2.5rem;
         font-size: 0.875rem;
         font-weight: bold;
+        box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+        border: 2px solid white;
+        z-index: 10;
+    }
+    
+    .qty-badge.updated {
+        animation: qty-update 0.5s ease-out;
+    }
+    
+    @keyframes qty-update {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.3); background-color: #2ECC71; }
+        100% { transform: scale(1); }
     }
     
     /* Pantalla de resumen de venta */
@@ -129,58 +231,120 @@
     
     /* Loading overlay para operaciones */
     .loading-overlay {
-        @apply fixed inset-0 bg-black bg-opacity-50 
-               flex items-center justify-center z-50;
+        @apply fixed inset-0 bg-black/60 
+               flex items-center justify-center z-50
+               backdrop-filter backdrop-blur-sm;
+        animation: fade-in 0.3s ease-out;
     }
     
     .loading-content {
         @apply bg-white dark:bg-gray-800 rounded-2xl p-8 
-               text-center shadow-2xl;
-        min-width: 300px;
+               text-center shadow-2xl border;
+        min-width: 320px;
+        animation: slide-in 0.4s ease-out;
     }
+    
+    /* Efectos de sonido visual */
+    .sound-wave {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .sound-wave::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 107, 53, 0.3);
+        transform: translate(-50%, -50%);
+        animation: none;
+    }
+    
+    .sound-wave.active::after {
+        animation: ripple 0.6s ease-out;
+    }
+    
+    @keyframes ripple {
+        0% { width: 0; height: 0; opacity: 1; }
+        100% { width: 200px; height: 200px; opacity: 0; }
+    }'
 </style>
 {% endblock %}
 
+{% block extra_head %}
+<!-- Preload de recursos críticos -->
+<link rel="preload" href="{% static 'sounds/beep-success.mp3' %}" as="audio" type="audio/mpeg">
+<link rel="preload" href="{% static 'sounds/beep-error.mp3' %}" as="audio" type="audio/mpeg">
+<link rel="preload" href="{% static 'sounds/cash-register.mp3' %}" as="audio" type="audio/mpeg">
+
+<!-- Meta tags para PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+{% endblock %}
+
 {% block navigation %}
-<!-- Navegación específica POS -->
+<!-- Navegación específica POS con mejores indicadores -->
 <a href="{% url 'pos:dashboard' %}" 
-   class="btn btn-ghost text-white hover:bg-white hover:bg-opacity-20"
+   class="btn btn-ghost text-white hover:bg-white hover:bg-opacity-20 group transition-all duration-300"
    aria-label="Dashboard POS">
-    <i class="fas fa-home mr-2"></i>
+    <i class="fas fa-home mr-2 group-hover:animate-pulse"></i>
     <span class="hidden lg:inline">Inicio</span>
 </a>
 
 <a href="{% url 'pos:venta' %}" 
-   class="btn btn-primary text-white"
+   class="btn btn-primary text-white hover:scale-105 transform transition-all duration-300 shadow-lg"
    aria-label="Nueva Venta">
     <i class="fas fa-cash-register mr-2"></i>
-    <span class="hidden lg:inline">Venta</span>
+    <span class="hidden lg:inline font-semibold">Venta</span>
+    <span class="badge badge-sm badge-accent ml-2 hidden xl:inline animate-pulse">F1</span>
 </a>
 
 <a href="{% url 'pos:historial' %}" 
-   class="btn btn-ghost text-white hover:bg-white hover:bg-opacity-20"
+   class="btn btn-ghost text-white hover:bg-white hover:bg-opacity-20 group transition-all duration-300"
    aria-label="Historial">
-    <i class="fas fa-history mr-2"></i>
+    <i class="fas fa-history mr-2 group-hover:animate-spin"></i>
     <span class="hidden lg:inline">Historial</span>
 </a>
 
 <a href="{% url 'pos:recargas' %}" 
-   class="btn btn-ghost text-white hover:bg-white hover:bg-opacity-20"
+   class="btn btn-ghost text-white hover:bg-white hover:bg-opacity-20 group transition-all duration-300"
    aria-label="Recargas">
-    <i class="fas fa-credit-card mr-2"></i>
+    <i class="fas fa-credit-card mr-2 group-hover:animate-bounce"></i>
     <span class="hidden lg:inline">Recargas</span>
 </a>
 
-<!-- Usuario actual -->
+<!-- Usuario actual con mejor UX -->
 <div class="dropdown dropdown-end">
-    <label tabindex="0" class="btn btn-ghost btn-circle text-white">
-        <i class="fas fa-user text-xl"></i>
+    <label tabindex="0" class="btn btn-ghost btn-circle text-white hover:bg-white hover:bg-opacity-20 group relative">
+        <i class="fas fa-user text-xl group-hover:animate-pulse"></i>
+        <!-- Indicador de usuario activo -->
+        <div class="absolute -top-1 -right-1 w-3 h-3 bg-success rounded-full border-2 border-white animate-pulse"></div>
     </label>
-    <ul tabindex="0" class="dropdown-content menu p-2 shadow-lg bg-white dark:bg-gray-800 rounded-box w-52 mt-2">
+    <ul tabindex="0" class="dropdown-content menu p-2 shadow-xl bg-white dark:bg-gray-800 rounded-box w-60 mt-2 border border-gray-200 dark:border-gray-700">
         <li class="menu-title">
-            <span>{{ user.get_full_name|default:user.username }}</span>
+            <span class="flex items-center gap-2">
+                <div class="avatar placeholder">
+                    <div class="bg-primary text-white rounded-full w-8">
+                        <span class="text-sm">{{ user.first_name.0|default:user.username.0 }}</span>
+                    </div>
+                </div>
+                <div>
+                    <p class="font-semibold">{{ user.get_full_name|default:user.username }}</p>
+                    <p class="text-xs opacity-70">Sistema POS</p>
+                </div>
+            </span>
         </li>
-        <li><a href="{% url 'logout' %}"><i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión</a></li>
+        <div class="divider my-1"></div>
+        <li>
+            <a href="{% url 'logout' %}" class="text-error hover:bg-error hover:text-white transition-colors">
+                <i class="fas fa-sign-out-alt"></i>
+                Cerrar Sesión
+            </a>
+        </li>
     </ul>
 </div>
 {% endblock %}
@@ -207,200 +371,272 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<!-- Scripts específicos POS -->
+<!-- JavaScript mejorado para POS - Sistema UX Avanzado -->
+<script src="{% static 'js/pos-enhanced.js' %}?v=2.1" defer></script>
+<!-- Inicialización de componentes Alpine.js para POS -->
 <script>
-    // Sonidos para POS
-    const sounds = {
-        beep: new Howl({ 
-            src: ['/static/sounds/beep.mp3'], 
-            volume: 0.5,
-            onloaderror: () => console.warn('Archivo de sonido beep no encontrado')
-        }),
-        success: new Howl({ 
-            src: ['/static/sounds/success.mp3'], 
-            volume: 0.5,
-            onloaderror: () => console.warn('Archivo de sonido success no encontrado')
-        }),
-        error: new Howl({ 
-            src: ['/static/sounds/error.mp3'], 
-            volume: 0.5,
-            onloaderror: () => console.warn('Archivo de sonido error no encontrado')
-        })
-    };
-    
-    // Funciones globales POS
-    window.posHelpers = {
-        // Reproducir sonido
-        playSound(type) {
-            if (sounds[type]) {
-                sounds[type].play();
+document.addEventListener('alpine:init', () => {
+    // Datos globales del POS mejorados
+    Alpine.store('posEnhanced', {
+        // Estados
+        loading: false,
+        offline: false,
+        
+        // Configuración de sonidos
+        soundEnabled: true,
+        
+        // Performance
+        enableAnimations: true,
+        debugMode: false,
+        
+        // Contadores de sesión
+        sessionStats: {
+            ventasCompletadas: 0,
+            itemsVendidos: 0,
+            montoTotal: 0,
+            inicioSesion: new Date()
+        },
+        
+        // Métodos del store
+        updateSessionStats(venta) {
+            this.sessionStats.ventasCompletadas++;
+            this.sessionStats.itemsVendidos += venta.items?.length || 0;
+            this.sessionStats.montoTotal += venta.total || 0;
+        },
+        
+        getSessionDuration() {
+            const ahora = new Date();
+            const duracion = ahora - this.sessionStats.inicioSesion;
+            const horas = Math.floor(duracion / (1000 * 60 * 60));
+            const minutos = Math.floor((duracion % (1000 * 60 * 60)) / (1000 * 60));
+            return `${horas}h ${minutos}m`;
+        }
+    });
+
+    // Alpine component para venta POS mejorada
+    Alpine.data('ventaPOSMejorada', () => ({
+        // Estados del componente
+        carrito: [],
+        total: 0,
+        cliente: null,
+        loading: false,
+        procesando: false,
+        
+        // Configuración
+        moneda: 'PYG',
+        maxItemsCarrito: 50,
+        
+        // Lifecycle
+        init() {
+            this.cargarCarritoLocal();
+            console.log('💡 Componente VentaPOS inicializado');
+        },
+        
+        // Gestión de carrito
+        agregarProducto(producto, cantidad = 1) {
+            if (this.carrito.length >= this.maxItemsCarrito) {
+                this.notificar('Carrito lleno. Máximo ' + this.maxItemsCarrito + ' productos.', 'warning');
+                return false;
+            }
+            
+            const itemExistente = this.carrito.find(item => item.id === producto.id);
+            
+            if (itemExistente) {
+                itemExistente.cantidad += cantidad;
+            } else {
+                this.carrito.push({
+                    id: producto.id,
+                    nombre: producto.nombre,
+                    precio: producto.precio,
+                    cantidad: cantidad,
+                    subtotal: producto.precio * cantidad
+                });
+            }
+            
+            this.calcularTotal();
+            this.guardarCarritoLocal();
+            this.reproducirSonido('success');
+            this.mostrarFeedbackVisual('producto-agregado');
+            
+            return true;
+        },
+        
+        quitarProducto(id) {
+            this.carrito = this.carrito.filter(item => item.id !== id);
+            this.calcularTotal();
+            this.guardarCarritoLocal();
+            this.reproducirSonido('click');
+        },
+        
+        actualizarCantidad(id, nuevaCantidad) {
+            const item = this.carrito.find(item => item.id === id);
+            if (item && nuevaCantidad > 0) {
+                item.cantidad = Math.max(1, parseInt(nuevaCantidad));
+                item.subtotal = item.precio * item.cantidad;
+                this.calcularTotal();
+                this.guardarCarritoLocal();
             }
         },
         
-        // Formatear precio en Guaraníes
-        formatPrice(amount) {
+        limpiarCarrito() {
+            this.carrito = [];
+            this.total = 0;
+            this.cliente = null;
+            localStorage.removeItem('pos_carrito');
+            this.reproducirSonido('click');
+        },
+        
+        // Cálculos
+        calcularTotal() {
+            this.total = this.carrito.reduce((sum, item) => sum + item.subtotal, 0);
+        },
+        
+        formatearPrecio(monto) {
             return new Intl.NumberFormat('es-PY', {
                 style: 'currency',
-                currency: 'PYG',
+                currency: this.moneda,
                 minimumFractionDigits: 0
-            }).format(amount);
+            }).format(monto);
         },
         
-        // Mostrar notificación con sonido
-        notify(message, type = 'info', playSound = true) {
-            // Dispatch evento para Alpine.js
-            window.dispatchEvent(new CustomEvent('show-notification', {
-                detail: { message, type, duration: 3000 }
+        // Persistencia local
+        guardarCarritoLocal() {
+            localStorage.setItem('pos_carrito', JSON.stringify({
+                carrito: this.carrito,
+                total: this.total,
+                timestamp: new Date().toISOString()
             }));
-            
-            // Reproducir sonido correspondiente
-            if (playSound && sounds[type]) {
-                sounds[type].play();
+        },
+        
+        cargarCarritoLocal() {
+            const data = localStorage.getItem('pos_carrito');
+            if (data) {
+                try {
+                    const parsed = JSON.parse(data);
+                    this.carrito = parsed.carrito || [];
+                    this.calcularTotal();
+                } catch (e) {
+                    console.warn('Error al cargar carrito local:', e);
+                }
             }
         },
         
-        // Confirmar acción
-        async confirm(message, title = '¿Está seguro?') {
-            return new Promise((resolve) => {
-                // Usar modal de confirmación nativo o Alpine.js modal
-                const result = window.confirm(`${title}\n\n${message}`);
-                resolve(result);
-            });
+        // Utilidades
+        notificar(mensaje, tipo = 'info') {
+            window.dispatchEvent(new CustomEvent('show-toast', {
+                detail: { message: mensaje, type: tipo, duration: 3000 }
+            }));
         },
         
-        // Prevenir doble clic en botones de venta
-        preventDoubleClick(button, timeout = 2000) {
-            button.disabled = true;
-            setTimeout(() => {
-                button.disabled = false;
-            }, timeout);
+        reproducirSonido(tipo) {
+            if (Alpine.store('posEnhanced').soundEnabled && window.posEnhanced?.audio) {
+                window.posEnhanced.audio.play(tipo);
+            }
+        },
+        
+        mostrarFeedbackVisual(tipo) {
+            if (window.posEnhanced?.feedback) {
+                window.posEnhanced.feedback.show(tipo);
+            }
+        },
+        
+        // Procesamiento de venta
+        async procesarVenta() {
+            if (this.carrito.length === 0) {
+                this.notificar('El carrito está vacío', 'warning');
+                return;
+            }
+            
+            this.procesando = true;
+            
+            try {
+                // Simular procesamiento
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // Actualizar estadísticas
+                Alpine.store('posEnhanced').updateSessionStats({
+                    items: this.carrito,
+                    total: this.total
+                });
+                
+                this.reproducirSonido('success');
+                this.notificar('Venta procesada exitosamente!', 'success');
+                this.limpiarCarrito();
+                
+            } catch (error) {
+                this.reproducirSonido('error');
+                this.notificar('Error al procesar venta: ' + error.message, 'error');
+            } finally {
+                this.procesando = false;
+            }
         }
-    };
+    }));
     
-    // Keyboard shortcuts para POS
-    document.addEventListener('keydown', (e) => {
-        // F1 - Cliente genérico
-        if (e.key === 'F1') {
-            e.preventDefault();
-            // Dispatch evento personalizado
-            window.dispatchEvent(new CustomEvent('pos:cliente-generico'));
-        }
+    // Component para búsqueda con filtros avanzados
+    Alpine.data('busquedaProductos', () => ({
+        query: '',
+        resultados: [],
+        filtros: {
+            categoria: '',
+            precioMin: null,
+            precioMax: null,
+            disponible: true
+        },
+        buscando: false,
+        timeout: null,
         
-        // F2 - Buscar producto
-        if (e.key === 'F2') {
-            e.preventDefault();
-            const searchInput = document.getElementById('product-search');
-            if (searchInput) searchInput.focus();
-        }
+        init() {
+            this.$watch('query', () => this.buscarConDebounce());
+        },
         
-        // F3 - Nuevo cliente
-        if (e.key === 'F3') {
-            e.preventDefault();
-            window.dispatchEvent(new CustomEvent('pos:nuevo-cliente'));
-        }
+        buscarConDebounce() {
+            clearTimeout(this.timeout);
+            this.timeout = setTimeout(() => {
+                this.buscar();
+            }, 300);
+        },
         
-        // F4 - Ver carrito
-        if (e.key === 'F4') {
-            e.preventDefault();
-            window.dispatchEvent(new CustomEvent('pos:ver-carrito'));
-        }
+        async buscar() {
+            if (!this.query || this.query.length < 2) {
+                this.resultados = [];
+                return;
+            }
+            
+            this.buscando = true;
+            
+            try {
+                // Aquí iría la llamada real a la API
+                await new Promise(resolve => setTimeout(resolve, 200));
+                
+                // Simular resultados filtrados
+                this.resultados = [
+                    // Resultados simulados...
+                ];
+                
+            } catch (error) {
+                console.error('Error en búsqueda:', error);
+                this.resultados = [];
+            } finally {
+                this.buscando = false;
+            }
+        },
         
-        // Enter - Procesar venta (solo si hay items)
-        if (e.key === 'Enter' && e.ctrlKey) {
-            e.preventDefault();
-            window.dispatchEvent(new CustomEvent('pos:procesar-venta'));
-        }
+        aplicarFiltros() {
+            this.buscar();
+        },
         
-        // Escape - Cancelar/Limpiar
-        if (e.key === 'Escape') {
-            e.preventDefault();
-            window.dispatchEvent(new CustomEvent('pos:cancelar'));
+        limpiarFiltros() {
+            this.filtros = {
+                categoria: '',
+                precioMin: null,
+                precioMax: null,
+                disponible: true
+            };
+            this.buscar();
         }
-    });
-    
-    // Inicialización
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log('🛒 POS Mode activado');
-        console.log('⌨️  Atajos de teclado:');
-        console.log('   F1 - Cliente genérico');
-        console.log('   F2 - Buscar producto');
-        console.log('   F3 - Nuevo cliente');
-        console.log('   F4 - Ver carrito');
-        console.log('   Ctrl+Enter - Procesar venta');
-        console.log('   Esc - Cancelar');
-    });
+    }));
+});
 </script>
 {% endblock %}
 
-{% block page_scripts %}
-<!-- Inicialización Alpine.js para POS -->
-<script>
-    document.addEventListener('alpine:init', () => {
-        // Componente para gestión de venta POS
-        Alpine.data('posVenta', () => ({
-            carrito: [],
-            total: 0,
-            clienteSeleccionado: null,
-            loading: false,
-            
-            agregarProducto(producto) {
-                const existe = this.carrito.find(p => p.id === producto.id);
-                if (existe) {
-                    existe.cantidad++;
-                } else {
-                    this.carrito.push({ ...producto, cantidad: 1 });
-                }
-                this.calcularTotal();
-                window.posHelpers.playSound('success');
-            },
-            
-            quitarProducto(productoId) {
-                this.carrito = this.carrito.filter(p => p.id !== productoId);
-                this.calcularTotal();
-            },
-            
-            calcularTotal() {
-                this.total = this.carrito.reduce((sum, item) => 
-                    sum + (item.precio * item.cantidad), 0
-                );
-            },
-            
-            limpiarCarrito() {
-                this.carrito = [];
-                this.total = 0;
-                this.clienteSeleccionado = null;
-            }
-        }));
-        
-        // Componente para búsqueda con debounce
-        Alpine.data('searchWithDebounce', (delay = 300) => ({
-            query: '',
-            results: [],
-            searching: false,
-            timeout: null,
-            
-            search() {
-                clearTimeout(this.timeout);
-                this.searching = true;
-                
-                this.timeout = setTimeout(() => {
-                    this.performSearch();
-                }, delay);
-            },
-            
-            async performSearch() {
-                if (!this.query || this.query.length < 2) {
-                    this.results = [];
-                    this.searching = false;
-                    return;
-                }
-                
-                // Aquí iría la llamada AJAX real
-                // Por ahora simulamos
-                await new Promise(resolve => setTimeout(resolve, 100));
-                this.searching = false;
-            }
-        }));
-    });
-</script>
-{% endblock %}
+
