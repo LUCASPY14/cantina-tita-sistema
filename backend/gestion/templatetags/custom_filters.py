@@ -12,3 +12,14 @@ def abs(value):
         return abs(float(value))
     except (ValueError, TypeError):
         return value
+
+@register.filter
+def get_item(lista, indice):
+    """
+    Obtiene un item de una lista por su índice.
+    Uso: {{ mi_lista|get_item:0 }}
+    """
+    try:
+        return lista[int(indice)]
+    except (ValueError, IndexError, TypeError):
+        return ''
