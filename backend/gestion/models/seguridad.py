@@ -17,29 +17,29 @@ class TarjetaAutorizacion(ManagedModel):
         ('CAJERO', 'Cajero'),
     ]
     
-    id_tarjeta_autorizacion = models.AutoField(db_column='ID_Tarjeta_Autorizacion', primary_key=True)
-    codigo_barra = models.CharField(db_column='Codigo_Barra', max_length=50, unique=True)
+    id_tarjeta_autorizacion = models.AutoField(db_column='id_tarjeta_autorizacion', primary_key=True)
+    codigo_barra = models.CharField(db_column='codigo_barra', max_length=50, unique=True)
     id_empleado = models.ForeignKey(
         Empleado,
         on_delete=models.SET_NULL,
-        db_column='ID_Empleado',
+        db_column='id_empleado',
         blank=True,
         null=True
     )
     tipo_autorizacion = models.CharField(
-        db_column='Tipo_Autorizacion',
+        db_column='tipo_autorizacion',
         max_length=15,
         choices=TIPO_AUTORIZACION_CHOICES,
         default='ADMIN'
     )
-    puede_anular_almuerzos = models.BooleanField(db_column='Puede_Anular_Almuerzos', default=True)
-    puede_anular_ventas = models.BooleanField(db_column='Puede_Anular_Ventas', default=True)
-    puede_anular_recargas = models.BooleanField(db_column='Puede_Anular_Recargas', default=True)
-    puede_modificar_precios = models.BooleanField(db_column='Puede_Modificar_Precios', default=False)
-    activo = models.BooleanField(db_column='Activo', default=True)
-    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
-    fecha_vencimiento = models.DateField(db_column='Fecha_Vencimiento', blank=True, null=True)
-    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
+    puede_anular_almuerzos = models.BooleanField(db_column='puede_anular_almuerzos', default=True)
+    puede_anular_ventas = models.BooleanField(db_column='puede_anular_ventas', default=True)
+    puede_anular_recargas = models.BooleanField(db_column='puede_anular_recargas', default=True)
+    puede_modificar_precios = models.BooleanField(db_column='puede_modificar_precios', default=False)
+    activo = models.BooleanField(db_column='activo', default=True)
+    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
+    fecha_vencimiento = models.DateField(db_column='fecha_vencimiento', blank=True, null=True)
+    observaciones = models.TextField(db_column='observaciones', blank=True, null=True)
     
     class Meta(ManagedModel.Meta):
         db_table = 'tarjetas_autorizacion'
@@ -84,25 +84,25 @@ class LogAutorizacion(ManagedModel):
         ('ERROR', 'Error'),
     ]
     
-    id_log = models.BigAutoField(db_column='ID_Log', primary_key=True)
+    id_log = models.BigAutoField(db_column='id_log', primary_key=True)
     id_tarjeta_autorizacion = models.ForeignKey(
         TarjetaAutorizacion,
         on_delete=models.CASCADE,
-        db_column='ID_Tarjeta_Autorizacion'
+        db_column='id_tarjeta_autorizacion'
     )
-    codigo_barra = models.CharField(db_column='Codigo_Barra', max_length=50)
+    codigo_barra = models.CharField(db_column='codigo_barra', max_length=50)
     tipo_operacion = models.CharField(
-        db_column='Tipo_Operacion',
+        db_column='tipo_operacion',
         max_length=20,
         choices=TIPO_OPERACION_CHOICES
     )
-    id_registro_afectado = models.BigIntegerField(db_column='ID_Registro_Afectado', blank=True, null=True)
-    descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
-    id_usuario = models.IntegerField(db_column='ID_Usuario', blank=True, null=True)
-    fecha_hora = models.DateTimeField(db_column='Fecha_Hora', auto_now_add=True)
-    ip_origen = models.CharField(db_column='IP_Origen', max_length=45, blank=True, null=True)
+    id_registro_afectado = models.BigIntegerField(db_column='id_registro_afectado', blank=True, null=True)
+    descripcion = models.TextField(db_column='descripcion', blank=True, null=True)
+    id_usuario = models.IntegerField(db_column='id_usuario', blank=True, null=True)
+    fecha_hora = models.DateTimeField(db_column='fecha_hora', auto_now_add=True)
+    ip_origen = models.CharField(db_column='ip_origen', max_length=45, blank=True, null=True)
     resultado = models.CharField(
-        db_column='Resultado',
+        db_column='resultado',
         max_length=15,
         choices=RESULTADO_CHOICES,
         default='EXITOSO'
@@ -127,25 +127,25 @@ class HistorialGradoHijo(ManagedModel):
         ('REINGRESO', 'Reingreso'),
     ]
     
-    id_historial = models.AutoField(db_column='ID_Historial', primary_key=True)
+    id_historial = models.AutoField(db_column='id_historial', primary_key=True)
     id_hijo = models.ForeignKey(
         Hijo,
         on_delete=models.CASCADE,
-        db_column='ID_Hijo',
+        db_column='id_hijo',
         related_name='historial_grados'
     )
-    grado_anterior = models.CharField(db_column='Grado_Anterior', max_length=50, blank=True, null=True)
-    grado_nuevo = models.CharField(db_column='Grado_Nuevo', max_length=50)
-    anio_escolar = models.IntegerField(db_column='Anio_Escolar')
-    fecha_cambio = models.DateTimeField(db_column='Fecha_Cambio', auto_now_add=True)
+    grado_anterior = models.CharField(db_column='grado_anterior', max_length=50, blank=True, null=True)
+    grado_nuevo = models.CharField(db_column='grado_nuevo', max_length=50)
+    anio_escolar = models.IntegerField(db_column='anio_escolar')
+    fecha_cambio = models.DateTimeField(db_column='fecha_cambio', auto_now_add=True)
     motivo = models.CharField(
-        db_column='Motivo',
+        db_column='motivo',
         max_length=20,
         choices=MOTIVO_CHOICES,
         default='PROMOCION'
     )
-    usuario_registro = models.CharField(db_column='Usuario_Registro', max_length=100, blank=True, null=True)
-    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
+    usuario_registro = models.CharField(db_column='usuario_registro', max_length=100, blank=True, null=True)
+    observaciones = models.TextField(db_column='observaciones', blank=True, null=True)
     
     class Meta(ManagedModel.Meta):
         db_table = 'historial_grados_hijos'
@@ -159,14 +159,14 @@ class HistorialGradoHijo(ManagedModel):
 
 class IntentoLogin(ManagedModel):
     '''Tabla intentos_login - Rate limiting y seguridad'''
-    id_intento = models.AutoField(db_column='ID_Intento', primary_key=True)
-    usuario = models.CharField(db_column='Usuario', max_length=100)
-    ip_address = models.CharField(db_column='IP_Address', max_length=45)
-    ciudad = models.CharField(db_column='Ciudad', max_length=100, blank=True, null=True)
-    pais = models.CharField(db_column='Pais', max_length=100, blank=True, null=True)
-    fecha_intento = models.DateTimeField(db_column='Fecha_Intento')
-    exitoso = models.BooleanField(db_column='Exitoso', default=False)
-    motivo_fallo = models.CharField(db_column='Motivo_Fallo', max_length=100, blank=True, null=True)
+    id_intento = models.AutoField(db_column='id_intento', primary_key=True)
+    usuario = models.CharField(db_column='usuario', max_length=100)
+    ip_address = models.CharField(db_column='ip_address', max_length=45)
+    ciudad = models.CharField(db_column='ciudad', max_length=100, blank=True, null=True)
+    pais = models.CharField(db_column='pais', max_length=100, blank=True, null=True)
+    fecha_intento = models.DateTimeField(db_column='fecha_intento')
+    exitoso = models.BooleanField(db_column='exitoso', default=False)
+    motivo_fallo = models.CharField(db_column='motivo_fallo', max_length=100, blank=True, null=True)
     
     class Meta(ManagedModel.Meta):
         db_table = 'intentos_login'
@@ -193,23 +193,23 @@ class AuditoriaOperacion(ManagedModel):
         ('FALLIDO', 'Fallido'),
     ]
     
-    id_auditoria = models.AutoField(db_column='ID_Auditoria', primary_key=True)
-    usuario = models.CharField(db_column='Usuario', max_length=100)
-    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
-    id_usuario = models.IntegerField(db_column='ID_Usuario', blank=True, null=True)
-    operacion = models.CharField(db_column='Operacion', max_length=100)
-    tabla_afectada = models.CharField(db_column='Tabla_Afectada', max_length=100, blank=True, null=True)
-    id_registro = models.IntegerField(db_column='ID_Registro', blank=True, null=True)
-    descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
-    datos_anteriores = models.JSONField(db_column='Datos_Anteriores', blank=True, null=True)
-    datos_nuevos = models.JSONField(db_column='Datos_Nuevos', blank=True, null=True)
-    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
-    ciudad = models.CharField(db_column='Ciudad', max_length=100, blank=True, null=True)
-    pais = models.CharField(db_column='Pais', max_length=100, blank=True, null=True)
-    user_agent = models.TextField(db_column='User_Agent', blank=True, null=True)
-    fecha_operacion = models.DateTimeField(db_column='Fecha_Operacion')
-    resultado = models.CharField(db_column='Resultado', max_length=20, choices=RESULTADO_CHOICES)
-    mensaje_error = models.TextField(db_column='Mensaje_Error', blank=True, null=True)
+    id_auditoria = models.AutoField(db_column='id_auditoria', primary_key=True)
+    usuario = models.CharField(db_column='usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='tipo_usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    id_usuario = models.IntegerField(db_column='id_usuario', blank=True, null=True)
+    operacion = models.CharField(db_column='operacion', max_length=100)
+    tabla_afectada = models.CharField(db_column='tabla_afectada', max_length=100, blank=True, null=True)
+    id_registro = models.IntegerField(db_column='id_registro', blank=True, null=True)
+    descripcion = models.TextField(db_column='descripcion', blank=True, null=True)
+    datos_anteriores = models.JSONField(db_column='datos_anteriores', blank=True, null=True)
+    datos_nuevos = models.JSONField(db_column='datos_nuevos', blank=True, null=True)
+    ip_address = models.CharField(db_column='ip_address', max_length=45, blank=True, null=True)
+    ciudad = models.CharField(db_column='ciudad', max_length=100, blank=True, null=True)
+    pais = models.CharField(db_column='pais', max_length=100, blank=True, null=True)
+    user_agent = models.TextField(db_column='user_agent', blank=True, null=True)
+    fecha_operacion = models.DateTimeField(db_column='fecha_operacion')
+    resultado = models.CharField(db_column='resultado', max_length=20, choices=RESULTADO_CHOICES)
+    mensaje_error = models.TextField(db_column='mensaje_error', blank=True, null=True)
     
     class Meta(ManagedModel.Meta):
         db_table = 'auditoria_operaciones'
@@ -224,20 +224,20 @@ class AuditoriaOperacion(ManagedModel):
 
 class AuditoriaEmpleados(ManagedModel):
     '''Tabla auditoria_empleados - Auditoría de acciones de empleados'''
-    id_auditoria = models.BigAutoField(db_column='ID_Auditoria', primary_key=True)
+    id_auditoria = models.BigAutoField(db_column='id_auditoria', primary_key=True)
     id_empleado = models.ForeignKey(
         Empleado,
         on_delete=models.SET_NULL,
-        db_column='ID_Empleado',
+        db_column='id_empleado',
         related_name='auditorias',
         null=True,
         blank=True
     )
-    fecha_cambio = models.DateTimeField(db_column='Fecha_Cambio')
-    campo_modificado = models.CharField(db_column='Campo_Modificado', max_length=50)
-    valor_anterior = models.TextField(db_column='Valor_Anterior', blank=True, null=True)
-    valor_nuevo = models.TextField(db_column='Valor_Nuevo', blank=True, null=True)
-    ip_origen = models.CharField(db_column='IP_Origen', max_length=45, blank=True, null=True)
+    fecha_cambio = models.DateTimeField(db_column='fecha_cambio')
+    campo_modificado = models.CharField(db_column='campo_modificado', max_length=50)
+    valor_anterior = models.TextField(db_column='valor_anterior', blank=True, null=True)
+    valor_nuevo = models.TextField(db_column='valor_nuevo', blank=True, null=True)
+    ip_origen = models.CharField(db_column='ip_origen', max_length=45, blank=True, null=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'auditoria_empleados'
@@ -250,22 +250,22 @@ class AuditoriaEmpleados(ManagedModel):
 
 class AuditoriaComisiones(ManagedModel):
     '''Tabla auditoria_comisiones - Auditoría de cálculos de comisiones'''
-    id_auditoria = models.BigAutoField(db_column='ID_Auditoria', primary_key=True)
+    id_auditoria = models.BigAutoField(db_column='id_auditoria', primary_key=True)
     id_tarifa = models.ForeignKey(
         TarifasComision,
         on_delete=models.SET_NULL,
-        db_column='ID_Tarifa',
+        db_column='id_tarifa',
         null=True,
         blank=True
     )
-    fecha_cambio = models.DateTimeField(db_column='Fecha_Cambio')
-    campo_modificado = models.CharField(db_column='Campo_Modificado', max_length=50)
-    valor_anterior = models.DecimalField(db_column='Valor_Anterior', max_digits=10, decimal_places=4, blank=True, null=True)
-    valor_nuevo = models.DecimalField(db_column='Valor_Nuevo', max_digits=10, decimal_places=4, blank=True, null=True)
+    fecha_cambio = models.DateTimeField(db_column='fecha_cambio')
+    campo_modificado = models.CharField(db_column='campo_modificado', max_length=50)
+    valor_anterior = models.DecimalField(db_column='valor_anterior', max_digits=10, decimal_places=4, blank=True, null=True)
+    valor_nuevo = models.DecimalField(db_column='valor_nuevo', max_digits=10, decimal_places=4, blank=True, null=True)
     id_empleado_modifico = models.ForeignKey(
         Empleado,
         on_delete=models.SET_NULL,
-        db_column='ID_Empleado_Modifico',
+        db_column='id_empleado_modifico',
         blank=True,
         null=True
     )
@@ -281,20 +281,20 @@ class AuditoriaComisiones(ManagedModel):
 
 class AuditoriaUsuariosWeb(ManagedModel):
     '''Tabla auditoria_usuarios_web - Auditoría de usuarios web'''
-    id_auditoria = models.BigAutoField(db_column='ID_Auditoria', primary_key=True)
+    id_auditoria = models.BigAutoField(db_column='id_auditoria', primary_key=True)
     id_cliente = models.ForeignKey(
         Cliente,
         on_delete=models.SET_NULL,
-        db_column='ID_Cliente',
+        db_column='id_cliente',
         related_name='auditorias_web',
         null=True,
         blank=True
     )
-    fecha_cambio = models.DateTimeField(db_column='Fecha_Cambio')
-    campo_modificado = models.CharField(db_column='Campo_Modificado', max_length=50)
-    valor_anterior = models.TextField(db_column='Valor_Anterior', blank=True, null=True)
-    valor_nuevo = models.TextField(db_column='Valor_Nuevo', blank=True, null=True)
-    ip_origen = models.CharField(db_column='IP_Origen', max_length=45, blank=True, null=True)
+    fecha_cambio = models.DateTimeField(db_column='fecha_cambio')
+    campo_modificado = models.CharField(db_column='campo_modificado', max_length=50)
+    valor_anterior = models.TextField(db_column='valor_anterior', blank=True, null=True)
+    valor_nuevo = models.TextField(db_column='valor_nuevo', blank=True, null=True)
+    ip_origen = models.CharField(db_column='ip_origen', max_length=45, blank=True, null=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'auditoria_usuarios_web'
@@ -307,18 +307,18 @@ class AuditoriaUsuariosWeb(ManagedModel):
 
 class TokenRecuperacion(ManagedModel):
     '''Tabla tokens_recuperacion - Tokens para reset de contraseña'''
-    id_token = models.AutoField(db_column='ID_Token', primary_key=True)
+    id_token = models.AutoField(db_column='id_token', primary_key=True)
     id_cliente = models.ForeignKey(
         Cliente,
         on_delete=models.CASCADE,
-        db_column='ID_Cliente'
+        db_column='id_cliente'
     )
-    token = models.CharField(db_column='Token', max_length=64, unique=True)
-    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion')
-    fecha_expiracion = models.DateTimeField(db_column='Fecha_Expiracion')
-    usado = models.BooleanField(db_column='Usado', default=False)
-    fecha_uso = models.DateTimeField(db_column='Fecha_Uso', blank=True, null=True)
-    ip_solicitud = models.CharField(db_column='IP_Solicitud', max_length=45, blank=True, null=True)
+    token = models.CharField(db_column='token', max_length=64, unique=True)
+    fecha_creacion = models.DateTimeField(db_column='fecha_creacion')
+    fecha_expiracion = models.DateTimeField(db_column='fecha_expiracion')
+    usado = models.BooleanField(db_column='usado', default=False)
+    fecha_uso = models.DateTimeField(db_column='fecha_uso', blank=True, null=True)
+    ip_solicitud = models.CharField(db_column='ip_solicitud', max_length=45, blank=True, null=True)
     
     class Meta(ManagedModel.Meta):
         db_table = 'tokens_recuperacion'
@@ -337,15 +337,15 @@ class BloqueoCuenta(ManagedModel):
         ('CLIENTE_WEB', 'Cliente Web'),
     ]
     
-    id_bloqueo = models.AutoField(db_column='ID_Bloqueo', primary_key=True)
-    usuario = models.CharField(db_column='Usuario', max_length=100)
-    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
-    motivo = models.CharField(db_column='Motivo', max_length=255)
-    fecha_bloqueo = models.DateTimeField(db_column='Fecha_Bloqueo')
-    fecha_desbloqueo = models.DateTimeField(db_column='Fecha_Desbloqueo', blank=True, null=True)
-    bloqueado_por = models.CharField(db_column='Bloqueado_Por', max_length=100, blank=True, null=True)
-    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
-    activo = models.BooleanField(db_column='Activo', default=True)
+    id_bloqueo = models.AutoField(db_column='id_bloqueo', primary_key=True)
+    usuario = models.CharField(db_column='usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='tipo_usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    motivo = models.CharField(db_column='motivo', max_length=255)
+    fecha_bloqueo = models.DateTimeField(db_column='fecha_bloqueo')
+    fecha_desbloqueo = models.DateTimeField(db_column='fecha_desbloqueo', blank=True, null=True)
+    bloqueado_por = models.CharField(db_column='bloqueado_por', max_length=100, blank=True, null=True)
+    ip_address = models.CharField(db_column='ip_address', max_length=45, blank=True, null=True)
+    activo = models.BooleanField(db_column='activo', default=True)
     
     class Meta(ManagedModel.Meta):
         db_table = 'bloqueos_cuenta'
@@ -373,14 +373,14 @@ class AnomaliaDetectada(ManagedModel):
         ('ALTO', 'Alto'),
     ]
     
-    id_anomalia = models.AutoField(db_column='ID_Anomalia', primary_key=True)
-    usuario = models.CharField(db_column='Usuario', max_length=100)
-    tipo_anomalia = models.CharField(db_column='Tipo_Anomalia', max_length=30, choices=TIPO_ANOMALIA_CHOICES)
-    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
-    fecha_deteccion = models.DateTimeField(db_column='Fecha_Deteccion')
-    descripcion = models.TextField(db_column='Descripcion', blank=True, null=True)
-    nivel_riesgo = models.CharField(db_column='Nivel_Riesgo', max_length=10, choices=NIVEL_RIESGO_CHOICES, default='MEDIO')
-    notificado = models.BooleanField(db_column='Notificado', default=False)
+    id_anomalia = models.AutoField(db_column='id_anomalia', primary_key=True)
+    usuario = models.CharField(db_column='usuario', max_length=100)
+    tipo_anomalia = models.CharField(db_column='tipo_anomalia', max_length=30, choices=TIPO_ANOMALIA_CHOICES)
+    ip_address = models.CharField(db_column='ip_address', max_length=45, blank=True, null=True)
+    fecha_deteccion = models.DateTimeField(db_column='fecha_deteccion')
+    descripcion = models.TextField(db_column='descripcion', blank=True, null=True)
+    nivel_riesgo = models.CharField(db_column='nivel_riesgo', max_length=10, choices=NIVEL_RIESGO_CHOICES, default='MEDIO')
+    notificado = models.BooleanField(db_column='notificado', default=False)
     
     class Meta(ManagedModel.Meta):
         db_table = 'anomalias_detectadas'
@@ -400,17 +400,17 @@ class PatronAcceso(ManagedModel):
         ('ADMIN', 'Administrador'),
     ]
     
-    id_patron = models.AutoField(db_column='ID_Patron', primary_key=True)
-    usuario = models.CharField(db_column='Usuario', max_length=100)
-    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
-    ip_address = models.CharField(db_column='IP_Address', max_length=45)
-    horario_inicio = models.TimeField(db_column='Horario_Inicio', blank=True, null=True)
-    horario_fin = models.TimeField(db_column='Horario_Fin', blank=True, null=True)
-    dias_semana = models.CharField(db_column='Dias_Semana', max_length=50, blank=True, null=True)
-    primera_deteccion = models.DateTimeField(db_column='Primera_Deteccion')
-    ultima_deteccion = models.DateTimeField(db_column='Ultima_Deteccion')
-    frecuencia_accesos = models.IntegerField(db_column='Frecuencia_Accesos', default=1)
-    es_habitual = models.BooleanField(db_column='Es_Habitual', default=False)
+    id_patron = models.AutoField(db_column='id_patron', primary_key=True)
+    usuario = models.CharField(db_column='usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='tipo_usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    ip_address = models.CharField(db_column='ip_address', max_length=45)
+    horario_inicio = models.TimeField(db_column='horario_inicio', blank=True, null=True)
+    horario_fin = models.TimeField(db_column='horario_fin', blank=True, null=True)
+    dias_semana = models.CharField(db_column='dias_semana', max_length=50, blank=True, null=True)
+    primera_deteccion = models.DateTimeField(db_column='primera_deteccion')
+    ultima_deteccion = models.DateTimeField(db_column='ultima_deteccion')
+    frecuencia_accesos = models.IntegerField(db_column='frecuencia_accesos', default=1)
+    es_habitual = models.BooleanField(db_column='es_habitual', default=False)
     
     class Meta(ManagedModel.Meta):
         db_table = 'patrones_acceso'
@@ -430,15 +430,15 @@ class Autenticacion2Fa(ManagedModel):
         ('CLIENTE_WEB', 'Cliente Web'),
     ]
     
-    id_2fa = models.AutoField(db_column='ID_2FA', primary_key=True)
-    usuario = models.CharField(db_column='Usuario', max_length=100)
-    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
-    secret_key = models.CharField(db_column='Secret_Key', max_length=32, help_text='Clave secreta TOTP codificada en Base32')
-    backup_codes = models.TextField(db_column='Backup_Codes', blank=True, null=True, help_text='Códigos de respaldo JSON (array de strings hasheados)')
-    habilitado = models.BooleanField(db_column='Habilitado', default=False, help_text='Si el usuario tiene 2FA activo')
-    fecha_activacion = models.DateTimeField(db_column='Fecha_Activacion', blank=True, null=True, help_text='Cuando se activó por primera vez')
-    ultima_verificacion = models.DateTimeField(db_column='Ultima_Verificacion', blank=True, null=True, help_text='Último uso exitoso del código')
-    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    id_2fa = models.AutoField(db_column='id_2fa', primary_key=True)
+    usuario = models.CharField(db_column='usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='tipo_usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    secret_key = models.CharField(db_column='secret_key', max_length=32, help_text='Clave secreta TOTP codificada en Base32')
+    backup_codes = models.TextField(db_column='backup_codes', blank=True, null=True, help_text='Códigos de respaldo JSON (array de strings hasheados)')
+    habilitado = models.BooleanField(db_column='habilitado', default=False, help_text='Si el usuario tiene 2FA activo')
+    fecha_activacion = models.DateTimeField(db_column='fecha_activacion', blank=True, null=True, help_text='Cuando se activó por primera vez')
+    ultima_verificacion = models.DateTimeField(db_column='ultima_verificacion', blank=True, null=True, help_text='Último uso exitoso del código')
+    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
     
     class Meta(ManagedModel.Meta):
         db_table = 'autenticacion_2fa'
@@ -465,16 +465,16 @@ class Intento2Fa(ManagedModel):
         ('BACKUP', 'Código de Respaldo'),
     ]
     
-    id_intento = models.AutoField(db_column='ID_Intento', primary_key=True)
-    usuario = models.CharField(db_column='Usuario', max_length=100)
-    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
-    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
-    ciudad = models.CharField(db_column='Ciudad', max_length=100, blank=True, null=True)
-    pais = models.CharField(db_column='Pais', max_length=100, blank=True, null=True)
-    codigo_ingresado = models.CharField(db_column='Codigo_Ingresado', max_length=10, blank=True, null=True)
-    exitoso = models.BooleanField(db_column='Exitoso', default=False)
-    tipo_codigo = models.CharField(db_column='Tipo_Codigo', max_length=10, choices=TIPO_CODIGO_CHOICES, blank=True, null=True)
-    fecha_intento = models.DateTimeField(db_column='Fecha_Intento', auto_now_add=True)
+    id_intento = models.AutoField(db_column='id_intento', primary_key=True)
+    usuario = models.CharField(db_column='usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='tipo_usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    ip_address = models.CharField(db_column='ip_address', max_length=45, blank=True, null=True)
+    ciudad = models.CharField(db_column='ciudad', max_length=100, blank=True, null=True)
+    pais = models.CharField(db_column='pais', max_length=100, blank=True, null=True)
+    codigo_ingresado = models.CharField(db_column='codigo_ingresado', max_length=10, blank=True, null=True)
+    exitoso = models.BooleanField(db_column='exitoso', default=False)
+    tipo_codigo = models.CharField(db_column='tipo_codigo', max_length=10, choices=TIPO_CODIGO_CHOICES, blank=True, null=True)
+    fecha_intento = models.DateTimeField(db_column='fecha_intento', auto_now_add=True)
     
     class Meta(ManagedModel.Meta):
         db_table = 'intentos_2fa'
@@ -496,15 +496,15 @@ class SesionActiva(ManagedModel):
         ('ADMIN', 'Administrador'),
     ]
     
-    id_sesion = models.AutoField(db_column='ID_Sesion', primary_key=True)
-    usuario = models.CharField(db_column='Usuario', max_length=100)
-    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
-    session_key = models.CharField(db_column='Session_Key', max_length=255, unique=True)
-    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
-    user_agent = models.TextField(db_column='User_Agent', blank=True, null=True)
-    fecha_inicio = models.DateTimeField(db_column='Fecha_Inicio')
-    ultima_actividad = models.DateTimeField(db_column='Ultima_Actividad')
-    activa = models.BooleanField(db_column='Activa', default=True)
+    id_sesion = models.AutoField(db_column='id_sesion', primary_key=True)
+    usuario = models.CharField(db_column='usuario', max_length=100)
+    tipo_usuario = models.CharField(db_column='tipo_usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    session_key = models.CharField(db_column='session_key', max_length=255, unique=True)
+    ip_address = models.CharField(db_column='ip_address', max_length=45, blank=True, null=True)
+    user_agent = models.TextField(db_column='user_agent', blank=True, null=True)
+    fecha_inicio = models.DateTimeField(db_column='fecha_inicio')
+    ultima_actividad = models.DateTimeField(db_column='ultima_actividad')
+    activa = models.BooleanField(db_column='activa', default=True)
     
     class Meta(ManagedModel.Meta):
         db_table = 'sesiones_activas'
@@ -535,14 +535,14 @@ class RestriccionHoraria(ManagedModel):
         ('DOMINGO', 'Domingo'),
     ]
     
-    id_restriccion = models.AutoField(db_column='ID_Restriccion', primary_key=True)
-    usuario = models.CharField(db_column='Usuario', max_length=100, blank=True, null=True, help_text='Usuario específico (NULL = aplica a tipo_usuario)')
-    tipo_usuario = models.CharField(db_column='Tipo_Usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
-    dia_semana = models.CharField(db_column='Dia_Semana', max_length=20, choices=DIA_SEMANA_CHOICES)
-    hora_inicio = models.TimeField(db_column='Hora_Inicio', help_text='Hora de inicio permitida')
-    hora_fin = models.TimeField(db_column='Hora_F fin', help_text='Hora de fin permitida')
-    activo = models.BooleanField(db_column='Activo', default=True, help_text='Si la restricción está activa')
-    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    id_restriccion = models.AutoField(db_column='id_restriccion', primary_key=True)
+    usuario = models.CharField(db_column='usuario', max_length=100, blank=True, null=True, help_text='Usuario específico (NULL = aplica a tipo_usuario)')
+    tipo_usuario = models.CharField(db_column='tipo_usuario', max_length=20, choices=TIPO_USUARIO_CHOICES)
+    dia_semana = models.CharField(db_column='dia_semana', max_length=20, choices=DIA_SEMANA_CHOICES)
+    hora_inicio = models.TimeField(db_column='hora_inicio', help_text='Hora de inicio permitida')
+    hora_fin = models.TimeField(db_column='hora_f fin', help_text='Hora de fin permitida')
+    activo = models.BooleanField(db_column='activo', default=True, help_text='Si la restricción está activa')
+    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
     
     class Meta(ManagedModel.Meta):
         db_table = 'restricciones_horarias'
@@ -557,13 +557,13 @@ class RestriccionHoraria(ManagedModel):
 
 class RenovacionSesion(ManagedModel):
     '''Tabla renovaciones_sesion - Auditoría de renovaciones de tokens'''
-    id_renovacion = models.AutoField(db_column='ID_Renovacion', primary_key=True)
-    usuario = models.CharField(db_column='Usuario', max_length=100)
-    session_key_anterior = models.CharField(db_column='Session_Key_Anterior', max_length=255, blank=True, null=True)
-    session_key_nuevo = models.CharField(db_column='Session_Key_Nuevo', max_length=255, blank=True, null=True)
-    ip_address = models.CharField(db_column='IP_Address', max_length=45, blank=True, null=True)
-    user_agent = models.TextField(db_column='User_Agent', blank=True, null=True)
-    fecha_renovacion = models.DateTimeField(db_column='Fecha_Renovacion', auto_now_add=True)
+    id_renovacion = models.AutoField(db_column='id_renovacion', primary_key=True)
+    usuario = models.CharField(db_column='usuario', max_length=100)
+    session_key_anterior = models.CharField(db_column='session_key_anterior', max_length=255, blank=True, null=True)
+    session_key_nuevo = models.CharField(db_column='session_key_nuevo', max_length=255, blank=True, null=True)
+    ip_address = models.CharField(db_column='ip_address', max_length=45, blank=True, null=True)
+    user_agent = models.TextField(db_column='user_agent', blank=True, null=True)
+    fecha_renovacion = models.DateTimeField(db_column='fecha_renovacion', auto_now_add=True)
     
     class Meta(ManagedModel.Meta):
         db_table = 'renovaciones_sesion'
@@ -592,11 +592,11 @@ class AjustesInventario(ManagedModel):
     ]
 
     id_ajuste = models.BigAutoField(db_column='ID_Ajuste', primary_key=True)
-    id_empleado_responsable = models.ForeignKey(
-        Empleado,
-        on_delete=models.PROTECT,
-        db_column='ID_Empleado_Responsable'
-    )
+    # id_empleado_responsable = models.ForeignKey(  # Columna no existe en MySQL
+    #     Empleado,
+    #     on_delete=models.PROTECT,
+    #     db_column='id_empleado_responsable'
+    # )
     fecha_hora = models.DateTimeField(db_column='Fecha_Hora')
     tipo_ajuste = models.CharField(db_column='Tipo_Ajuste', max_length=8, choices=TIPO_AJUSTE_CHOICES)
     motivo = models.CharField(db_column='Motivo', max_length=255)
@@ -613,24 +613,24 @@ class AjustesInventario(ManagedModel):
 
 class DetalleAjuste(ManagedModel):
     '''Tabla detalle_ajuste - Detalle de ajustes de inventario'''
-    id_detalle = models.BigAutoField(db_column='ID_Detalle', primary_key=True)
+    id_detalle = models.BigAutoField(db_column='id_detalle', primary_key=True)
     id_ajuste = models.ForeignKey(
         AjustesInventario,
         on_delete=models.CASCADE,
-        db_column='ID_Ajuste',
+        db_column='id_ajuste',
         related_name='detalles'
     )
     id_producto = models.ForeignKey(
         Producto,
         on_delete=models.PROTECT,
-        db_column='ID_Producto'
+        db_column='id_producto'
     )
     id_movimientostock = models.OneToOneField(
         MovimientosStock,
         on_delete=models.CASCADE,
-        db_column='ID_MovimientoStock'
+        db_column='id_movimientostock'
     )
-    cantidad_ajustada = models.DecimalField(db_column='Cantidad_Ajustada', max_digits=8, decimal_places=3)
+    cantidad_ajustada = models.DecimalField(db_column='cantidad_ajustada', max_digits=8, decimal_places=3)
 
     class Meta(ManagedModel.Meta):
         db_table = 'detalle_ajuste'

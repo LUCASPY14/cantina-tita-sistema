@@ -5,11 +5,11 @@ from .base import ManagedModel
 
 class ListaPrecios(ManagedModel):
     '''Tabla listas_precios - Listas de precios para clientes'''
-    id_lista = models.AutoField(db_column='ID_Lista', primary_key=True)
-    nombre_lista = models.CharField(db_column='Nombre_Lista', max_length=100, unique=True)
-    fecha_vigencia = models.DateField(db_column='Fecha_Vigencia', blank=True, null=True)
-    moneda = models.CharField(db_column='Moneda', max_length=3, default='PYG')
-    activo = models.BooleanField(db_column='Activo', default=True)
+    id_lista = models.AutoField(db_column='id_lista', primary_key=True)
+    nombre_lista = models.CharField(db_column='nombre_lista', max_length=100, unique=True)
+    fecha_vigencia = models.DateField(db_column='fecha_vigencia', blank=True, null=True)
+    moneda = models.CharField(db_column='moneda', max_length=3, default='PYG')
+    activo = models.BooleanField(db_column='activo', default=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'listas_precios'
@@ -21,9 +21,9 @@ class ListaPrecios(ManagedModel):
 
 class TipoCliente(ManagedModel):
     '''Tabla tipos_cliente - Tipos de cliente existentes'''
-    id_tipo_cliente = models.AutoField(db_column='ID_Tipo_Cliente', primary_key=True)
-    nombre_tipo = models.CharField(db_column='Nombre_Tipo', max_length=50, unique=True)
-    activo = models.BooleanField(db_column='Activo', default=True)
+    id_tipo_cliente = models.AutoField(db_column='id_tipo_cliente', primary_key=True)
+    nombre_tipo = models.CharField(db_column='nombre_tipo', max_length=50, unique=True)
+    activo = models.BooleanField(db_column='activo', default=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'tipos_cliente'
@@ -36,17 +36,17 @@ class TipoCliente(ManagedModel):
 
 class Categoria(ManagedModel):
     '''Tabla categorias - Categorías de productos'''
-    id_categoria = models.AutoField(db_column='ID_Categoria', primary_key=True)
-    nombre = models.CharField(db_column='Nombre', max_length=100)
+    id_categoria = models.AutoField(db_column='id_categoria', primary_key=True)
+    nombre = models.CharField(db_column='nombre', max_length=100)
     id_categoria_padre = models.ForeignKey(
         'self', 
         on_delete=models.SET_NULL, 
-        db_column='ID_Categoria_Padre',
+        db_column='id_categoria_padre',
         blank=True, 
         null=True,
         related_name='subcategorias'
     )
-    activo = models.BooleanField(db_column='Activo', default=True)
+    activo = models.BooleanField(db_column='activo', default=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'categorias'
@@ -59,10 +59,10 @@ class Categoria(ManagedModel):
 
 class UnidadMedida(ManagedModel):
     '''Tabla unidades_medida'''
-    id_unidad_medida = models.AutoField(db_column='ID_Unidad_de_Medida', primary_key=True)
-    nombre = models.CharField(db_column='Nombre', max_length=50)
-    abreviatura = models.CharField(db_column='Abreviatura', max_length=10)
-    activo = models.BooleanField(db_column='Activo', default=True)
+    id_unidad_medida = models.AutoField(db_column='id_unidad_de_medida', primary_key=True)
+    nombre = models.CharField(db_column='nombre', max_length=50)
+    abreviatura = models.CharField(db_column='abreviatura', max_length=10)
+    activo = models.BooleanField(db_column='activo', default=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'unidades_medida'
@@ -75,12 +75,12 @@ class UnidadMedida(ManagedModel):
 
 class Impuesto(ManagedModel):
     '''Tabla impuestos'''
-    id_impuesto = models.AutoField(db_column='ID_Impuesto', primary_key=True)
-    nombre_impuesto = models.CharField(db_column='Nombre_Impuesto', max_length=50, unique=True)
-    porcentaje = models.DecimalField(db_column='Porcentaje', max_digits=4, decimal_places=2)
-    vigente_desde = models.DateField(db_column='Vigente_Desde')
-    vigente_hasta = models.DateField(db_column='Vigente_Hasta', blank=True, null=True)
-    activo = models.BooleanField(db_column='Activo', default=True)
+    id_impuesto = models.AutoField(db_column='id_impuesto', primary_key=True)
+    nombre_impuesto = models.CharField(db_column='nombre_impuesto', max_length=50, unique=True)
+    porcentaje = models.DecimalField(db_column='porcentaje', max_digits=4, decimal_places=2)
+    vigente_desde = models.DateField(db_column='vigente_desde')
+    vigente_hasta = models.DateField(db_column='vigente_hasta', blank=True, null=True)
+    activo = models.BooleanField(db_column='activo', default=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'impuestos'
@@ -93,10 +93,10 @@ class Impuesto(ManagedModel):
 
 class TipoRolGeneral(ManagedModel):
     '''Tabla tipos_rol_general'''
-    id_rol = models.AutoField(db_column='ID_Rol', primary_key=True)
-    nombre_rol = models.CharField(db_column='Nombre_Rol', max_length=50, unique=True)
-    descripcion = models.CharField(db_column='Descripcion', max_length=100, blank=True, null=True)
-    activo = models.BooleanField(db_column='Activo', default=True)
+    id_rol = models.AutoField(db_column='id_rol', primary_key=True)
+    nombre_rol = models.CharField(db_column='nombre_rol', max_length=50, unique=True)
+    descripcion = models.CharField(db_column='descripcion', max_length=100, blank=True, null=True)
+    activo = models.BooleanField(db_column='activo', default=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'tipos_rol_general'
@@ -109,11 +109,11 @@ class TipoRolGeneral(ManagedModel):
 
 class MediosPago(ManagedModel):
     '''Tabla medios_pago - Medios de pago'''
-    id_medio_pago = models.AutoField(db_column='ID_Medio_Pago', primary_key=True)
-    descripcion = models.CharField(db_column='Descripcion', max_length=50, unique=True)
-    genera_comision = models.BooleanField(db_column='Genera_Comision', default=False)
-    requiere_validacion = models.BooleanField(db_column='Requiere_Validacion', default=False)
-    activo = models.BooleanField(db_column='Activo', default=True)
+    id_medio_pago = models.AutoField(db_column='id_medio_pago', primary_key=True)
+    descripcion = models.CharField(db_column='descripcion', max_length=50, unique=True)
+    genera_comision = models.BooleanField(db_column='genera_comision', default=False)
+    requiere_validacion = models.BooleanField(db_column='requiere_validacion', default=False)
+    activo = models.BooleanField(db_column='activo', default=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'medios_pago'
@@ -126,18 +126,18 @@ class MediosPago(ManagedModel):
 
 class TarifasComision(ManagedModel):
     '''Tabla tarifas_comision - Tarifas de comisión por medio de pago'''
-    id_tarifa = models.AutoField(db_column='ID_Tarifa', primary_key=True)
+    id_tarifa = models.AutoField(db_column='id_tarifa', primary_key=True)
     id_medio_pago = models.ForeignKey(
         MediosPago,
         on_delete=models.CASCADE,
-        db_column='ID_Medio_Pago',
+        db_column='id_medio_pago',
         related_name='tarifas'
     )
-    fecha_inicio_vigencia = models.DateTimeField(db_column='Fecha_Inicio_Vigencia')
-    fecha_fin_vigencia = models.DateTimeField(db_column='Fecha_Fin_Vigencia', blank=True, null=True)
-    porcentaje_comision = models.DecimalField(db_column='Porcentaje_Comision', max_digits=5, decimal_places=4)
-    monto_fijo_comision = models.DecimalField(db_column='Monto_Fijo_Comision', max_digits=10, decimal_places=2, blank=True, null=True)
-    activo = models.BooleanField(db_column='Activo', default=True)
+    fecha_inicio_vigencia = models.DateTimeField(db_column='fecha_inicio_vigencia')
+    fecha_fin_vigencia = models.DateTimeField(db_column='fecha_fin_vigencia', blank=True, null=True)
+    porcentaje_comision = models.DecimalField(db_column='porcentaje_comision', max_digits=5, decimal_places=4)
+    monto_fijo_comision = models.DecimalField(db_column='monto_fijo_comision', max_digits=10, decimal_places=2, blank=True, null=True)
+    activo = models.BooleanField(db_column='activo', default=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'tarifas_comision'
@@ -150,9 +150,9 @@ class TarifasComision(ManagedModel):
 
 class TiposPago(ManagedModel):
     '''Tabla tipos_pago - Tipos de pago'''
-    id_tipo_pago = models.AutoField(db_column='ID_Tipo_Pago', primary_key=True)
-    descripcion = models.CharField(db_column='Descripcion', max_length=50, unique=True)
-    activo = models.BooleanField(db_column='Activo', default=True)
+    id_tipo_pago = models.AutoField(db_column='id_tipo_pago', primary_key=True)
+    descripcion = models.CharField(db_column='descripcion', max_length=50, unique=True)
+    activo = models.BooleanField(db_column='activo', default=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'tipos_pago'
@@ -165,13 +165,13 @@ class TiposPago(ManagedModel):
 
 class Grado(ManagedModel):
     '''Tabla grados - Catálogo de niveles educativos'''
-    id_grado = models.AutoField(db_column='ID_Grado', primary_key=True)
-    nombre_grado = models.CharField(db_column='Nombre_Grado', max_length=50, unique=True)
-    nivel = models.IntegerField(db_column='Nivel')
-    orden_visualizacion = models.IntegerField(db_column='Orden_Visualizacion')
-    es_ultimo_grado = models.BooleanField(db_column='Es_Ultimo_Grado', default=False)
-    activo = models.BooleanField(db_column='Activo', default=True)
-    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    id_grado = models.AutoField(db_column='id_grado', primary_key=True)
+    nombre_grado = models.CharField(db_column='nombre_grado', max_length=50, unique=True)
+    nivel = models.IntegerField(db_column='nivel')
+    orden_visualizacion = models.IntegerField(db_column='orden_visualizacion')
+    es_ultimo_grado = models.BooleanField(db_column='es_ultimo_grado', default=False)
+    activo = models.BooleanField(db_column='activo', default=True)
+    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'grados'

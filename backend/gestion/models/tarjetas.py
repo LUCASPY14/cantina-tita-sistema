@@ -15,23 +15,23 @@ class Tarjeta(ManagedModel):
         ('Vencida', 'Vencida'),
     ]
 
-    nro_tarjeta = models.CharField(db_column='Nro_Tarjeta', max_length=20, primary_key=True)
+    nro_tarjeta = models.CharField(db_column='nro_tarjeta', max_length=20, primary_key=True)
     id_hijo = models.OneToOneField(
         Hijo,
         on_delete=models.PROTECT,
-        db_column='ID_Hijo',
+        db_column='id_hijo',
         unique=True
     )
     saldo_actual = models.DecimalField(
-        db_column='Saldo_Actual', 
+        db_column='saldo_actual', 
         max_digits=12, 
         decimal_places=2, 
         default=0
     )
-    estado = models.CharField(db_column='Estado', max_length=20, choices=ESTADO_CHOICES, default='Activa')
-    fecha_vencimiento = models.DateField(db_column='Fecha_Vencimiento', blank=True, null=True)
-    saldo_alerta = models.DecimalField(db_column='Saldo_Alerta', max_digits=10, decimal_places=2, blank=True, null=True)
-    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
+    estado = models.CharField(db_column='estado', max_length=20, choices=ESTADO_CHOICES, default='Activa')
+    fecha_vencimiento = models.DateField(db_column='fecha_vencimiento', blank=True, null=True)
+    saldo_alerta = models.DecimalField(db_column='saldo_alerta', max_digits=10, decimal_places=2, blank=True, null=True)
+    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
     
     # Campos para autorización de saldo negativo
     permite_saldo_negativo = models.BooleanField(
@@ -76,16 +76,16 @@ class CargasSaldo(ManagedModel):
         ('ERROR', 'Error')
     ]
 
-    id_carga = models.BigAutoField(db_column='ID_Carga', primary_key=True)
+    id_carga = models.BigAutoField(db_column='id_carga', primary_key=True)
     nro_tarjeta = models.ForeignKey(
         Tarjeta,
         on_delete=models.PROTECT,
-        db_column='Nro_Tarjeta'
+        db_column='nro_tarjeta'
     )
     id_cliente_origen = models.ForeignKey(
         Cliente,
         on_delete=models.PROTECT,
-        db_column='ID_Cliente_Origen',
+        db_column='id_cliente_origen',
         related_name='cargas_origen',
         blank=True,
         null=True
@@ -93,13 +93,13 @@ class CargasSaldo(ManagedModel):
     id_nota = models.ForeignKey(
             'gestion.NotasCreditoCliente',  # Confirmado: referencia correcta a la app gestion
         on_delete=models.PROTECT,
-        db_column='ID_Nota',
+        db_column='id_nota',
         blank=True,
         null=True
     )
-    fecha_carga = models.DateTimeField(db_column='Fecha_Carga')
-    monto_cargado = models.DecimalField(db_column='Monto_Cargado', max_digits=12, decimal_places=2)
-    referencia = models.CharField(db_column='Referencia', max_length=100, blank=True, null=True)
+    fecha_carga = models.DateTimeField(db_column='fecha_carga')
+    monto_cargado = models.DecimalField(db_column='monto_cargado', max_digits=12, decimal_places=2)
+    referencia = models.CharField(db_column='referencia', max_length=100, blank=True, null=True)
 
     # Campos adicionales para integración MetrePay
     estado = models.CharField(
@@ -143,34 +143,34 @@ class CargasSaldo(ManagedModel):
 
 class ConsumoTarjeta(ManagedModel):
     '''Tabla consumos_tarjeta - Historial de consumos con tarjeta'''
-    id_consumo = models.BigAutoField(db_column='ID_Consumo', primary_key=True)
+    id_consumo = models.BigAutoField(db_column='id_consumo', primary_key=True)
     nro_tarjeta = models.ForeignKey(
         Tarjeta,
         on_delete=models.PROTECT,
-        db_column='Nro_Tarjeta',
+        db_column='nro_tarjeta',
         related_name='consumos'
     )
-    fecha_consumo = models.DateTimeField(db_column='Fecha_Consumo')
+    fecha_consumo = models.DateTimeField(db_column='fecha_consumo')
     monto_consumido = models.DecimalField(
-        db_column='Monto_Consumido', 
+        db_column='monto_consumido', 
         max_digits=12, 
         decimal_places=2
     )
-    detalle = models.CharField(db_column='Detalle', max_length=200, blank=True, null=True)
+    detalle = models.CharField(db_column='detalle', max_length=200, blank=True, null=True)
     saldo_anterior = models.DecimalField(
-        db_column='Saldo_Anterior', 
+        db_column='saldo_anterior', 
         max_digits=12, 
         decimal_places=2
     )
     saldo_posterior = models.DecimalField(
-        db_column='Saldo_Posterior', 
+        db_column='saldo_posterior', 
         max_digits=12, 
         decimal_places=2
     )
     id_empleado_registro = models.ForeignKey(
         Empleado,
         on_delete=models.SET_NULL,
-        db_column='ID_Empleado_Registro',
+        db_column='id_empleado_registro',
         blank=True,
         null=True,
         related_name='consumos_registrados'

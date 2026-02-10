@@ -6,24 +6,24 @@ from .catalogos import TipoRolGeneral
 
 class Empleado(ManagedModel):
     '''Tabla empleados'''
-    id_empleado = models.AutoField(db_column='ID_Empleado', primary_key=True)
+    id_empleado = models.AutoField(db_column='id_empleado', primary_key=True)
     id_rol = models.ForeignKey(
         TipoRolGeneral, 
         on_delete=models.PROTECT, 
-        db_column='ID_Rol'
+        db_column='id_rol'
     )
-    nombre = models.CharField(db_column='Nombre', max_length=100)
-    apellido = models.CharField(db_column='Apellido', max_length=100)
-    usuario = models.CharField(db_column='Usuario', max_length=50, unique=True)
-    contrasena_hash = models.CharField(db_column='Contrasena_Hash', max_length=60)
-    fecha_ingreso = models.DateTimeField(db_column='Fecha_Ingreso', auto_now_add=True)
-    direccion = models.CharField(db_column='Direccion', max_length=255, blank=True, null=True)
-    ciudad = models.CharField(db_column='Ciudad', max_length=100, blank=True, null=True)
-    pais = models.CharField(db_column='Pais', max_length=100, blank=True, null=True)
-    telefono = models.CharField(db_column='Telefono', max_length=20, blank=True, null=True)
-    email = models.EmailField(db_column='Email', blank=True, null=True)
-    activo = models.BooleanField(db_column='Activo', default=True)
-    fecha_baja = models.DateTimeField(db_column='Fecha_Baja', blank=True, null=True)
+    nombre = models.CharField(db_column='nombre', max_length=100)
+    apellido = models.CharField(db_column='apellido', max_length=100)
+    usuario = models.CharField(db_column='usuario', max_length=50, unique=True)
+    contrasena_hash = models.CharField(db_column='contrasena_hash', max_length=60)
+    fecha_ingreso = models.DateTimeField(db_column='fecha_ingreso', auto_now_add=True)
+    direccion = models.CharField(db_column='direccion', max_length=255, blank=True, null=True)
+    ciudad = models.CharField(db_column='ciudad', max_length=100, blank=True, null=True)
+    pais = models.CharField(db_column='pais', max_length=100, blank=True, null=True)
+    telefono = models.CharField(db_column='telefono', max_length=20, blank=True, null=True)
+    email = models.EmailField(db_column='email', blank=True, null=True)
+    activo = models.BooleanField(db_column='activo', default=True)
+    fecha_baja = models.DateTimeField(db_column='fecha_baja', blank=True, null=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'empleados'

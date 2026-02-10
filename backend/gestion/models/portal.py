@@ -12,14 +12,14 @@ class UsuariosWebClientes(ManagedModel):
     id_cliente = models.OneToOneField(
         Cliente,
         on_delete=models.CASCADE,
-        db_column='ID_Cliente',
+        db_column='id_cliente',
         primary_key=True,
         related_name='usuario_web'
     )
-    usuario = models.CharField(db_column='Usuario', max_length=50, unique=True)
-    contrasena_hash = models.CharField(db_column='Contrasena_Hash', max_length=128)
-    ultimo_acceso = models.DateTimeField(db_column='Ultimo_Acceso', blank=True, null=True)
-    activo = models.BooleanField(db_column='Activo', default=True)
+    usuario = models.CharField(db_column='usuario', max_length=50, unique=True)
+    contrasena_hash = models.CharField(db_column='contrasena_hash', max_length=128)
+    ultimo_acceso = models.DateTimeField(db_column='ultimo_acceso', blank=True, null=True)
+    activo = models.BooleanField(db_column='activo', default=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'usuarios_web_clientes'
@@ -34,19 +34,19 @@ class UsuarioPortal(ManagedModel):
     """Usuario del portal web de padres
     Permite a los padres acceder al portal con email/contraseña"""
     
-    id_usuario_portal = models.AutoField(db_column='ID_Usuario_Portal', primary_key=True)
+    id_usuario_portal = models.AutoField(db_column='id_usuario_portal', primary_key=True)
     cliente = models.OneToOneField(
         Cliente,
         on_delete=models.CASCADE,
-        db_column='ID_Cliente',
+        db_column='id_cliente',
         related_name='usuario_portal'
     )
-    email = models.EmailField(db_column='Email', unique=True, max_length=255)
-    password_hash = models.CharField(db_column='Password_Hash', max_length=255)
-    email_verificado = models.BooleanField(db_column='Email_Verificado', default=False)
-    fecha_registro = models.DateTimeField(db_column='Fecha_Registro', auto_now_add=True)
-    ultimo_acceso = models.DateTimeField(db_column='Ultimo_Acceso', null=True, blank=True)
-    activo = models.BooleanField(db_column='Activo', default=True)
+    email = models.EmailField(db_column='email', unique=True, max_length=255)
+    password_hash = models.CharField(db_column='password_hash', max_length=255)
+    email_verificado = models.BooleanField(db_column='email_verificado', default=False)
+    fecha_registro = models.DateTimeField(db_column='fecha_registro', auto_now_add=True)
+    ultimo_acceso = models.DateTimeField(db_column='ultimo_acceso', null=True, blank=True)
+    activo = models.BooleanField(db_column='activo', default=True)
     
     class Meta(ManagedModel.Meta):
         managed = True
@@ -66,19 +66,19 @@ class TokenVerificacion(ManagedModel):
         ('password_reset', 'Recuperación de Contraseña'),
     ]
     
-    id_token = models.AutoField(db_column='ID_Token', primary_key=True)
+    id_token = models.AutoField(db_column='id_token', primary_key=True)
     usuario_portal = models.ForeignKey(
         UsuarioPortal,
         on_delete=models.CASCADE,
-        db_column='ID_Usuario_Portal',
+        db_column='id_usuario_portal',
         related_name='tokens'
     )
-    token = models.CharField(db_column='Token', max_length=100, unique=True)
-    tipo = models.CharField(db_column='Tipo', max_length=50, choices=TIPO_CHOICES)
-    expira_en = models.DateTimeField(db_column='Expira_En')
-    usado = models.BooleanField(db_column='Usado', default=False)
-    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion', auto_now_add=True)
-    fecha_uso = models.DateTimeField(db_column='Fecha_Uso', null=True, blank=True)
+    token = models.CharField(db_column='token', max_length=100, unique=True)
+    tipo = models.CharField(db_column='tipo', max_length=50, choices=TIPO_CHOICES)
+    expira_en = models.DateTimeField(db_column='expira_en')
+    usado = models.BooleanField(db_column='usado', default=False)
+    fecha_creacion = models.DateTimeField(db_column='fecha_creacion', auto_now_add=True)
+    fecha_uso = models.DateTimeField(db_column='fecha_uso', null=True, blank=True)
     
     class Meta(ManagedModel.Meta):
         managed = True
@@ -97,18 +97,18 @@ class TokenVerificacion(ManagedModel):
 class PreferenciaNotificacion(ManagedModel):
     """Preferencias de notificación de los usuarios del portal"""
     
-    id_preferencia = models.AutoField(db_column='ID_Preferencia', primary_key=True)
+    id_preferencia = models.AutoField(db_column='id_preferencia', primary_key=True)
     usuario_portal = models.ForeignKey(
         UsuarioPortal,
         on_delete=models.CASCADE,
-        db_column='ID_Usuario_Portal',
+        db_column='id_usuario_portal',
         related_name='preferencias_notificacion'
     )
-    tipo_notificacion = models.CharField(db_column='Tipo_Notificacion', max_length=50)
-    email_activo = models.BooleanField(db_column='Email_Activo', default=True)
-    push_activo = models.BooleanField(db_column='Push_Activo', default=True)
-    creado_en = models.DateTimeField(db_column='Creado_En', auto_now_add=True)
-    actualizado_en = models.DateTimeField(db_column='Actualizado_En', auto_now=True)
+    tipo_notificacion = models.CharField(db_column='tipo_notificacion', max_length=50)
+    email_activo = models.BooleanField(db_column='email_activo', default=True)
+    push_activo = models.BooleanField(db_column='push_activo', default=True)
+    creado_en = models.DateTimeField(db_column='creado_en', auto_now_add=True)
+    actualizado_en = models.DateTimeField(db_column='actualizado_en', auto_now=True)
     
     class Meta(ManagedModel.Meta):
         managed = True
@@ -138,20 +138,20 @@ class Notificacion(ManagedModel):
         ('info_general', 'Información General'),
     ]
     
-    id_notificacion = models.AutoField(db_column='ID_Notificacion', primary_key=True)
+    id_notificacion = models.AutoField(db_column='id_notificacion', primary_key=True)
     usuario_portal = models.ForeignKey(
         UsuarioPortal,
         on_delete=models.CASCADE,
-        db_column='ID_Usuario_Portal',
+        db_column='id_usuario_portal',
         related_name='notificaciones'
     )
-    tipo = models.CharField(db_column='Tipo', max_length=50, choices=TIPO_CHOICES)
-    titulo = models.CharField(db_column='Titulo', max_length=255)
-    mensaje = models.TextField(db_column='Mensaje')
-    leida = models.BooleanField(db_column='Leida', default=False)
-    fecha_envio = models.DateTimeField(db_column='Fecha_Envio', default=timezone.now)
-    fecha_lectura = models.DateTimeField(db_column='Fecha_Lectura', null=True, blank=True)
-    creado_en = models.DateTimeField(db_column='Creado_En', auto_now_add=True)
+    tipo = models.CharField(db_column='tipo', max_length=50, choices=TIPO_CHOICES)
+    titulo = models.CharField(db_column='titulo', max_length=255)
+    mensaje = models.TextField(db_column='mensaje')
+    leida = models.BooleanField(db_column='leida', default=False)
+    fecha_envio = models.DateTimeField(db_column='fecha_envio', default=timezone.now)
+    fecha_lectura = models.DateTimeField(db_column='fecha_lectura', null=True, blank=True)
+    creado_en = models.DateTimeField(db_column='creado_en', auto_now_add=True)
     
     class Meta(ManagedModel.Meta):
         managed = True
@@ -231,24 +231,24 @@ class SolicitudesNotificacion(ManagedModel):
         ('Fallida', 'Fallida'),
     ]
 
-    id_solicitud = models.BigAutoField(db_column='ID_Solicitud', primary_key=True)
+    id_solicitud = models.BigAutoField(db_column='id_solicitud', primary_key=True)
     id_cliente = models.ForeignKey(
         Cliente,
         on_delete=models.CASCADE,
-        db_column='ID_Cliente',
+        db_column='id_cliente',
         related_name='notificaciones'
     )
     nro_tarjeta = models.ForeignKey(
         Tarjeta,
         on_delete=models.CASCADE,
-        db_column='Nro_Tarjeta'
+        db_column='nro_tarjeta'
     )
-    saldo_alerta = models.DecimalField(db_column='Saldo_Alerta', max_digits=10, decimal_places=2)
-    mensaje = models.CharField(db_column='Mensaje', max_length=255)
-    destino = models.CharField(db_column='Destino', max_length=8, choices=DESTINO_CHOICES)
-    estado = models.CharField(db_column='Estado', max_length=9, choices=ESTADO_CHOICES, blank=True, null=True)
-    fecha_solicitud = models.DateTimeField(db_column='Fecha_Solicitud')
-    fecha_envio = models.DateTimeField(db_column='Fecha_Envio', blank=True, null=True)
+    saldo_alerta = models.DecimalField(db_column='saldo_alerta', max_digits=10, decimal_places=2)
+    mensaje = models.CharField(db_column='mensaje', max_length=255)
+    destino = models.CharField(db_column='destino', max_length=8, choices=DESTINO_CHOICES)
+    estado = models.CharField(db_column='estado', max_length=9, choices=ESTADO_CHOICES, blank=True, null=True)
+    fecha_solicitud = models.DateTimeField(db_column='fecha_solicitud')
+    fecha_envio = models.DateTimeField(db_column='fecha_envio', blank=True, null=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'solicitudes_notificacion'
@@ -274,11 +274,11 @@ class TransaccionOnline(ManagedModel):
         ('tigo_money', 'Tigo Money'),
     ]
     
-    id_transaccion = models.AutoField(db_column='ID_Transaccion', primary_key=True)
+    id_transaccion = models.AutoField(db_column='id_transaccion', primary_key=True)
     nro_tarjeta = models.ForeignKey(
         Tarjeta,
         on_delete=models.SET_NULL,
-        db_column='Nro_Tarjeta',
+        db_column='nro_tarjeta',
         to_field='nro_tarjeta',
         related_name='transacciones_online',
         null=True,
@@ -287,20 +287,20 @@ class TransaccionOnline(ManagedModel):
     usuario_portal = models.ForeignKey(
         UsuarioPortal,
         on_delete=models.SET_NULL,
-        db_column='ID_Usuario_Portal',
+        db_column='id_usuario_portal',
         related_name='transacciones',
         null=True,
         blank=True
     )
-    monto = models.BigIntegerField(db_column='Monto')
-    metodo_pago = models.CharField(db_column='Metodo_Pago', max_length=20, choices=METODO_PAGO_CHOICES)
-    estado = models.CharField(db_column='Estado', max_length=20, choices=ESTADO_CHOICES, default='pendiente')
-    referencia_pago = models.CharField(db_column='Referencia_Pago', max_length=255, null=True, blank=True)
-    id_transaccion_externa = models.CharField(db_column='ID_Transaccion_Externa', max_length=255, null=True, blank=True)
-    datos_extra = models.TextField(db_column='Datos_Extra', null=True, blank=True)
-    fecha_transaccion = models.DateTimeField(db_column='Fecha_Transaccion')
-    creado_en = models.DateTimeField(db_column='Creado_En', auto_now_add=True)
-    actualizado_en = models.DateTimeField(db_column='Actualizado_En', auto_now=True)
+    monto = models.BigIntegerField(db_column='monto')
+    metodo_pago = models.CharField(db_column='metodo_pago', max_length=20, choices=METODO_PAGO_CHOICES)
+    estado = models.CharField(db_column='estado', max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    referencia_pago = models.CharField(db_column='referencia_pago', max_length=255, null=True, blank=True)
+    id_transaccion_externa = models.CharField(db_column='id_transaccion_externa', max_length=255, null=True, blank=True)
+    datos_extra = models.TextField(db_column='datos_extra', null=True, blank=True)
+    fecha_transaccion = models.DateTimeField(db_column='fecha_transaccion')
+    creado_en = models.DateTimeField(db_column='creado_en', auto_now_add=True)
+    actualizado_en = models.DateTimeField(db_column='actualizado_en', auto_now=True)
     
     class Meta(ManagedModel.Meta):
         managed = True
@@ -328,15 +328,15 @@ class AlertasSistema(ManagedModel):
         ('Resuelta', 'Resuelta'),
     ]
 
-    id_alerta = models.BigAutoField(db_column='ID_Alerta', primary_key=True)
-    tipo = models.CharField(db_column='Tipo', max_length=30, choices=TIPO_CHOICES)
-    mensaje = models.CharField(db_column='Mensaje', max_length=500)
-    fecha_creacion = models.DateTimeField(db_column='Fecha_Creacion')
-    fecha_leida = models.DateTimeField(db_column='Fecha_Leida', blank=True, null=True)
-    estado = models.CharField(db_column='Estado', max_length=9, choices=ESTADO_CHOICES, blank=True, null=True)
-    id_empleado_resuelve = models.BigIntegerField(db_column='ID_Empleado_Resuelve', blank=True, null=True)
-    fecha_resolucion = models.DateTimeField(db_column='Fecha_Resolucion', blank=True, null=True)
-    observaciones = models.TextField(db_column='Observaciones', blank=True, null=True)
+    id_alerta = models.BigAutoField(db_column='id_alerta', primary_key=True)
+    tipo = models.CharField(db_column='tipo', max_length=30, choices=TIPO_CHOICES)
+    mensaje = models.CharField(db_column='mensaje', max_length=500)
+    fecha_creacion = models.DateTimeField(db_column='fecha_creacion')
+    fecha_leida = models.DateTimeField(db_column='fecha_leida', blank=True, null=True)
+    estado = models.CharField(db_column='estado', max_length=9, choices=ESTADO_CHOICES, blank=True, null=True)
+    id_empleado_resuelve = models.BigIntegerField(db_column='id_empleado_resuelve', blank=True, null=True)
+    fecha_resolucion = models.DateTimeField(db_column='fecha_resolucion', blank=True, null=True)
+    observaciones = models.TextField(db_column='observaciones', blank=True, null=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'alertas_sistema'

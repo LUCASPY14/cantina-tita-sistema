@@ -8,44 +8,44 @@ from .empleados import Empleado
 
 class Producto(ManagedModel):
     '''Tabla productos - Productos existentes en la BD'''
-    id_producto = models.AutoField(db_column='ID_Producto', primary_key=True)
+    id_producto = models.AutoField(db_column='id_producto', primary_key=True)
     id_categoria = models.ForeignKey(
         Categoria,
         on_delete=models.PROTECT,
-        db_column='ID_Categoria',
+        db_column='id_categoria',
         related_name='productos'
     )
     id_unidad_medida = models.ForeignKey(
         UnidadMedida,
         on_delete=models.SET_NULL,  # Cambiado a SET_NULL porque en MySQL dice YES (permite NULL)
-        db_column='ID_Unidad_de_Medida',  # Nombre exacto de la columna
+        db_column='id_unidad_de_medida',  # Nombre exacto de la columna
         blank=True,
         null=True
     )
     id_impuesto = models.ForeignKey(
         Impuesto,
         on_delete=models.PROTECT,
-        db_column='ID_Impuesto'
+        db_column='id_impuesto'
     )
     codigo_barra = models.CharField(
-        db_column='Codigo_Barra',
+        db_column='codigo_barra',
         max_length=50,
         unique=True,
         blank=True,
         null=True  # En MySQL dice YES (permite NULL)
     )
-    descripcion = models.CharField(db_column='Descripcion', max_length=255)
+    descripcion = models.CharField(db_column='descripcion', max_length=255)
     stock_minimo = models.DecimalField(
-        db_column='Stock_Minimo',
+        db_column='stock_minimo',
         max_digits=10,
         decimal_places=3,
         default=0
     )
     permite_stock_negativo = models.BooleanField(
-        db_column='Permite_Stock_Negativo',
+        db_column='permite_stock_negativo',
         default=False
     )
-    activo = models.BooleanField(db_column='Activo', default=True)
+    activo = models.BooleanField(db_column='activo', default=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'productos'
@@ -61,15 +61,15 @@ class Producto(ManagedModel):
 
 class StockUnico(ManagedModel):
     '''Tabla stock_unico - Stock de productos'''
-    id_stock_unico = models.AutoField(db_column='ID_Stock_Unico', primary_key=True)
+    id_stock_unico = models.AutoField(db_column='id_stock_unico', primary_key=True)
     id_producto = models.OneToOneField(
         Producto,
         on_delete=models.CASCADE,
-        db_column='ID_Producto',
+        db_column='id_producto',
         related_name='stock'
     )
-    cantidad = models.DecimalField(db_column='Cantidad', max_digits=10, decimal_places=3, default=0)
-    fecha_ultima_actualizacion = models.DateTimeField(db_column='Fecha_Ultima_Actualizacion', auto_now=True)
+    cantidad = models.DecimalField(db_column='cantidad', max_digits=10, decimal_places=3, default=0)
+    fecha_ultima_actualizacion = models.DateTimeField(db_column='fecha_ultima_actualizacion', auto_now=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'stock_unico'
@@ -82,21 +82,21 @@ class StockUnico(ManagedModel):
 
 class PreciosPorLista(ManagedModel):
     '''Tabla precios_por_lista - Precios de productos por lista'''
-    id_precio = models.AutoField(db_column='ID_Precio', primary_key=True)
+    id_precio = models.AutoField(db_column='id_precio', primary_key=True)
     id_producto = models.ForeignKey(
         Producto,
         on_delete=models.CASCADE,
-        db_column='ID_Producto',
+        db_column='id_producto',
         related_name='precios_lista'
     )
     id_lista_precios = models.ForeignKey(
         ListaPrecios,
         on_delete=models.CASCADE,
-        db_column='ID_Lista',
+        db_column='id_lista',
         related_name='precios_productos'
     )
-    precio_venta = models.DecimalField(db_column='Precio_Unitario_Neto', max_digits=20, decimal_places=0)
-    fecha_vigencia = models.DateTimeField(db_column='Fecha_Vigencia')
+    precio_venta = models.DecimalField(db_column='precio_unitario_neto', max_digits=20, decimal_places=0)
+    fecha_vigencia = models.DateTimeField(db_column='fecha_vigencia')
 
     class Meta(ManagedModel.Meta):
         db_table = 'precios_por_lista'
@@ -110,22 +110,22 @@ class PreciosPorLista(ManagedModel):
 
 class CostosHistoricos(ManagedModel):
     '''Tabla costos_historicos - Historial de costos de productos'''
-    id_costo_historico = models.BigAutoField(db_column='ID_Costo_Historico', primary_key=True)
+    id_costo_historico = models.BigAutoField(db_column='id_costo_historico', primary_key=True)
     id_producto = models.ForeignKey(
         Producto,
         on_delete=models.CASCADE,
-        db_column='ID_Producto',
+        db_column='id_producto',
         related_name='costos_historicos'
     )
     id_compra = models.ForeignKey(
         'gestion.Compras',  # CAMBIADO: referencia correcta a la app gestion
         on_delete=models.SET_NULL,
-        db_column='ID_Compra',
+        db_column='id_compra',
         blank=True,
         null=True
     )
-    costo_unitario_neto = models.DecimalField(db_column='Costo_Unitario_Neto', max_digits=10, decimal_places=2)
-    fecha_compra = models.DateTimeField(db_column='Fecha_Compra')
+    costo_unitario_neto = models.DecimalField(db_column='costo_unitario_neto', max_digits=10, decimal_places=2)
+    fecha_compra = models.DateTimeField(db_column='fecha_compra')
 
     class Meta(ManagedModel.Meta):
         db_table = 'costos_historicos'
@@ -138,23 +138,27 @@ class CostosHistoricos(ManagedModel):
 
 class HistoricoPrecios(ManagedModel):
     '''Tabla historico_precios - Historial de precios de productos'''
-    id_historico_precio = models.BigAutoField(db_column='ID_Historico_Precio', primary_key=True)
+    # NOTA: Este modelo necesita revisión - mysqls table structure differs significantly
+    id_historico_precio = models.BigAutoField(db_column='id_historico', primary_key=True)  # MySQL: id_historico
+    # id_precio (campo falta en modelo Django)
     id_producto = models.ForeignKey(
         Producto,
         on_delete=models.CASCADE,
-        db_column='ID_Producto',
+        db_column='id_producto',
         related_name='historico_precios'
     )
-    precio_venta_anterior = models.DecimalField(db_column='Precio_Venta_Anterior', max_digits=12, decimal_places=2)
-    precio_venta_nuevo = models.DecimalField(db_column='Precio_Venta_Nuevo', max_digits=12, decimal_places=2)
-    fecha_cambio = models.DateTimeField(db_column='Fecha_Cambio')
-    motivo = models.CharField(db_column='Motivo', max_length=255, blank=True, null=True)
+    # id_lista (campo falta en modelo Django)
+    precio_venta_anterior = models.DecimalField(db_column='precio_anterior', max_digits=12, decimal_places=2)  # MySQL: precio_anterior
+    precio_venta_nuevo = models.DecimalField(db_column='precio_nuevo', max_digits=12, decimal_places=2)  # MySQL: precio_nuevo
+    fecha_cambio = models.DateTimeField(db_column='fecha_cambio')
+    # motivo = models.CharField(db_column='motivo', max_length=255, blank=True, null=True)  # Campo no existe en MySQL
     id_empleado_autoriza = models.ForeignKey(
         Empleado,
         on_delete=models.PROTECT,
-        db_column='ID_Empleado_Autoriza',
+        db_column='id_empleado_modifico',  # MySQL: id_empleado_modifico
         blank=True,
-        null=True
+        null=True,
+        related_name='historico_precios_modificados'
     )
 
     class Meta(ManagedModel.Meta):
@@ -174,43 +178,43 @@ class MovimientosStock(ManagedModel):
         ('Ajuste', 'Ajuste'),
     ]
 
-    id_movimientostock = models.BigAutoField(db_column='ID_MovimientoStock', primary_key=True)
+    id_movimientostock = models.BigAutoField(db_column='id_movimientostock', primary_key=True)
     id_producto = models.ForeignKey(
         Producto,
         on_delete=models.PROTECT,
-        db_column='ID_Producto',
+        db_column='id_producto',
         related_name='movimientos'
     )
     id_empleado_autoriza = models.ForeignKey(
         Empleado,
         on_delete=models.PROTECT,
-        db_column='ID_Empleado_Autoriza'
+        db_column='id_empleado_autoriza'
     )
     id_venta = models.ForeignKey(
         'pos.Venta',  # ACTUALIZADO: referencia al modelo migrado en pos app
         on_delete=models.SET_NULL,
-        db_column='ID_Venta',
+        db_column='id_venta',
         blank=True,
         null=True
     )
     id_compra = models.ForeignKey(
         'gestion.Compras',  # CAMBIADO: referencia correcta a la app gestion
         on_delete=models.SET_NULL,
-        db_column='ID_Compra',
+        db_column='id_compra',
         blank=True,
         null=True
     )
-    fecha_hora = models.DateTimeField(db_column='Fecha_Hora')
-    tipo_movimiento = models.CharField(db_column='Tipo_Movimiento', max_length=7, choices=TIPO_MOVIMIENTO_CHOICES)
-    cantidad = models.DecimalField(db_column='Cantidad', max_digits=10, decimal_places=3)
+    fecha_hora = models.DateTimeField(db_column='fecha_hora')
+    tipo_movimiento = models.CharField(db_column='tipo_movimiento', max_length=7, choices=TIPO_MOVIMIENTO_CHOICES)
+    cantidad = models.DecimalField(db_column='cantidad', max_digits=10, decimal_places=3)
     stock_resultante = models.DecimalField(
-        db_column='Stock_Resultante', 
+        db_column='stock_resultante', 
         max_digits=10, 
         decimal_places=3,
         default=0,
         help_text='Se calcula automáticamente por el trigger trg_stock_unico_after_movement'
     )
-    referencia_documento = models.CharField(db_column='Referencia_Documento', max_length=50, blank=True, null=True)
+    referencia_documento = models.CharField(db_column='referencia_documento', max_length=50, blank=True, null=True)
 
     class Meta(ManagedModel.Meta):
         db_table = 'movimientos_stock'

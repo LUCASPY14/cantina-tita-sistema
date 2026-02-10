@@ -16,6 +16,9 @@ from .promociones import *
 from .alergenos import *
 from .vistas import *
 
+# Importar modelos de notificaciones desde el archivo separado
+from ..models_notificaciones import NotificacionSistema, ConfiguracionNotificacionesSistema
+
 # Asegurar que se importen todas las clases necesarias
 __all__ = [
     # Base
@@ -82,4 +85,7 @@ __all__ = [
     'VistaRecargasHistorial', 'VistaResumenCajaDiario',
     'VistaNotasCreditoDetallado', 'VistaAlmuerzosDiarios',
     'VistaCuentasAlmuerzoDetallado', 'VistaReporteMensualSeparado',
+    
+    # Notificaciones
+    'NotificacionSistema', 'ConfiguracionNotificacionesSistema',
 ]
