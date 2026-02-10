@@ -1,0 +1,263 @@
+{% extends "base_pos.html" %}
+{% load static %}
+
+{% block title %}{% if plan %}Editar{% else %}Crear{% endif %} Plan de Almuerzo - MetrePay{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+    
+    <!-- Header -->
+    <div class="bg-white rounded-2xl shadow-lg p-6 mb-8">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'pos:planes_almuerzo_view' %}" class="btn btn-ghost btn-circle">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="text-4xl font-bold bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent">
+                    {% if plan %}Editar Plan{% else %}Crear Nuevo Plan{% endif %}
+                </h1>
+                <p class="text-gray-600 mt-2">Define los detalles del plan de almuerzo mensual</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario -->
+    <form method="POST" class="space-y-6" x-data="planForm()" @submit.prevent="submitForm">
+        {% csrf_token %}
+        
+        <!-- Información Básica -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <i class="fas fa-info-circle text-blue-600"></i>
+                Información Básica
+            </h2>
+
+            <div class="space-y-4">
+                <!-- Nombre del Plan -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Nombre del Plan *</span>
+                    </label>
+                    <input type="text" 
+                           name="nombre_plan" 
+                           x-model="formData.nombre_plan"
+                           placeholder="Ej: Plan Completo Semanal"
+                           class="input input-bordered w-full"
+                           required>
+                    <label class="label">
+                        <span class="label-text-alt text-gray-500">Nombre identificativo del plan</span>
+                    </label>
+                </div>
+
+                <!-- Descripción -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Descripción</span>
+                    </label>
+                    <textarea name="descripcion"
+                              x-model="formData.descripcion"
+                              class="textarea textarea-bordered h-24"
+                              placeholder="Describe los beneficios y características del plan..."></textarea>
+                </div>
+
+                <!-- Precio Mensual -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Precio Mensual (₲) *</span>
+                    </label>
+                    <input type="number" 
+                           name="precio_mensual"
+                           x-model="formData.precio_mensual"
+                           @input="calcularPrecioPromedio"
+                           placeholder="0"
+                           min="0"
+                           step="1000"
+                           class="input input-bordered w-full"
+                           required>
+                    <label class="label">
+                        <span class="label-text-alt text-gray-500">
+                            Precio aprox. por día: <span class="font-bold" x-text="precioPorDia"></span> ₲
+                        </span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Días de la Semana -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <i class="fas fa-calendar-week text-green-600"></i>
+                Días Incluidos en el Plan
+            </h2>
+
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <label class="label cursor-pointer justify-start gap-3 p-4 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors">
+                    <input type="checkbox" 
+                           value="Lunes" 
+                           x-model="diasSeleccionados"
+                           @change="actualizarDias"
+                           class="checkbox checkbox-primary">
+                    <span class="label-text font-semibold">Lunes</span>
+                </label>
+
+                <label class="label cursor-pointer justify-start gap-3 p-4 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors">
+                    <input type="checkbox" 
+                           value="Martes" 
+                           x-model="diasSeleccionados"
+                           @change="actualizarDias"
+                           class="checkbox checkbox-primary">
+                    <span class="label-text font-semibold">Martes</span>
+                </label>
+
+                <label class="label cursor-pointer justify-start gap-3 p-4 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors">
+                    <input type="checkbox" 
+                           value="Miércoles" 
+                           x-model="diasSeleccionados"
+                           @change="actualizarDias"
+                           class="checkbox checkbox-primary">
+                    <span class="label-text font-semibold">Miércoles</span>
+                </label>
+
+                <label class="label cursor-pointer justify-start gap-3 p-4 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors">
+                    <input type="checkbox" 
+                           value="Jueves" 
+                           x-model="diasSeleccionados"
+                           @change="actualizarDias"
+                           class="checkbox checkbox-primary">
+                    <span class="label-text font-semibold">Jueves</span>
+                </label>
+
+                <label class="label cursor-pointer justify-start gap-3 p-4 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors">
+                    <input type="checkbox" 
+                           value="Viernes" 
+                           x-model="diasSeleccionados"
+                           @change="actualizarDias"
+                           class="checkbox checkbox-primary">
+                    <span class="label-text font-semibold">Viernes</span>
+                </label>
+            </div>
+
+            <input type="hidden" name="dias_semana_incluidos" x-model="formData.dias_semana_incluidos">
+
+            <div class="alert alert-info mt-4" x-show="diasSeleccionados.length > 0">
+                <i class="fas fa-info-circle"></i>
+                <span>
+                    Días seleccionados: <strong x-text="diasSeleccionados.join(', ')"></strong>
+                    (<span x-text="diasSeleccionados.length"></span> día<span x-show="diasSeleccionados.length !== 1">s</span>)
+                </span>
+            </div>
+        </div>
+
+        <!-- Estado -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <i class="fas fa-toggle-on text-purple-600"></i>
+                Estado del Plan
+            </h2>
+
+            <div class="form-control">
+                <label class="label cursor-pointer justify-start gap-4">
+                    <input type="checkbox" 
+                           name="activo"
+                           x-model="formData.activo"
+                           class="toggle toggle-success toggle-lg">
+                    <div>
+                        <span class="label-text font-semibold text-lg">Plan Activo</span>
+                        <p class="text-sm text-gray-600">Los planes activos están disponibles para nuevas suscripciones</p>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Vista Previa -->
+        <div class="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-2xl shadow-lg p-6 border-2 border-orange-200">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <i class="fas fa-eye text-orange-600"></i>
+                Vista Previa
+            </h2>
+
+            <div class="bg-white rounded-xl p-6 shadow-md">
+                <div class="flex items-start justify-between mb-4">
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-800" x-text="formData.nombre_plan || 'Nombre del Plan'"></h3>
+                        <span class="badge badge-sm mt-2" :class="formData.activo ? 'badge-success' : 'badge-ghost'">
+                            <span x-text="formData.activo ? 'Activo' : 'Inactivo'"></span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg p-4 mb-4">
+                    <p class="text-sm text-gray-600 mb-1">Precio Mensual</p>
+                    <p class="text-3xl font-bold text-orange-600" x-text="formatPrice(formData.precio_mensual)"></p>
+                </div>
+
+                <p class="text-gray-700 text-sm mb-4" x-text="formData.descripcion || 'Sin descripción'"></p>
+
+                <div class="border-t pt-4">
+                    <p class="text-xs text-gray-500 mb-2">Días incluidos</p>
+                    <p class="text-sm" x-text="formData.dias_semana_incluidos || 'Ningún día seleccionado'"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex justify-end gap-4">
+            <a href="{% url 'pos:planes_almuerzo_view' %}" class="btn btn-outline">
+                <i class="fas fa-times mr-2"></i>
+                Cancelar
+            </a>
+            <button type="submit" class="btn btn-primary gap-2">
+                <i class="fas fa-save"></i>
+                {% if plan %}Actualizar Plan{% else %}Crear Plan{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function planForm() {
+    return {
+        formData: {
+            nombre_plan: '{{ plan.nombre_plan|default:"" }}',
+            descripcion: '{{ plan.descripcion|default:"" }}',
+            precio_mensual: {{ plan.precio_mensual|default:0 }},
+            dias_semana_incluidos: '{{ plan.dias_semana_incluidos|default:"" }}',
+            activo: {{ plan.activo|default:"true"|lower }}
+        },
+        diasSeleccionados: [],
+        precioPorDia: '0',
+
+        init() {
+            // Inicializar días seleccionados si existe plan
+            if (this.formData.dias_semana_incluidos) {
+                this.diasSeleccionados = this.formData.dias_semana_incluidos.split(',').map(d => d.trim());
+            }
+            this.calcularPrecioPromedio();
+        },
+
+        actualizarDias() {
+            this.formData.dias_semana_incluidos = this.diasSeleccionados.join(', ');
+            this.calcularPrecioPromedio();
+        },
+
+        calcularPrecioPromedio() {
+            const numDias = this.diasSeleccionados.length || 1;
+            const diasMes = numDias * 4; // Aproximado
+            const precioPromedio = this.formData.precio_mensual / diasMes;
+            this.precioPorDia = this.formatPrice(precioPromedio);
+        },
+
+        formatPrice(amount) {
+            if (!amount || isNaN(amount)) return '0';
+            return new Intl.NumberFormat('es-PY').format(Math.round(amount));
+        },
+
+        submitForm(e) {
+            e.target.submit();
+        }
+    }
+}
+</script>
+{% endblock %}
