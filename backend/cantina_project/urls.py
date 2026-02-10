@@ -110,11 +110,17 @@ urlpatterns = [
          ), 
          name='password_reset_complete'),
     
-    # Admin personalizado
-    path('admin/', cantina_admin_site.urls),
+    # Django Admin (estándar - todos los modelos están registrados aquí)
+    path('admin/', admin.site.urls),
+    
+    # Admin personalizado (dashboard con estadísticas)
+    path('cantina-admin/', cantina_admin_site.urls),
     
     # POS (Punto de Venta) - Nueva interfaz
     path('pos/', include('gestion.pos_urls')),
+    
+    # URLs de Notificaciones
+    path('notificaciones/', include('gestion.urls_notificaciones', namespace='notificaciones')),
     
     # Portal de Padres
     path('portal/', include('portal_urls')),

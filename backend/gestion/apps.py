@@ -8,6 +8,7 @@ class GestionConfig(AppConfig):
     def ready(self):
         """
         Importa signals cuando la app está lista
-        Esto conecta automáticamente todos los signals de cache
+        Esto conecta automáticamente todos los signals de cache y notificaciones
         """
         import gestion.signals  # noqa
+        import gestion.signals_notificaciones  # noqa

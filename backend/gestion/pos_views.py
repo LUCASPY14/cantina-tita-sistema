@@ -29,6 +29,12 @@ from gestion.restricciones_utils import (
     analizar_restricciones_producto,
     analizar_carrito_completo
 )
+
+# Importar utilidades de reportes
+try:
+    from gestion.reporte_utils import exportar_reporte_formato
+except ImportError:
+    exportar_reporte_formato = None
 from gestion.promociones_utils import (
     calcular_promociones_disponibles,
     registrar_promocion_aplicada
@@ -1306,6 +1312,11 @@ def reportes_view(request):
             'monto_total': totales['monto'] or Decimal('0'),
             'promedio': (totales['monto'] / totales['consumos']) if totales['consumos'] > 0 else Decimal('0')
         }
+    
+    # Verificar si se solicita exportación
+    formato = request.GET.get('formato')
+    if formato in ['pdf', 'excel', 'csv']:
+        return exportar_reporte_formato(datos, columnas, titulo_tabla, stats, formato, fecha_desde, fecha_hasta, tipo_reporte)
     
     context = {
         'fecha_desde': fecha_desde,
@@ -4208,15 +4219,15 @@ def suscripciones_almuerzo_view(request):
         'suscripciones': suscripciones,
         'planes': planes_activos,
         'grados': grados,
-        'estadisticas': {
+        'stats': {
             'activas': activas,
+            'suspendidas': SuscripcionesAlmuerzo.objects.filter(estado='Suspendida').count(),
+            'canceladas': SuscripcionesAlmuerzo.objects.filter(estado='Cancelada').count(),
             'por_vencer': por_vencer,
-            'vencidas': vencidas,
-            'ingreso': 0  # Calcular si es necesario
         },
     }
     
-    return render(request, 'lunch/plans/subscriptions.html', context)
+    return render(request, 'lunch/suscripciones/list.html', context)
 
 
 @acceso_cajero
@@ -4322,7 +4333,7 @@ def registro_consumo_almuerzo_view(request):
         'total_disponibles': suscripciones_disponibles.count(),
     }
     
-    return render(request, 'lunch/registration/consume.html', context)
+    return render(request, 'lunch/consumo/registro.html', context)
 
 
 @acceso_cajero
@@ -4701,19 +4712,24 @@ def reportes_almuerzos_view(request):
         total_consumos=Count('id_registro_consumo')
     ).order_by('-total_consumos')[:10]
     
+    # Calcular porcentaje de asistencia para cada uno
+    for consumidor in top_consumidores:
+        consumidor['porcentaje_asistencia'] = (consumidor['total_consumos'] / dias_periodo * 100) if dias_periodo > 0 else 0
+    
     context = {
         'fecha_desde': fecha_desde,
         'fecha_hasta': fecha_hasta,
         'consumos_por_dia': consumos_por_dia,
         'ingresos_por_plan': ingresos_por_plan,
-        'tasa_asistencia': round(tasa_asistencia, 2),
-        'consumos_reales': consumos_reales,
-        'consumos_esperados': consumos_esperados,
         'total_pagado': total_pagado,
+        'suscripciones_activas': suscripciones_activas,
+        'consumos_reales': consumos_reales,
+        'tasa_asistencia': tasa_asistencia,
         'top_consumidores': top_consumidores,
+        'dias_periodo': dias_periodo,
     }
     
-    return render(request, 'gestion/reportes_almuerzos.html', context)
+    return render(request, 'lunch/reportes.html', context)
 
 
 # =============================================================================

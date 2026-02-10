@@ -2,13 +2,14 @@
 
 from django.urls import path
 from . import views_basicas as views
+from . import dashboard_views
 
 app_name = 'gestion'
 
 urlpatterns = [
     # Dashboard principal
     path('', views.index, name='index'),
-    path('dashboard/', views.dashboard_unificado, name='dashboard'),
+    path('dashboard/', dashboard_views.dashboard_unificado, name='dashboard'),
     
     # Funciones básicas disponibles
     path('productos/', views.productos_lista, name='productos_lista'),

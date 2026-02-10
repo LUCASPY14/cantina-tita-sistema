@@ -6,6 +6,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 from django.utils.html import format_html
 from .models import *
+from .models_notificaciones import NotificacionSistema, ConfiguracionNotificacionesSistema
 
 # Personalizar User Admin si es necesario
 class CustomUserAdmin(UserAdmin):
@@ -28,7 +29,7 @@ class ProductoAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Información Básica', {
-            'fields': ('descripcion', 'codigo_barra', 'id_categoria', 'id_unidad_de_medida', 'id_impuesto')
+            'fields': ('descripcion', 'codigo_barra', 'id_categoria')
         }),
         ('Stock', {
             'fields': ('stock_minimo', 'permite_stock_negativo')
@@ -72,27 +73,32 @@ class TarjetaAdmin(admin.ModelAdmin):
 # en pos/admin.py para mantener separación de responsabilidades
 # ========================================================================
 
-# Configuración para CargasSaldo
-@admin.register(CargasSaldo)
-class CargasSaldoAdmin(admin.ModelAdmin):
-    list_display = ('nro_tarjeta', 'monto_display', 'fecha_carga', 'estado')
-    list_filter = ('estado', 'fecha_carga')
-    search_fields = ('nro_tarjeta__nro_tarjeta', 'nro_tarjeta__id_hijo__nombre')
-    ordering = ('-fecha_carga',)
-    date_hierarchy = 'fecha_carga'
-    
-    def monto_display(self, obj):
-        return f"₲ {obj.monto_cargado:,.0f}"
-    monto_display.short_description = 'Monto'
+# ========================================================================
+# ⚠️  MODELOS SIN TABLA EN MYSQL - DESREGISTRADOS TEMPORALMENTE
+# ========================================================================
+# CargasSaldo y CierresCaja están desregistrados porque sus tablas
+# no existen en MySQL. Crear las tablas con migraciones para habilitarlos.
+# ========================================================================
 
-# Configuración para CierresCaja
-@admin.register(CierresCaja)
-class CierresCajaAdmin(admin.ModelAdmin):
-    list_display = ('id_cierre', 'fecha_hora_cierre', 'id_empleado', 'id_caja', 'estado')
-    list_filter = ('fecha_hora_cierre', 'id_empleado', 'estado')
-    ordering = ('-fecha_hora_cierre',)
-    date_hierarchy = 'fecha_hora_cierre'
-    readonly_fields = ('fecha_hora_apertura', 'fecha_hora_cierre')
+# # Configuración para CargasSaldo (DESHABILITADO - tabla no existe)
+# @admin.register(CargasSaldo)
+# class CargasSaldoAdmin(admin.ModelAdmin):
+#     list_display = ('nro_tarjeta', 'monto_display', 'fecha_carga', 'estado')
+#     list_filter = ('estado', 'fecha_carga')
+#     search_fields = ('nro_tarjeta__nro_tarjeta', 'nro_tarjeta__id_hijo__nombre')
+#     ordering = ('-fecha_carga',)
+#     
+#     def monto_display(self, obj):
+#         return f"₲ {obj.monto_cargado:,.0f}"
+#     monto_display.short_description = 'Monto'
+
+# # Configuración para CierresCaja (DESHABILITADO - tabla no existe)
+# @admin.register(CierresCaja)
+# class CierresCajaAdmin(admin.ModelAdmin):
+#     list_display = ('id_cierre', 'fecha_hora_cierre', 'id_empleado', 'id_caja', 'estado')
+#     list_filter = ('fecha_hora_cierre', 'id_empleado', 'estado')
+#     ordering = ('-fecha_hora_cierre',)
+#     readonly_fields = ('fecha_hora_apertura', 'fecha_hora_cierre')
 
 # Configuración para Categoria
 @admin.register(Categoria)
@@ -122,6 +128,52 @@ try:
 except:
     # Timbrados puede no existir en todos los casos
     pass
+
+# Configuración para NotificacionSistema
+@admin.register(NotificacionSistema)
+class NotificacionSistemaAdmin(admin.ModelAdmin):
+    list_display = ('titulo', 'usuario', 'tipo', 'prioridad', 'leida', 'creada_en')
+    list_filter = ('tipo', 'prioridad', 'leida', 'creada_en')
+    search_fields = ('titulo', 'mensaje', 'usuario__username', 'usuario__email')
+    list_editable = ('leida',)
+    ordering = ('-creada_en',)
+    readonly_fields = ('creada_en', 'fecha_leida')
+    
+    fieldsets = (
+        ('Información Básica', {
+            'fields': ('usuario', 'titulo', 'mensaje', 'tipo', 'prioridad')
+        }),
+        ('Visualización', {
+            'fields': ('icono', 'url')
+        }),
+        ('Estado', {
+            'fields': ('leida', 'fecha_leida', 'creada_en', 'expira_en')
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        # Las notificaciones se crean automáticamente por signals
+        return False
+
+# Configuración para ConfiguracionNotificacionesSistema
+@admin.register(ConfiguracionNotificacionesSistema)
+class ConfiguracionNotificacionesSistemaAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'notif_ventas', 'notif_recargas', 'notif_stock', 'notif_sistema', 'solo_criticas', 'sonido_habilitado')
+    list_filter = ('notif_ventas', 'notif_recargas', 'notif_stock', 'notif_sistema', 'solo_criticas')
+    search_fields = ('usuario__username', 'usuario__email')
+    ordering = ('usuario__username',)
+    
+    fieldsets = (
+        ('Usuario', {
+            'fields': ('usuario',)
+        }),
+        ('Tipos de Notificaciones', {
+            'fields': ('notif_ventas', 'notif_recargas', 'notif_stock', 'notif_sistema')
+        }),
+        ('Preferencias', {
+            'fields': ('solo_criticas', 'sonido_habilitado', 'push_habilitado', 'push_subscription')
+        }),
+    )
 
 # Personalización del admin site
 admin.site.site_header = "Administración Cantina TITA"

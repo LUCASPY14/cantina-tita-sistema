@@ -46,5 +46,5 @@ class PagoVentaAdmin(admin.ModelAdmin):
     list_display = ('id_pago_venta', 'id_venta', 'id_medio_pago', 'monto_aplicado', 'fecha_pago', 'estado')
     list_filter = ('estado', 'fecha_pago', 'id_medio_pago')
     search_fields = ('referencia_transaccion', 'id_venta__nro_factura_venta', 'nro_tarjeta_usada__numero_tarjeta')
-    date_hierarchy = 'fecha_pago'
     readonly_fields = ('fecha_pago',)
+    exclude = ('id_cierre',)  # Excluir porque la tabla cierres_caja no existe

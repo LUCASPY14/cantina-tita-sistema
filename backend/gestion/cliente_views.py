@@ -586,12 +586,61 @@ def portal_dashboard_view(request):
         fecha_consumo__year=anio_actual
     ).count()
     
+    # Recargas del mes actual
+    recargas_mes = CargasSaldo.objects.filter(
+        id_cliente_origen=cliente,
+        fecha_carga__month=mes_actual,
+        fecha_carga__year=anio_actual,
+        estado='APROBADA'
+    ).aggregate(total=Sum('monto'))['total'] or Decimal('0')
+    
+    # Estadísticas adicionales
+    total_hijos = hijos.count()
+    
+    # Últimas 5 transacciones
+    ultimas_transacciones = []
+    
+    # Agregar ventas/consumos recientes
+    for venta in consumos_recientes[:5]:
+        ultimas_transacciones.append({
+            'tipo': 'consumo',
+            'descripcion': f'Consumo de {venta.id_hijo.nombres if venta.id_hijo else "N/A"}',
+            'monto': -venta.monto_total,  # Negativo porque es un gasto
+            'fecha': venta.fecha,
+            'hijo': venta.id_hijo.nombres if venta.id_hijo else 'N/A'
+        })
+    
+    # Agregar recargas recientes
+    recargas_recientes = CargasSaldo.objects.filter(
+        id_cliente_origen=cliente,
+        estado='APROBADA'
+    ).order_by('-fecha_carga')[:5]
+    
+    for recarga in recargas_recientes:
+        ultimas_transacciones.append({
+            'tipo': 'recarga',
+            'descripcion': f'Recarga para {recarga.nro_tarjeta.id_hijo.nombres}',
+            'monto': recarga.monto,  # Positivo porque es un ingreso
+            'fecha': recarga.fecha_carga,
+            'hijo': recarga.nro_tarjeta.id_hijo.nombres
+        })
+    
+    # Ordenar por fecha descendente y tomar las 10 más recientes
+    ultimas_transacciones = sorted(
+        ultimas_transacciones, 
+        key=lambda x: x['fecha'], 
+        reverse=True
+    )[:10]
+    
     context = {
         'cliente': cliente,
         'hijos': hijos,
         'saldo_total': saldo_total,
         'consumos_recientes': consumos_recientes,
         'almuerzos_mes': almuerzos_mes,
+        'recargas_mes': recargas_mes,
+        'total_hijos': total_hijos,
+        'ultimas_transacciones': ultimas_transacciones,
     }
     
     return render(request, 'portal/dashboard.html', context)

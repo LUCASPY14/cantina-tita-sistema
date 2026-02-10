@@ -222,7 +222,7 @@ def dashboard_unificado(request):
         # Guardar en cache por 60 segundos
         cache.set(cache_key, context, 60)
     
-    return render(request, 'dashboard/unificado.html', context)
+    return render(request, 'gestion/dashboard.html', context)
 
 
 @login_required
