@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Configuración de Notificaciones - MetrePay{% endblock %}
+
+{% block content %}
+<div class="container max-w-4xl mx-auto px-4 py-4 md:py-8 pb-24 md:pb-8">
+    
+    <!-- Header -->
+    <div class="mb-6">
+        <a href="{% url 'notificaciones:panel' %}" class="btn btn-ghost btn-sm mb-4">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Volver a notificaciones
+        </a>
+        
+        <h1 class="text-2xl md:text-4xl font-bold flex items-center gap-3">
+            <i class="fas fa-cog text-primary"></i>
+            Configuración de Notificaciones
+        </h1>
+        <p class="text-sm md:text-base text-gray-600 mt-2">
+            Personaliza qué notificaciones deseas recibir
+        </p>
+    </div>
+    
+    <!-- Formulario -->
+    <form method="post" 
+          x-data="{ guardando: false }"
+          @submit.prevent="guardando = true; $el.submit()">
+        {% csrf_token %}
+        
+        <div class="space-y-6">
+            
+            <!-- Tipos de Notificaciones -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-filter text-blue-600"></i>
+                    Tipos de Notificaciones
+                </h2>
+                
+                <div class="space-y-4">
+                    <!-- Ventas -->
+                    <div class="form-control">
+                        <label class="label cursor-pointer justify-start gap-4">
+                            <input type="checkbox" 
+                                   name="notif_ventas"
+                                   class="toggle toggle-primary"
+                                   {% if config.notif_ventas %}checked{% endif %}>
+                            <div class="flex-1">
+                                <span class="label-text font-semibold flex items-center gap-2">
+                                    <i class="fas fa-cash-register text-blue-600"></i>
+                                    Notificaciones de Ventas
+                                </span>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Recibir alertas cuando se registren nuevas ventas
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="divider my-2"></div>
+                    
+                    <!-- Recargas -->
+                    <div class="form-control">
+                        <label class="label cursor-pointer justify-start gap-4">
+                            <input type="checkbox" 
+                                   name="notif_recargas"
+                                   class="toggle toggle-primary"
+                                   {% if config.notif_recargas %}checked{% endif %}>
+                            <div class="flex-1">
+                                <span class="label-text font-semibold flex items-center gap-2">
+                                    <i class="fas fa-credit-card text-purple-600"></i>
+                                    Notificaciones de Recargas
+                                </span>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Recibir alertas cuando se procesen recargas de saldo
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="divider my-2"></div>
+                    
+                    <!-- Stock -->
+                    <div class="form-control">
+                        <label class="label cursor-pointer justify-start gap-4">
+                            <input type="checkbox" 
+                                   name="notif_stock"
+                                   class="toggle toggle-primary"
+                                   {% if config.notif_stock %}checked{% endif %}>
+                            <div class="flex-1">
+                                <span class="label-text font-semibold flex items-center gap-2">
+                                    <i class="fas fa-box text-orange-600"></i>
+                                    Alertas de Stock Bajo
+                                </span>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Recibir alertas cuando productos tengan stock bajo o se agoten
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="divider my-2"></div>
+                    
+                    <!-- Sistema -->
+                    <div class="form-control">
+                        <label class="label cursor-pointer justify-start gap-4">
+                            <input type="checkbox" 
+                                   name="notif_sistema"
+                                   class="toggle toggle-primary"
+                                   {% if config.notif_sistema %}checked{% endif %}>
+                            <div class="flex-1">
+                                <span class="label-text font-semibold flex items-center gap-2">
+                                    <i class="fas fa-server text-gray-600"></i>
+                                    Notificaciones del Sistema
+                                </span>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Recibir notificaciones sobre el estado del sistema
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Preferencias -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-sliders-h text-green-600"></i>
+                    Preferencias
+                </h2>
+                
+                <div class="space-y-4">
+                    <!-- Solo críticas -->
+                    <div class="form-control">
+                        <label class="label cursor-pointer justify-start gap-4">
+                            <input type="checkbox" 
+                                   name="solo_criticas"
+                                   class="toggle toggle-warning"
+                                   {% if config.solo_criticas %}checked{% endif %}>
+                            <div class="flex-1">
+                                <span class="label-text font-semibold flex items-center gap-2">
+                                    <i class="fas fa-exclamation-triangle text-yellow-600"></i>
+                                    Solo Notificaciones Importantes
+                                </span>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Recibir únicamente notificaciones de prioridad alta o crítica
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="divider my-2"></div>
+                    
+                    <!-- Sonido -->
+                    <div class="form-control">
+                        <label class="label cursor-pointer justify-start gap-4">
+                            <input type="checkbox" 
+                                   name="sonido_habilitado"
+                                   class="toggle toggle-success"
+                                   {% if config.sonido_habilitado %}checked{% endif %}>
+                            <div class="flex-1">
+                                <span class="label-text font-semibold flex items-center gap-2">
+                                    <i class="fas fa-volume-up text-green-600"></i>
+                                    Sonido de Notificaciones
+                                </span>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Reproducir sonido al recibir nuevas notificaciones
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Push Notifications (Info) -->
+            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-info-circle text-blue-600 text-xl mt-1"></i>
+                    <div class="flex-1">
+                        <h3 class="font-bold text-blue-900 dark:text-blue-100 mb-2">
+                            Notificaciones Push del Navegador
+                        </h3>
+                        <p class="text-sm text-blue-800 dark:text-blue-200 mb-3">
+                            Para recibir notificaciones incluso cuando el sitio esté cerrado, 
+                            habilita las notificaciones push en tu navegador.
+                        </p>
+                        <button type="button" 
+                                class="btn btn-sm btn-primary"
+                                onclick="solicitarPermisoNotificaciones()">
+                            <i class="fas fa-bell mr-2"></i>
+                            Habilitar Notificaciones Push
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botones de acción -->
+            <div class="flex flex-col xs:flex-row gap-3">
+                <button type="submit" 
+                        class="btn btn-primary flex-1 xs:flex-none"
+                        :class="{ 'loading': guardando }">
+                    <i class="fas fa-save mr-2" x-show="!guardando"></i>
+                    <span x-text="guardando ? 'Guardando...' : 'Guardar Cambios'"></span>
+                </button>
+                
+                <a href="{% url 'notificaciones:panel' %}" 
+                   class="btn btn-ghost flex-1 xs:flex-none">
+                    Cancelar
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+async function solicitarPermisoNotificaciones() {
+    if (!('Notification' in window)) {
+        alert('Tu navegador no soporta notificaciones push');
+        return;
+    }
+    
+    const permission = await Notification.requestPermission();
+    
+    if (permission === 'granted') {
+        // Mostrar notificación de prueba
+        new Notification('¡Notificaciones habilitadas!', {
+            body: 'Ahora recibirás notificaciones de MetrePay',
+            icon: '/static/icons/icon-192x192.png',
+            badge: '/static/icons/icon-72x72.png'
+        });
+        
+        // TODO: Registrar subscription en el servidor
+        // Esto requiere configurar push notifications con VAPID keys
+    } else {
+        alert('Debes permitir las notificaciones en tu navegador');
+    }
+}
+</script>
+{% endblock %}

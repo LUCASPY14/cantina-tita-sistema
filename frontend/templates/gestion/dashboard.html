@@ -1,420 +1,526 @@
 {% extends "base_gestion.html" %}
 {% load static %}
+{% load humanize %}
 
-{% block title %}Dashboard - Gestión{% endblock %}
+{% block title %}Dashboard Administrativo - MetrePay{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .stat-card {
+        @apply rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-2xl hover:scale-105;
+    }
+    
+    .gradient-ventas {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    }
+    
+    .gradient-productos {
+        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
+    }
+    
+    .gradient-clientes {
+        background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%) !important;
+    }
+    
+    .gradient-tarjetas {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+    }
+    
+    .gradient-sistema {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+    }
+    
+    .alert-card {
+        @apply bg-white rounded-lg p-4 border-l-4 transition-all duration-200 hover:shadow-md;
+    }
+    
+    .alert-critica {
+        @apply border-red-500;
+    }
+    
+    .alert-importante {
+        @apply border-yellow-500;
+    }
+    
+    .alert-normal {
+        @apply border-blue-500;
+    }
+    
+    .metric-bar {
+        @apply h-3 rounded-full transition-all duration-500;
+    }
+    
+    .health-indicator {
+        @apply w-3 h-3 rounded-full animate-pulse;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div x-data="dashboardGestion()" x-init="init()" class="space-y-6">
+<div class="container mx-auto px-4 py-4 md:py-8 pb-24 md:pb-8 space-y-6 md:space-y-8" 
+     x-data="dashboardAdmin()" 
+     x-init="init()">
     
-    <!-- Header -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
-                    <i class="fas fa-chart-line mr-3 text-secondary"></i>Dashboard Administrativo
+    <!-- Header con información del Admin -->
+    <div class="bg-white rounded-2xl shadow-lg p-4 md:p-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div class="flex-1">
+                <h1 class="text-2xl md:text-4xl font-bold bg-gradient-to-r from-orange-600 to-teal-600 bg-clip-text text-transparent flex items-center gap-2 md:gap-3">
+                    <i class="fas fa-chart-line text-orange-600 text-xl md:text-3xl"></i>
+                    <span class="hidden sm:inline">Dashboard Administrativo</span>
+                    <span class="sm:hidden">Admin</span>
                 </h1>
-                <p class="text-gray-600 dark:text-gray-400 mt-1" x-text="fechaActual"></p>
+                <p class="text-sm md:text-base text-gray-600 mt-2" x-text="fechaActual"></p>
             </div>
-            <div class="text-right">
-                <p class="text-sm text-gray-600 dark:text-gray-400">Administrador</p>
-                <p class="font-semibold text-lg">{{ user.get_full_name|default:user.username }}</p>
+            <div class="text-left md:text-right">
+                <p class="text-xs md:text-sm text-gray-500">Administrador</p>
+                <p class="text-base md:text-xl font-bold text-gray-800">{{ user.get_full_name|default:user.username|truncatewords:2 }}</p>
+                <p class="text-xs text-gray-400 mt-1 hidden md:block">
+                    Última actualización: <span x-text="ultimaActualizacion"></span>
+                </p>
             </div>
         </div>
     </div>
-    
-    <!-- Cards de Estadísticas Principales -->
+
+    <!-- KPIs Principales -->xs:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         
-        <!-- Ventas Hoy -->
-        <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
-            <template x-if="cargando">
-                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
-            </template>
-            <template x-if="!cargando">
+        <!-- Ventas del Día -->
+        <div class="stat-card gradient-ventas text-white">
+            <div class="flex items-center justify-between mb-3">
                 <div>
-                    <div class="flex items-center justify-between mb-2">
-                        <p class="text-sm opacity-90">Ventas Hoy</p>
-                        <i class="fas fa-cash-register text-2xl opacity-80"></i>
-                    </div>
-                    <p class="text-3xl font-bold mb-1" x-text="stats.ventas_hoy"></p>
-                    <p class="text-sm opacity-80" x-text="formatearPrecio(stats.monto_ventas_hoy)"></p>
+                    <p class="text-sm opacity-90 font-medium">Ventas Hoy</p>
+                    <p class="text-4xl font-bold mt-2">{{ ventas.hoy.cantidad|default:0 }}</p>
+                    <p class="text-lg opacity-90 mt-1">{{ ventas.hoy.total|default:0|floatformat:0|intcomma }} ₲</p>
+                </div>3 md:p-4 rounded-full">
+                    <i class="fas fa-cash-register text-3xl md:text-4xl"></i>
                 </div>
-            </template>
+            </div>
+            <div class="flex items-center gap-2 text-xs md:
+            <div class="flex items-center gap-2 text-sm opacity-90 mt-4 pt-4 border-t border-white border-opacity-30">
+                <i class="fas fa-calendar-week"></i>
+                <span>7 días: {{ ventas.ultimos_7_dias.total|default:0|floatformat:0|intcomma }} ₲</span>
+            </div>
         </div>
-        
-        <!-- Productos Activos -->
-        <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
-            <template x-if="cargando">
-                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
-            </template>
-            <template x-if="!cargando">
+
+        <!-- Productos y Stock -->
+        <div class="stat-card gradient-productos text-white">
+            <div class="flex items-center justify-between mb-3">
                 <div>
-                    <div class="flex items-center justify-between mb-2">
-                        <p class="text-sm opacity-90">Productos Activos</p>
-                        <i class="fas fa-box text-2xl opacity-80"></i>
-                    </div>
-                    <p class="text-3xl font-bold mb-1" x-text="stats.productos_activos"></p>
-                    <p class="text-sm opacity-80">
-                        <span x-text="stats.productos_stock_bajo"></span> con stock bajo
-                    </p>
+                    <p class="text-sm opacity-90 font-medium">Stock Total</p>
+                    <p class="text-4xl font-bold mt-2">{{ stock.total_productos|default:0 }}</p>
+                    <p class="text-lg opacity-90 mt-1">productos</p>
                 </div>
-            </template>
+                <div class="bg-white bg-opacity-20 p-4 rounded-full">
+                    <i class="fas fa-boxes text-4xl"></i>
+                </div>
+            </div>
+            <div class="flex items-center justify-between text-sm opacity-90 mt-4 pt-4 border-t border-white border-opacity-30">
+                <span><i class="fas fa-exclamation-triangle mr-1"></i>Stock bajo: {{ stock.bajo|default:0 }}</span>
+                <span><i class="fas fa-times-circle mr-1"></i>Sin stock: {{ stock.sin_stock|default:0 }}</span>
+            </div>
         </div>
-        
-        <!-- Clientes/Estudiantes -->
-        <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
-            <template x-if="cargando">
-                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
-            </template>
-            <template x-if="!cargando">
+
+        <!-- Clientes Activos -->
+        <div class="stat-card gradient-clientes text-white">
+            <div class="flex items-center justify-between mb-3">
                 <div>
-                    <div class="flex items-center justify-between mb-2">
-                        <p class="text-sm opacity-90">Estudiantes</p>
-                        <i class="fas fa-users text-2xl opacity-80"></i>
-                    </div>
-                    <p class="text-3xl font-bold mb-1" x-text="stats.total_estudiantes"></p>
-                    <p class="text-sm opacity-80">
-                        <span x-text="stats.tarjetas_activas"></span> tarjetas activas
-                    </p>
+                    <p class="text-sm opacity-90 font-medium">Clientes</p>
+                    <p class="text-4xl font-bold mt-2">{{ clientes.total|default:0 }}</p>
+                    <p class="text-lg opacity-90 mt-1">{{ clientes.con_tarjeta|default:0 }} con tarjeta</p>
                 </div>
-            </template>
+                <div class="bg-white bg-opacity-20 p-4 rounded-full">
+                    <i class="fas fa-users text-4xl"></i>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 text-sm opacity-90 mt-4 pt-4 border-t border-white border-opacity-30">
+                <i class="fas fa-user-plus"></i>
+                <span>Nuevos este mes: {{ clientes.nuevos_mes|default:0 }}</span>
+            </div>
         </div>
-        
-        <!-- Recargas Hoy -->
-        <div class="stat-card bg-gradient-to-br from-purple-500 to-pink-600 text-white">
-            <template x-if="cargando">
-                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
-            </template>
-            <template x-if="!cargando">
+
+        <!-- Tarjetas y Recargas -->
+        <div class="stat-card gradient-tarjetas text-white">
+            <div class="flex items-center justify-between mb-3">
                 <div>
-                    <div class="flex items-center justify-between mb-2">
-                        <p class="text-sm opacity-90">Recargas Hoy</p>
-                        <i class="fas fa-credit-card text-2xl opacity-80"></i>
-                    </div>
-                    <p class="text-3xl font-bold mb-1" x-text="stats.recargas_hoy"></p>
-                    <p class="text-sm opacity-80" x-text="formatearPrecio(stats.monto_recargas_hoy)"></p>
+                    <p class="text-sm opacity-90 font-medium">Tarjetas Activas</p>
+                    <p class="text-4xl font-bold mt-2">{{ tarjetas.activas|default:0 }}</p>
+                    <p class="text-lg opacity-90 mt-1">{{ tarjetas.saldo_total|default:0|floatformat:0|intcomma }} ₲ total</p>
                 </div>
-            </template>
+                <div class="bg-white bg-opacity-20 p-4 rounded-full">
+                    <i class="fas fa-credit-card text-4xl"></i>
+                </div>
+            </div>
+            <div class="flex items-center justify-between text-sm opacity-90 mt-4 pt-4 border-t border-white border-opacity-30">
+                <span>Recargas hoy: {{ tarjetas.recargas_hoy_total.cantidad|default:0 }}</span>
+                <span>{{ tarjetas.recargas_hoy_total.total|default:0|floatformat:0|intcomma }} ₲</span>
+            </div>
         </div>
     </div>
-    
-    <!-- Gráficos y Tablas -->
+
+    <!-- Salud del Sistema -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+        <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+            <i class="fas fa-heartbeat text-red-500"></i>
+            Salud del Sistema
+            {% if sistema.redis_activo %}
+                <span class="health-indicator bg-green-500" title="Sistema saludable"></span>
+            {% else %}
+                <span class="health-indicator bg-red-500" title="Problemas detectados"></span>
+            {% endif %}
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            <!-- CPU -->
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-600">CPU</span>
+                    <span class="text-lg font-bold {% if sistema.cpu_alerta %}text-red-600{% else %}text-green-600{% endif %}">
+                        {{ sistema.cpu|floatformat:1 }}%
+                    </span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div class="metric-bar {% if sistema.cpu_alerta %}bg-red-500{% else %}bg-green-500{% endif %}" 
+                         style="width: {{ sistema.cpu }}%"></div>
+                </div>
+            </div>
+
+            <!-- Memoria -->
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-600">Memoria</span>
+                    <span class="text-lg font-bold {% if sistema.memoria_alerta %}text-red-600{% else %}text-green-600{% endif %}">
+                        {{ sistema.memoria_usada|floatformat:1 }}%
+                    </span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div class="metric-bar {% if sistema.memoria_alerta %}bg-red-500{% elif sistema.memoria_usada > 70 %}bg-yellow-500{% else %}bg-green-500{% endif %}" 
+                         style="width: {{ sistema.memoria_usada }}%"></div>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">{{ sistema.memoria_disponible_gb|floatformat:2 }} GB disponible</p>
+            </div>
+
+            <!-- Disco -->
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-600">Disco</span>
+                    <span class="text-lg font-bold {% if sistema.disco_alerta %}text-red-600{% else %}text-green-600{% endif %}">
+                        {{ sistema.disco_usado|floatformat:1 }}%
+                    </span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div class="metric-bar {% if sistema.disco_alerta %}bg-red-500{% elif sistema.disco_usado > 75 %}bg-yellow-500{% else %}bg-green-500{% endif %}" 
+                         style="width: {{ sistema.disco_usado }}%"></div>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">{{ sistema.disco_libre_gb|floatformat:2 }} GB libre</p>
+            </div>
+
+            <!-- Redis & Backups -->
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-sm font-medium text-gray-600">Cache Redis</span>
+                    {% if sistema.redis_activo %}
+                        <span class="badge badge-success gap-2">
+                            <i class="fas fa-check-circle"></i>
+                            Activo
+                        </span>
+                    {% else %}
+                        <span class="badge badge-error gap-2">
+                            <i class="fas fa-times-circle"></i>
+                            Inactivo
+                        </span>
+                    {% endif %}
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-gray-600">Backups</span>
+                    {% if sistema.backups.existe %}
+                        <span class="badge badge-info gap-2">
+                            <i class="fas fa-database"></i>
+                            {{ sistema.backups.total }}
+                        </span>
+                    {% else %}
+                        <span class="badge badge-warning gap-2">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Sin backups
+                        </span>
+                    {% endif %}
+                </div>
+                {% if sistema.backups.ultimo %}
+                    <p class="text-xs text-gray-500 mt-2">
+                        Último: {{ sistema.backups.ultimo|date:"d/m/Y H:i" }}
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertas y Top Productos -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        <!-- Ventas de la Semana -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <h2 class="text-xl font-bold mb-4">
-                <i class="fas fa-chart-bar mr-2 text-secondary"></i>
-                Ventas de la Semana
+        <!-- Alertas del Sistema -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-6 flex items-center justify-between">
+                <span class="flex items-center gap-3">
+                    <i class="fas fa-bell text-yellow-500"></i>
+                    Alertas Activas
+                </span>
+                {% if alertas.total > 0 %}
+                    <span class="badge badge-error badge-lg">{{ alertas.total }}</span>
+                {% else %}
+                    <span class="badge badge-success badge-lg">
+                        <i class="fas fa-check"></i>
+                    </span>
+                {% endif %}
             </h2>
-            
-            <template x-if="cargando">
-                <div class="skeleton h-64 w-full"></div>
-            </template>
-            
-            <template x-if="!cargando">
-                <div class="space-y-3">
-                    <template x-for="(dia, index) in ventasSemana" :key="index">
-                        <div>
-                            <div class="flex items-center justify-between text-sm mb-1">
-                                <span class="font-semibold" x-text="dia.dia"></span>
-                                <span class="text-primary font-bold" x-text="formatearPrecio(dia.total)"></span>
-                            </div>
-                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-                                <div class="bg-gradient-to-r from-secondary to-primary h-full transition-all duration-500"
-                                     :style="`width: ${(dia.total / maxVentaSemana * 100)}%`"></div>
+
+            <div class="space-y-3">
+                {% if alertas.ultimas %}
+                    {% for alerta in alertas.ultimas %}
+                        <div class="alert-card {% if alerta.tipo == 'Stock Bajo' %}alert-critica{% elif alerta.tipo == 'Saldo Bajo' %}alert-importante{% else %}alert-normal{% endif %}">
+                            <div class="flex items-start gap-3">
+                                <div class="flex-shrink-0">
+                                    {% if alerta.tipo == 'Stock Bajo' %}
+                                        <i class="fas fa-exclamation-circle text-red-500 text-xl"></i>
+                                    {% elif alerta.tipo == 'Saldo Bajo' %}
+                                        <i class="fas fa-exclamation-triangle text-yellow-500 text-xl"></i>
+                                    {% else %}
+                                        <i class="fas fa-info-circle text-blue-500 text-xl"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-bold text-gray-800">{{ alerta.tipo }}</p>
+                                    <p class="text-sm text-gray-600 mt-1">{{ alerta.mensaje }}</p>
+                                    <p class="text-xs text-gray-400 mt-1">
+                                        <i class="fas fa-clock mr-1"></i>
+                                        {{ alerta.fecha_creacion|date:"d/m/Y H:i" }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                    </template>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-8">
+                        <i class="fas fa-check-circle text-6xl text-green-500 mb-4"></i>
+                        <p class="text-xl font-bold text-gray-800">Todo en Orden</p>
+                        <p class="text-gray-600 mt-2">No hay alertas pendientes en el sistema</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            {% if alertas.total > 10 %}
+                <div class="mt-4 text-center">
+                    <a href="{% url 'gestion:alertas' %}" class="btn btn-outline btn-sm">
+                        <i class="fas fa-eye mr-2"></i>
+                        Ver todas las alertas ({{ alertas.total }})
+                    </a>
                 </div>
-            </template>
+            {% endif %}
         </div>
-        
-        <!-- Productos Más Vendidos -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <h2 class="text-xl font-bold mb-4 flex items-center justify-between">
-                <span>
-                    <i class="fas fa-fire mr-2 text-danger"></i>
-                    Top 5 Productos
-                </span>
-                <a href="{% url 'gestion:reportes_productos' %}" class="text-sm text-primary hover:underline">
-                    Ver todos
-                </a>
+
+        <!-- Top Productos -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <i class="fas fa-fire text-orange-500"></i>
+                Top Productos Hoy
             </h2>
-            
-            <template x-if="cargando">
-                <div class="space-y-3">
-                    <template x-for="i in 5" :key="i">
-                        <div class="skeleton h-16 w-full"></div>
-                    </template>
-                </div>
-            </template>
-            
-            <template x-if="!cargando">
-                <div class="space-y-3">
-                    <template x-for="(producto, index) in productosMasVendidos" :key="producto.id">
-                        <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <!-- Ranking -->
-                            <div class="w-8 h-8 flex items-center justify-center rounded-full font-bold text-white"
-                                 :class="{
-                                     'bg-yellow-500': index === 0,
-                                     'bg-gray-400': index === 1,
-                                     'bg-orange-600': index === 2,
-                                     'bg-gray-300 text-gray-700': index > 2
-                                 }">
-                                <span x-text="index + 1"></span>
+
+            <div class="space-y-4">
+                {% if top_productos %}
+                    {% for producto in top_productos %}
+                        <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:shadow-md transition-shadow">
+                            <!-- Ranking Badge -->
+                            <div class="flex-shrink-0">
+                                {% if forloop.counter == 1 %}
+                                    <div class="w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-white font-bold text-xl shadow-lg">
+                                        🥇
+                                    </div>
+                                {% elif forloop.counter == 2 %}
+                                    <div class="w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-gray-300 to-gray-500 text-white font-bold text-xl shadow-lg">
+                                        🥈
+                                    </div>
+                                {% elif forloop.counter == 3 %}
+                                    <div class="w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-white font-bold text-xl shadow-lg">
+                                        🥉
+                                    </div>
+                                {% else %}
+                                    <div class="w-12 h-12 flex items-center justify-center rounded-full bg-gray-200 text-gray-700 font-bold text-xl">
+                                        {{ forloop.counter }}
+                                    </div>
+                                {% endif %}
                             </div>
-                            
-                            <!-- Producto -->
+
+                            <!-- Producto Info -->
                             <div class="flex-1 min-w-0">
-                                <p class="font-semibold truncate" x-text="producto.nombre"></p>
-                                <p class="text-sm text-gray-500">
-                                    <span x-text="producto.cantidad"></span> unidades
+                                <p class="font-bold text-gray-800 truncate">{{ producto.nombre }}</p>
+                                <p class="text-sm text-gray-600">
+                                    <i class="fas fa-shopping-cart mr-1"></i>
+                                    {{ producto.vendidos }} vendido{{ producto.vendidos|pluralize }}
                                 </p>
                             </div>
-                            
-                            <!-- Total -->
-                            <div class="text-right">
-                                <p class="font-bold text-primary" x-text="formatearPrecio(producto.total)"></p>
+
+                            <!-- Indicador Visual -->
+                            <div class="flex-shrink-0">
+                                <div class="w-16 text-right">
+                                    <div class="text-sm text-gray-500">Popularidad</div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+                                        <div class="bg-gradient-to-r from-orange-500 to-teal-500 h-2 rounded-full transition-all duration-500"
+                                             style="width: {% widthratio producto.vendidos top_productos.0.vendidos 100 %}%"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </template>
-                </div>
-            </template>
-        </div>
-    </div>
-    
-    <!-- Alertas y Acciones Rápidas -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- Alertas (2/3 ancho) -->
-        <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <h2 class="text-xl font-bold mb-4">
-                <i class="fas fa-bell mr-2 text-warning"></i>
-                Alertas y Notificaciones
-            </h2>
-            
-            <div class="space-y-3">
-                <!-- Stock Bajo -->
-                <template x-if="stats.productos_stock_bajo > 0">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle text-xl"></i>
-                        <div class="flex-1">
-                            <h3 class="font-bold">Productos con Stock Bajo</h3>
-                            <p class="text-sm">
-                                <span x-text="stats.productos_stock_bajo"></span> productos necesitan reposición.
-                                <a href="{% url 'gestion:productos' %}?filtro=stock_bajo" class="link">Ver productos</a>
-                            </p>
-                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-8">
+                        <i class="fas fa-box-open text-6xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-600">No hay ventas registradas hoy</p>
                     </div>
-                </template>
-                
-                <!-- Tarjetas por vencer -->
-                <template x-if="stats.tarjetas_por_vencer > 0">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle text-xl"></i>
-                        <div class="flex-1">
-                            <h3 class="font-bold">Tarjetas por Vencer</h3>
-                            <p class="text-sm">
-                                <span x-text="stats.tarjetas_por_vencer"></span> tarjetas vencen en 30 días.
-                                <a href="{% url 'gestion:tarjetas' %}?filtro=por_vencer" class="link">Ver tarjetas</a>
-                            </p>
-                        </div>
-                    </div>
-                </template>
-                
-                <!-- Todo OK -->
-                <template x-if="!cargando && stats.productos_stock_bajo === 0 && stats.tarjetas_por_vencer === 0">
-                    <div class="alert alert-success">
-                        <i class="fas fa-check-circle text-xl"></i>
-                        <span>Todo en orden. No hay alertas pendientes.</span>
-                    </div>
-                </template>
-            </div>
-        </div>
-        
-        <!-- Acciones Rápidas (1/3 ancho) -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <h2 class="text-xl font-bold mb-4">
-                <i class="fas fa-bolt mr-2 text-warning"></i>
-                Acciones Rápidas
-            </h2>
-            
-            <div class="space-y-3">
-                <a href="{% url 'gestion:productos_crear' %}" 
-                   class="btn btn-primary btn-sm w-full justify-start">
-                    <i class="fas fa-plus-circle mr-2"></i>
-                    Nuevo Producto
-                </a>
-                
-                <a href="{% url 'gestion:clientes_crear' %}" 
-                   class="btn btn-secondary btn-sm w-full justify-start">
-                    <i class="fas fa-user-plus mr-2"></i>
-                    Nuevo Cliente
-                </a>
-                
-                <a href="{% url 'gestion:reportes_ventas' %}" 
-                   class="btn btn-outline btn-sm w-full justify-start">
-                    <i class="fas fa-file-download mr-2"></i>
-                    Exportar Ventas
-                </a>
-                
-                <a href="{% url 'gestion:inventario' %}" 
-                   class="btn btn-outline btn-sm w-full justify-start">
-                    <i class="fas fa-boxes mr-2"></i>
-                    Gestionar Inventario
-                </a>
+                {% endif %}
             </div>
         </div>
     </div>
-    
-    <!-- Últimas Transacciones -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-        <h2 class="text-xl font-bold mb-4 flex items-center justify-between">
-            <span>
-                <i class="fas fa-history mr-2 text-primary"></i>
-                Últimas Transacciones
-            </span>
-            <a href="{% url 'gestion:transacciones' %}" class="text-sm text-primary hover:underline">
-                Ver todas
-            </a>
+
+    <!-- Métricas Adicionales -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- Ventas 30 días -->
+        <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl shadow-lg p-6 border border-green-200">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-green-800">Ventas 30 Días</h3>
+                <i class="fas fa-chart-line text-3xl text-green-600"></i>
+            </div>
+            <p class="text-3xl font-bold text-green-900">{{ ventas.ultimos_30_dias.total|default:0|floatformat:0|intcomma }} ₲</p>
+            <p class="text-sm text-green-700 mt-2">{{ ventas.ultimos_30_dias.cantidad|default:0 }} transacciones</p>
+        </div>
+
+        <!-- Stock Crítico -->
+        <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl shadow-lg p-6 border border-red-200">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-red-800">Stock Crítico</h3>
+                <i class="fas fa-exclamation-triangle text-3xl text-red-600"></i>
+            </div>
+            <p class="text-3xl font-bold text-red-900">{{ stock.critico|default:0 }}</p>
+            <p class="text-sm text-red-700 mt-2">productos requieren atención inmediata</p>
+            {% if stock.critico > 0 %}
+                <a href="{% url 'gestion:productos' %}?filtro=critico" class="btn btn-error btn-sm mt-3">
+                    <i class="fas fa-eye mr-2"></i>Ver productos
+                </a>
+            {% endif %}
+        </div>
+
+        <!-- Saldo Promedio -->
+        <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl shadow-lg p-6 border border-purple-200">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-purple-800">Saldo Promedio</h3>
+                <i class="fas fa-wallet text-3xl text-purple-600"></i>
+            </div>
+            <p class="text-3xl font-bold text-purple-900">{{ tarjetas.promedio_saldo|default:0|floatformat:0|intcomma }} ₲</p>
+            <p class="text-sm text-purple-700 mt-2">{{ tarjetas.saldo_bajo|default:0 }} tarjetas con saldo bajo</p>
+        </div>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+        <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+            <i class="fas fa-bolt text-yellow-500"></i>
+            Acciones Rápidas
         </h2>
-        
-        <template x-if="cargando">
-            <div class="overflow-x-auto">
-                <table class="table w-full">
-                    <thead>
-                        <tr>
-                            <th>Hora</th>
-                            <th>Tipo</th>
-                            <th>Cliente</th>
-                            <th>Detalle</th>
-                            <th class="text-right">Monto</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <template x-for="i in 5" :key="i">
-                            <tr>
-                                <td><div class="skeleton h-4 w-16"></div></td>
-                                <td><div class="skeleton h-4 w-20"></div></td>
-                                <td><div class="skeleton h-4 w-32"></div></td>
-                                <td><div class="skeleton h-4 w-40"></div></td>
-                                <td><div class="skeleton h-4 w-24"></div></td>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
-        </template>
-        
-        <template x-if="!cargando">
-            <div class="overflow-x-auto">
-                <table class="table table-zebra w-full">
-                    <thead>
-                        <tr>
-                            <th>Hora</th>
-                            <th>Tipo</th>
-                            <th>Cliente</th>
-                            <th>Detalle</th>
-                            <th class="text-right">Monto</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <template x-for="tx in transacciones" :key="tx.id">
-                            <tr class="hover">
-                                <td class="font-mono text-sm" x-text="tx.hora"></td>
-                                <td>
-                                    <span class="badge badge-sm" 
-                                          :class="{
-                                              'badge-success': tx.tipo === 'recarga',
-                                              'badge-primary': tx.tipo === 'venta',
-                                              'badge-error': tx.tipo === 'ajuste'
-                                          }">
-                                        <span x-text="tx.tipo"></span>
-                                    </span>
-                                </td>
-                                <td x-text="tx.cliente"></td>
-                                <td class="text-sm text-gray-600 dark:text-gray-400" x-text="tx.detalle"></td>
-                                <td class="text-right font-bold" 
-                                    :class="tx.tipo === 'recarga' ? 'text-success' : 'text-primary'"
-                                    x-text="formatearPrecio(tx.monto)"></td>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
-        </template>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <a href="{% url 'gestion:productos_crear' %}" 
+               class="flex flex-col items-center gap-3 p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg hover:shadow-lg transition-all hover:scale-105">
+                <div class="w-14 h-14 flex items-center justify-center rounded-full bg-orange-500 text-white">
+                    <i class="fas fa-plus-circle text-2xl"></i>
+                </div>
+                <span class="text-sm font-medium text-gray-800 text-center">Nuevo Producto</span>
+            </a>
+
+            <a href="{% url 'gestion:clientes_crear' %}" 
+               class="flex flex-col items-center gap-3 p-4 bg-gradient-to-br from-teal-50 to-teal-100 rounded-lg hover:shadow-lg transition-all hover:scale-105">
+                <div class="w-14 h-14 flex items-center justify-center rounded-full bg-teal-500 text-white">
+                    <i class="fas fa-user-plus text-2xl"></i>
+                </div>
+                <span class="text-sm font-medium text-gray-800 text-center">Nuevo Cliente</span>
+            </a>
+
+            <a href="{% url 'gestion:reportes_ventas' %}" 
+               class="flex flex-col items-center gap-3 p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg hover:shadow-lg transition-all hover:scale-105">
+                <div class="w-14 h-14 flex items-center justify-center rounded-full bg-blue-500 text-white">
+                    <i class="fas fa-file-download text-2xl"></i>
+                </div>
+                <span class="text-sm font-medium text-gray-800 text-center">Exportar Ventas</span>
+            </a>
+
+            <a href="{% url 'gestion:inventario' %}" 
+               class="flex flex-col items-center gap-3 p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg hover:shadow-lg transition-all hover:scale-105">
+                <div class="w-14 h-14 flex items-center justify-center rounded-full bg-purple-500 text-white">
+                    <i class="fas fa-boxes text-2xl"></i>
+                </div>
+                <span class="text-sm font-medium text-gray-800 text-center">Inventario</span>
+            </a>
+
+            <a href="{% url 'gestion:reportes_productos' %}" 
+               class="flex flex-col items-center gap-3 p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg hover:shadow-lg transition-all hover:scale-105">
+                <div class="w-14 h-14 flex items-center justify-center rounded-full bg-green-500 text-white">
+                    <i class="fas fa-chart-bar text-2xl"></i>
+                </div>
+                <span class="text-sm font-medium text-gray-800 text-center">Reportes</span>
+            </a>
+
+            <a href="{% url 'gestion:configuracion' %}" 
+               class="flex flex-col items-center gap-3 p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg hover:shadow-lg transition-all hover:scale-105">
+                <div class="w-14 h-14 flex items-center justify-center rounded-full bg-gray-600 text-white">
+                    <i class="fas fa-cog text-2xl"></i>
+                </div>
+                <span class="text-sm font-medium text-gray-800 text-center">Configuración</span>
+            </a>
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block page_scripts %}
 <script>
-function dashboardGestion() {
+function dashboardAdmin() {
     return {
-        cargando: true,
         fechaActual: '',
-        stats: {
-            ventas_hoy: 0,
-            monto_ventas_hoy: 0,
-            productos_activos: 0,
-            productos_stock_bajo: 0,
-            total_estudiantes: 0,
-            tarjetas_activas: 0,
-            recargas_hoy: 0,
-            monto_recargas_hoy: 0,
-            tarjetas_por_vencer: 0
-        },
-        ventasSemana: [],
-        maxVentaSemana: 0,
-        productosMasVendidos: [],
-        transacciones: [],
+        ultimaActualizacion: '',
         
-        async init() {
-            this.actualizarFecha();
-            await this.cargarDatos();
-            this.cargando = false;
-            
-            // Auto-refresh cada 60 segundos
-            setInterval(() => this.cargarDatos(), 60000);
+        init() {
+            this.actualizarFechaHora();
+            // Actualizar cada minuto
+            setInterval(() => {
+                this.actualizarFechaHora();
+            }, 60000);
         },
         
-        actualizarFecha() {
+        actualizarFechaHora() {
             const ahora = new Date();
-            const opciones = { 
+            
+            // Fecha completa
+            const opcionesFecha = { 
                 weekday: 'long', 
                 year: 'numeric', 
                 month: 'long', 
                 day: 'numeric' 
             };
-            this.fechaActual = ahora.toLocaleDateString('es-PY', opciones);
-        },
-        
-        async cargarDatos() {
-            try {
-                const response = await fetch('/api/gestion/dashboard/stats/');
-                const data = await response.json();
-                
-                if (data.success) {
-                    this.stats = data.stats;
-                    this.ventasSemana = data.ventas_semana || [];
-                    this.productosMasVendidos = data.productos_mas_vendidos || [];
-                    this.transacciones = data.transacciones || [];
-                    
-                    // Calcular máximo para gráfico
-                    if (this.ventasSemana.length > 0) {
-                        this.maxVentaSemana = Math.max(...this.ventasSemana.map(d => d.total));
-                    }
-                }
-            } catch (error) {
-                console.error('Error al cargar datos:', error);
-            }
-        },
-        
-        formatearPrecio(monto) {
-            return gestionHelpers.formatPrice(monto);
+            this.fechaActual = ahora.toLocaleDateString('es-PY', opcionesFecha);
+            
+            // Hora para última actualización
+            const opcionesHora = {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            };
+            this.ultimaActualizacion = ahora.toLocaleTimeString('es-PY', opcionesHora);
         }
     }
 }
+
+<!-- Mobile Bottom Navigation -->
+{% include "components/mobile-bottom-nav.html" with active_page="dashboard" %}
+
 </script>
 {% endblock %}

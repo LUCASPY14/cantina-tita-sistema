@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Panel de Notificaciones - MetrePay{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-4 md:py-8 pb-24 md:pb-8">
+    
+    <!-- Header -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 md:p-6 mb-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl md:text-4xl font-bold flex items-center gap-3">
+                    <i class="fas fa-bell text-primary"></i>
+                    Notificaciones
+                </h1>
+                <p class="text-sm md:text-base text-gray-600 mt-2">
+                    {% if count_no_leidas > 0 %}
+                        Tienes {{ count_no_leidas }} notificación{% if count_no_leidas > 1 %}es{% endif %} sin leer
+                    {% else %}
+                        Todas las notificaciones están al día
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="flex gap-2">
+                {% if count_no_leidas > 0 %}
+                    <button class="btn btn-primary btn-sm md:btn-md"
+                            hx-post="{% url 'notificaciones:marcar_todas_leidas' %}"
+                            hx-trigger="click"
+                            hx-swap="none"
+                            hx-on::after-request="window.location.reload()">
+                        <i class="fas fa-check-double mr-2"></i>
+                        Marcar todas leídas
+                    </button>
+                {% endif %}
+                
+                <a href="{% url 'notificaciones:configuracion' %}" 
+                   class="btn btn-ghost btn-sm md:btn-md">
+                    <i class="fas fa-cog mr-2"></i>
+                    <span class="hidden sm:inline">Configuración</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 mb-6"
+         x-data="{ filtro: 'todas', busqueda: '' }">
+        <div class="flex flex-col md:flex-row gap-4">
+            <!-- Búsqueda -->
+            <input type="text" 
+                   x-model="busqueda"
+                   placeholder="Buscar notificaciones..."
+                   class="input input-bordered flex-1">
+            
+            <!-- Filtro por tipo -->
+            <select x-model="filtro" class="select select-bordered">
+                <option value="todas">Todas</option>
+                <option value="no_leidas">No leídas</option>
+                <option value="venta">Ventas</option>
+                <option value="recarga">Recargas</option>
+                <option value="stock">Stock</option>
+                <option value="sistema">Sistema</option>
+            </select>
+        </div>
+    </div>
+    
+    <!-- Lista de notificaciones -->
+    {% if notificaciones %}
+        <div class="space-y-4">
+            {% for notif in notificaciones %}
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow hover:shadow-lg transition-all p-4 md:p-6
+                            {% if not notif.leida %}border-l-4 border-blue-500{% endif %}"
+                     x-data="{ eliminando: false }">
+                    
+                    <div class="flex items-start gap-4">
+                        <!-- Ícono -->
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-xl
+                                {% if notif.tipo == 'error' or notif.prioridad == 'critica' %}bg-red-100 text-red-600
+                                {% elif notif.tipo == 'warning' %}bg-yellow-100 text-yellow-600
+                                {% elif notif.tipo == 'success' %}bg-green-100 text-green-600
+                                {% elif notif.tipo == 'venta' %}bg-blue-100 text-blue-600
+                                {% elif notif.tipo == 'recarga' %}bg-purple-100 text-purple-600
+                                {% elif notif.tipo == 'stock' %}bg-orange-100 text-orange-600
+                                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                <i class="fas {{ notif.icono|default:'fa-bell' }}"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Contenido -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-col md:flex-row md:items-start justify-between gap-2 mb-2">
+                                <div class="flex-1">
+                                    <h3 class="font-bold text-lg text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                        {{ notif.titulo }}
+                                        {% if not notif.leida %}
+                                            <span class="badge badge-primary badge-sm">Nueva</span>
+                                        {% endif %}
+                                        {% if notif.prioridad == 'alta' or notif.prioridad == 'critica' %}
+                                            <span class="badge badge-error badge-sm">
+                                                {{ notif.get_prioridad_display }}
+                                            </span>
+                                        {% endif %}
+                                    </h3>
+                                    
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                        {{ notif.mensaje }}
+                                    </p>
+                                </div>
+                                
+                                <!-- Timestamp -->
+                                <div class="text-xs md:text-sm text-gray-500 whitespace-nowrap">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    {{ notif.creada_en|timesince }} atrás
+                                </div>
+                            </div>
+                            
+                            <!-- Acciones -->
+                            <div class="flex flex-wrap gap-2 mt-3">
+                                {% if notif.url %}
+                                    <a href="{{ notif.url }}" 
+                                       class="btn btn-primary btn-xs md:btn-sm"
+                                       hx-post="{% url 'notificaciones:marcar_leida' notif.id %}"
+                                       hx-trigger="click"
+                                       hx-swap="none">
+                                        <i class="fas fa-external-link-alt mr-1"></i>
+                                        Ver detalles
+                                    </a>
+                                {% endif %}
+                                
+                                {% if not notif.leida %}
+                                    <button class="btn btn-ghost btn-xs md:btn-sm"
+                                            hx-post="{% url 'notificaciones:marcar_leida' notif.id %}"
+                                            hx-trigger="click"
+                                            hx-swap="outerHTML"
+                                            hx-target="closest .bg-white">
+                                        <i class="fas fa-check mr-1"></i>
+                                        Marcar leída
+                                    </button>
+                                {% endif %}
+                                
+                                <button class="btn btn-ghost btn-xs md:btn-sm text-error"
+                                        @click="if(confirm('¿Eliminar esta notificación?')) eliminando = true"
+                                        x-show="!eliminando"
+                                        hx-delete="{% url 'notificaciones:eliminar' notif.id %}"
+                                        hx-trigger="click"
+                                        hx-swap="outerHTML"
+                                        hx-target="closest .bg-white"
+                                        hx-confirm="¿Estás seguro de eliminar esta notificación?">
+                                    <i class="fas fa-trash mr-1"></i>
+                                    Eliminar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Paginación (si hay muchas) -->
+        {% if notificaciones|length >= 50 %}
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-500">
+                    Mostrando las últimas 50 notificaciones
+                </p>
+            </div>
+        {% endif %}
+        
+    {% else %}
+        <!-- Sin notificaciones -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-16 text-center">
+            <i class="fas fa-bell-slash text-6xl text-gray-300 mb-4"></i>
+            <h3 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2">
+                No tienes notificaciones
+            </h3>
+            <p class="text-gray-600 dark:text-gray-400">
+                Cuando recibas notificaciones, aparecerán aquí
+            </p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

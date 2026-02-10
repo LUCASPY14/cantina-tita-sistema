@@ -1,303 +1,237 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Dashboard - Portal Padres{% endblock %}
+{% block title %}Portal de Padres - Dashboard{% endblock %}
+
+{% block extra_styles %}
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        background-attachment: fixed !important;
+    }
+    
+    .stat-card {
+        @apply bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transition-transform hover:scale-105;
+    }
+    
+    .quick-action-btn {
+        @apply flex flex-col items-center justify-center h-32 rounded-xl shadow-lg transition-all text-white font-semibold;
+    }
+    
+    .transaction-item {
+        @apply flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div x-data="dashboardPadres()" x-init="init()" class="container mx-auto px-4 py-8">
+<div x-data="dashboardPadres()" x-init="init()" class="container mx-auto px-4 py-4 md:py-8 pb-24 md:pb-8">
     
     <!-- Header de bienvenida -->
-    <header role="banner" class="bg-gradient-to-r from-primary to-secondary rounded-xl shadow-xl p-8 mb-8 text-white">
+    <header class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-4 md:p-8 mb-6 md:mb-8 text-gray-800">
         <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-4xl font-bold mb-2">
-                    <i class="fas fa-home mr-3" aria-hidden="true"></i>
-                    Bienvenido, <span x-text="usuario.nombre"></span>
+            <div class="flex-1">
+                <h1 class="text-2xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                    <i class="fas fa-home mr-2 md:mr-3"></i>
+                    <span class="hidden xs:inline">Bienvenido, </span>{{ cliente.nombres|truncatewords:2 }}
                 </h1>
-                <p class="text-lg opacity-90" aria-live="polite">
-                    <i class="fas fa-calendar-alt mr-2" aria-hidden="true"></i>
-                    <span x-text="fechaActual"></span>
-                </p>
+                <p class="text-sm md:text-lg text-gray-600" x-text="fechaActual"></p>
             </div>
             <div class="hidden md:block">
                 <img src="{% static 'images/tita_logotipo.png' %}" 
                      alt="Cantina Tita" 
-                     class="h-20 w-auto brightness-0 invert">
+                     class="h-20 w-auto">
             </div>
         </div>
     </header>
     
     <!-- Cards de resumen -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" role="region" aria-label="Resumen de estadísticas">
+    <div class="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
         
         <!-- Total Hijos -->
-        <article class="stat-card bg-white dark:bg-gray-800" role="article" aria-label="Estadística de total de hijos registrados">
+        <div class="stat-card">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Mis Hijos</p>
-                    <p class="text-3xl font-bold text-primary" x-text="resumen.total_hijos" aria-label="Total de hijos registrados"></p>
+                    <p class="text-3xl font-bold text-purple-600">{{ total_hijos }}</p>
+                    <p class="text-sm text-gray-500">Registrados</p>
                 </div>
-                <div class="w-16 h-16 bg-primary bg-opacity-10 rounded-full flex items-center justify-center">
-                    <i class="fas fa-child text-3xl text-primary" aria-hidden="true"></i>
+                <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-child text-3xl text-purple-600"></i>
                 </div>
             </div>
-        </article>
+        </div>
         
         <!-- Saldo Total -->
-        <article class="stat-card bg-white dark:bg-gray-800" role="article" aria-label="Saldo total acumulado en todas las tarjetas">
+        <div class="stat-card">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Saldo Total</p>
-                    <p class="text-3xl font-bold text-success" x-text="formatearPrecio(resumen.saldo_total)" aria-label="Saldo total disponible"></p>
+                    <p class="text-3xl font-bold text-green-600" x-text="formatearPrecio({{ saldo_total }})"></p>
+                    <p class="text-sm text-gray-500">Todas las tarjetas</p>
                 </div>
-                <div class="w-16 h-16 bg-success bg-opacity-10 rounded-full flex items-center justify-center">
-                    <i class="fas fa-wallet text-3xl text-success" aria-hidden="true"></i>
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-wallet text-3xl text-green-600"></i>
                 </div>
             </div>
-        </article>
+        </div>
         
         <!-- Recargas Este Mes -->
-        <article class="stat-card bg-white dark:bg-gray-800" role="article" aria-label="Total recargado en el mes actual">
+        <div class="stat-card">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Recargas Este Mes</p>
-                    <p class="text-3xl font-bold text-secondary" x-text="formatearPrecio(resumen.recargas_mes)" aria-label="Monto total recargado este mes"></p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Recargado Este Mes</p>
+                    <p class="text-3xl font-bold text-blue-600" x-text="formatearPrecio({{ recargas_mes }})"></p>
+                    <p class="text-sm text-gray-500">Total de recargas</p>
                 </div>
-                <div class="w-16 h-16 bg-secondary bg-opacity-10 rounded-full flex items-center justify-center">
-                    <i class="fas fa-credit-card text-3xl text-secondary" aria-hidden="true"></i>
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-credit-card text-3xl text-blue-600"></i>
                 </div>
             </div>
-        </article>
+        </div>
     </div>
     
     <!-- Acciones Rápidas -->
-    <nav role="navigation" aria-label="Acciones rápidas" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
-        <h2 class="text-2xl font-bold mb-6">
-            <i class="fas fa-bolt mr-2 text-warning" aria-hidden="true"></i>
+    <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8 mb-8">
+        <h2 class="text-2xl font-bold mb-6 text-gray-800">
+            <i class="fas fa-bolt mr-2 text-yellow-500"></i>
             Acciones Rápidas
         </h2>
         
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <a href="{% url 'portal:recargar' %}" 
-               aria-label="Ir a recargar saldo de tarjetas"
-               class="btn btn-lg bg-primary hover:bg-orange-600 text-white flex flex-col items-center justify-center h-32">
-                <i class="fas fa-plus-circle text-3xl mb-2" aria-hidden="true"></i>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <a href="{% url 'clientes:portal_cargar_saldo' %}" 
+               class="quick-action-btn bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700">
+                <i class="fas fa-plus-circle text-4xl mb-3"></i>
                 <span>Recargar Saldo</span>
             </a>
             
-            <a href="{% url 'portal:mis_hijos' %}" 
-               aria-label="Ver y gestionar tarjetas de mis hijos"
-               class="btn btn-lg bg-secondary hover:bg-teal-600 text-white flex flex-col items-center justify-center h-32">
-                <i class="fas fa-users text-3xl mb-2" aria-hidden="true"></i>
+            <button @click="mostrarHijos = true"
+                    class="quick-action-btn bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700">
+                <i class="fas fa-users text-4xl mb-3"></i>
                 <span>Mis Hijos</span>
-            </a>
+            </button>
             
-            <a href="{% url 'portal:historial' %}" 
-               aria-label="Ver historial completo de transacciones"
-               class="btn btn-lg bg-purple-500 hover:bg-purple-600 text-white flex flex-col items-center justify-center h-32">
-                <i class="fas fa-history text-3xl mb-2" aria-hidden="true"></i>
+            <button @click="mostrarHistorial = true"
+                    class="quick-action-btn bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700">
+                <i class="fas fa-history text-4xl mb-3"></i>
                 <span>Historial</span>
-            </a>
+            </button>
             
-            <a href="{% url 'portal:perfil' %}" 
-               aria-label="Configurar mi perfil y preferencias"
-               class="btn btn-lg bg-gray-600 hover:bg-gray-700 text-white flex flex-col items-center justify-center h-32">
-                <i class="fas fa-user-cog text-3xl mb-2" aria-hidden="true"></i>
-                <span>Mi Perfil</span>
+            <a href="{% url 'clientes:portal_recargas' %}"
+               class="quick-action-btn bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700">
+                <i class="fas fa-chart-line text-4xl mb-3"></i>
+                <span>Reportes</span>
             </a>
         </div>
-    </nav>
-    
-    <!-- Dos columnas: Tarjetas de Hijos y Últimas Transacciones -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
-        <!-- Tarjetas de Hijos -->
-        <section role="region" aria-labelledby="tarjetas-titulo" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <h2 id="tarjetas-titulo" class="text-2xl font-bold mb-6 flex items-center justify-between">
-                <span>
-                    <i class="fas fa-id-card mr-2 text-primary" aria-hidden="true"></i>
-                    Tarjetas de mis Hijos
-                </span>
-                <a href="{% url 'portal:mis_hijos' %}" 
-                   class="text-sm text-primary hover:underline"
-                   aria-label="Ver todas las tarjetas de mis hijos">
-                    Ver todas
-                </a>
-            </h2>
-            
-            <!-- Loading skeleton -->
-            <template x-if="cargando">
-                <div role="status" aria-live="polite" class="space-y-4">
-                    <template x-for="i in 3" :key="i">
-                        <div class="flex items-center gap-4">
-                            <div class="skeleton h-20 w-20 rounded-lg"></div>
-                            <div class="flex-1 space-y-2">
-                                <div class="skeleton h-4 w-full"></div>
-                                <div class="skeleton h-3 w-2/3"></div>
-                            </div>
-                        </div>
-                    </template>
-                    <span class="sr-only">Cargando información de tarjetas...</span>
-                </div>
-            </template>
-            
-            <!-- Lista de hijos -->
-            <template x-if="!cargando">
-                <div class="space-y-4">
-                    <template x-for="hijo in hijos" :key="hijo.id">
-                        <div class="bg-gradient-to-br from-primary/10 to-secondary/10 p-4 rounded-lg hover:shadow-md transition-shadow">
-                            <div class="flex items-center gap-4">
-                                <!-- Foto -->
-                                <div class="avatar">
-                                    <div class="w-20 h-20 rounded-lg">
-                                        <template x-if="hijo.foto">
-                                            <img :src="hijo.foto" :alt="hijo.nombre">
-                                        </template>
-                                        <template x-if="!hijo.foto">
-                                            <div class="w-full h-full bg-primary bg-opacity-20 flex items-center justify-center">
-                                                <i class="fas fa-child text-3xl text-primary" aria-hidden="true"></i>
-                                            </div>
-                                        </template>
-                                    </div>
-                                </div>
-                                
-                                <!-- Info -->
-                                <div class="flex-1">
-                                    <h3 class="font-bold text-lg" x-text="hijo.nombre"></h3>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">
-                                        <span x-text="hijo.grado"></span> - 
-                                        Tarjeta: <span class="font-mono" x-text="hijo.numero_tarjeta"></span>
-                                    </p>
-                                    <div class="mt-2 flex items-center justify-between">
-                                        <div>
-                                            <p class="text-xs text-gray-500">Saldo</p>
-                                            <p class="text-xl font-bold" 
-                                               :class="hijo.saldo < 5000 ? 'text-warning' : 'text-success'"
-                                               x-text="formatearPrecio(hijo.saldo)"></p>
-                                        </div>
-                                        <a :href="`{% url 'portal:recargar' %}?hijo=${hijo.id}`" 
-                                           class="btn btn-sm btn-primary"
-                                           :aria-label="`Recargar saldo de ${hijo.nombre}`">
-                                            <i class="fas fa-plus mr-1" aria-hidden="true"></i>
-                                            Recargar
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </template>
-                    
-                    <!-- Sin hijos registrados -->
-                    <template x-if="hijos.length === 0">
-                        <div class="text-center py-12">
-                            <i class="fas fa-child text-6xl text-gray-300 dark:text-gray-600 mb-4" aria-hidden="true"></i>
-                            <p class="text-lg font-semibold text-gray-500 dark:text-gray-400 mb-4">
-                                No tienes hijos registrados
-                            </p>
-                            <a href="{% url 'portal:agregar_hijo' %}" 
-                               class="btn btn-primary"
-                               aria-label="Agregar nuevo hijo al portal">
-                                <i class="fas fa-plus-circle mr-2" aria-hidden="true"></i>
-                                Agregar Hijo
-                            </a>
-                        </div>
-                    </template>
-                </div>
-            </template>
-        </section>
-        
-        <!-- Últimas Transacciones -->
-        <section role="region" aria-labelledby="transacciones-titulo" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <h2 id="transacciones-titulo" class="text-2xl font-bold mb-6 flex items-center justify-between">
-                <span>
-                    <i class="fas fa-receipt mr-2 text-secondary" aria-hidden="true"></i>
-                    Últimas Transacciones
-                </span>
-                <a href="{% url 'portal:historial' %}" 
-                   class="text-sm text-primary hover:underline"
-                   aria-label="Ver historial completo de transacciones">
-                    Ver todas
-                </a>
-            </h2>
-            
-            <!-- Loading skeleton -->
-            <template x-if="cargando">
-                <div role="status" aria-live="polite" class="space-y-3">
-                    <template x-for="i in 5" :key="i">
-                        <div class="flex items-center gap-4">
-                            <div class="skeleton h-12 w-12 rounded-full"></div>
-                            <div class="flex-1 space-y-2">
-                                <div class="skeleton h-4 w-full"></div>
-                                <div class="skeleton h-3 w-2/3"></div>
-                            </div>
-                        </div>
-                    </template>
-                    <span class="sr-only">Cargando últimas transacciones...</span>
-                </div>
-            </template>
-            
-            <!-- Lista de transacciones -->
-            <template x-if="!cargando">
-                <div class="space-y-3 max-h-96 overflow-y-auto">
-                    <template x-for="transaccion in transacciones" :key="transaccion.id">
-                        <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <!-- Icono según tipo -->
-                            <div class="w-12 h-12 rounded-full flex items-center justify-center"
-                                 :class="transaccion.tipo === 'recarga' ? 'bg-success bg-opacity-10' : 'bg-primary bg-opacity-10'">
-                                <i class="fas text-xl"
-                                   :class="transaccion.tipo === 'recarga' ? 'fa-plus-circle text-success' : 'fa-shopping-bag text-primary'"
-                                   aria-hidden="true"></i>
-                            </div>
-                            
-                            <!-- Info -->
-                            <div class="flex-1 min-w-0">
-                                <p class="font-semibold truncate" x-text="transaccion.descripcion"></p>
-                                <p class="text-sm text-gray-500">
-                                    <span x-text="transaccion.hijo"></span> • 
-                                    <span x-text="transaccion.fecha"></span>
-                                </p>
-                            </div>
-                            
-                            <!-- Monto -->
-                            <div class="text-right">
-                                <p class="font-bold"
-                                   :class="transaccion.tipo === 'recarga' ? 'text-success' : 'text-primary'">
-                                    <span x-text="transaccion.tipo === 'recarga' ? '+' : '-'"></span>
-                                    <span x-text="formatearPrecio(transaccion.monto)"></span>
-                                </p>
-                            </div>
-                        </div>
-                    </template>
-                    
-                    <!-- Sin transacciones -->
-                    <template x-if="transacciones.length === 0">
-                        <div class="text-center py-12 text-gray-400">
-                            <i class="fas fa-inbox text-4xl mb-2" aria-hidden="true"></i>
-                            <p>No hay transacciones registradas</p>
-                        </div>
-                    </template>
-                </div>
-            </template>
-        </section>
     </div>
     
-    <!-- Alertas -->
-    <div class="mt-8 space-y-4">
-        <!-- Saldo bajo -->
-        <template x-for="hijo in hijosConSaldoBajo()" :key="hijo.id">
-            <div class="alert alert-warning shadow-lg" role="alert" aria-live="polite">
-                <i class="fas fa-exclamation-triangle text-2xl" aria-hidden="true"></i>
-                <div class="flex-1">
-                    <h3 class="font-bold">Saldo Bajo</h3>
-                    <p class="text-sm">
-                        La tarjeta de <strong x-text="hijo.nombre"></strong> tiene saldo bajo 
-                        (<span x-text="formatearPrecio(hijo.saldo)"></span>). 
-                        <a :href="`{% url 'portal:recargar' %}?hijo=${hijo.id}`" class="link">Recargar ahora</a>
+    <!-- Dos columnas: Mis Hijos y Últimas Transacciones -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <!-- Mis Hijos -->
+        <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8">
+            <h3 class="text-2xl font-bold mb-6 text-gray-800">
+                <i class="fas fa-child mr-2 text-purple-600"></i>Mis Hijos
+            </h3>
+            
+            <div class="space-y-4">
+                {% for hijo in hijos %}
+                <div class="flex items-center gap-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200">
+                    <div class="w-16 h-16 bg-gradient-to-r from-purple-400 to-blue-400 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                        {{ hijo.nombres.0 }}{{ hijo.apellidos.0 }}
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-gray-800">{{ hijo.nombres }} {{ hijo.apellidos }}</h4>
+                        <p class="text-sm text-gray-600">{{ hijo.grado|default:"Grado no especificado" }} • {{ hijo.seccion|default:"Sin sección" }}</p>
+                        {% if hijo.tarjeta_set.first %}
+                        <p class="text-sm font-semibold text-green-600">
+                            Saldo: <span x-text="formatearPrecio({{ hijo.tarjeta_set.first.saldo_actual }})"></span>
+                        </p>
+                        {% else %}
+                        <p class="text-sm text-red-600">Sin tarjeta asignada</p>
+                        {% endif %}
+                    </div>
+                    <div class="text-right">
+                        <button @click="verDetalleHijo({{ hijo.id_hijo }})"
+                                class="btn btn-sm bg-purple-500 hover:bg-purple-600 text-white">
+                            <i class="fas fa-eye mr-1"></i>Ver
+                        </button>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-12 text-gray-500">
+                    <i class="fas fa-user-plus text-6xl mb-4 opacity-30"></i>
+                    <h4 class="text-xl font-semibold mb-2">No hay hijos registrados</h4>
+                    <p>Contacta al administrador para agregar a tus hijos al sistema</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Últimas Transacciones -->
+        <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8">
+            <h3 class="text-2xl font-bold mb-6 text-gray-800">
+                <i class="fas fa-list mr-2 text-blue-600"></i>Últimas Transacciones
+            </h3>
+            
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+                {% for transaccion in ultimas_transacciones %}
+                <div class="transaction-item">
+                    {% if transaccion.tipo == 'recarga' %}
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-plus text-green-600 text-xl"></i>
+                    </div>
+                    {% else %}
+                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-shopping-cart text-red-600 text-xl"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="flex-1">
+                        <p class="font-semibold text-gray-800">{{ transaccion.descripcion }}</p>
+                        <p class="text-sm text-gray-600">
+                            {{ transaccion.fecha|date:"d/m/Y H:i" }}
+                        </p>
+                    </div>
+                    
+                    <div class="text-right">
+                        <p class="font-bold {% if transaccion.tipo == 'recarga' %}text-green-600{% else %}text-red-600{% endif %}"
+                           x-text="formatearPrecio({{ transaccion.monto }})">
+                        </p>
+                        <p class="text-xs text-gray-500 capitalize">{{ transaccion.tipo }}</p>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-12 text-gray-500">
+                    <i class="fas fa-receipt text-6xl mb-4 opacity-30"></i>
+                    <h4 class="text-xl font-semibold mb-2">No hay transacciones</h4>
+                    <p>Las transacciones aparecerán aquí una vez que realices recargas o consumos</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alertas (si hay saldos bajos) -->
+    {% for hijo in hijos %}
+        {% if hijo.tarjeta_set.first and hijo.tarjeta_set.first.saldo_actual < 10000 %}
+        <div class="mt-8 bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-r-xl">
+            <div class="flex items-center">
+                <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mr-4">
+                    <i class="fas fa-exclamation-triangle text-yellow-600 text-xl"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-yellow-800">Saldo Bajo</h4>
+                    <p class="text-yellow-700">
+                        La tarjeta de <strong>{{ hijo.nombres }}</strong> tiene un saldo bajo
+                        (<span x-text="formatearPrecio({{ hijo.tarjeta_set.first.saldo_actual }})"></span>).
+                        <a href="{% url 'clientes:portal_cargar_saldo' %}" class="underline hover:no-underline">Recargar ahora</a>
                     </p>
                 </div>
             </div>
-        </template>
-    </div>
+        </div>
+        {% endif %}
+    {% endfor %}
 </div>
 {% endblock %}
 
@@ -305,28 +239,14 @@
 <script>
 function dashboardPadres() {
     return {
-        cargando: true,
         fechaActual: '',
-        usuario: {
-            nombre: '{{ user.get_full_name|default:user.username }}'
-        },
-        resumen: {
-            total_hijos: 0,
-            saldo_total: 0,
-            recargas_mes: 0
-        },
-        hijos: [],
-        transacciones: [],
+        mostrarHijos: false,
+        mostrarHistorial: false,
         
-        async init() {
+        init() {
             this.actualizarFecha();
-            await this.cargarDatos();
-            this.cargando = false;
-            
-            // Auto-refresh cada 5 minutos
-            setInterval(() => {
-                this.cargarDatos();
-            }, 300000);
+            // Actualizar fecha cada minuto
+            setInterval(() => this.actualizarFecha(), 60000);
         },
         
         actualizarFecha() {
@@ -335,47 +255,40 @@ function dashboardPadres() {
                 weekday: 'long', 
                 year: 'numeric', 
                 month: 'long', 
-                day: 'numeric' 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
             };
             this.fechaActual = ahora.toLocaleDateString('es-PY', opciones);
         },
         
-        async cargarDatos() {
-            try {
-                const response = await fetch('/api/portal/dashboard/');
-                const data = await response.json();
-                
-                if (data.success) {
-                    this.resumen = data.resumen;
-                    this.hijos = data.hijos || [];
-                    this.transacciones = data.transacciones || [];
-                } else {
-                    this.showNotification('Error al cargar datos del dashboard', 'error');
-                }
-            } catch (error) {
-                console.error('Error al cargar datos:', error);
-                this.showNotification('Error de conexión. Por favor, recarga la página.', 'error');
-            }
-        },
-        
-        showNotification(message, type) {
-            if (window.Alpine && window.Alpine.store('notifications')) {
-                window.Alpine.store('notifications').add(message, type);
-            }
-        },
-        
-        hijosConSaldoBajo() {
-            return this.hijos.filter(hijo => hijo.saldo < 5000);
-        },
-        
         formatearPrecio(monto) {
+            if (!monto || monto === '' || monto === null) return '₲ 0';
+            
+            let numero = monto;
+            if (typeof monto === 'string') {
+                numero = parseFloat(monto.replace(/[^\d.-]/g, ''));
+            }
+            
+            if (isNaN(numero)) return '₲ 0';
+            
             return new Intl.NumberFormat('es-PY', {
-                style: 'decimal',
+                style: 'currency',
+                currency: 'PYG',
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0
-            }).format(monto) + ' Gs.';
+            }).format(numero);
+        },
+        
+        verDetalleHijo(hijoId) {
+            // Redirigir a la página de detalles del hijo
+            window.location.href = `/clientes/hijo/${hijoId}/consumos/`;
         }
     }
 }
 </script>
+
+<!-- Mobile Bottom Navigation -->
+{% include "components/mobile-bottom-nav.html" with active_page="dashboard" %}
+
 {% endblock %}

@@ -1,0 +1,168 @@
+{% comment %}
+Mobile Header Component
+Incluir en templates para un header responsive optimizado
+Uso: {% include "components/mobile-header.html" with title="Dashboard" subtitle="Vista General" %}
+{% endcomment %}
+
+<header class="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow-md safe-area-top no-print"
+        x-data="{ showSearch: false, searchQuery: '' }">
+    
+    <!-- Header Principal -->
+    <div class="container mx-auto px-4 py-3">
+        <div class="flex items-center justify-between gap-4">
+            
+            <!-- Menu Toggle (Mobile) -->
+            <div class="md:hidden">
+                <label for="main-drawer" class="btn btn-ghost btn-circle drawer-button">
+                    <i class="fas fa-bars text-xl"></i>
+                </label>
+            </div>
+            
+            <!-- Logo y Título -->
+            <div class="flex-1 flex items-center gap-3 min-w-0">
+                <!-- Logo (ocultar en xs) -->
+                <div class="hidden xs:block flex-shrink-0">
+                    <img src="{% static 'icons/icon-72x72.png' %}" 
+                         alt="MetrePay" 
+                         class="w-10 h-10 rounded-lg">
+                </div>
+                
+                <!-- Título y Subtítulo -->
+                <div class="min-w-0 flex-1">
+                    <h1 class="text-lg md:text-2xl font-bold text-gray-800 dark:text-white truncate">
+                        {{ title|default:"MetrePay" }}
+                    </h1>
+                    {% if subtitle %}
+                        <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 hidden sm:block truncate">
+                            {{ subtitle }}
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="flex items-center gap-2 flex-shrink-0">
+                
+                <!-- Search Toggle (Mobile) -->
+                {% if show_search %}
+                    <button @click="showSearch = !showSearch" 
+                            class="btn btn-ghost btn-circle btn-sm md:hidden">
+                        <i class="fas fa-search text-lg"></i>
+                    </button>
+                {% endif %}
+                
+                <!-- Notifications -->
+                {% if show_notifications %}
+                    <div class="dropdown dropdown-end">
+                        <label tabindex="0" class="btn btn-ghost btn-circle btn-sm relative">
+                            <i class="fas fa-bell text-lg"></i>
+                            <span class="absolute top-1 right-1 flex h-3 w-3">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                            </span>
+                        </label>
+                        <ul tabindex="0" class="dropdown-content menu p-2 shadow-lg bg-base-100 rounded-box w-80 max-h-96 overflow-y-auto">
+                            <li class="menu-title">
+                                <span>Notificaciones</span>
+                            </li>
+                            {% block notifications_list %}
+                                <li><a>No hay notificaciones nuevas</a></li>
+                            {% endblock %}
+                        </ul>
+                    </div>
+                {% endif %}
+                
+                <!-- User Menu -->
+                <div class="dropdown dropdown-end">
+                    <label tabindex="0" class="btn btn-ghost btn-circle avatar">
+                        <div class="w-8 md:w-10 rounded-full bg-primary text-white flex items-center justify-center">
+                            <span class="text-sm md:text-base font-bold">
+                                {{ user.first_name|first|default:user.username|first }}{{ user.last_name|first|default:"" }}
+                            </span>
+                        </div>
+                    </label>
+                    <ul tabindex="0" class="dropdown-content menu p-2 shadow-lg bg-base-100 rounded-box w-64 mt-3">
+                        <li class="menu-title">
+                            <span class="flex items-center gap-2">
+                                <i class="fas fa-user-circle"></i>
+                                {{ user.get_full_name|default:user.username }}
+                            </span>
+                            <span class="text-xs text-gray-500">{{ user.email }}</span>
+                        </li>
+                        <div class="divider my-1"></div>
+                        <li><a href="{% url 'perfil' %}"><i class="fas fa-user mr-2"></i>Mi Perfil</a></li>
+                        <li><a href="{% url 'configuracion' %}"><i class="fas fa-cog mr-2"></i>Configuración</a></li>
+                        <div class="divider my-1"></div>
+                        <li>
+                            <button @click="darkMode = !darkMode" class="flex items-center justify-between">
+                                <span><i class="fas fa-moon mr-2"></i>Modo Oscuro</span>
+                                <input type="checkbox" class="toggle toggle-sm" x-model="darkMode">
+                            </button>
+                        </li>
+                        <div class="divider my-1"></div>
+                        <li><a href="{% url 'logout' %}" class="text-error"><i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Search Bar (Mobile Expandible) -->
+    {% if show_search %}
+        <div x-show="showSearch"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 -translate-y-2"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 -translate-y-2"
+             class="md:hidden border-t border-gray-200 dark:border-gray-700">
+            <div class="container mx-auto px-4 py-3">
+                <div class="relative">
+                    <input type="text" 
+                           x-model="searchQuery"
+                           placeholder="Buscar..."
+                           class="input input-bordered w-full pl-10"
+                           autofocus>
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <button @click="showSearch = false; searchQuery = ''" 
+                            class="btn btn-ghost btn-sm btn-circle absolute right-2 top-1/2 -translate-y-1/2">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</header>
+
+<!-- Progress Bar (opcional) -->
+{% if show_progress %}
+    <div class="progress-bar-container h-1 bg-gray-200 dark:bg-gray-700 relative overflow-hidden no-print">
+        <div class="progress-bar h-full bg-primary absolute left-0 top-0 transition-all duration-300"
+             x-data="{ progress: 0 }"
+             :style="`width: ${progress}%`">
+        </div>
+    </div>
+{% endif %}
+
+<style>
+    /* Animación de progress bar */
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+    
+    .progress-bar::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        background: linear-gradient(90deg, 
+            transparent 0%, 
+            rgba(255,255,255,0.3) 50%, 
+            transparent 100%);
+        animation: shimmer 1.5s infinite;
+    }
+</style>

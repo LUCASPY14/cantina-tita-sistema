@@ -18,13 +18,14 @@
     .login-container {
         background: white;
         border-radius: 2rem;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.2);
         overflow: hidden;
-        max-width: 900px;
+        max-width: 1000px;
         width: 100%;
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1.2fr 1fr;
         gap: 0;
+        backdrop-filter: blur(10px);
     }
     
     @media (max-width: 768px) {
@@ -37,25 +38,105 @@
     }
     
     .login-banner {
-        background: linear-gradient(135deg, #FF6B35 0%, #4ECDC4 100%);
+        background: linear-gradient(135deg, #FF6B35 0%, #FFB199 35%, #4ECDC4 100%);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 3rem;
+        padding: 4rem 3rem;
         color: white;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .login-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        animation: gentle-float 6s ease-in-out infinite;
+    }
+    
+    @keyframes gentle-float {
+        0%, 100% { transform: rotate(0deg) translate(-20px, -20px); }
+        50% { transform: rotate(180deg) translate(20px, 20px); }
     }
     
     .login-form-container {
-        padding: 3rem;
+        padding: 4rem 3rem;
+        background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    }
+    
+    .brand-title {
+        background: linear-gradient(135deg, #FF6B35 0%, #4ECDC4 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 800;
+        font-size: 2.5rem;
+        text-align: center;
+        margin-bottom: 1rem;
+        position: relative;
+        z-index: 2;
+    }
+    
+    .features-list {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-top: 2rem;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .feature-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        transition: all 0.3s ease;
+        border-radius: 0.5rem;
+        margin: 0.25rem 0;
+    }
+    
+    .feature-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateX(5px);
+    }
+    
+    .feature-icon {
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 1.1rem;
     }
     
     .logo-large {
-        width: 120px;
-        height: 120px;
+        width: 180px;
+        height: 180px;
         object-fit: contain;
-        margin-bottom: 1.5rem;
-        filter: brightness(0) invert(1);
+        margin-bottom: 2rem;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.15);
+        padding: 1.5rem;
+        backdrop-filter: blur(10px);
+        border: 3px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+        z-index: 2;
+        position: relative;
+    }
+    
+    .logo-large:hover {
+        transform: scale(1.05);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        background: rgba(255, 255, 255, 0.25);
     }
 </style>
 {% endblock %}
@@ -68,20 +149,51 @@
     <!-- Banner lateral -->
     <div class="login-banner">
         <img src="{% static 'images/tita_logotipo.png' %}" alt="Cantina Tita" class="logo-large">
-        <h2 class="text-3xl font-bold mb-4 text-center">Cantina Tita</h2>
-        <p class="text-lg text-center opacity-90">Sistema de Gestión POS</p>
-        <div class="mt-8 text-center space-y-2 opacity-75">
-            <p><i class="fas fa-utensils mr-2"></i>Gestión de Ventas</p>
-            <p><i class="fas fa-credit-card mr-2"></i>Control de Recargas</p>
-            <p><i class="fas fa-chart-line mr-2"></i>Reportes en Tiempo Real</p>
+        <h2 class="brand-title">Cantina Tita</h2>
+        <p class="text-xl text-center opacity-95 font-medium mb-4">Sistema de Gestión POS</p>
+        <p class="text-center opacity-80 text-sm max-w-xs leading-relaxed">
+            Gestiona tu negocio de manera eficiente con nuestro sistema integral
+        </p>
+        
+        <div class="features-list">
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <i class="fas fa-utensils"></i>
+                </div>
+                <div>
+                    <p class="font-semibold text-sm">Gestión de Ventas</p>
+                    <p class="text-xs opacity-75">Control total de transacciones</p>
+                </div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <i class="fas fa-credit-card"></i>
+                </div>
+                <div>
+                    <p class="font-semibold text-sm">Control de Recargas</p>
+                    <p class="text-xs opacity-75">Pagos seguros y rápidos</p>
+                </div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div>
+                    <p class="font-semibold text-sm">Reportes en Tiempo Real</p>
+                    <p class="text-xs opacity-75">Análisis y estadísticas</p>
+                </div>
+            </div>
         </div>
     </div>
     
     <!-- Formulario de login -->
     <div class="login-form-container">
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Bienvenido</h1>
-            <p class="text-gray-600">Ingrese sus credenciales para continuar</p>
+        <div class="mb-10 text-center">
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-orange-500 to-teal-500 bg-clip-text text-transparent mb-3">
+                Bienvenido
+            </h1>
+            <p class="text-gray-600 text-lg">Ingrese sus credenciales para continuar</p>
+            <div class="w-24 h-1 bg-gradient-to-r from-orange-500 to-teal-500 mx-auto mt-3 rounded-full"></div>
         </div>
         
         <!-- Formulario con validación Alpine.js -->

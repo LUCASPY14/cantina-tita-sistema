@@ -1,0 +1,139 @@
+{% comment %}
+Componente de Notificaciones para incluir en base.html
+Incluye el botón con badge y el dropdown
+{% endcomment %}
+
+<div class="dropdown dropdown-end" 
+     x-data="notificacionesComponent()"
+     x-init="init()"
+     id="notif-dropdown">
+    
+    <!-- Botón con badge -->
+    <label tabindex="0" 
+           class="btn btn-ghost btn-circle relative"
+           @click="abrirDropdown()">
+        <i class="fas fa-bell text-lg"></i>
+        
+        <!-- Badge con polling HTMX -->
+        <div hx-get="{% url 'notificaciones:badge' %}"
+             hx-trigger="load, every 30s, refresh-notif from:body"
+             hx-swap="innerHTML">
+            <!-- El badge se carga aquí -->
+        </div>
+    </label>
+    
+    <!-- Dropdown content -->
+    <div tabindex="0" 
+         class="dropdown-content card card-compact shadow-2xl bg-base-100 z-[1000] mt-3"
+         x-show="abierto"
+         @click.away="cerrarDropdown()"
+         x-transition>
+        
+        <!-- Contenido cargado con HTMX -->
+        <div class="card-body p-0"
+             hx-get="{% url 'notificaciones:dropdown' %}"
+             hx-trigger="click from:label, refresh-notif from:body"
+             hx-swap="innerHTML">
+            
+            <!-- Loading state -->
+            <div class="p-8 text-center">
+                <span class="loading loading-spinner loading-md"></span>
+                <p class="text-sm text-gray-500 mt-2">Cargando notificaciones...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function notificacionesComponent() {
+    return {
+        abierto: false,
+        sonidoHabilitado: true,
+        
+        init() {
+            // Escuchar evento personalizado para nuevas notificaciones
+            window.addEventListener('nueva-notificacion', (e) => {
+                this.notificacionRecibida(e.detail);
+            });
+            
+            // Verificar permisos de notificaciones del navegador
+            this.verificarPermisos();
+        },
+        
+        abrirDropdown() {
+            this.abierto = !this.abierto;
+        },
+        
+        cerrarDropdown() {
+            this.abierto = false;
+        },
+        
+        async verificarPermisos() {
+            if ('Notification' in window) {
+                if (Notification.permission === 'default') {
+                    // Pedir permisos si no se han solicitado
+                    await Notification.requestPermission();
+                }
+            }
+        },
+        
+        notificacionRecibida(data) {
+            // Actualizar badge
+            htmx.trigger(document.body, 'refresh-notif');
+            
+            // Reproducir sonido si está habilitado
+            if (this.sonidoHabilitado) {
+                this.reproducirSonido();
+            }
+            
+            // Mostrar notificación del navegador
+            this.mostrarNotificacionNativa(data);
+        },
+        
+        reproducirSonido() {
+            try {
+                // Usar Howler.js si está disponible
+                if (window.Howl) {
+                    const sound = new Howl({
+                        src: ['/static/sounds/notification.mp3'],
+                        volume: 0.5
+                    });
+                    sound.play();
+                } else {
+                    // Fallback a Audio nativo
+                    const audio = new Audio('/static/sounds/notification.mp3');
+                    audio.volume = 0.5;
+                    audio.play().catch(() => {
+                        // Ignorar errores (puede fallar por permisos)
+                    });
+                }
+            } catch (error) {
+                console.log('No se pudo reproducir el sonido de notificación');
+            }
+        },
+        
+        mostrarNotificacionNativa(data) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                const notification = new Notification(data.titulo, {
+                    body: data.mensaje,
+                    icon: '/static/icons/icon-192x192.png',
+                    badge: '/static/icons/icon-72x72.png',
+                    tag: `notif-${data.id}`,
+                    requireInteraction: data.prioridad === 'critica',
+                    vibrate: [200, 100, 200],
+                });
+                
+                // Manejar click en la notificación
+                notification.onclick = function(event) {
+                    event.preventDefault();
+                    window.focus();
+                    if (data.url) {
+                        window.location.href = data.url;
+                    }
+                    notification.close();
+                };
+            }
+        }
+    }
+}
+</script>
