@@ -16,6 +16,12 @@ from .promociones import *
 from .alergenos import *
 from .vistas import *
 
+# Nuevos modelos avanzados
+from .analytics import *
+from .comunicaciones import *
+from .integraciones import *
+from .configuraciones import *
+
 # Importar modelos de notificaciones desde el archivo separado
 from ..models_notificaciones import NotificacionSistema, ConfiguracionNotificacionesSistema
 
@@ -88,4 +94,19 @@ __all__ = [
     
     # Notificaciones
     'NotificacionSistema', 'ConfiguracionNotificacionesSistema',
+    
+    # Analytics y Reportes
+    'ReporteTemplate', 'KpiMetrica', 'ValorKpi', 'Dashboard', 
+    'AlertaAutomatica', 'AlertaDestinatario', 'HistorialAlerta',
+    
+    # Comunicaciones
+    'EmailTemplate', 'EmailEnviado', 'SmsTemplate', 'SmsEnviado', 'CampanaComunicacion',
+    
+    # Integraciones
+    'ProveedorApi', 'CredencialApi', 'EndpointApi', 'LogLlamadaApi',
+    'WebhookEndpoint', 'LogWebhook',
+    
+    # Configuraciones
+    'ConfiguracionSistema', 'PerfilUsuario', 'PlantillaTarea', 'DestinatarioTarea',
+    'EjecucionTarea', 'CacheConfiguracion',
 ]
