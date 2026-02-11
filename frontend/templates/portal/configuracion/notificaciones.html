@@ -1,0 +1,468 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Notificaciones - Portal Padres{% endblock %}
+
+{% block content %}
+<div x-data="configNotificaciones()" x-init="init()" class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-8">
+    <div class="container mx-auto px-4 max-w-4xl">
+        
+        <!-- Header -->
+        <div class="mb-8">
+            <a href="{% url 'portal:dashboard' %}" class="btn btn-ghost mb-4">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Volver al Dashboard
+            </a>
+            
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-bell mr-3 text-primary"></i>
+                Configuración de Notificaciones
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Administra cómo y cuándo recibir alertas
+            </p>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            
+            <!-- Canales de Notificación -->
+            <div class="mb-8">
+                <h2 class="text-xl font-bold mb-4 flex items-center">
+                    <i class="fas fa-paper-plane mr-2 text-primary"></i>
+                    Canales de Notificación
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="card bg-gray-50 dark:bg-gray-700">
+                        <div class="card-body">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-start gap-3">
+                                    <i class="fas fa-envelope text-2xl text-primary mt-1"></i>
+                                    <div>
+                                        <h3 class="font-bold">Email</h3>
+                                        <p class="text-sm text-gray-500" x-text="usuario.email || 'No configurado'"></p>
+                                    </div>
+                                </div>
+                                <input type="checkbox" 
+                                       x-model="preferencias.notif_email"
+                                       @change="guardarPreferencias()"
+                                       class="toggle toggle-primary">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card bg-gray-50 dark:bg-gray-700">
+                        <div class="card-body">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-start gap-3">
+                                    <i class="fas fa-mobile-alt text-2xl text-primary mt-1"></i>
+                                    <div>
+                                        <h3 class="font-bold">SMS</h3>
+                                        <p class="text-sm text-gray-500" x-text="usuario.telefono || 'No configurado'"></p>
+                                    </div>
+                                </div>
+                                <input type="checkbox" 
+                                       x-model="preferencias.notif_sms"
+                                       @change="guardarPreferencias()"
+                                       class="toggle toggle-primary"
+                                       :disabled="!usuario.telefono">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <!-- Alertas de Saldo -->
+            <div class="mb-8">
+                <h2 class="text-xl font-bold mb-4 flex items-center">
+                    <i class="fas fa-wallet mr-2 text-success"></i>
+                    Alertas de Saldo
+                </h2>
+                
+                <div class="space-y-4">
+                    <div class="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="checkbox" 
+                                       x-model="preferencias.alerta_saldo_bajo"
+                                       @change="guardarPreferencias()"
+                                       class="checkbox checkbox-sm checkbox-success">
+                                <h3 class="font-semibold">Saldo Bajo</h3>
+                            </div>
+                            <p class="text-sm text-gray-500 mb-3">Recibir alerta cuando el saldo sea menor a:</p>
+                            <div class="flex items-center gap-2">
+                                <input type="number" 
+                                       x-model="preferencias.umbral_saldo_bajo"
+                                       @change="guardarPreferencias()"
+                                       :disabled="!preferencias.alerta_saldo_bajo"
+                                       class="input input-bordered input-sm w-40"
+                                       min="0"
+                                       step="1000">
+                                <span class="text-sm">Gs.</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="checkbox" 
+                                       x-model="preferencias.alerta_recarga_exitosa"
+                                       @change="guardarPreferencias()"
+                                       class="checkbox checkbox-sm checkbox-success">
+                                <h3 class="font-semibold">Recarga Exitosa</h3>
+                            </div>
+                            <p class="text-sm text-gray-500">Confirmar cuando se procese una recarga correctamente</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <!-- Alertas de Consumo -->
+            <div class="mb-8">
+                <h2 class="text-xl font-bold mb-4 flex items-center">
+                    <i class="fas fa-shopping-cart mr-2 text-primary"></i>
+                    Alertas de Consumo
+                </h2>
+                
+                <div class="space-y-4">
+                    <div class="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="checkbox" 
+                                       x-model="preferencias.alerta_cada_compra"
+                                       @change="guardarPreferencias()"
+                                       class="checkbox checkbox-sm checkbox-primary">
+                                <h3 class="font-semibold">Cada Compra</h3>
+                            </div>
+                            <p class="text-sm text-gray-500">Notificar cada vez que tu hijo/a realice una compra</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="checkbox" 
+                                       x-model="preferencias.alerta_limite_diario"
+                                       @change="guardarPreferencias()"
+                                       class="checkbox checkbox-sm checkbox-primary">
+                                <h3 class="font-semibold">Límite Diario Alcanzado</h3>
+                            </div>
+                            <p class="text-sm text-gray-500">Alerta cuando se alcance el límite diario configurado</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="checkbox" 
+                                       x-model="preferencias.alerta_limite_semanal"
+                                       @change="guardarPreferencias()"
+                                       class="checkbox checkbox-sm checkbox-primary">
+                                <h3 class="font-semibold">Límite Semanal Alcanzado</h3>
+                            </div>
+                            <p class="text-sm text-gray-500">Alerta cuando se alcance el límite semanal configurado</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="checkbox" 
+                                       x-model="preferencias.alerta_compra_grande"
+                                       @change="guardarPreferencias()"
+                                       class="checkbox checkbox-sm checkbox-primary">
+                                <h3 class="font-semibold">Compra Grande</h3>
+                            </div>
+                            <p class="text-sm text-gray-500 mb-3">Alerta cuando una compra supere:</p>
+                            <div class="flex items-center gap-2">
+                                <input type="number" 
+                                       x-model="preferencias.umbral_compra_grande"
+                                       @change="guardarPreferencias()"
+                                       :disabled="!preferencias.alerta_compra_grande"
+                                       class="input input-bordered input-sm w-40"
+                                       min="0"
+                                       step="1000">
+                                <span class="text-sm">Gs.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <!-- Reportes Automáticos -->
+            <div class="mb-8">
+                <h2 class="text-xl font-bold mb-4 flex items-center">
+                    <i class="fas fa-chart-bar mr-2 text-secondary"></i>
+                    Reportes Automáticos
+                </h2>
+                
+                <div class="space-y-4">
+                    <div class="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="checkbox" 
+                                       x-model="preferencias.reporte_diario"
+                                       @change="guardarPreferencias()"
+                                       class="checkbox checkbox-sm checkbox-secondary">
+                                <h3 class="font-semibold">Resumen Diario</h3>
+                            </div>
+                            <p class="text-sm text-gray-500">Recibir un resumen del consumo del día</p>
+                            <div class="mt-2" x-show="preferencias.reporte_diario">
+                                <select x-model="preferencias.hora_reporte_diario"
+                                        @change="guardarPreferencias()"
+                                        class="select select-bordered select-sm w-40">
+                                    <option value="18:00">18:00</option>
+                                    <option value="19:00">19:00</option>
+                                    <option value="20:00">20:00</option>
+                                    <option value="21:00">21:00</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="checkbox" 
+                                       x-model="preferencias.reporte_semanal"
+                                       @change="guardarPreferencias()"
+                                       class="checkbox checkbox-sm checkbox-secondary">
+                                <h3 class="font-semibold">Resumen Semanal</h3>
+                            </div>
+                            <p class="text-sm text-gray-500">Recibir un resumen semanal cada domingo</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="checkbox" 
+                                       x-model="preferencias.reporte_mensual"
+                                       @change="guardarPreferencias()"
+                                       class="checkbox checkbox-sm checkbox-secondary">
+                                <h3 class="font-semibold">Resumen Mensual</h3>
+                            </div>
+                            <p class="text-sm text-gray-500">Recibir un reporte completo el primer día de cada mes</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <!-- Recordatorios -->
+            <div class="mb-8">
+                <h2 class="text-xl font-bold mb-4 flex items-center">
+                    <i class="fas fa-clock mr-2 text-warning"></i>
+                    Recordatorios
+                </h2>
+                
+                <div class="space-y-4">
+                    <div class="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="checkbox" 
+                                       x-model="preferencias.recordar_recarga"
+                                       @change="guardarPreferencias()"
+                                       class="checkbox checkbox-sm checkbox-warning">
+                                <h3 class="font-semibold">Recordar Recarga</h3>
+                            </div>
+                            <p class="text-sm text-gray-500">Recordatorio cuando el saldo esté bajo y sea necesario recargar</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <input type="checkbox" 
+                                       x-model="preferencias.recordar_revisar_consumo"
+                                       @change="guardarPreferencias()"
+                                       class="checkbox checkbox-sm checkbox-warning">
+                                <h3 class="font-semibold">Revisar Consumo</h3>
+                            </div>
+                            <p class="text-sm text-gray-500">Recordatorio semanal para revisar el consumo</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Estado de Guardado -->
+            <div class="alert" 
+                 :class="{
+                     'alert-success': guardadoReciente,
+                     'alert-info': !guardadoReciente
+                 }"
+                 x-show="mostrarMensaje"
+                 x-transition>
+                <i class="fas" :class="guardadoReciente ? 'fa-check-circle' : 'fa-info-circle'"></i>
+                <span x-text="guardadoReciente ? 'Preferencias guardadas automáticamente' : 'Los cambios se guardan automáticamente'"></span>
+            </div>
+            
+            <!-- Botón de Prueba -->
+            <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="font-bold mb-1">Probar Notificaciones</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Envía una notificación de prueba a tus canales configurados</p>
+                    </div>
+                    <button @click="enviarNotificacionPrueba()" 
+                            class="btn btn-primary btn-sm"
+                            :disabled="enviandoPrueba">
+                        <i class="fas fa-paper-plane mr-2"></i>
+                        <span x-show="!enviandoPrueba">Enviar Prueba</span>
+                        <span x-show="enviandoPrueba" class="loading loading-spinner loading-sm"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function configNotificaciones() {
+    return {
+        usuario: {},
+        preferencias: {
+            // Canales
+            notif_email: true,
+            notif_sms: false,
+            
+            // Saldo
+            alerta_saldo_bajo: true,
+            umbral_saldo_bajo: 10000,
+            alerta_recarga_exitosa: true,
+            
+            // Consumo
+            alerta_cada_compra: false,
+            alerta_limite_diario: true,
+            alerta_limite_semanal: true,
+            alerta_compra_grande: true,
+            umbral_compra_grande: 15000,
+            
+            // Reportes
+            reporte_diario: false,
+            hora_reporte_diario: '19:00',
+            reporte_semanal: true,
+            reporte_mensual: true,
+            
+            // Recordatorios
+            recordar_recarga: true,
+            recordar_revisar_consumo: true
+        },
+        guardadoReciente: false,
+        mostrarMensaje: true,
+        enviandoPrueba: false,
+        timeoutGuardado: null,
+        
+        async init() {
+            await this.cargarPreferencias();
+        },
+        
+        async cargarPreferencias() {
+            try {
+                const response = await fetch('/api/portal/notificaciones/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.usuario = data.usuario;
+                    this.preferencias = { ...this.preferencias, ...data.preferencias };
+                }
+            } catch (error) {
+                console.error('Error al cargar preferencias:', error);
+                this.notificar('Error al cargar configuración', 'error');
+            }
+        },
+        
+        async guardarPreferencias() {
+            // Cancelar guardado anterior si existe
+            if (this.timeoutGuardado) {
+                clearTimeout(this.timeoutGuardado);
+            }
+            
+            // Guardar después de 500ms (debounce)
+            this.timeoutGuardado = setTimeout(async () => {
+                try {
+                    const response = await fetch('/api/portal/notificaciones/', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.getCookie('csrftoken')
+                        },
+                        body: JSON.stringify(this.preferencias)
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.guardadoReciente = true;
+                        setTimeout(() => {
+                            this.guardadoReciente = false;
+                        }, 2000);
+                    }
+                } catch (error) {
+                    console.error('Error al guardar:', error);
+                    this.notificar('Error al guardar preferencias', 'error');
+                }
+            }, 500);
+        },
+        
+        async enviarNotificacionPrueba() {
+            this.enviandoPrueba = true;
+            
+            try {
+                const response = await fetch('/api/portal/notificaciones/prueba/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.notificar('Notificación de prueba enviada. Revisa tus canales configurados.', 'success');
+                } else {
+                    this.notificar(data.error || 'Error al enviar notificación', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                this.notificar('Error al enviar notificación de prueba', 'error');
+            } finally {
+                this.enviandoPrueba = false;
+            }
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        },
+        
+        notificar(mensaje, tipo = 'info') {
+            const event = new CustomEvent('notify', {
+                detail: { message: mensaje, type: tipo }
+            });
+            window.dispatchEvent(event);
+        }
+    }
+}
+</script>
+{% endblock %}

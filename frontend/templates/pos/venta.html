@@ -1,0 +1,846 @@
+{% extends "base_pos.html" %}
+{% load static %}
+
+{% block title %}Venta - POS{% endblock %}
+
+{% block content %}
+<div x-data="ventaPOS()" 
+     @pos:cliente-generico.window="seleccionarClienteGenerico()"
+     @pos:nuevo-cliente.window="abrirModalCliente()"
+     @pos:ver-carrito.window="scrollToCarrito()"
+     @pos:procesar-venta.window="procesarVenta()"
+     @pos:cancelar.window="confirmarCancelar()"
+     class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- COLUMNA IZQUIERDA: Productos y Búsqueda -->
+    <div class="lg:col-span-2 space-y-6">
+        
+        <!-- Barra de búsqueda de productos -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <div class="flex items-center gap-4 mb-4">
+                <div class="flex-1">
+                    <label for="product-search" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-search mr-2"></i>Buscar Producto
+                        <span class="text-xs text-gray-500 ml-2">(F2)</span>
+                    </label>
+                    <div x-data="searchWithDebounce(buscarProductos)" class="relative">
+                        <input 
+                            type="text" 
+                            id="product-search"
+                            x-model="search"
+                            @input="handleSearch"
+                            placeholder="Nombre, código de barra o categoría..."
+                            class="input-pos w-full pl-12"
+                            autocomplete="off"
+                            aria-label="Buscar producto por nombre, código de barras o categoría"
+                            aria-describedby="search-hint">
+                        <span id="search-hint" class="sr-only">Use F2 para enfocar este campo</span>
+                        <i class="fas fa-barcode absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl"></i>
+                        
+                        <!-- Loading indicator -->
+                        <div x-show="loading" 
+                             class="absolute right-4 top-1/2 transform -translate-y-1/2"
+                             role="status"
+                             aria-live="polite">
+                            <div class="spinner"></div>
+                            <span class="sr-only">Buscando productos...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Filtro por categoría -->
+                <div class="w-64">
+                    <label for="category-filter" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-filter mr-2"></i>Categoría
+                    </label>
+                    <select id="category-filter"
+                            x-model="categoriaSeleccionada" 
+                            @change="filtrarPorCategoria()"
+                            class="select select-bordered w-full"
+                            aria-label="Filtrar productos por categoría">
+                        <option value="">Todas</option>
+                        <template x-for="cat in categorias" :key="cat.id">
+                            <option :value="cat.id" x-text="cat.nombre"></option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Grid de Productos -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4 flex items-center justify-between">
+                <span>
+                    <i class="fas fa-box mr-2 text-primary"></i>Productos Disponibles
+                </span>
+                <span class="text-sm text-gray-500" x-text="`${productosFiltrados.length} productos`"></span>
+            </h2>
+            
+            <!-- Loading skeleton con animación mejorada -->
+            <div x-show="cargandoProductos" 
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 class="product-grid"
+                 role="status"
+                 aria-live="polite"
+                 aria-label="Cargando productos">
+                <template x-for="i in 8" :key="i">
+                    <div class="skeleton h-40 relative overflow-hidden">
+                        <div class="absolute inset-0 flex items-center justify-center text-gray-400">
+                            <i class="fas fa-box text-2xl opacity-30"></i>
+                        </div>
+                    </div>
+                </template>
+                <div class="col-span-full text-center mt-4">
+                    <div class="spinner mx-auto mb-2"></div>
+                    <p class="text-sm text-gray-500">Cargando productos...</p>
+                </div>
+            </div>
+            
+            <!-- Grid de productos con transiciones mejoradas -->
+            <div x-show="!cargandoProductos" 
+                 x-transition:enter="transition ease-out duration-500"
+                 x-transition:enter-start="opacity-0 transform scale-95"
+                 x-transition:enter-end="opacity-100 transform scale-100"
+                 class="product-grid">
+                <template x-for="(producto, index) in productosFiltrados" :key="producto.id">
+                    <div class="product-card sound-wave"
+                         :class="{ 
+                             'selected': productoEnCarrito(producto.id),
+                             'adding': producto._adding
+                         }"
+                         @click="agregarProductoConFeedback(producto)"
+                         :style="`animation-delay: ${index * 0.05}s`"
+                         x-transition:enter="transition ease-out duration-300"
+                         x-transition:enter-start="opacity-0 transform translate-y-4"
+                         x-transition:enter-end="opacity-100 transform translate-y-0"
+                         tabindex="0"
+                         @keydown.enter="agregarProductoConFeedback(producto)"
+                         @keydown.space.prevent="agregarProductoConFeedback(producto)"
+                         role="button"
+                         :aria-label="`Agregar ${producto.descripcion} al carrito. Precio: ${formatearPrecio(producto.precio_venta)}. Stock: ${producto.stock}`">
+                        
+                        <!-- Imagen del producto con estado de loading -->
+                        <div class="h-20 flex items-center justify-center mb-3 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-lg relative overflow-hidden">
+                            <!-- Placeholder mientras carga la imagen -->
+                            <div class="absolute inset-0 flex items-center justify-center" 
+                                 x-show="!producto.imagenCargada && !producto.imagen">
+                                <i class="fas fa-utensils text-4xl text-gray-400 animate-pulse"></i>
+                            </div>
+                            
+                            <!-- Imagen real -->
+                            <img :src="producto.imagen" 
+                                 :alt="producto.descripcion"
+                                 class="h-full object-contain transition-opacity duration-300"
+                                 x-show="producto.imagen"
+                                 @load="producto.imagenCargada = true"
+                                 :class="{ 'opacity-0': !producto.imagenCargada }">
+                                 
+                            <!-- Indicador de stock bajo -->
+                            <div x-show="producto.stock <= 10 && producto.stock > 0"
+                                 class="absolute top-1 right-1 w-3 h-3 bg-warning rounded-full animate-pulse"
+                                 title="Stock bajo"></div>
+                                 
+                            <!-- Indicador sin stock -->
+                            <div x-show="producto.stock <= 0"
+                                 class="absolute inset-0 bg-gray-900/50 rounded-lg flex items-center justify-center">
+                                <span class="text-white text-xs font-bold">SIN STOCK</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Info del producto mejorada -->
+                        <div class="flex-1">
+                            <h3 class="font-bold text-sm mb-1 line-clamp-2 group-hover:text-primary transition-colors" 
+                                x-text="producto.descripcion"></h3>
+                            <p class="text-xs text-gray-500 mb-2">
+                                <template x-if="producto.categoria">
+                                    <span class="inline-flex items-center gap-1">
+                                        <i class="fas fa-tag text-primary"></i>
+                                        <span x-text="producto.categoria.nombre"></span>
+                                    </span>
+                                </template>
+                                <template x-if="!producto.categoria">
+                                    <span class="text-gray-400">Sin categoría</span>
+                                </template>
+                            </p>
+                            <div class="flex items-center justify-between">
+                                <span class="text-lg font-bold text-primary" 
+                                      x-text="formatearPrecio(producto.precio_venta)"></span>
+                                <span class="badge badge-sm transition-colors" 
+                                      :class="{
+                                          'badge-success': producto.stock > 10,
+                                          'badge-warning': producto.stock > 0 && producto.stock <= 10,
+                                          'badge-error': producto.stock <= 0
+                                      }">
+                                    <i class="fas fa-boxes mr-1"></i>
+                                    <span x-text="producto.stock > 0 ? producto.stock : 'Agotado'"></span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Badge de cantidad en carrito con animación -->
+                        <template x-if="productoEnCarrito(producto.id)">
+                            <div class="qty-badge" 
+                                 x-text="getCantidadEnCarrito(producto.id)"
+                                 x-transition:enter="transition ease-out duration-300"
+                                 x-transition:enter-start="transform scale-0 rotate-45"
+                                 x-transition:enter-end="transform scale-100 rotate-0"
+                                 x-transition:leave="transition ease-in duration-200"
+                                 x-transition:leave-start="transform scale-100 rotate-0"
+                                 x-transition:leave-end="transform scale-0 rotate-45">
+                            </div>
+                        </template>
+                        
+                        <!-- Overlay de acción -->
+                        <div class="absolute inset-0 bg-primary/10 rounded-xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                            <div class="bg-primary text-white px-3 py-1 rounded-full text-sm font-semibold">
+                                <i class="fas fa-plus mr-1"></i>Agregar
+                            </div>
+                        </div>
+                    </div>
+                </template>
+                
+                <!-- Mensaje de sin resultados mejorado -->
+                <template x-if="productosFiltrados.length === 0 && !cargandoProductos">
+                    <div class="col-span-full text-center py-16 text-gray-500">
+                        <div class="animate-bounce mb-4">
+                            <i class="fas fa-search text-6xl opacity-30"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2">Sin resultados</h3>
+                        <p class="text-sm mb-4">No se encontraron productos que coincidan con su búsqueda</p>
+                        <template x-if="search.length > 0">
+                            <div class="space-y-2">
+                                <p class="text-xs">Búsqueda actual: <strong x-text="search"></strong></p>
+                                <button @click="limpiarBusqueda()" 
+                                        class="btn btn-sm btn-outline btn-primary">
+                                    <i class="fas fa-times mr-2"></i>Limpiar búsqueda
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+    
+    <!-- COLUMNA DERECHA: Carrito y Detalles -->
+    <div class="lg:col-span-1 space-y-6">
+        
+        <!-- Cliente/Tarjeta -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-bold mb-4">
+                <i class="fas fa-user mr-2 text-primary"></i>Cliente
+            </h3>
+            
+            <div x-show="!clienteSeleccionado" class="space-y-3">
+                <!-- Buscar tarjeta -->
+                <input 
+                    type="text"
+                    x-model="numeroTarjeta"
+                    @input.debounce.500ms="buscarTarjeta()"
+                    placeholder="Número de tarjeta..."
+                    class="input input-bordered w-full"
+                    maxlength="10"
+                    aria-label="Ingresar número de tarjeta del cliente"
+                    :aria-invalid="errorTarjeta ? 'true' : 'false'">
+                
+                <div class="flex gap-2">
+                    <button @click="seleccionarClienteGenerico()" 
+                            class="btn btn-outline flex-1"
+                            aria-label="Seleccionar cliente genérico para venta rápida">
+                        <i class="fas fa-user-tag mr-2"></i>Cliente Genérico
+                    </button>
+                    <button @click="abrirModalCliente()" 
+                            class="btn btn-outline btn-primary"
+                            aria-label="Crear nuevo cliente">
+                        <i class="fas fa-user-plus"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Info del cliente/tarjeta seleccionada -->
+            <div x-show="clienteSeleccionado" class="space-y-3">
+                <div class="bg-gradient-to-r from-primary to-secondary text-white rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm opacity-90">Tarjeta Nº</span>
+                        <button @click="limpiarCliente()" 
+                                class="btn btn-ghost btn-xs text-white">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <p class="text-2xl font-bold mb-1" x-text="clienteSeleccionado?.nro_tarjeta"></p>
+                    <p class="text-sm" x-text="clienteSeleccionado?.titular"></p>
+                    <div class="mt-3 pt-3 border-t border-white border-opacity-30">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm opacity-90">Saldo Disponible</span>
+                            <span class="text-xl font-bold" x-text="formatearPrecio(clienteSeleccionado?.saldo || 0)"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Carrito mejorado -->
+        <div class="cart-summary" id="cart-section">
+            <h3 class="text-xl font-bold mb-4 flex items-center justify-between">
+                <span class="flex items-center gap-2">
+                    <i class="fas fa-shopping-cart text-primary"></i>
+                    <span>Carrito</span>
+                    <div x-show="carrito.length > 0" 
+                         x-transition:enter="transition ease-out duration-300"
+                         x-transition:enter-start="transform scale-0"
+                         x-transition:enter-end="transform scale-100"
+                         class="ml-2">
+                        <span class="badge badge-lg badge-primary animate-pulse" 
+                              x-text="carrito.length"></span>
+                    </div>
+                </span>
+                <button x-show="carrito.length > 0"
+                        @click="limpiarCarrito()"
+                        x-transition
+                        class="btn btn-ghost btn-xs text-error hover:bg-error hover:text-white"
+                        title="Limpiar todo el carrito">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </h3>
+            
+            <!-- Items del carrito con animaciones mejoradas -->
+            <div class="space-y-3 mb-6 max-h-80 overflow-y-auto custom-scrollbar cart-items">
+                <template x-for="(item, index) in carrito" :key="`${item.producto.id}-${index}`">
+                    <div class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-xl p-4 transform transition-all duration-300 hover:shadow-md"
+                         x-transition:enter="transition ease-out duration-300"
+                         x-transition:enter-start="opacity-0 transform translate-x-full scale-95"
+                         x-transition:enter-end="opacity-100 transform translate-x-0 scale-100"
+                         x-transition:leave="transition ease-in duration-200"
+                         x-transition:leave-start="opacity-100 transform translate-x-0 scale-100"
+                         x-transition:leave-end="opacity-0 transform -translate-x-full scale-95">
+                        
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-sm leading-tight" x-text="item.producto.descripcion"></h4>
+                                <p class="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                                    <span x-text="formatearPrecio(item.producto.precio_venta)"></span>
+                                    <span class="text-gray-400">•</span>
+                                    <span class="inline-flex items-center gap-1">
+                                        <i class="fas fa-boxes text-xs"></i>
+                                        <span x-text="item.producto.stock"></span>
+                                    </span>
+                                </p>
+                            </div>
+                            <button @click="eliminarDelCarrito(index)" 
+                                    class="btn btn-ghost btn-xs btn-circle text-error hover:bg-error hover:text-white transition-all duration-200 transform hover:scale-110"
+                                    title="Eliminar del carrito"
+                                    aria-label="Eliminar producto del carrito">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Control de cantidad mejorado -->
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg p-2">
+                                <button @click="cambiarCantidad(index, item.cantidad - 1)" 
+                                        :disabled="item.cantidad <= 1"
+                                        class="btn btn-sm btn-circle btn-ghost hover:btn-primary transition-all duration-200 disabled:opacity-50"
+                                        aria-label="Disminuir cantidad">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                
+                                <div class="relative">
+                                    <input type="number" 
+                                           x-model.number="item.cantidad"
+                                           @input="validarCantidad(item, index)"
+                                           @focus="$event.target.select()"
+                                           min="1"
+                                           :max="item.producto.stock"
+                                           class="input input-sm w-16 text-center font-bold focus:ring-2 focus:ring-primary/20"
+                                           aria-label="Cantidad del producto">
+                                    <!-- Indicador de validación -->
+                                    <div x-show="item.cantidad > item.producto.stock" 
+                                         class="absolute -top-8 left-1/2 transform -translate-x-1/2 text-xs text-error bg-error/10 px-2 py-1 rounded whitespace-nowrap">
+                                        Stock insuficiente
+                                    </div>
+                                </div>
+                                
+                                <button @click="cambiarCantidad(index, item.cantidad + 1)" 
+                                        :disabled="item.cantidad >= item.producto.stock"
+                                        class="btn btn-sm btn-circle btn-ghost hover:btn-primary transition-all duration-200 disabled:opacity-50"
+                                        aria-label="Aumentar cantidad">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Subtotal con animación -->
+                            <div class="text-right">
+                                <span class="text-lg font-bold text-primary block"
+                                      x-text="formatearPrecio(item.producto.precio_venta * item.cantidad)"
+                                      x-transition:enter="transition ease-out duration-300"
+                                      x-transition:enter-start="transform scale-110"
+                                      x-transition:enter-end="transform scale-100">
+                                </span>
+                                <span class="text-xs text-gray-500" 
+                                      x-text="`${item.cantidad} × ${formatearPrecio(item.producto.precio_venta)}`"></span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+                
+                <!-- Carrito vacío mejorado -->
+                <template x-if="carrito.length === 0">
+                    <div class="text-center py-12 text-gray-400">
+                        <div class="animate-pulse mb-4">
+                            <i class="fas fa-shopping-cart text-5xl opacity-30"></i>
+                        </div>
+                        <h4 class="font-semibold mb-2">Carrito vacío</h4>
+                        <p class="text-sm mb-4">Seleccione productos para comenzar una venta</p>
+                        <div class="flex items-center justify-center gap-4 text-xs">
+                            <span class="flex items-center gap-1">
+                                <i class="fas fa-mouse"></i>Click en producto
+                            </span>
+                            <span class="flex items-center gap-1">
+                                <i class="fas fa-keyboard"></i>F2 para buscar
+                            </span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            
+            <!-- Totales mejorados -->
+            <div class="border-t-2 border-gradient-to-r from-primary/20 to-secondary/20 pt-6 space-y-3 mb-6">
+                <div class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-lg p-4 space-y-2">
+                    <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                        <span class="flex items-center gap-1">
+                            <i class="fas fa-calculator text-xs"></i>Subtotal:
+                        </span>
+                        <span class="font-medium" x-text="formatearPrecio(calcularSubtotal())"></span>
+                    </div>
+                    <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                        <span class="flex items-center gap-1">
+                            <i class="fas fa-percentage text-xs"></i>IVA (10%):
+                        </span>
+                        <span class="font-medium" x-text="formatearPrecio(calcularIVA())"></span>
+                    </div>
+                    <hr class="border-gray-300 dark:border-gray-500">
+                    <div class="flex justify-between text-xl font-bold text-primary">
+                        <span class="flex items-center gap-2">
+                            <i class="fas fa-money-bill-wave"></i>Total:
+                        </span>
+                        <span class="animate-pulse" 
+                              x-text="formatearPrecio(calcularTotal())"
+                              :class="{ 'text-green-600': puedeProcessarVenta(), 'text-gray-400': !puedeProcessarVenta() }">
+                        </span>
+                    </div>
+                    
+                    <!-- Información adicional -->
+                    <div x-show="carrito.length > 0" class="pt-2 border-t border-gray-200 dark:border-gray-600">
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span x-text="`${carrito.length} producto${carrito.length !== 1 ? 's' : ''}`"></span>
+                            <span x-text="`${carrito.reduce((sum, item) => sum + item.cantidad, 0)} unidades`"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botones de acción mejorados -->
+            <div class="space-y-3">
+                <!-- Botón procesar venta -->
+                <button 
+                    @click="procesarVentaConFeedback()"
+                    :disabled="!puedeProcessarVenta() || procesando"
+                    class="btn-pos-success w-full relative overflow-hidden group transform transition-all duration-300"
+                    :class="{ 
+                        'opacity-50 cursor-not-allowed': !puedeProcessarVenta() || procesando,
+                        'hover:scale-105 shadow-xl': puedeProcessarVenta() && !procesando,
+                        'animate-pulse': procesando
+                    }"
+                    aria-label="Procesar venta y cobrar al cliente"
+                    :aria-disabled="!puedeProcessarVenta() || procesando ? 'true' : 'false'">
+                    
+                    <!-- Contenido normal -->
+                    <span :class="{ 'invisible': procesando }" 
+                          class="flex items-center justify-center gap-2">
+                        <i class="fas fa-check-circle text-lg group-hover:animate-spin"></i>
+                        <span class="font-bold">Procesar Venta</span>
+                        <span class="hidden sm:inline text-sm opacity-75 ml-2 px-2 py-1 bg-white/20 rounded">
+                            Ctrl+Enter
+                        </span>
+                    </span>
+                    
+                    <!-- Estado de loading -->
+                    <div x-show="procesando" 
+                         x-transition:enter="transition ease-out duration-300"
+                         x-transition:enter-start="opacity-0"
+                         x-transition:enter-end="opacity-100"
+                         class="absolute inset-0 flex items-center justify-center bg-success text-white">
+                        <div class="flex items-center gap-2">
+                            <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <span class="font-semibold">Procesando...</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Efecto de ondas al hacer click -->
+                    <div class="absolute inset-0 opacity-0 group-active:opacity-20 bg-white rounded-xl transition-opacity duration-150"></div>
+                </button>
+                
+                <!-- Información de validación -->
+                <div x-show="!puedeProcessarVenta() && carrito.length > 0" 
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 transform translate-y-2"
+                     x-transition:enter-end="opacity-100 transform translate-y-0"
+                     class="bg-warning/10 border border-warning/30 rounded-lg p-3">
+                    <div class="flex items-start gap-2 text-sm text-warning-content">
+                        <i class="fas fa-exclamation-triangle text-warning mt-0.5"></i>
+                        <div>
+                            <p class="font-semibold mb-1">Venta incompleta</p>
+                            <ul class="text-xs space-y-1 text-gray-600 dark:text-gray-400">
+                                <li x-show="!clienteSeleccionado">• Seleccionar cliente o tarjeta</li>
+                                <li x-show="carrito.length === 0">• Agregar productos al carrito</li>
+                                <li x-show="tieneStockInsuficiente()">• Verificar stock de productos</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Botón cancelar -->
+                <button @click="confirmarCancelarConFeedback()" 
+                        :disabled="carrito.length === 0 && !clienteSeleccionado"
+                        class="btn btn-outline btn-error w-full group transform transition-all duration-200 hover:scale-105"
+                        :class="{ 'opacity-50 cursor-not-allowed': carrito.length === 0 && !clienteSeleccionado }"
+                        aria-label="Cancelar venta actual">
+                    <i class="fas fa-times-circle group-hover:animate-pulse"></i>
+                    <span>Cancelar Venta</span>
+                    <span class="hidden sm:inline text-sm opacity-75 ml-2 px-2 py-1 bg-current/10 rounded">
+                        Esc
+                    </span>
+                </button>
+                
+                <!-- Enlaces rápidos -->
+                <div x-show="carrito.length === 0" 
+                     x-transition:enter="transition ease-out duration-500 delay-300"
+                     x-transition:enter-start="opacity-0"
+                     x-transition:enter-end="opacity-100"
+                     class="pt-4 border-t border-gray-200 dark:border-gray-600">
+                    <p class="text-sm text-gray-500 mb-3 text-center">Acciones rápidas</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button @click="buscarProductoRapido()" 
+                                class="btn btn-sm btn-outline font-normal">
+                            <i class="fas fa-search text-xs"></i>
+                            <span class="text-xs">Buscar</span>
+                        </button>
+                        <button @click="verHistorialVentas()" 
+                                class="btn btn-sm btn-outline font-normal">
+                            <i class="fas fa-history text-xs"></i>
+                            <span class="text-xs">Historial</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación -->
+<div x-show="mostrarModal" 
+     x-cloak
+     class="modal modal-open"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="modal-title">
+    <div class="modal-box">
+        <h3 id="modal-title" class="font-bold text-lg mb-4" x-text="modalTitulo"></h3>
+        <p class="py-4" x-text="modalMensaje"></p>
+        <div class="modal-action">
+            <button @click="cerrarModal()" class="btn btn-ghost" aria-label="Cancelar acción">Cancelar</button>
+            <button @click="confirmarAccion()" class="btn btn-primary" aria-label="Confirmar acción">Confirmar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function ventaPOS() {
+    return {
+        // Estado
+        productos: [],
+        productosFiltrados: [],
+        categorias: [],
+        carrito: [],
+        clienteSeleccionado: null,
+        numeroTarjeta: '',
+        categoriaSeleccionada: '',
+        cargandoProductos: true,
+        procesando: false,
+        buscandoTarjeta: false,
+        errorTarjeta: false,
+        mostrarModal: false,
+        modalTitulo: '',
+        modalMensaje: '',
+        accionConfirmada: null,
+        
+        // Inicialización
+        async init() {
+            await this.cargarCategorias();
+            await this.cargarProductos();
+            this.cargandoProductos = false;
+        },
+        
+        // Cargar datos
+        async cargarProductos() {
+            try {
+                const response = await fetch('/api/productos/activos/');
+                const data = await response.json();
+                this.productos = data.productos || [];
+                this.productosFiltrados = this.productos;
+            } catch (error) {
+                console.error('Error al cargar productos:', error);
+                posHelpers.notify('Error al cargar productos', 'error');
+            }
+        },
+        
+        async cargarCategorias() {
+            try {
+                const response = await fetch('/api/categorias/');
+                const data = await response.json();
+                this.categorias = data.categorias || [];
+            } catch (error) {
+                console.error('Error al cargar categorías:', error);
+            }
+        },
+        
+        // Búsqueda y filtros
+        buscarProductos(termino) {
+            if (!termino) {
+                this.productosFiltrados = this.filtrarPorCategoria(this.productos);
+                return;
+            }
+            
+            const busqueda = termino.toLowerCase();
+            let resultados = this.productos.filter(p => 
+                p.descripcion.toLowerCase().includes(busqueda) ||
+                (p.codigo_barra && p.codigo_barra.includes(busqueda)) ||
+                (p.categoria && p.categoria.nombre.toLowerCase().includes(busqueda))
+            );
+            
+            this.productosFiltrados = this.filtrarPorCategoria(resultados);
+        },
+        
+        filtrarPorCategoria(productos = null) {
+            const lista = productos || this.productos;
+            if (!this.categoriaSeleccionada) return lista;
+            
+            this.productosFiltrados = lista.filter(p => 
+                p.id_categoria == this.categoriaSeleccionada
+            );
+        },
+        
+        // Carrito
+        agregarProducto(producto) {
+            if (producto.stock <= 0) {
+                posHelpers.notify('Producto sin stock', 'warning');
+                return;
+            }
+            
+            const index = this.carrito.findIndex(item => item.producto.id === producto.id);
+            
+            if (index >= 0) {
+                if (this.carrito[index].cantidad < producto.stock) {
+                    this.carrito[index].cantidad++;
+                    posHelpers.playSound('beep');
+                } else {
+                    posHelpers.notify('Stock insuficiente', 'warning');
+                }
+            } else {
+                this.carrito.push({
+                    producto: producto,
+                    cantidad: 1
+                });
+                posHelpers.playSound('beep');
+            }
+        },
+        
+        eliminarDelCarrito(index) {
+            this.carrito.splice(index, 1);
+        },
+        
+        validarCantidad(item) {
+            if (item.cantidad > item.producto.stock) {
+                item.cantidad = item.producto.stock;
+                posHelpers.notify('Cantidad ajustada al stock disponible', 'warning');
+            }
+            if (item.cantidad < 1) {
+                item.cantidad = 1;
+            }
+        },
+        
+        productoEnCarrito(productoId) {
+            return this.carrito.some(item => item.producto.id === productoId);
+        },
+        
+        getCantidadEnCarrito(productoId) {
+            const item = this.carrito.find(item => item.producto.id === productoId);
+            return item ? item.cantidad : 0;
+        },
+        
+        // Cliente/Tarjeta
+        async buscarTarjeta() {
+            if (!this.numeroTarjeta || this.numeroTarjeta.length < 3) return;
+            
+            this.buscandoTarjeta = true;
+            this.errorTarjeta = false;
+            
+            try {
+                const response = await fetch(`/api/tarjetas/${this.numeroTarjeta}/`);
+                const data = await response.json();
+                
+                if (data.tarjeta) {
+                    this.clienteSeleccionado = data.tarjeta;
+                    posHelpers.playSound('success');
+                } else {
+                    this.errorTarjeta = true;
+                    posHelpers.notify('Tarjeta no encontrada', 'warning');
+                }
+            } catch (error) {
+                console.error('Error al buscar tarjeta:', error);
+                this.errorTarjeta = true;
+                posHelpers.notify('Error al buscar tarjeta', 'error');
+            } finally {
+                this.buscandoTarjeta = false;
+            }
+        },
+        
+        seleccionarClienteGenerico() {
+            this.clienteSeleccionado = {
+                nro_tarjeta: 'GENERICO',
+                titular: 'Cliente Genérico',
+                saldo: 0,
+                tipo: 'generico'
+            };
+            posHelpers.notify('Cliente genérico seleccionado', 'info');
+        },
+        
+        limpiarCliente() {
+            this.clienteSeleccionado = null;
+            this.numeroTarjeta = '';
+        },
+        
+        abrirModalCliente() {
+            // TODO: Implementar modal de creación de cliente
+            posHelpers.notify('Funcionalidad en desarrollo', 'info');
+        },
+        
+        // Cálculos
+        calcularSubtotal() {
+            return this.carrito.reduce((total, item) => 
+                total + (item.producto.precio_venta * item.cantidad), 0
+            );
+        },
+        
+        calcularIVA() {
+            return this.calcularSubtotal() * 0.10;
+        },
+        
+        calcularTotal() {
+            return this.calcularSubtotal() + this.calcularIVA();
+        },
+        
+        // Validaciones
+        puedeProcessarVenta() {
+            return this.carrito.length > 0 && this.clienteSeleccionado;
+        },
+        
+        // Procesar venta
+        async procesarVenta() {
+            if (!this.puedeProcessarVenta() || this.procesando) return;
+            
+            const total = this.calcularTotal();
+            
+            // Validar saldo si es tarjeta
+            if (this.clienteSeleccionado.tipo !== 'generico' && 
+                this.clienteSeleccionado.saldo < total) {
+                posHelpers.notify('Saldo insuficiente en la tarjeta', 'error');
+                return;
+            }
+            
+            this.procesando = true;
+            
+            try {
+                const ventaData = {
+                    cliente: this.clienteSeleccionado,
+                    items: this.carrito.map(item => ({
+                        producto_id: item.producto.id,
+                        cantidad: item.cantidad,
+                        precio_unitario: item.producto.precio_venta
+                    })),
+                    total: total,
+                    metodo_pago: this.clienteSeleccionado.tipo === 'generico' ? 'efectivo' : 'tarjeta'
+                };
+                
+                const response = await fetch('/api/ventas/procesar/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify(ventaData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    posHelpers.playSound('success');
+                    posHelpers.notify('Venta procesada exitosamente', 'success');
+                    
+                    // Limpiar
+                    this.carrito = [];
+                    this.limpiarCliente();
+                    
+                    // Preguntar si quiere imprimir ticket
+                    if (confirm('¿Desea imprimir el ticket?')) {
+                        window.open(`/pos/ticket/${data.venta_id}/`, '_blank');
+                    }
+                } else {
+                    posHelpers.notify(data.error || 'Error al procesar venta', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                posHelpers.notify('Error al procesar venta', 'error');
+            } finally {
+                this.procesando = false;
+            }
+        },
+        
+        confirmarCancelar() {
+            if (this.carrito.length === 0) return;
+            
+            if (confirm('¿Está seguro de cancelar la venta?')) {
+                this.carrito = [];
+                this.limpiarCliente();
+                posHelpers.notify('Venta cancelada', 'info');
+            }
+        },
+        
+        // Helpers
+        formatearPrecio(monto) {
+            return posHelpers.formatPrice(monto);
+        },
+        
+        scrollToCarrito() {
+            document.getElementById('cart-section')?.scrollIntoView({ behavior: 'smooth' });
+        },
+        
+        // Modal
+        cerrarModal() {
+            this.mostrarModal = false;
+        },
+        
+        confirmarAccion() {
+            if (this.accionConfirmada) {
+                this.accionConfirmada();
+            }
+            this.cerrarModal();
+        }
+    }
+}
+</script>
+{% endblock %}

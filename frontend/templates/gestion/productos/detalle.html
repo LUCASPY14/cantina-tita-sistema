@@ -1,0 +1,541 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}{{ producto.nombre }} - Detalle Producto{% endblock %}
+
+{% block content %}
+<div x-data="detalleProducto()" x-init="init()" class="space-y-6">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <a href="{% url 'gestion:productos' %}" class="btn btn-ghost btn-sm mb-2">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Volver a Productos
+            </a>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-box mr-3 text-secondary"></i>
+                Detalle del Producto
+            </h1>
+        </div>
+        
+        <div class="flex gap-2">
+            <button @click="ajustarStock()" class="btn btn-secondary">
+                <i class="fas fa-layer-group mr-2"></i>
+                Ajustar Stock
+            </button>
+            <a :href="`/gestion/productos/${productoId}/editar/`" class="btn btn-primary">
+                <i class="fas fa-edit mr-2"></i>
+                Editar
+            </a>
+        </div>
+    </div>
+    
+    <!-- Loading -->
+    <template x-if="cargando">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-6">
+                <div class="skeleton h-64 w-full"></div>
+                <div class="skeleton h-48 w-full"></div>
+            </div>
+            <div class="space-y-6">
+                <div class="skeleton h-32 w-full"></div>
+                <div class="skeleton h-48 w-full"></div>
+            </div>
+        </div>
+    </template>
+    
+    <!-- Contenido -->
+    <template x-if="!cargando && producto">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Columna Principal -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- Card Principal con Imagen -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+                        
+                        <!-- Imagen -->
+                        <div class="flex items-center justify-center">
+                            <template x-if="producto.imagen">
+                                <img :src="producto.imagen" 
+                                     :alt="producto.nombre"
+                                     class="w-full max-w-xs h-auto rounded-lg shadow-md">
+                            </template>
+                            <template x-if="!producto.imagen">
+                                <div class="w-64 h-64 bg-gradient-to-br from-secondary to-teal-600 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-box text-white text-8xl"></i>
+                                </div>
+                            </template>
+                        </div>
+                        
+                        <!-- Info Principal -->
+                        <div class="flex flex-col justify-between">
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2" x-text="producto.nombre"></h2>
+                                
+                                <div class="flex flex-wrap gap-2 mb-4">
+                                    <span class="badge badge-secondary" x-text="producto.categoria_nombre"></span>
+                                    <span class="badge" 
+                                          :class="producto.activo ? 'badge-success' : 'badge-error'"
+                                          x-text="producto.activo ? 'Activo' : 'Inactivo'"></span>
+                                    <span class="badge"
+                                          :class="{
+                                              'badge-success': producto.estado_stock === 'normal',
+                                              'badge-warning': producto.estado_stock === 'bajo',
+                                              'badge-error': producto.estado_stock === 'agotado'
+                                          }">
+                                        <span x-text="producto.estado_stock === 'normal' ? 'Stock Normal' : 
+                                                     producto.estado_stock === 'bajo' ? 'Stock Bajo' : 'Agotado'"></span>
+                                    </span>
+                                </div>
+                                
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-500">Código:</span>
+                                        <span class="font-mono font-semibold" x-text="producto.codigo"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-500">Código de Barras:</span>
+                                        <span class="font-mono" x-text="producto.codigo_barras || 'N/A'"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-500">Unidad:</span>
+                                        <span class="font-semibold" x-text="producto.unidad_medida"></span>
+                                    </div>
+                                </div>
+                                
+                                <template x-if="producto.descripcion">
+                                    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                        <p class="text-sm text-gray-600 dark:text-gray-400" x-text="producto.descripcion"></p>
+                                    </div>
+                                </template>
+                            </div>
+                            
+                            <!-- Precio de Venta Grande -->
+                            <div class="mt-4 p-4 bg-gradient-to-br from-secondary to-teal-600 rounded-lg text-white">
+                                <p class="text-sm opacity-90 mb-1">Precio de Venta</p>
+                                <p class="text-4xl font-bold" x-text="formatearPrecio(producto.precio_venta)"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Información Financiera -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-bold mb-4 flex items-center">
+                        <i class="fas fa-dollar-sign mr-2 text-success"></i>
+                        Información Financiera
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+                            <p class="text-sm opacity-90 mb-1">Precio Costo</p>
+                            <p class="text-2xl font-bold" x-text="formatearPrecio(producto.precio_costo)"></p>
+                        </div>
+                        
+                        <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+                            <p class="text-sm opacity-90 mb-1">Precio Venta</p>
+                            <p class="text-2xl font-bold" x-text="formatearPrecio(producto.precio_venta)"></p>
+                        </div>
+                        
+                        <div class="stat-card text-white"
+                             :class="{
+                                 'bg-gradient-to-br from-success to-green-600': producto.margen >= 40,
+                                 'bg-gradient-to-br from-warning to-yellow-600': producto.margen >= 20 && producto.margen < 40,
+                                 'bg-gradient-to-br from-error to-red-600': producto.margen < 20
+                             }">
+                            <p class="text-sm opacity-90 mb-1">Margen</p>
+                            <p class="text-2xl font-bold" x-text="producto.margen.toFixed(1) + '%'"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <p class="text-gray-500 dark:text-gray-400">Ganancia Unitaria</p>
+                                <p class="text-lg font-bold text-success" x-text="formatearPrecio(producto.precio_venta - producto.precio_costo)"></p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500 dark:text-gray-400">Ganancia Total (Stock)</p>
+                                <p class="text-lg font-bold text-success" x-text="formatearPrecio((producto.precio_venta - producto.precio_costo) * producto.stock)"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Estadísticas de Ventas -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-bold mb-4 flex items-center">
+                        <i class="fas fa-chart-bar mr-2 text-primary"></i>
+                        Estadísticas de Ventas (Último Mes)
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <i class="fas fa-shopping-cart text-2xl text-primary mb-2"></i>
+                            <p class="text-2xl font-bold" x-text="stats.cantidad_vendida || 0"></p>
+                            <p class="text-xs text-gray-500">Unidades Vendidas</p>
+                        </div>
+                        
+                        <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <i class="fas fa-receipt text-2xl text-secondary mb-2"></i>
+                            <p class="text-2xl font-bold" x-text="stats.num_transacciones || 0"></p>
+                            <p class="text-xs text-gray-500">Transacciones</p>
+                        </div>
+                        
+                        <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <i class="fas fa-money-bill-wave text-2xl text-success mb-2"></i>
+                            <p class="text-xl font-bold" x-text="formatearPrecio(stats.ingresos_totales || 0)"></p>
+                            <p class="text-xs text-gray-500">Ingresos</p>
+                        </div>
+                        
+                        <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <i class="fas fa-chart-line text-2xl text-warning mb-2"></i>
+                            <p class="text-xl font-bold" x-text="(stats.cantidad_vendida / 30).toFixed(1) || 0"></p>
+                            <p class="text-xs text-gray-500">Prom. Diario</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Top Clientes -->
+                    <template x-if="stats.top_clientes && stats.top_clientes.length > 0">
+                        <div>
+                            <h4 class="font-semibold mb-3">Top Clientes</h4>
+                            <div class="space-y-2">
+                                <template x-for="(cliente, index) in stats.top_clientes.slice(0, 5)" :key="cliente.id">
+                                    <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                        <div class="flex items-center gap-2">
+                                            <span class="badge badge-sm" 
+                                                  :class="{
+                                                      'badge-warning': index === 0,
+                                                      'badge-info': index === 1,
+                                                      'badge-success': index === 2
+                                                  }"
+                                                  x-text="index + 1"></span>
+                                            <span class="font-semibold" x-text="cliente.nombre"></span>
+                                            <span class="text-xs text-gray-500" x-text="cliente.grado"></span>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="font-semibold" x-text="cliente.cantidad + ' unidades'"></p>
+                                            <p class="text-xs text-gray-500" x-text="formatearPrecio(cliente.total)"></p>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            
+            <!-- Columna Lateral -->
+            <div class="space-y-6">
+                
+                <!-- Stock Actual -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-bold mb-4 flex items-center">
+                        <i class="fas fa-layer-group mr-2 text-secondary"></i>
+                        Stock
+                    </h3>
+                    
+                    <div class="text-center mb-4">
+                        <p class="text-5xl font-bold" 
+                           :class="{
+                               'text-success': producto.estado_stock === 'normal',
+                               'text-warning': producto.estado_stock === 'bajo',
+                               'text-error': producto.estado_stock === 'agotado'
+                           }"
+                           x-text="producto.stock"></p>
+                        <p class="text-gray-500" x-text="producto.unidad_medida"></p>
+                    </div>
+                    
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                            <span class="text-gray-500">Stock Mínimo:</span>
+                            <span class="font-semibold" x-text="producto.stock_minimo"></span>
+                        </div>
+                        <div class="flex justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                            <span class="text-gray-500">Valorización (costo):</span>
+                            <span class="font-semibold text-blue-600" x-text="formatearPrecio(producto.stock * producto.precio_costo)"></span>
+                        </div>
+                        <div class="flex justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                            <span class="text-gray-500">Valorización (venta):</span>
+                            <span class="font-semibold text-success" x-text="formatearPrecio(producto.stock * producto.precio_venta)"></span>
+                        </div>
+                    </div>
+                    
+                    <button @click="ajustarStock()" class="btn btn-secondary w-full mt-4">
+                        <i class="fas fa-edit mr-2"></i>
+                        Ajustar Stock
+                    </button>
+                </div>
+                
+                <!-- Últimos Movimientos -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-bold mb-4 flex items-center">
+                        <i class="fas fa-history mr-2 text-warning"></i>
+                        Últimos Movimientos
+                    </h3>
+                    
+                    <template x-if="movimientos.length > 0">
+                        <div class="space-y-2">
+                            <template x-for="mov in movimientos.slice(0, 5)" :key="mov.id">
+                                <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                    <div class="flex items-start justify-between mb-1">
+                                        <span class="badge badge-sm capitalize"
+                                              :class="{
+                                                  'badge-success': mov.tipo === 'entrada',
+                                                  'badge-error': mov.tipo === 'salida',
+                                                  'badge-info': mov.tipo === 'ajuste'
+                                              }">
+                                            <span x-text="mov.tipo"></span>
+                                        </span>
+                                        <span class="font-bold" 
+                                              :class="{
+                                                  'text-success': mov.tipo === 'entrada',
+                                                  'text-error': mov.tipo === 'salida',
+                                                  'text-info': mov.tipo === 'ajuste'
+                                              }"
+                                              x-text="(mov.tipo === 'entrada' ? '+' : '-') + mov.cantidad"></span>
+                                    </div>
+                                    <p class="text-xs text-gray-500" x-text="mov.motivo"></p>
+                                    <p class="text-xs text-gray-400 mt-1" x-text="mov.fecha"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    
+                    <template x-if="movimientos.length === 0">
+                        <div class="text-center py-6 text-gray-400">
+                            <i class="fas fa-inbox text-3xl mb-2"></i>
+                            <p class="text-sm">Sin movimientos registrados</p>
+                        </div>
+                    </template>
+                    
+                    <a :href="`/gestion/stock/movimientos/?producto=${productoId}`" 
+                       class="btn btn-ghost btn-sm w-full mt-4">
+                        Ver Historial Completo
+                        <i class="fas fa-arrow-right ml-2"></i>
+                    </a>
+                </div>
+                
+                <!-- Información Adicional -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-bold mb-4 flex items-center">
+                        <i class="fas fa-info-circle mr-2 text-info"></i>
+                        Información
+                    </h3>
+                    
+                    <div class="space-y-2 text-sm">
+                        <div>
+                            <p class="text-gray-500">Creado el:</p>
+                            <p class="font-semibold" x-text="formatearFecha(producto.fecha_creacion)"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Última modificación:</p>
+                            <p class="font-semibold" x-text="formatearFecha(producto.fecha_modificacion)"></p>
+                        </div>
+                        <template x-if="producto.proveedor">
+                            <div>
+                                <p class="text-gray-500">Proveedor:</p>
+                                <p class="font-semibold" x-text="producto.proveedor_nombre"></p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+    
+    <!-- Modal Ajustar Stock -->
+    <template x-if="modalStock.abierto">
+        <div class="modal modal-open">
+            <div class="modal-box">
+                <h3 class="font-bold text-lg mb-4">
+                    <i class="fas fa-layer-group mr-2 text-secondary"></i>
+                    Ajustar Stock
+                </h3>
+                
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
+                    <p class="font-semibold" x-text="producto?.nombre"></p>
+                    <p class="text-sm text-gray-500">Stock actual: 
+                        <span class="font-bold" x-text="producto?.stock + ' ' + producto?.unidad_medida"></span>
+                    </p>
+                </div>
+                
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text">Tipo de Movimiento</span>
+                    </label>
+                    <select x-model="modalStock.tipo" class="select select-bordered">
+                        <option value="entrada">Entrada (agregar)</option>
+                        <option value="salida">Salida (retirar)</option>
+                        <option value="ajuste">Ajuste manual</option>
+                    </select>
+                </div>
+                
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text">
+                            <span x-text="modalStock.tipo === 'ajuste' ? 'Nuevo Stock' : 'Cantidad'"></span>
+                        </span>
+                    </label>
+                    <input type="number" 
+                           x-model="modalStock.cantidad"
+                           min="0"
+                           step="1"
+                           class="input input-bordered"
+                           :placeholder="modalStock.tipo === 'ajuste' ? 'Stock final' : 'Cantidad a ' + modalStock.tipo">
+                </div>
+                
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text">Motivo</span>
+                    </label>
+                    <textarea x-model="modalStock.motivo"
+                              class="textarea textarea-bordered"
+                              rows="3"
+                              placeholder="Describe el motivo del movimiento..."></textarea>
+                </div>
+                
+                <div class="alert alert-info mb-4" x-show="modalStock.cantidad > 0">
+                    <i class="fas fa-info-circle"></i>
+                    <span>
+                        Stock resultante: 
+                        <strong x-text="calcularStockResultante()"></strong>
+                        <span x-text="producto?.unidad_medida"></span>
+                    </span>
+                </div>
+                
+                <div class="modal-action">
+                    <button @click="cerrarModalStock()" class="btn">Cancelar</button>
+                    <button @click="guardarAjusteStock()" 
+                            class="btn btn-secondary"
+                            :disabled="!modalStock.cantidad || modalStock.cantidad <= 0">
+                        <i class="fas fa-check mr-2"></i>
+                        Guardar Ajuste
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function detalleProducto() {
+    return {
+        cargando: true,
+        productoId: {{ producto.id }},
+        producto: null,
+        stats: {},
+        movimientos: [],
+        modalStock: {
+            abierto: false,
+            tipo: 'entrada',
+            cantidad: 0,
+            motivo: ''
+        },
+        
+        async init() {
+            await this.cargarDatos();
+        },
+        
+        async cargarDatos() {
+            this.cargando = true;
+            
+            try {
+                const response = await fetch(`/api/productos/${this.productoId}/detalle/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.producto = data.producto;
+                    this.stats = data.stats || {};
+                    this.movimientos = data.movimientos || [];
+                }
+            } catch (error) {
+                console.error('Error al cargar producto:', error);
+                gestionHelpers.notify('Error al cargar información', 'error');
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        ajustarStock() {
+            this.modalStock = {
+                abierto: true,
+                tipo: 'entrada',
+                cantidad: 0,
+                motivo: ''
+            };
+        },
+        
+        cerrarModalStock() {
+            this.modalStock = {
+                abierto: false,
+                tipo: 'entrada',
+                cantidad: 0,
+                motivo: ''
+            };
+        },
+        
+        calcularStockResultante() {
+            if (!this.producto || !this.modalStock.cantidad) return 0;
+            
+            const stockActual = this.producto.stock;
+            const cantidad = parseFloat(this.modalStock.cantidad);
+            
+            switch (this.modalStock.tipo) {
+                case 'entrada':
+                    return stockActual + cantidad;
+                case 'salida':
+                    return Math.max(0, stockActual - cantidad);
+                case 'ajuste':
+                    return cantidad;
+                default:
+                    return stockActual;
+            }
+        },
+        
+        async guardarAjusteStock() {
+            try {
+                const response = await fetch(`/api/productos/${this.productoId}/ajustar-stock/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': gestionHelpers.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        tipo: this.modalStock.tipo,
+                        cantidad: this.modalStock.cantidad,
+                        motivo: this.modalStock.motivo
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify('Stock ajustado correctamente', 'success');
+                    this.cerrarModalStock();
+                    await this.cargarDatos();
+                } else {
+                    gestionHelpers.notify(data.error || 'Error al ajustar stock', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                gestionHelpers.notify('Error al ajustar stock', 'error');
+            }
+        },
+        
+        formatearPrecio(monto) {
+            return gestionHelpers.formatPrice(monto);
+        },
+        
+        formatearFecha(fecha) {
+            return gestionHelpers.formatDateTime(fecha);
+        }
+    }
+}
+</script>
+{% endblock %}

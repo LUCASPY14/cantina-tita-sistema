@@ -1,0 +1,284 @@
+{% extends "base_pos.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Suscripciones de Almuerzo - MetrePay{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 space-y-8">
+    
+    <!-- Header -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-3">
+                    <i class="fas fa-users text-purple-600"></i>
+                    Suscripciones de Almuerzo
+                </h1>
+                <p class="text-gray-600 mt-2">Gestiona las suscripciones activas de los estudiantes</p>
+            </div>
+            <a href="{% url 'pos:crear_suscripcion_almuerzo' %}" class="btn btn-primary gap-2">
+                <i class="fas fa-user-plus"></i>
+                Nueva Suscripción
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtros y Búsqueda -->
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- Búsqueda -->
+            <div class="form-control md:col-span-2">
+                <label class="label">
+                    <span class="label-text font-semibold">Buscar estudiante</span>
+                </label>
+                <input type="text" 
+                       placeholder="Nombre, apellido o código..." 
+                       class="input input-bordered w-full">
+            </div>
+
+            <!-- Filtro por Plan -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Plan</span>
+                </label>
+                <select class="select select-bordered w-full">
+                    <option value="">Todos los planes</option>
+                    {% for plan in planes %}
+                        <option value="{{ plan.id_plan_almuerzo }}">{{ plan.nombre_plan }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Filtro por Estado -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Estado</span>
+                </label>
+                <select class="select select-bordered w-full">
+                    <option value="">Todos</option>
+                    <option value="Activa" selected>Activas</option>
+                    <option value="Suspendida">Suspendidas</option>
+                    <option value="Cancelada">Canceladas</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas Rápidas -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm opacity-90">Activas</p>
+                    <p class="text-4xl font-bold mt-2">{{ stats.activas|default:0 }}</p>
+                </div>
+                <i class="fas fa-check-circle text-5xl opacity-20"></i>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm opacity-90">Suspendidas</p>
+                    <p class="text-4xl font-bold mt-2">{{ stats.suspendidas|default:0 }}</p>
+                </div>
+                <i class="fas fa-pause-circle text-5xl opacity-20"></i>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-red-500 to-red-600 text-white rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm opacity-90">Canceladas</p>
+                    <p class="text-4xl font-bold mt-2">{{ stats.canceladas|default:0 }}</p>
+                </div>
+                <i class="fas fa-times-circle text-5xl opacity-20"></i>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm opacity-90">Por Vencer</p>
+                    <p class="text-4xl font-bold mt-2">{{ stats.por_vencer|default:0 }}</p>
+                </div>
+                <i class="fas fa-exclamation-triangle text-5xl opacity-20"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Suscripciones -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+        <div class="overflow-x-auto">
+            <table class="table table-zebra w-full">
+                <thead>
+                    <tr>
+                        <th>Estudiante</th>
+                        <th>Plan</th>
+                        <th>Fecha Inicio</th>
+                        <th>Fecha Fin</th>
+                        <th>Estado</th>
+                        <th>Días Restantes</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for suscripcion in suscripciones %}
+                        <tr class="hover">
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <div class="avatar placeholder">
+                                        <div class="bg-primary text-white rounded-full w-12">
+                                            <span class="text-lg">{{ suscripcion.id_hijo.nombre|first }}{{ suscripcion.id_hijo.apellido|first }}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold">{{ suscripcion.id_hijo.nombre_completo }}</p>
+                                        <p class="text-sm text-gray-500">{{ suscripcion.id_hijo.grado }} - {{ suscripcion.id_hijo.seccion }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <p class="font-semibold">{{ suscripcion.id_plan_almuerzo.nombre_plan }}</p>
+                                    <p class="text-sm text-gray-500">{{ suscripcion.id_plan_almuerzo.precio_mensual|floatformat:0|intcomma }} ₲/mes</p>
+                                </div>
+                            </td>
+                            <td>{{ suscripcion.fecha_inicio|date:"d/m/Y" }}</td>
+                            <td>
+                                {% if suscripcion.fecha_fin %}
+                                    {{ suscripcion.fecha_fin|date:"d/m/Y" }}
+                                {% else %}
+                                    <span class="badge badge-ghost badge-sm">Sin fecha fin</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if suscripcion.estado == 'Activa' %}
+                                    <span class="badge badge-success gap-2">
+                                        <i class="fas fa-check-circle"></i>
+                                        Activa
+                                    </span>
+                                {% elif suscripcion.estado == 'Suspendida' %}
+                                    <span class="badge badge-warning gap-2">
+                                        <i class="fas fa-pause-circle"></i>
+                                        Suspendida
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-error gap-2">
+                                        <i class="fas fa-times-circle"></i>
+                                        Cancelada
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if suscripcion.fecha_fin and suscripcion.estado == 'Activa' %}
+                                    {% with dias_restantes=suscripcion.fecha_fin|timeuntil %}
+                                        <span class="badge {% if suscripcion.dias_restantes <= 7 %}badge-error{% elif suscripcion.dias_restantes <= 15 %}badge-warning{% else %}badge-info{% endif %}">
+                                            {{ suscripcion.dias_restantes }} día{{ suscripcion.dias_restantes|pluralize }}
+                                        </span>
+                                    {% endwith %}
+                                {% else %}
+                                    <span class="text-gray-400">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="dropdown dropdown-end">
+                                    <label tabindex="0" class="btn btn-ghost btn-sm btn-circle">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </label>
+                                    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow-lg bg-base-100 rounded-box w-52">
+                                        <li>
+                                            <a href="#">
+                                                <i class="fas fa-eye text-blue-600"></i>
+                                                Ver Detalles
+                                            </a>
+                                        </li>
+                                        {% if suscripcion.estado == 'Activa' %}
+                                            <li>
+                                                <a onclick="suspenderSuscripcion({{ suscripcion.id_suscripcion }})">
+                                                    <i class="fas fa-pause text-yellow-600"></i>
+                                                    Suspender
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a onclick="cancelarSuscripcion({{ suscripcion.id_suscripcion }})">
+                                                    <i class="fas fa-ban text-red-600"></i>
+                                                    Cancelar
+                                                </a>
+                                            </li>
+                                        {% elif suscripcion.estado == 'Suspendida' %}
+                                            <li>
+                                                <a onclick="reactivarSuscripcion({{ suscripcion.id_suscripcion }})">
+                                                    <i class="fas fa-play text-green-600"></i>
+                                                    Reactivar
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                        <li>
+                                            <a href="#">
+                                                <i class="fas fa-history text-purple-600"></i>
+                                                Historial de Consumo
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-16">
+                                <i class="fas fa-users text-8xl text-gray-300 mb-6"></i>
+                                <h3 class="text-2xl font-bold text-gray-800 mb-2">No hay suscripciones</h3>
+                                <p class="text-gray-600 mb-6">Comienza creando la primera suscripción</p>
+                                <a href="{% url 'pos:crear_suscripcion_almuerzo' %}" class="btn btn-primary gap-2">
+                                    <i class="fas fa-user-plus"></i>
+                                    Nueva Suscripción
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginación -->
+        {% if suscripciones %}
+            <div class="flex justify-center mt-6">
+                <div class="btn-group">
+                    <button class="btn btn-sm">«</button>
+                    <button class="btn btn-sm btn-active">1</button>
+                    <button class="btn btn-sm">2</button>
+                    <button class="btn btn-sm">3</button>
+                    <button class="btn btn-sm">»</button>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function suspenderSuscripcion(id) {
+    if (confirm('¿Confirmas suspender esta suscripción?')) {
+        console.log('Suspendiendo suscripción:', id);
+        // Implementar llamada AJAX
+    }
+}
+
+function cancelarSuscripcion(id) {
+    if (confirm('¿Confirmas cancelar esta suscripción? Esta acción no se puede deshacer.')) {
+        console.log('Cancelando suscripción:', id);
+        // Implementar llamada AJAX
+    }
+}
+
+function reactivarSuscripcion(id) {
+    if (confirm('¿Confirmas reactivar esta suscripción?')) {
+        console.log('Reactivando suscripción:', id);
+        // Implementar llamada AJAX
+    }
+}
+</script>
+{% endblock %}

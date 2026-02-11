@@ -1,0 +1,121 @@
+{% extends "base_pos.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Planes de Almuerzo - MetrePay{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 space-y-8">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between bg-white rounded-2xl shadow-lg p-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
+                <i class="fas fa-clipboard-list text-orange-600"></i>
+                Planes de Almuerzo
+            </h1>
+            <p class="text-gray-600 mt-2">Gestión de planes mensuales</p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'pos:almuerzos_dashboard_view' %}" class="btn btn-outline gap-2">
+                <i class="fas fa-arrow-left"></i>
+                Volver
+            </a>
+            <a href="{% url 'pos:crear_plan_almuerzo' %}" class="btn btn-primary gap-2">
+                <i class="fas fa-plus"></i>
+                Nuevo Plan
+            </a>
+        </div>
+    </div>
+
+    <!-- Lista de Planes -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% if planes %}
+            {% for plan in planes %}
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all {% if not plan.activo %}opacity-60{% endif %}">
+                    <!-- Header Card -->
+                    <div class="bg-gradient-to-r from-orange-500 to-yellow-500 p-6 text-white">
+                        <div class="flex items-start justify-between mb-2">
+                            <h3 class="text-2xl font-bold">{{ plan.nombre_plan }}</h3>
+                            {% if plan.activo %}
+                                <span class="badge badge-success gap-2">
+                                    <i class="fas fa-check-circle"></i>
+                                    Activo
+                                </span>
+                            {% else %}
+                                <span class="badge badge-error gap-2">
+                                    <i class="fas fa-times-circle"></i>
+                                    Inactivo
+                                </span>
+                            {% endif %}
+                        </div>
+                        <p class="text-3xl font-bold mt-4">{{ plan.precio_mensual|floatformat:0|intcomma }} ₲</p>
+                        <p class="text-sm opacity-90">por mes</p>
+                    </div>
+
+                    <!-- Body Card -->
+                    <div class="p-6">
+                        <div class="space-y-4">
+                            <!-- Descripción -->
+                            {% if plan.descripcion %}
+                                <div>
+                                    <p class="text-sm text-gray-600">{{ plan.descripcion }}</p>
+                                </div>
+                            {% endif %}
+
+                            <!-- Días incluidos -->
+                            <div class="flex items-center gap-2 text-sm">
+                                <i class="fas fa-calendar-week text-orange-600"></i>
+                                <span class="font-semibold">Días:</span>
+                                <span class="text-gray-600">{{ plan.dias_semana_incluidos }}</span>
+                            </div>
+
+                            <!-- Número de suscriptores -->
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-users text-orange-600"></i>
+                                <span class="font-semibold">Suscriptores:</span>
+                                <span class="badge badge-primary badge-lg">{{ plan.num_suscriptores }}</span>
+                            </div>
+
+                            <!-- Fecha de creación -->
+                            {% if plan.fecha_creacion %}
+                                <div class="text-xs text-gray-400 flex items-center gap-2">
+                                    <i class="fas fa-clock"></i>
+                                    Creado: {{ plan.fecha_creacion|date:"d/m/Y" }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Acciones -->
+                        <div class="flex gap-2 mt-6 pt-6 border-t">
+                            <a href="{% url 'pos:editar_plan_almuerzo' plan.id_plan_almuerzo %}" 
+                               class="btn btn-sm btn-outline btn-primary flex-1">
+                                <i class="fas fa-edit"></i>
+                                Editar
+                            </a>
+                            <a href="{% url 'pos:suscripciones_almuerzo_view' %}?plan={{ plan.id_plan_almuerzo }}" 
+                               class="btn btn-sm btn-outline btn-secondary flex-1">
+                                <i class="fas fa-eye"></i>
+                                Ver Suscriptores
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <!-- Empty State -->
+            <div class="col-span-full">
+                <div class="bg-white rounded-2xl shadow-lg p-12 text-center">
+                    <i class="fas fa-clipboard text-8xl text-gray-300 mb-6"></i>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-2">No hay planes registrados</h3>
+                    <p class="text-gray-600 mb-6">Crea tu primer plan de almuerzo para comenzar</p>
+                    <a href="{% url 'pos:crear_plan_almuerzo' %}" class="btn btn-primary btn-lg gap-2">
+                        <i class="fas fa-plus"></i>
+                        Crear Primer Plan
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

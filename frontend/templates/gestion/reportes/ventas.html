@@ -1,0 +1,519 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Reporte de Ventas - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="reporteVentas()" x-init="init()" class="space-y-6">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-chart-bar mr-3 text-primary"></i>
+                Reporte de Ventas
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Análisis detallado de ventas y estadísticas
+            </p>
+        </div>
+        
+        <div class="flex gap-2">
+            <button @click="exportarPDF()" class="btn btn-error">
+                <i class="fas fa-file-pdf mr-2"></i>
+                Exportar PDF
+            </button>
+            
+            <button @click="exportarExcel()" class="btn btn-success">
+                <i class="fas fa-file-excel mr-2"></i>
+                Exportar Excel
+            </button>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            
+            <!-- Rango de Fechas -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-calendar mr-2"></i>Fecha Desde
+                    </span>
+                </label>
+                <input type="date" 
+                       x-model="filtros.fecha_desde"
+                       @change="cargarDatos()"
+                       class="input input-bordered w-full">
+            </div>
+            
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-calendar mr-2"></i>Fecha Hasta
+                    </span>
+                </label>
+                <input type="date" 
+                       x-model="filtros.fecha_hasta"
+                       @change="cargarDatos()"
+                       class="input input-bordered w-full">
+            </div>
+            
+            <!-- Filtros rápidos -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-clock mr-2"></i>Periodo
+                    </span>
+                </label>
+                <select x-model="periodo" 
+                        @change="aplicarPeriodo()"
+                        class="select select-bordered w-full">
+                    <option value="">Personalizado</option>
+                    <option value="hoy">Hoy</option>
+                    <option value="ayer">Ayer</option>
+                    <option value="semana">Esta Semana</option>
+                    <option value="mes">Este Mes</option>
+                    <option value="mes_anterior">Mes Anterior</option>
+                </select>
+            </div>
+            
+            <!-- Tipo de Pago -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-credit-card mr-2"></i>Tipo de Pago
+                    </span>
+                </label>
+                <select x-model="filtros.tipo_pago" 
+                        @change="cargarDatos()"
+                        class="select select-bordered w-full">
+                    <option value="">Todos</option>
+                    <option value="tarjeta">Tarjeta</option>
+                    <option value="efectivo">Efectivo</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Cards de Resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        
+        <!-- Total Ventas -->
+        <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <p class="text-sm opacity-90 mb-2">Total Ventas</p>
+                    <p class="text-3xl font-bold mb-1" x-text="resumen.cantidad_ventas"></p>
+                    <p class="text-lg opacity-80" x-text="formatearPrecio(resumen.total_ventas)"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Ticket Promedio -->
+        <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <p class="text-sm opacity-90 mb-2">Ticket Promedio</p>
+                    <p class="text-3xl font-bold" x-text="formatearPrecio(resumen.ticket_promedio)"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Productos Vendidos -->
+        <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <p class="text-sm opacity-90 mb-2">Productos Vendidos</p>
+                    <p class="text-3xl font-bold mb-1" x-text="resumen.cantidad_productos"></p>
+                    <p class="text-sm opacity-80">
+                        <span x-text="resumen.productos_unicos"></span> productos únicos
+                    </p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Ganancia Estimada -->
+        <div class="stat-card bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <p class="text-sm opacity-90 mb-2">Ganancia Estimada</p>
+                    <p class="text-3xl font-bold" x-text="formatearPrecio(resumen.ganancia_estimada)"></p>
+                    <p class="text-sm opacity-80">
+                        Margen: <span x-text="resumen.margen_promedio"></span>%
+                    </p>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Gráficos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Ventas por Día -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-chart-line mr-2 text-primary"></i>
+                Ventas por Día
+            </h2>
+            
+            <template x-if="cargando">
+                <div class="skeleton h-64 w-full"></div>
+            </template>
+            
+            <template x-if="!cargando">
+                <div class="space-y-3">
+                    <template x-for="(dia, index) in ventasPorDia" :key="index">
+                        <div>
+                            <div class="flex items-center justify-between text-sm mb-1">
+                                <span class="font-semibold" x-text="dia.fecha"></span>
+                                <div class="text-right">
+                                    <span class="text-primary font-bold" x-text="formatearPrecio(dia.total)"></span>
+                                    <span class="text-gray-500 text-xs ml-2">(<span x-text="dia.cantidad"></span> ventas)</span>
+                                </div>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                                <div class="bg-gradient-to-r from-primary to-secondary h-full transition-all duration-500"
+                                     :style="`width: ${(dia.total / maxVentaDia * 100)}%`"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Ventas por Método de Pago -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-credit-card mr-2 text-secondary"></i>
+                Métodos de Pago
+            </h2>
+            
+            <template x-if="cargando">
+                <div class="skeleton h-64 w-full"></div>
+            </template>
+            
+            <template x-if="!cargando">
+                <div class="space-y-4">
+                    <template x-for="metodo in ventasPorMetodo" :key="metodo.tipo">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <i class="fas" :class="metodo.tipo === 'tarjeta' ? 'fa-credit-card text-primary' : 'fa-money-bill-wave text-success'"></i>
+                                    <span class="font-semibold capitalize" x-text="metodo.tipo"></span>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-bold" x-text="formatearPrecio(metodo.total)"></p>
+                                    <p class="text-xs text-gray-500">
+                                        <span x-text="metodo.porcentaje"></span>% del total
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                                <div class="h-full transition-all duration-500"
+                                     :class="metodo.tipo === 'tarjeta' ? 'bg-primary' : 'bg-success'"
+                                     :style="`width: ${metodo.porcentaje}%`"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Top Productos y Top Clientes -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Top 10 Productos -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-trophy mr-2 text-warning"></i>
+                Top 10 Productos Más Vendidos
+            </h2>
+            
+            <template x-if="cargando">
+                <div class="space-y-3">
+                    <template x-for="i in 5" :key="i">
+                        <div class="skeleton h-16 w-full"></div>
+                    </template>
+                </div>
+            </template>
+            
+            <template x-if="!cargando">
+                <div class="overflow-x-auto">
+                    <table class="table w-full">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th class="text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(producto, index) in topProductos" :key="producto.id">
+                                <tr>
+                                    <td>
+                                        <span class="font-bold" 
+                                              :class="{
+                                                  'text-yellow-500': index === 0,
+                                                  'text-gray-400': index === 1,
+                                                  'text-orange-600': index === 2
+                                              }"
+                                              x-text="index + 1"></span>
+                                    </td>
+                                    <td>
+                                        <p class="font-semibold" x-text="producto.nombre"></p>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-secondary" x-text="producto.cantidad"></span>
+                                    </td>
+                                    <td class="text-right font-bold text-primary" x-text="formatearPrecio(producto.total)"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Top 10 Clientes -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-star mr-2 text-warning"></i>
+                Top 10 Clientes
+            </h2>
+            
+            <template x-if="cargando">
+                <div class="space-y-3">
+                    <template x-for="i in 5" :key="i">
+                        <div class="skeleton h-16 w-full"></div>
+                    </template>
+                </div>
+            </template>
+            
+            <template x-if="!cargando">
+                <div class="overflow-x-auto">
+                    <table class="table w-full">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Cliente</th>
+                                <th>Compras</th>
+                                <th class="text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(cliente, index) in topClientes" :key="cliente.id">
+                                <tr>
+                                    <td>
+                                        <span class="font-bold" 
+                                              :class="{
+                                                  'text-yellow-500': index === 0,
+                                                  'text-gray-400': index === 1,
+                                                  'text-orange-600': index === 2
+                                              }"
+                                              x-text="index + 1"></span>
+                                    </td>
+                                    <td>
+                                        <p class="font-semibold" x-text="cliente.nombre"></p>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-primary" x-text="cliente.cantidad_compras"></span>
+                                    </td>
+                                    <td class="text-right font-bold text-success" x-text="formatearPrecio(cliente.total)"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Tabla de Ventas Detalladas -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="p-6 border-b dark:border-gray-700">
+            <h2 class="text-xl font-bold">
+                <i class="fas fa-list mr-2 text-primary"></i>
+                Detalle de Ventas
+            </h2>
+        </div>
+        
+        <template x-if="cargando">
+            <div class="p-6">
+                <div class="skeleton h-64 w-full"></div>
+            </div>
+        </template>
+        
+        <template x-if="!cargando">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full" id="tabla-ventas">
+                    <thead>
+                        <tr>
+                            <th>Fecha/Hora</th>
+                            <th>N° Venta</th>
+                            <th>Cliente</th>
+                            <th>Productos</th>
+                            <th>Método Pago</th>
+                            <th class="text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="venta in ventas" :key="venta.id">
+                            <tr class="hover">
+                                <td class="font-mono text-sm" x-text="venta.fecha_hora"></td>
+                                <td class="font-mono text-sm">#<span x-text="venta.numero"></span></td>
+                                <td x-text="venta.cliente"></td>
+                                <td>
+                                    <span class="badge badge-sm badge-secondary" x-text="venta.cantidad_items + ' items'"></span>
+                                </td>
+                                <td>
+                                    <span class="badge badge-sm" 
+                                          :class="venta.metodo_pago === 'tarjeta' ? 'badge-primary' : 'badge-success'">
+                                        <span class="capitalize" x-text="venta.metodo_pago"></span>
+                                    </span>
+                                </td>
+                                <td class="text-right font-bold text-primary" x-text="formatearPrecio(venta.total)"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </template>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function reporteVentas() {
+    return {
+        cargando: true,
+        periodo: 'hoy',
+        filtros: {
+            fecha_desde: '',
+            fecha_hasta: '',
+            tipo_pago: ''
+        },
+        resumen: {
+            cantidad_ventas: 0,
+            total_ventas: 0,
+            ticket_promedio: 0,
+            cantidad_productos: 0,
+            productos_unicos: 0,
+            ganancia_estimada: 0,
+            margen_promedio: 0
+        },
+        ventasPorDia: [],
+        maxVentaDia: 0,
+        ventasPorMetodo: [],
+        topProductos: [],
+        topClientes: [],
+        ventas: [],
+        
+        async init() {
+            this.aplicarPeriodo();
+        },
+        
+        aplicarPeriodo() {
+            const hoy = new Date();
+            let desde, hasta;
+            
+            switch(this.periodo) {
+                case 'hoy':
+                    desde = hasta = this.formatearFecha(hoy);
+                    break;
+                case 'ayer':
+                    const ayer = new Date(hoy);
+                    ayer.setDate(ayer.getDate() - 1);
+                    desde = hasta = this.formatearFecha(ayer);
+                    break;
+                case 'semana':
+                    const inicioSemana = new Date(hoy);
+                    inicioSemana.setDate(hoy.getDate() - hoy.getDay());
+                    desde = this.formatearFecha(inicioSemana);
+                    hasta = this.formatearFecha(hoy);
+                    break;
+                case 'mes':
+                    desde = this.formatearFecha(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+                    hasta = this.formatearFecha(hoy);
+                    break;
+                case 'mes_anterior':
+                    const mesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+                    desde = this.formatearFecha(mesAnterior);
+                    hasta = this.formatearFecha(new Date(hoy.getFullYear(), hoy.getMonth(), 0));
+                    break;
+                default:
+                    return;
+            }
+            
+            this.filtros.fecha_desde = desde;
+            this.filtros.fecha_hasta = hasta;
+            this.cargarDatos();
+        },
+        
+        async cargarDatos() {
+            this.cargando = true;
+            
+            try {
+                const params = new URLSearchParams({
+                    fecha_desde: this.filtros.fecha_desde,
+                    fecha_hasta: this.filtros.fecha_hasta,
+                    tipo_pago: this.filtros.tipo_pago
+                });
+                
+                const response = await fetch(`/api/reportes/ventas/?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.resumen = data.resumen;
+                    this.ventasPorDia = data.ventas_por_dia || [];
+                    this.ventasPorMetodo = data.ventas_por_metodo || [];
+                    this.topProductos = data.top_productos || [];
+                    this.topClientes = data.top_clientes || [];
+                    this.ventas = data.ventas || [];
+                    
+                    if (this.ventasPorDia.length > 0) {
+                        this.maxVentaDia = Math.max(...this.ventasPorDia.map(d => d.total));
+                    }
+                }
+            } catch (error) {
+                console.error('Error al cargar datos:', error);
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        exportarPDF() {
+            window.open(`/api/reportes/ventas/pdf/?fecha_desde=${this.filtros.fecha_desde}&fecha_hasta=${this.filtros.fecha_hasta}&tipo_pago=${this.filtros.tipo_pago}`, '_blank');
+        },
+        
+        exportarExcel() {
+            gestionHelpers.exportTableToCSV('tabla-ventas', `ventas_${this.filtros.fecha_desde}_${this.filtros.fecha_hasta}.csv`);
+        },
+        
+        formatearFecha(fecha) {
+            return fecha.toISOString().split('T')[0];
+        },
+        
+        formatearPrecio(monto) {
+            return gestionHelpers.formatPrice(monto);
+        }
+    }
+}
+</script>
+{% endblock %}

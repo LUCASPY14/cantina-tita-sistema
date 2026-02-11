@@ -1,0 +1,487 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Horarios de {{ empleado.nombre_completo }} - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="horariosEmpleado({{ empleado.id }})" x-init="cargarHorarios()" class="container mx-auto px-4 py-8">
+    
+    <!-- Header -->
+    <div class="mb-8">
+        <a href="{% url 'gestion:empleados_perfil' empleado.id %}" class="btn btn-ghost mb-4">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Volver al Perfil
+        </a>
+        
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                    <i class="fas fa-calendar-alt mr-3 text-secondary"></i>
+                    Horarios y Turnos
+                </h1>
+                <p class="text-gray-600 dark:text-gray-400 mt-1">
+                    Empleado: <span class="font-semibold">{{ empleado.nombre_completo }}</span>
+                </p>
+            </div>
+            
+            <button @click="abrirModalCrear()" 
+                    class="btn btn-secondary text-white gap-2">
+                <i class="fas fa-plus"></i>
+                Asignar Turno
+            </button>
+        </div>
+    </div>
+    
+    <!-- Resumen Semanal -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-clock text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Horas Semanales</p>
+            <p class="text-3xl font-bold" x-text="resumen.horas_semanales || 0"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-calendar-week text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Días Asignados</p>
+            <p class="text-3xl font-bold" x-text="resumen.dias_asignados || 0"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-sun text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Turno Principal</p>
+            <p class="text-xl font-bold" x-text="resumen.turno_principal || '-'"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-coffee text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Descansos</p>
+            <p class="text-3xl font-bold" x-text="resumen.descansos || 0"></p>
+        </div>
+    </div>
+    
+    <!-- Calendario Semanal -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden mb-6">
+        <div class="p-6 border-b flex justify-between items-center">
+            <h3 class="text-lg font-bold flex items-center">
+                <i class="fas fa-calendar mr-2 text-primary"></i>
+                Calendario Semanal
+            </h3>
+            
+            <div class="flex gap-2">
+                <button @click="cambiarSemana(-1)" class="btn btn-ghost btn-sm">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span class="btn btn-ghost btn-sm no-animation" x-text="semanaActual"></span>
+                <button @click="cambiarSemana(1)" class="btn btn-ghost btn-sm">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="table w-full">
+                <thead>
+                    <tr class="bg-gray-100 dark:bg-gray-700">
+                        <th class="w-32">Hora</th>
+                        <th class="text-center">Lunes</th>
+                        <th class="text-center">Martes</th>
+                        <th class="text-center">Miércoles</th>
+                        <th class="text-center">Jueves</th>
+                        <th class="text-center">Viernes</th>
+                        <th class="text-center">Sábado</th>
+                        <th class="text-center">Domingo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="hora in horas" :key="hora">
+                        <tr>
+                            <td class="font-mono text-sm font-semibold" x-text="hora + ':00'"></td>
+                            <template x-for="dia in ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']" :key="dia">
+                                <td class="p-1">
+                                    <template x-if="getTurno(dia, hora)">
+                                        <div @click="editarTurno(getTurno(dia, hora))"
+                                             class="p-2 rounded cursor-pointer text-xs text-white hover:opacity-80"
+                                             :class="{
+                                                 'bg-primary': getTurno(dia, hora).turno === 'mañana',
+                                                 'bg-secondary': getTurno(dia, hora).turno === 'tarde',
+                                                 'bg-info': getTurno(dia, hora).turno === 'noche',
+                                                 'bg-gray-400': getTurno(dia, hora).tipo === 'descanso'
+                                             }">
+                                            <div class="font-semibold" x-text="getTurno(dia, hora).titulo"></div>
+                                            <div class="text-xs opacity-90" x-text="getTurno(dia, hora).horario"></div>
+                                        </div>
+                                    </template>
+                                </td>
+                            </template>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Turnos Asignados (Lista) -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-bold mb-4 flex items-center">
+            <i class="fas fa-list mr-2 text-secondary"></i>
+            Turnos Asignados
+        </h3>
+        
+        <template x-if="turnos.length > 0">
+            <div class="space-y-3">
+                <template x-for="turno in turnos" :key="turno.id">
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:shadow-md transition-shadow">
+                        <div class="w-16 h-16 rounded-lg flex items-center justify-center text-white"
+                             :class="{
+                                 'bg-primary': turno.turno === 'mañana',
+                                 'bg-secondary': turno.turno === 'tarde',
+                                 'bg-info': turno.turno === 'noche',
+                                 'bg-gray-400': turno.tipo === 'descanso'
+                             }">
+                            <i class="fas fa-2xl" 
+                               :class="{
+                                   'fa-sun': turno.turno === 'mañana',
+                                   'fa-cloud-sun': turno.turno === 'tarde',
+                                   'fa-moon': turno.turno === 'noche',
+                                   'fa-coffee': turno.tipo === 'descanso'
+                               }"></i>
+                        </div>
+                        
+                        <div class="flex-1">
+                            <p class="font-semibold text-lg" x-text="turno.titulo"></p>
+                            <div class="flex flex-wrap gap-2 mt-1">
+                                <div class="badge badge-sm badge-outline">
+                                    <i class="fas fa-calendar-day mr-1"></i>
+                                    <span x-text="turno.dia_display"></span>
+                                </div>
+                                <div class="badge badge-sm badge-outline">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    <span x-text="turno.hora_inicio + ' - ' + turno.hora_fin"></span>
+                                </div>
+                                <template x-if="turno.descripcion">
+                                    <div class="badge badge-sm badge-ghost" x-text="turno.descripcion"></div>
+                                </template>
+                            </div>
+                        </div>
+                        
+                        <div class="flex gap-2">
+                            <button @click="editarTurno(turno)" 
+                                    class="btn btn-ghost btn-sm"
+                                    title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button @click="eliminarTurno(turno)" 
+                                    class="btn btn-ghost btn-sm text-error"
+                                    title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+        
+        <template x-if="turnos.length === 0">
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-calendar-times text-6xl mb-2"></i>
+                <p class="text-lg mb-4">No hay turnos asignados</p>
+                <button @click="abrirModalCrear()" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-plus mr-2"></i>
+                    Asignar Primer Turno
+                </button>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Modal Crear/Editar Turno -->
+    <div x-show="modalAbierto" 
+         x-transition
+         class="modal" 
+         :class="{'modal-open': modalAbierto}">
+        <div class="modal-box max-w-2xl">
+            <h3 class="font-bold text-lg mb-4">
+                <i class="fas mr-2" :class="modoEdicion ? 'fa-edit text-secondary' : 'fa-plus text-success'"></i>
+                <span x-text="modoEdicion ? 'Editar Turno' : 'Asignar Turno'"></span>
+            </h3>
+            
+            <form @submit.prevent="guardarTurno()">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <!-- Día -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Día de la Semana *</span>
+                        </label>
+                        <select x-model="formTurno.dia" 
+                                class="select select-bordered"
+                                required>
+                            <option value="">Seleccionar día...</option>
+                            <option value="lunes">Lunes</option>
+                            <option value="martes">Martes</option>
+                            <option value="miércoles">Miércoles</option>
+                            <option value="jueves">Jueves</option>
+                            <option value="viernes">Viernes</option>
+                            <option value="sábado">Sábado</option>
+                            <option value="domingo">Domingo</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Turno -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Turno *</span>
+                        </label>
+                        <select x-model="formTurno.turno" 
+                                class="select select-bordered"
+                                required>
+                            <option value="">Seleccionar turno...</option>
+                            <option value="mañana">Mañana</option>
+                            <option value="tarde">Tarde</option>
+                            <option value="noche">Noche</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Hora Inicio -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Hora de Inicio *</span>
+                        </label>
+                        <input type="time" 
+                               x-model="formTurno.hora_inicio" 
+                               class="input input-bordered"
+                               required>
+                    </div>
+                    
+                    <!-- Hora Fin -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Hora de Fin *</span>
+                        </label>
+                        <input type="time" 
+                               x-model="formTurno.hora_fin" 
+                               class="input input-bordered"
+                               required>
+                    </div>
+                    
+                    <!-- Descripción -->
+                    <div class="form-control md:col-span-2">
+                        <label class="label">
+                            <span class="label-text">Descripción / Notas</span>
+                        </label>
+                        <textarea x-model="formTurno.descripcion" 
+                                  placeholder="Información adicional sobre el turno..."
+                                  class="textarea textarea-bordered h-20"
+                                  maxlength="200"></textarea>
+                    </div>
+                    
+                    <!-- Recurrente -->
+                    <div class="form-control md:col-span-2">
+                        <label class="label cursor-pointer justify-start gap-3">
+                            <input type="checkbox" 
+                                   x-model="formTurno.recurrente" 
+                                   class="checkbox checkbox-secondary">
+                            <span class="label-text">
+                                <i class="fas fa-redo mr-2"></i>
+                                Turno recurrente (se repite cada semana)
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="modal-action">
+                    <button type="button" 
+                            @click="cerrarModal()" 
+                            class="btn btn-ghost">
+                        <i class="fas fa-times mr-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="submit" 
+                            class="btn btn-secondary text-white"
+                            :class="{'loading': guardando}"
+                            :disabled="guardando">
+                        <i class="fas fa-save mr-2" x-show="!guardando"></i>
+                        <span x-text="guardando ? 'Guardando...' : 'Guardar'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="modal-backdrop" @click="cerrarModal()"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function horariosEmpleado(empleadoId) {
+    return {
+        empleadoId: empleadoId,
+        turnos: [],
+        resumen: {},
+        semanaActual: '',
+        horas: Array.from({length: 14}, (_, i) => i + 6), // 6:00 a 19:00
+        modalAbierto: false,
+        modoEdicion: false,
+        guardando: false,
+        formTurno: {
+            dia: '',
+            turno: '',
+            hora_inicio: '07:00',
+            hora_fin: '13:00',
+            descripcion: '',
+            recurrente: true
+        },
+        
+        async cargarHorarios() {
+            try {
+                const response = await fetch(`/api/empleados/${this.empleadoId}/horarios/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.turnos = data.turnos || [];
+                    this.resumen = data.resumen || {};
+                    this.actualizarSemanaActual();
+                }
+            } catch (error) {
+                console.error('Error al cargar horarios:', error);
+                gestionHelpers.notify('Error al cargar horarios', 'error');
+            }
+        },
+        
+        getTurno(dia, hora) {
+            return this.turnos.find(t => {
+                const horaInicio = parseInt(t.hora_inicio.split(':')[0]);
+                const horaFin = parseInt(t.hora_fin.split(':')[0]);
+                return t.dia === dia && hora >= horaInicio && hora < horaFin;
+            });
+        },
+        
+        actualizarSemanaActual() {
+            const hoy = new Date();
+            const inicio = new Date(hoy.setDate(hoy.getDate() - hoy.getDay() + 1));
+            const fin = new Date(inicio);
+            fin.setDate(fin.getDate() + 6);
+            
+            this.semanaActual = `${this.formatearFechaCorta(inicio)} - ${this.formatearFechaCorta(fin)}`;
+        },
+        
+        cambiarSemana(direccion) {
+            // Implementar navegación de semanas
+            gestionHelpers.notify('Funcionalidad en desarrollo', 'info');
+        },
+        
+        abrirModalCrear() {
+            this.modoEdicion = false;
+            this.formTurno = {
+                dia: '',
+                turno: '',
+                hora_inicio: '07:00',
+                hora_fin: '13:00',
+                descripcion: '',
+                recurrente: true
+            };
+            this.modalAbierto = true;
+        },
+        
+        editarTurno(turno) {
+            this.modoEdicion = true;
+            this.formTurno = { ...turno };
+            this.modalAbierto = true;
+        },
+        
+        async guardarTurno() {
+            this.guardando = true;
+            try {
+                const url = this.modoEdicion 
+                    ? `/api/empleados/${this.empleadoId}/horarios/${this.formTurno.id}/`
+                    : `/api/empleados/${this.empleadoId}/horarios/`;
+                
+                const response = await fetch(url, {
+                    method: this.modoEdicion ? 'PUT' : 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(this.formTurno)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify(
+                        this.modoEdicion ? 'Turno actualizado' : 'Turno asignado',
+                        'success'
+                    );
+                    this.cerrarModal();
+                    this.cargarHorarios();
+                } else {
+                    gestionHelpers.notify(data.message || 'Error al guardar', 'error');
+                }
+            } catch (error) {
+                console.error('Error al guardar turno:', error);
+                gestionHelpers.notify('Error al guardar turno', 'error');
+            } finally {
+                this.guardando = false;
+            }
+        },
+        
+        async eliminarTurno(turno) {
+            if (!await gestionHelpers.confirmDelete(
+                '¿Eliminar este turno?',
+                `${turno.dia_display} - ${turno.hora_inicio} a ${turno.hora_fin}`
+            )) return;
+            
+            try {
+                const response = await fetch(`/api/empleados/${this.empleadoId}/horarios/${turno.id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify('Turno eliminado', 'success');
+                    this.cargarHorarios();
+                }
+            } catch (error) {
+                console.error('Error al eliminar turno:', error);
+                gestionHelpers.notify('Error al eliminar turno', 'error');
+            }
+        },
+        
+        cerrarModal() {
+            this.modalAbierto = false;
+            this.modoEdicion = false;
+        },
+        
+        formatearFechaCorta(fecha) {
+            return fecha.toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit' });
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    }
+}
+</script>
+{% endblock %}

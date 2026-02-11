@@ -1,0 +1,800 @@
+{
+  "duplicados_exactos": {
+    "73c2ce8056acec84c65bb1547f8bc2ca": [
+      "admin\\admin_autorizaciones.html",
+      "portal\\admin_autorizaciones.html"
+    ],
+    "1b86a036803fbffb6b96b6f441606737": [
+      "admin\\configurar_limites_masivo.html",
+      "portal\\configurar_limites_masivo.html"
+    ],
+    "c4f261067a56532cc3000596f03d3b61": [
+      "components\\modals\\autorizar_saldo_negativo.html",
+      "templates_sueltos\\autorizar_saldo_negativo.html"
+    ],
+    "69e9ebbb49ec3c12c71d7a3cad8c050a": [
+      "gestion\\almuerzos_dashboard.html",
+      "templates_sueltos\\almuerzos_dashboard.html"
+    ],
+    "8993ca2d27dbd53ffabbd0e24f8f8513": [
+      "gestion\\categoria_form.html",
+      "templates_sueltos\\categoria_form.html"
+    ],
+    "54c20489ee864198ea512cd10df4f041": [
+      "gestion\\facturacion_dashboard.html",
+      "templates_sueltos\\facturacion_dashboard.html"
+    ],
+    "5b265cc0777c36c9bfde5c1705f052f0": [
+      "gestion\\facturacion_listado.html",
+      "templates_sueltos\\facturacion_listado.html"
+    ],
+    "e9c6ebe4650457afc6b7e9ff87236b61": [
+      "gestion\\facturacion_mensual_almuerzos.html",
+      "templates_sueltos\\facturacion_mensual_almuerzos.html"
+    ],
+    "20bbefc30d5dd817e14fd617bcd09682": [
+      "gestion\\lista_cargas_pendientes.html",
+      "templates_sueltos\\lista_cargas_pendientes.html"
+    ],
+    "982fca5d7f0ce5c934b694896cb95247": [
+      "gestion\\lista_pagos_pendientes.html",
+      "templates_sueltos\\lista_pagos_pendientes.html"
+    ],
+    "6822af55738b8698de202a71fba2842e": [
+      "gestion\\menu_diario.html",
+      "templates_sueltos\\menu_diario.html"
+    ],
+    "305ba3201325ea1a1f6c1b65f74fda9d": [
+      "gestion\\planes_almuerzo.html",
+      "templates_sueltos\\planes_almuerzo.html"
+    ],
+    "ca58bd8dbd592cdfa3fb980170e4bbf5": [
+      "gestion\\registro_consumo_almuerzo.html",
+      "templates_sueltos\\registro_consumo_almuerzo.html"
+    ],
+    "cac8981dd73e55a50dcb7c64dce1cb5e": [
+      "gestion\\suscripciones_almuerzo.html",
+      "templates_sueltos\\suscripciones_almuerzo.html"
+    ],
+    "8bd2617e3a3de60c0e58a38175287c57": [
+      "gestion\\validar_carga.html",
+      "templates_sueltos\\validar_carga.html"
+    ],
+    "6ee3e394d3ba40954b12d6a8b71c24b7": [
+      "gestion\\validar_pago.html",
+      "templates_sueltos\\validar_pago.html"
+    ],
+    "ac7dbd5012584cb052a922dea0dbc550": [
+      "gestion\\validar_pagos.html",
+      "templates_sueltos\\validar_pagos.html"
+    ],
+    "a43cb68bac774814542e17ed565196a7": [
+      "gestion\\categories\\create.html",
+      "templates_sueltos\\crear.html"
+    ],
+    "79e412a1c8c3f7db4e96ec6bc4b816b2": [
+      "gestion\\categories\\edit.html",
+      "templates_sueltos\\editar.html"
+    ],
+    "a3b3e9229504decbd228b0d57f5c9718": [
+      "gestion\\categories\\list.html",
+      "templates_sueltos\\lista.html"
+    ],
+    "7109a32eedb59fe5175bedf629a64f7f": [
+      "gestion\\clients\\clientes_lista.html",
+      "templates_sueltos\\clientes_lista.html"
+    ],
+    "48d1d2580941a1dad47bb02e554f87a8": [
+      "gestion\\clients\\clientes_list_paginado.html",
+      "templates_sueltos\\clientes_list_paginado.html"
+    ],
+    "c994bd9bfad51a1a11ca2e2789c027ad": [
+      "gestion\\clients\\lista.html",
+      "templates_sueltos\\lista_clientes.html"
+    ],
+    "5a8c8a96fff4ad7fd58981fb3a2e9764": [
+      "gestion\\employees\\cambiar_contrasena_empleado.html",
+      "templates_sueltos\\cambiar_contrasena_empleado.html"
+    ],
+    "7a18025a95096189f9f38f1ff01630f6": [
+      "gestion\\employees\\crear.html",
+      "templates_sueltos\\crear_empleado.html"
+    ],
+    "26040f401aaad1472de0647108274ad6": [
+      "gestion\\employees\\gestionar.html",
+      "templates_sueltos\\gestionar.html"
+    ],
+    "86d6484c81dc1b5f32489d35fa7d4139": [
+      "gestion\\employees\\gestionar_empleados.html",
+      "templates_sueltos\\gestionar_empleados.html"
+    ],
+    "9e93a7c77c7252bed7b2819963698285": [
+      "gestion\\employees\\perfil_empleado.html",
+      "templates_sueltos\\perfil_empleado.html"
+    ],
+    "cf6418211c2c41e43e76345700cd5b73": [
+      "gestion\\products\\create.html",
+      "templates_sueltos\\crear_productos.html"
+    ],
+    "3e806e2d5d1f211adebe3e093d4f1650": [
+      "gestion\\products\\edit.html",
+      "templates_sueltos\\editar_productos..html"
+    ],
+    "8e368c12458a671b65b7f472828868a1": [
+      "gestion\\products\\list.html",
+      "templates_sueltos\\lista_productos..html"
+    ],
+    "8ebc336052fda7d5c1da644d9a27bbab": [
+      "portal\\ajuste_inventario.html",
+      "pos\\inventory\\adjust_inventory.html",
+      "templates_sueltos\\ajuste_inventario.html"
+    ],
+    "efafeb0054fb5f137224ea46cd1cb197": [
+      "portal\\alertas_inventario.html",
+      "pos\\inventory\\alerts.html",
+      "templates_sueltos\\alertas_inventario.html"
+    ],
+    "634ac58d3e274126f500dfa5cb1deceb": [
+      "portal\\almuerzo.html",
+      "pos\\lunch\\almuerzo.html"
+    ],
+    "d3faba81485991adb4a436572f7ed33f": [
+      "portal\\almuerzo_cuentas_mensuales.html",
+      "pos\\lunch\\almuerzo_cuentas_mensuales.html"
+    ],
+    "496668f6242df4221aaba702c7c75e05": [
+      "portal\\almuerzo_generar_cuentas.html",
+      "pos\\lunch\\almuerzo_generar_cuentas.html"
+    ],
+    "a95c02adaccec28abcf1ee372e2c6e72": [
+      "portal\\almuerzo_pagar.html",
+      "pos\\lunch\\almuerzo_pagar.html"
+    ],
+    "49e3ac08a67eed40cc560dd280fe97c1": [
+      "portal\\almuerzo_reportes.html",
+      "pos\\lunch\\almuerzo_reportes.html"
+    ],
+    "fba91e1c3b9e69f959d694d4c54ad55c": [
+      "portal\\almuerzo_reporte_diario.html",
+      "pos\\lunch\\almuerzo_reporte_diario.html"
+    ],
+    "13d316177dca0044fd1afd805b6f38e0": [
+      "portal\\almuerzo_reporte_estudiante.html",
+      "pos\\lunch\\almuerzo_reporte_estudiante.html"
+    ],
+    "34c1a8e0d2c1cb0aafd0c74653ae3c51": [
+      "portal\\almuerzo_reporte_mensual.html",
+      "pos\\lunch\\almuerzo_reporte_mensual.html"
+    ],
+    "13f086ab53406db753d732f4deae5189": [
+      "portal\\apertura_caja.html",
+      "pos\\cash_register\\apertura_caja.html"
+    ],
+    "5213de84df5ba2d5682f5a451bf49c18": [
+      "portal\\arqueo_caja.html",
+      "pos\\cash_register\\arqueo_caja.html"
+    ],
+    "d87b1d43d118f2fb5f61f5b1097cc0a3": [
+      "portal\\cajas_dashboard.html",
+      "pos\\cash_register\\cajas_dashboard.html"
+    ],
+    "3b418bbc2305c49d565fdb99a4982725": [
+      "portal\\cierre_caja.html",
+      "pos\\cash_register\\cierre_caja.html"
+    ],
+    "be7c18522bf93f3cd960646c378fbe74": [
+      "portal\\comprobante_recargas.html",
+      "pos\\recharges\\comprobante.html"
+    ],
+    "336d3bb01d9b68b88ad52543ded6f502": [
+      "portal\\configurar_precio.html",
+      "pos\\lunch\\configurar_precio.html"
+    ],
+    "992ff67a1a32a9a1a155c71fb316ab1c": [
+      "portal\\cuenta_corriente.html",
+      "pos\\accounts\\index.html"
+    ],
+    "8c4c53ca167d216334b7be1eee28df93": [
+      "portal\\cuenta_corriente_unificada.html",
+      "pos\\accounts\\unificada.html"
+    ],
+    "f5b73314fe89f20fd1b8b3d6658c2cd2": [
+      "portal\\dashboard.html",
+      "pos\\cash_register\\dashboard.html"
+    ],
+    "669f565463407697856639b8912f462c": [
+      "portal\\dashboard_comisiones.html",
+      "pos\\commissions\\dashboard.html"
+    ],
+    "61140b3a8f97c23cf10b204f39c1ff1c": [
+      "portal\\dashboard_compras.html",
+      "pos\\purchases\\dashboard.html"
+    ],
+    "1d2afa619a9d51a2e3cdf9878c15d0b1": [
+      "portal\\inventario_dashboard.html",
+      "pos\\inventory\\dashboard.html"
+    ],
+    "d1c197a350f80b8dcd478cba70174662": [
+      "portal\\inventario_productos.html",
+      "templates_sueltos\\inventario_productos.html"
+    ],
+    "6e492f6cc244be266a0bdb23e619d883": [
+      "portal\\pos_dashboard.html",
+      "pos\\dashboard\\main.html"
+    ],
+    "5c554d5426d0220ef3a67aa13be843dd": [
+      "portal\\procesar_recargas.html",
+      "pos\\recharges\\procesar.html"
+    ],
+    "23962699ff164034cf897e6d9ce46a8b": [
+      "portal\\productos.html",
+      "pos\\inventory\\products_list.html"
+    ],
+    "de7eb4500224141c485a44c075d5ae8b": [
+      "portal\\recargas_lista.html",
+      "pos\\recharges\\recargas_lista.html"
+    ],
+    "4d8fdb2c1cd93274c757c7016ecfd199": [
+      "portal\\ticket_almuerzo.html",
+      "pos\\lunch\\ticket_almuerzo.html"
+    ],
+    "99045e71f966e73b65fee559d98fd850": [
+      "portal\\_recargas.html",
+      "pos\\recharges\\index.html"
+    ],
+    "88b4420e0734da93180afbae51222595": [
+      "portal\\payments\\cargar_saldo.html",
+      "templates_sueltos\\cargar_saldo.html"
+    ],
+    "a33f256ca1fe92832df56ef51c0c2c77": [
+      "portal\\payments\\estado_recarga.html",
+      "templates_sueltos\\estado_recarga.html"
+    ],
+    "8ae0100c21cf1bae43419b95ab4e44c7": [
+      "portal\\payments\\notificaciones_saldo.html",
+      "templates_sueltos\\notificaciones_saldo.html"
+    ],
+    "ce5fdee4fe81d634f4318437ccfdb229": [
+      "portal\\payments\\notificaciones_saldo_widget.html",
+      "templates_sueltos\\notificaciones_saldo_widget.html"
+    ],
+    "6ca0809356fb29aee1548a09893e8bc6": [
+      "portal\\payments\\pagos.html",
+      "templates_sueltos\\pagos.html"
+    ],
+    "945f6d97de7c79d5e92c4ede1435d3ac": [
+      "portal\\payments\\pago_cancelado.html",
+      "templates_sueltos\\pago_cancelado.html"
+    ],
+    "32da0141cfc4e00abed9ac59c92ccf24": [
+      "portal\\payments\\pago_exitoso.html",
+      "templates_sueltos\\pago_exitoso.html"
+    ],
+    "30004bd2dc6fc5446942a007409f0de4": [
+      "portal\\payments\\recargar_tarjeta.html",
+      "templates_sueltos\\recargar_tarjeta.html"
+    ],
+    "99120280602ea485a43959d202f0f407": [
+      "portal\\payments\\recargas.html",
+      "templates_sueltos\\recargas.html"
+    ],
+    "f2f9cc2d9a4bb35d05c50cf57edf0597": [
+      "portal\\payments\\terminos_saldo_negativo.html",
+      "templates_sueltos\\terminos_saldo_negativo.html"
+    ],
+    "3fa208acfb6f135c521d98eee2295a2e": [
+      "portal\\profile\\perfil.html",
+      "templates_sueltos\\perfil.html"
+    ],
+    "565ca88a6667b107861ac8345ab6ce06": [
+      "pos\\alertas_sistema.html",
+      "templates_sueltos\\alertas_sistema.html"
+    ],
+    "b52f93399f645511dafbaf06d655da9b": [
+      "pos\\alertas_tarjetas_saldo.html",
+      "templates_sueltos\\alertas_tarjetas_saldo.html"
+    ],
+    "0ea2fb65d2ce5bab120c96fb0d25dd44": [
+      "pos\\base_pos.html",
+      "templates_sueltos\\base_pos.html"
+    ],
+    "40221e8d34089ab201b232a88e9bb5f0": [
+      "pos\\cc_detalle.html",
+      "templates_sueltos\\cc_detalle.html"
+    ],
+    "b70d08aebf28903ddd264be98680ea62": [
+      "pos\\cc_estado_cuenta.html",
+      "templates_sueltos\\cc_estado_cuenta.html"
+    ],
+    "f4b6919a7c990035624901d903042c36": [
+      "pos\\conciliacion_pagos.html",
+      "templates_sueltos\\conciliacion_pagos.html"
+    ],
+    "fc81159ac12c3f53363fa3a66b69e989": [
+      "pos\\configurar_tarifas.html",
+      "templates_sueltos\\configurar_tarifas.html"
+    ],
+    "b12bc6526342efae383428d547a7f2dd": [
+      "pos\\crear_cliente.html",
+      "templates_sueltos\\crear_cliente.html"
+    ],
+    "31e0824a7451780486905357e512f4e6": [
+      "pos\\cuenta_corriente.html",
+      "templates_sueltos\\cuenta_corriente.html"
+    ],
+    "76c6c4ac015960b10e64b20a8ba2edea": [
+      "pos\\cuenta_corriente_unificada.html",
+      "templates_sueltos\\cuenta_corriente_unificada.html"
+    ],
+    "d85bb6386ff0d6fa40ee08185afee4ad": [
+      "pos\\deuda_proveedores.html",
+      "templates_sueltos\\deuda_proveedores.html"
+    ],
+    "2fe23fd7102fd7e909f02880a99c0713": [
+      "pos\\gestionar_clientes.html",
+      "templates_sueltos\\gestionar_clientes.html"
+    ],
+    "c1831c00638047442f32984ccff584c9": [
+      "pos\\gestionar_fotos.html",
+      "templates_sueltos\\gestionar_fotos.html"
+    ],
+    "2183a4d71be85feab7763120a1568beb": [
+      "pos\\gestionar_grados.html",
+      "templates_sueltos\\gestionar_grados.html"
+    ],
+    "6f614bbd944ed4ab79c5789a8c87f555": [
+      "pos\\historial.html",
+      "templates_sueltos\\historial.html"
+    ],
+    "bdaf3773ea0dfa3dc3a47178228ef225": [
+      "pos\\historial_grados.html",
+      "templates_sueltos\\historial_grados.html"
+    ],
+    "84bd413ac7ad50a1b3c12be2a14ad78d": [
+      "pos\\historial_recargas.html",
+      "templates_sueltos\\historial_recargas.html"
+    ],
+    "f70b49a677db8047e3d133532f467548": [
+      "pos\\logs_autorizaciones.html",
+      "templates_sueltos\\logs_autorizaciones.html"
+    ],
+    "d970405dc5b8e5aa9f6dda9ecf21b5c8": [
+      "pos\\nueva_compra.html",
+      "templates_sueltos\\nueva_compra.html"
+    ],
+    "dfbbc0161e539944f0993d515d4eb118": [
+      "pos\\pos_bootstrap.html",
+      "templates_sueltos\\pos_bootstrap.html"
+    ],
+    "28246ca16d80a65f4c3cfa8d5218d899": [
+      "pos\\proveedores.html",
+      "templates_sueltos\\proveedores.html"
+    ],
+    "a4fd15afa0826d40c24a5f189b8b331b": [
+      "pos\\proveedor_detalle.html",
+      "templates_sueltos\\proveedor_detalle.html"
+    ],
+    "af7d9cf0e852e42594c176c549fb2d45": [
+      "pos\\recepcion_mercaderia.html",
+      "templates_sueltos\\recepcion_mercaderia.html"
+    ],
+    "21262db69ffc5070832001b2260c4c30": [
+      "pos\\venta_modern.html",
+      "templates_sueltos\\venta_modern.html"
+    ],
+    "e36ea0b6ab8a6566bd08e88be3ac3ef5": [
+      "pos\\reports\\autorizaciones_saldo_negativo.html",
+      "templates_sueltos\\autorizaciones_saldo_negativo.html"
+    ],
+    "1ba781e86d46c39e3de7b4731b0c3af1": [
+      "pos\\reports\\index.html",
+      "templates_sueltos\\reportes_pos.html"
+    ],
+    "6ff33617814c960934c716c407db83de": [
+      "pos\\reports\\reportes.html",
+      "templates_sueltos\\reportes.html"
+    ],
+    "6993955cb32d050a2318fcf2e46ad974": [
+      "pos\\reports\\reporte_comisiones.html",
+      "templates_sueltos\\reporte_comisiones.html"
+    ],
+    "552e5673c4cd9d5a5a2ea9981b4f9862": [
+      "pos\\sales\\dashboard.html",
+      "templates_sueltos\\dashboard.html"
+    ],
+    "4a312811cf9748677cdc5340552eac2f": [
+      "pos\\sales\\new_sale.html",
+      "templates_sueltos\\nueva_venta.html"
+    ],
+    "9d998a82a615bee3c40b541d74f31e18": [
+      "pos\\sales\\ticket.html",
+      "templates_sueltos\\ticket.html"
+    ],
+    "6c5cf3317b41b02c3d0cdd8ec7b81d16": [
+      "pos\\security\\dashboard.html",
+      "templates_sueltos\\dashboard_seguridad.html"
+    ],
+    "7952cf451837c0aca6095276b52b1e26": [
+      "templates_sueltos\\venta.html",
+      "templates_sueltos\\venta_lista.html"
+    ]
+  },
+  "duplicados_nombre": {
+    "admin_autorizaciones.html": [
+      "admin\\admin_autorizaciones.html",
+      "portal\\admin_autorizaciones.html"
+    ],
+    "configurar_limites_masivo.html": [
+      "admin\\configurar_limites_masivo.html",
+      "portal\\configurar_limites_masivo.html"
+    ],
+    "main.html": [
+      "admin\\dashboard\\main.html",
+      "gestion\\dashboard\\main.html",
+      "portal\\dashboard\\main.html",
+      "pos\\dashboard\\main.html"
+    ],
+    "autorizar_saldo_negativo.html": [
+      "components\\modals\\autorizar_saldo_negativo.html",
+      "templates_sueltos\\autorizar_saldo_negativo.html"
+    ],
+    "almuerzos_dashboard.html": [
+      "gestion\\almuerzos_dashboard.html",
+      "templates_sueltos\\almuerzos_dashboard.html"
+    ],
+    "categoria_form.html": [
+      "gestion\\categoria_form.html",
+      "templates_sueltos\\categoria_form.html"
+    ],
+    "facturacion_dashboard.html": [
+      "gestion\\facturacion_dashboard.html",
+      "templates_sueltos\\facturacion_dashboard.html"
+    ],
+    "facturacion_listado.html": [
+      "gestion\\facturacion_listado.html",
+      "templates_sueltos\\facturacion_listado.html"
+    ],
+    "facturacion_mensual_almuerzos.html": [
+      "gestion\\facturacion_mensual_almuerzos.html",
+      "templates_sueltos\\facturacion_mensual_almuerzos.html"
+    ],
+    "lista_cargas_pendientes.html": [
+      "gestion\\lista_cargas_pendientes.html",
+      "templates_sueltos\\lista_cargas_pendientes.html"
+    ],
+    "lista_pagos_pendientes.html": [
+      "gestion\\lista_pagos_pendientes.html",
+      "templates_sueltos\\lista_pagos_pendientes.html"
+    ],
+    "menu_diario.html": [
+      "gestion\\menu_diario.html",
+      "templates_sueltos\\menu_diario.html"
+    ],
+    "planes_almuerzo.html": [
+      "gestion\\planes_almuerzo.html",
+      "templates_sueltos\\planes_almuerzo.html"
+    ],
+    "registro_consumo_almuerzo.html": [
+      "gestion\\registro_consumo_almuerzo.html",
+      "templates_sueltos\\registro_consumo_almuerzo.html"
+    ],
+    "suscripciones_almuerzo.html": [
+      "gestion\\suscripciones_almuerzo.html",
+      "templates_sueltos\\suscripciones_almuerzo.html"
+    ],
+    "validar_carga.html": [
+      "gestion\\validar_carga.html",
+      "templates_sueltos\\validar_carga.html"
+    ],
+    "validar_pago.html": [
+      "gestion\\validar_pago.html",
+      "templates_sueltos\\validar_pago.html"
+    ],
+    "validar_pagos.html": [
+      "gestion\\validar_pagos.html",
+      "templates_sueltos\\validar_pagos.html"
+    ],
+    "create.html": [
+      "gestion\\categories\\create.html",
+      "gestion\\products\\create.html"
+    ],
+    "edit.html": [
+      "gestion\\categories\\edit.html",
+      "gestion\\products\\edit.html"
+    ],
+    "list.html": [
+      "gestion\\categories\\list.html",
+      "gestion\\products\\list.html"
+    ],
+    "clientes_lista.html": [
+      "gestion\\clients\\clientes_lista.html",
+      "templates_sueltos\\clientes_lista.html"
+    ],
+    "clientes_list_paginado.html": [
+      "gestion\\clients\\clientes_list_paginado.html",
+      "templates_sueltos\\clientes_list_paginado.html"
+    ],
+    "crear_cliente.html": [
+      "gestion\\clients\\crear_cliente.html",
+      "pos\\crear_cliente.html",
+      "templates_sueltos\\crear_cliente.html"
+    ],
+    "lista.html": [
+      "gestion\\clients\\lista.html",
+      "templates_sueltos\\lista.html"
+    ],
+    "cambiar_contrasena_empleado.html": [
+      "gestion\\employees\\cambiar_contrasena_empleado.html",
+      "templates_sueltos\\cambiar_contrasena_empleado.html"
+    ],
+    "crear.html": [
+      "gestion\\employees\\crear.html",
+      "templates_sueltos\\crear.html"
+    ],
+    "gestionar.html": [
+      "gestion\\employees\\gestionar.html",
+      "templates_sueltos\\gestionar.html"
+    ],
+    "gestionar_empleados.html": [
+      "gestion\\employees\\gestionar_empleados.html",
+      "templates_sueltos\\gestionar_empleados.html"
+    ],
+    "perfil.html": [
+      "gestion\\employees\\perfil.html",
+      "portal\\profile\\perfil.html",
+      "templates_sueltos\\perfil.html"
+    ],
+    "perfil_empleado.html": [
+      "gestion\\employees\\perfil_empleado.html",
+      "templates_sueltos\\perfil_empleado.html"
+    ],
+    "ajuste_inventario.html": [
+      "portal\\ajuste_inventario.html",
+      "templates_sueltos\\ajuste_inventario.html"
+    ],
+    "alertas_inventario.html": [
+      "portal\\alertas_inventario.html",
+      "templates_sueltos\\alertas_inventario.html"
+    ],
+    "almuerzo.html": [
+      "portal\\almuerzo.html",
+      "pos\\lunch\\almuerzo.html"
+    ],
+    "almuerzo_cuentas_mensuales.html": [
+      "portal\\almuerzo_cuentas_mensuales.html",
+      "pos\\lunch\\almuerzo_cuentas_mensuales.html"
+    ],
+    "almuerzo_generar_cuentas.html": [
+      "portal\\almuerzo_generar_cuentas.html",
+      "pos\\lunch\\almuerzo_generar_cuentas.html"
+    ],
+    "almuerzo_pagar.html": [
+      "portal\\almuerzo_pagar.html",
+      "pos\\lunch\\almuerzo_pagar.html"
+    ],
+    "almuerzo_reportes.html": [
+      "portal\\almuerzo_reportes.html",
+      "pos\\lunch\\almuerzo_reportes.html"
+    ],
+    "almuerzo_reporte_diario.html": [
+      "portal\\almuerzo_reporte_diario.html",
+      "pos\\lunch\\almuerzo_reporte_diario.html"
+    ],
+    "almuerzo_reporte_estudiante.html": [
+      "portal\\almuerzo_reporte_estudiante.html",
+      "pos\\lunch\\almuerzo_reporte_estudiante.html"
+    ],
+    "almuerzo_reporte_mensual.html": [
+      "portal\\almuerzo_reporte_mensual.html",
+      "pos\\lunch\\almuerzo_reporte_mensual.html"
+    ],
+    "apertura_caja.html": [
+      "portal\\apertura_caja.html",
+      "pos\\cash_register\\apertura_caja.html"
+    ],
+    "arqueo_caja.html": [
+      "portal\\arqueo_caja.html",
+      "pos\\cash_register\\arqueo_caja.html"
+    ],
+    "cajas_dashboard.html": [
+      "portal\\cajas_dashboard.html",
+      "pos\\cash_register\\cajas_dashboard.html"
+    ],
+    "cierre_caja.html": [
+      "portal\\cierre_caja.html",
+      "pos\\cash_register\\cierre_caja.html"
+    ],
+    "configurar_precio.html": [
+      "portal\\configurar_precio.html",
+      "pos\\lunch\\configurar_precio.html"
+    ],
+    "cuenta_corriente.html": [
+      "portal\\cuenta_corriente.html",
+      "pos\\cuenta_corriente.html",
+      "templates_sueltos\\cuenta_corriente.html"
+    ],
+    "cuenta_corriente_unificada.html": [
+      "portal\\cuenta_corriente_unificada.html",
+      "pos\\cuenta_corriente_unificada.html",
+      "templates_sueltos\\cuenta_corriente_unificada.html"
+    ],
+    "dashboard.html": [
+      "portal\\dashboard.html",
+      "pos\\cash_register\\dashboard.html",
+      "pos\\commissions\\dashboard.html",
+      "pos\\inventory\\dashboard.html",
+      "pos\\purchases\\dashboard.html",
+      "pos\\sales\\dashboard.html",
+      "pos\\security\\dashboard.html",
+      "templates_sueltos\\dashboard.html"
+    ],
+    "inventario_dashboard.html": [
+      "portal\\inventario_dashboard.html",
+      "templates_sueltos\\inventario_dashboard.html"
+    ],
+    "inventario_productos.html": [
+      "portal\\inventario_productos.html",
+      "templates_sueltos\\inventario_productos.html"
+    ],
+    "recargas_lista.html": [
+      "portal\\recargas_lista.html",
+      "pos\\recharges\\recargas_lista.html"
+    ],
+    "ticket_almuerzo.html": [
+      "portal\\ticket_almuerzo.html",
+      "pos\\lunch\\ticket_almuerzo.html"
+    ],
+    "cargar_saldo.html": [
+      "portal\\payments\\cargar_saldo.html",
+      "templates_sueltos\\cargar_saldo.html"
+    ],
+    "estado_recarga.html": [
+      "portal\\payments\\estado_recarga.html",
+      "templates_sueltos\\estado_recarga.html"
+    ],
+    "notificaciones_saldo.html": [
+      "portal\\payments\\notificaciones_saldo.html",
+      "templates_sueltos\\notificaciones_saldo.html"
+    ],
+    "notificaciones_saldo_widget.html": [
+      "portal\\payments\\notificaciones_saldo_widget.html",
+      "templates_sueltos\\notificaciones_saldo_widget.html"
+    ],
+    "pagos.html": [
+      "portal\\payments\\pagos.html",
+      "templates_sueltos\\pagos.html"
+    ],
+    "pago_cancelado.html": [
+      "portal\\payments\\pago_cancelado.html",
+      "templates_sueltos\\pago_cancelado.html"
+    ],
+    "pago_exitoso.html": [
+      "portal\\payments\\pago_exitoso.html",
+      "templates_sueltos\\pago_exitoso.html"
+    ],
+    "recargar_tarjeta.html": [
+      "portal\\payments\\recargar_tarjeta.html",
+      "templates_sueltos\\recargar_tarjeta.html"
+    ],
+    "recargas.html": [
+      "portal\\payments\\recargas.html",
+      "templates_sueltos\\recargas.html"
+    ],
+    "terminos_saldo_negativo.html": [
+      "portal\\payments\\terminos_saldo_negativo.html",
+      "templates_sueltos\\terminos_saldo_negativo.html"
+    ],
+    "alertas_sistema.html": [
+      "pos\\alertas_sistema.html",
+      "templates_sueltos\\alertas_sistema.html"
+    ],
+    "alertas_tarjetas_saldo.html": [
+      "pos\\alertas_tarjetas_saldo.html",
+      "templates_sueltos\\alertas_tarjetas_saldo.html"
+    ],
+    "base_pos.html": [
+      "pos\\base_pos.html",
+      "templates_sueltos\\base_pos.html"
+    ],
+    "cc_detalle.html": [
+      "pos\\cc_detalle.html",
+      "templates_sueltos\\cc_detalle.html"
+    ],
+    "cc_estado_cuenta.html": [
+      "pos\\cc_estado_cuenta.html",
+      "templates_sueltos\\cc_estado_cuenta.html"
+    ],
+    "conciliacion_pagos.html": [
+      "pos\\conciliacion_pagos.html",
+      "templates_sueltos\\conciliacion_pagos.html"
+    ],
+    "configurar_tarifas.html": [
+      "pos\\configurar_tarifas.html",
+      "templates_sueltos\\configurar_tarifas.html"
+    ],
+    "deuda_proveedores.html": [
+      "pos\\deuda_proveedores.html",
+      "templates_sueltos\\deuda_proveedores.html"
+    ],
+    "gestionar_clientes.html": [
+      "pos\\gestionar_clientes.html",
+      "templates_sueltos\\gestionar_clientes.html"
+    ],
+    "gestionar_fotos.html": [
+      "pos\\gestionar_fotos.html",
+      "templates_sueltos\\gestionar_fotos.html"
+    ],
+    "gestionar_grados.html": [
+      "pos\\gestionar_grados.html",
+      "templates_sueltos\\gestionar_grados.html"
+    ],
+    "historial.html": [
+      "pos\\historial.html",
+      "templates_sueltos\\historial.html"
+    ],
+    "historial_grados.html": [
+      "pos\\historial_grados.html",
+      "templates_sueltos\\historial_grados.html"
+    ],
+    "historial_recargas.html": [
+      "pos\\historial_recargas.html",
+      "templates_sueltos\\historial_recargas.html"
+    ],
+    "logs_autorizaciones.html": [
+      "pos\\logs_autorizaciones.html",
+      "templates_sueltos\\logs_autorizaciones.html"
+    ],
+    "nueva_compra.html": [
+      "pos\\nueva_compra.html",
+      "templates_sueltos\\nueva_compra.html"
+    ],
+    "pos_bootstrap.html": [
+      "pos\\pos_bootstrap.html",
+      "templates_sueltos\\pos_bootstrap.html"
+    ],
+    "proveedores.html": [
+      "pos\\proveedores.html",
+      "templates_sueltos\\proveedores.html"
+    ],
+    "proveedor_detalle.html": [
+      "pos\\proveedor_detalle.html",
+      "templates_sueltos\\proveedor_detalle.html"
+    ],
+    "recepcion_mercaderia.html": [
+      "pos\\recepcion_mercaderia.html",
+      "templates_sueltos\\recepcion_mercaderia.html"
+    ],
+    "venta_modern.html": [
+      "pos\\venta_modern.html",
+      "templates_sueltos\\venta_modern.html"
+    ],
+    "index.html": [
+      "pos\\accounts\\index.html",
+      "pos\\recharges\\index.html",
+      "pos\\reports\\index.html"
+    ],
+    "autorizaciones_saldo_negativo.html": [
+      "pos\\reports\\autorizaciones_saldo_negativo.html",
+      "templates_sueltos\\autorizaciones_saldo_negativo.html"
+    ],
+    "reportes.html": [
+      "pos\\reports\\reportes.html",
+      "templates_sueltos\\reportes.html"
+    ],
+    "reporte_comisiones.html": [
+      "pos\\reports\\reporte_comisiones.html",
+      "templates_sueltos\\reporte_comisiones.html"
+    ],
+    "ticket.html": [
+      "pos\\sales\\ticket.html",
+      "templates_sueltos\\ticket.html"
+    ]
+  },
+  "estadisticas": {
+    "total_templates": 168,
+    "grupos_duplicados_exactos": 104,
+    "archivos_duplicados": 106,
+    "espacio_desperdiciado_bytes": 1168370,
+    "espacio_desperdiciado_kb": 1140.99
+  }
+}

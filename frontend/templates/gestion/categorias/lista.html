@@ -1,0 +1,482 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Categorías - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="listaCategorias()" x-init="init()" class="space-y-6">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-tags mr-3 text-secondary"></i>
+                Categorías de Productos
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Gestión de categorías y clasificación de productos
+            </p>
+        </div>
+        
+        <button @click="abrirModalCrear()" class="btn btn-secondary btn-lg">
+            <i class="fas fa-plus mr-2"></i>
+            Nueva Categoría
+        </button>
+    </div>
+    
+    <!-- Estadísticas -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-tags text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Total Categorías</p>
+            <p class="text-3xl font-bold" x-text="categorias.length"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-box text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Total Productos</p>
+            <p class="text-3xl font-bold" x-text="stats.total_productos"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-check-circle text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Categorías Activas</p>
+            <p class="text-3xl font-bold" x-text="stats.activas"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-warning to-yellow-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-exclamation-triangle text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Sin Productos</p>
+            <p class="text-3xl font-bold" x-text="stats.sin_productos"></p>
+        </div>
+    </div>
+    
+    <!-- Grid de Categorías -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        
+        <!-- Controles -->
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex gap-2">
+                <button @click="ordenar = 'nombre'; cargarCategorias()" 
+                        class="btn btn-sm"
+                        :class="ordenar === 'nombre' ? 'btn-secondary' : 'btn-ghost'">
+                    <i class="fas fa-sort-alpha-down mr-1"></i>
+                    Nombre
+                </button>
+                <button @click="ordenar = 'productos'; cargarCategorias()" 
+                        class="btn btn-sm"
+                        :class="ordenar === 'productos' ? 'btn-secondary' : 'btn-ghost'">
+                    <i class="fas fa-sort-numeric-down mr-1"></i>
+                    Productos
+                </button>
+            </div>
+            
+            <div class="form-control">
+                <label class="label cursor-pointer gap-2">
+                    <span class="label-text">Solo activas</span>
+                    <input type="checkbox" 
+                           x-model="soloActivas" 
+                           @change="cargarCategorias()"
+                           class="checkbox checkbox-secondary checkbox-sm">
+                </label>
+            </div>
+        </div>
+        
+        <!-- Loading -->
+        <template x-if="cargando">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <template x-for="i in 6" :key="i">
+                    <div class="skeleton h-48 w-full"></div>
+                </template>
+            </div>
+        </template>
+        
+        <!-- Categorías Grid -->
+        <template x-if="!cargando && categorias.length > 0">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <template x-for="categoria in categorias" :key="categoria.id">
+                    <div class="card bg-base-100 border-2 hover:shadow-xl transition-all"
+                         :class="categoria.activa ? 'border-secondary' : 'border-gray-300 opacity-60'">
+                        <div class="card-body">
+                            <!-- Header con Badge -->
+                            <div class="flex items-start justify-between mb-2">
+                                <h3 class="card-title text-lg" x-text="categoria.nombre"></h3>
+                                <span class="badge badge-sm" 
+                                      :class="categoria.activa ? 'badge-success' : 'badge-error'">
+                                    <span x-text="categoria.activa ? 'Activa' : 'Inactiva'"></span>
+                                </span>
+                            </div>
+                            
+                            <!-- Descripción -->
+                            <template x-if="categoria.descripcion">
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-3" x-text="categoria.descripcion"></p>
+                            </template>
+                            <template x-if="!categoria.descripcion">
+                                <p class="text-sm text-gray-400 italic mb-3">Sin descripción</p>
+                            </template>
+                            
+                            <!-- Stats -->
+                            <div class="stats stats-vertical shadow">
+                                <div class="stat py-2">
+                                    <div class="stat-figure text-secondary">
+                                        <i class="fas fa-box text-2xl"></i>
+                                    </div>
+                                    <div class="stat-title text-xs">Productos</div>
+                                    <div class="stat-value text-2xl" x-text="categoria.total_productos"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Acciones -->
+                            <div class="card-actions justify-end mt-4">
+                                <button @click="editarCategoria(categoria)" class="btn btn-sm btn-secondary">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button @click="toggleEstado(categoria)" 
+                                        class="btn btn-sm"
+                                        :class="categoria.activa ? 'btn-warning' : 'btn-success'">
+                                    <i class="fas" :class="categoria.activa ? 'fa-ban' : 'fa-check'"></i>
+                                </button>
+                                <button @click="eliminarCategoria(categoria)" 
+                                        class="btn btn-sm btn-error"
+                                        :disabled="categoria.total_productos > 0">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+        
+        <!-- Empty State -->
+        <template x-if="!cargando && categorias.length === 0">
+            <div class="text-center py-16">
+                <i class="fas fa-tags text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
+                <p class="text-xl text-gray-500 dark:text-gray-400 mb-2">No hay categorías registradas</p>
+                <p class="text-gray-400 dark:text-gray-500 mb-6">Crea tu primera categoría para organizar los productos</p>
+                <button @click="abrirModalCrear()" class="btn btn-secondary">
+                    <i class="fas fa-plus mr-2"></i>
+                    Crear Primera Categoría
+                </button>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Modal Crear/Editar -->
+    <template x-if="modalAbierto">
+        <div class="modal modal-open">
+            <div class="modal-box">
+                <h3 class="font-bold text-lg mb-4">
+                    <i class="fas mr-2" :class="categoriaEditando ? 'fa-edit' : 'fa-plus-circle'"></i>
+                    <span x-text="categoriaEditando ? 'Editar Categoría' : 'Nueva Categoría'"></span>
+                </h3>
+                
+                <div class="space-y-4">
+                    
+                    <!-- Nombre -->
+                    <div>
+                        <label class="label">
+                            <span class="label-text font-semibold">
+                                Nombre <span class="text-error">*</span>
+                            </span>
+                        </label>
+                        <input type="text" 
+                               x-model="form.nombre"
+                               placeholder="Ej: Bebidas"
+                               class="input input-bordered w-full"
+                               :class="{'input-error': errores.nombre}">
+                        <template x-if="errores.nombre">
+                            <p class="text-error text-sm mt-1" x-text="errores.nombre"></p>
+                        </template>
+                    </div>
+                    
+                    <!-- Descripción -->
+                    <div>
+                        <label class="label">
+                            <span class="label-text font-semibold">Descripción</span>
+                        </label>
+                        <textarea x-model="form.descripcion"
+                                  placeholder="Descripción de la categoría..."
+                                  class="textarea textarea-bordered w-full"
+                                  rows="3"></textarea>
+                    </div>
+                    
+                    <!-- Orden -->
+                    <div>
+                        <label class="label">
+                            <span class="label-text font-semibold">Orden de visualización</span>
+                        </label>
+                        <input type="number" 
+                               x-model="form.orden"
+                               min="0"
+                               step="1"
+                               placeholder="0"
+                               class="input input-bordered w-full">
+                        <p class="text-sm text-gray-500 mt-1">
+                            Menor número aparece primero
+                        </p>
+                    </div>
+                    
+                    <!-- Activa -->
+                    <div>
+                        <label class="label cursor-pointer justify-start gap-3">
+                            <input type="checkbox" 
+                                   x-model="form.activa" 
+                                   class="checkbox checkbox-secondary">
+                            <div>
+                                <span class="label-text font-semibold">Categoría Activa</span>
+                                <p class="text-sm text-gray-500">
+                                    Solo las categorías activas aparecen en el POS
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="modal-action">
+                    <button @click="cerrarModal()" class="btn btn-ghost">
+                        Cancelar
+                    </button>
+                    <button @click="guardarCategoria()" 
+                            :disabled="guardando"
+                            class="btn btn-secondary">
+                        <template x-if="!guardando">
+                            <span>
+                                <i class="fas fa-save mr-2"></i>
+                                Guardar
+                            </span>
+                        </template>
+                        <template x-if="guardando">
+                            <span class="loading loading-spinner"></span>
+                        </template>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function listaCategorias() {
+    return {
+        cargando: true,
+        categorias: [],
+        ordenar: 'nombre',
+        soloActivas: false,
+        stats: {
+            total_productos: 0,
+            activas: 0,
+            sin_productos: 0
+        },
+        modalAbierto: false,
+        categoriaEditando: null,
+        guardando: false,
+        form: {
+            nombre: '',
+            descripcion: '',
+            orden: 0,
+            activa: true
+        },
+        errores: {},
+        
+        async init() {
+            await this.cargarCategorias();
+        },
+        
+        async cargarCategorias() {
+            this.cargando = true;
+            
+            try {
+                const params = new URLSearchParams({
+                    ordenar: this.ordenar,
+                    solo_activas: this.soloActivas
+                });
+                
+                const response = await fetch(`/api/categorias/?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.categorias = data.categorias || [];
+                    this.stats = data.stats || this.stats;
+                }
+            } catch (error) {
+                console.error('Error al cargar categorías:', error);
+                gestionHelpers.notify('Error al cargar categorías', 'error');
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        abrirModalCrear() {
+            this.categoriaEditando = null;
+            this.form = {
+                nombre: '',
+                descripcion: '',
+                orden: 0,
+                activa: true
+            };
+            this.errores = {};
+            this.modalAbierto = true;
+        },
+        
+        editarCategoria(categoria) {
+            this.categoriaEditando = categoria;
+            this.form = {
+                nombre: categoria.nombre,
+                descripcion: categoria.descripcion || '',
+                orden: categoria.orden || 0,
+                activa: categoria.activa
+            };
+            this.errores = {};
+            this.modalAbierto = true;
+        },
+        
+        cerrarModal() {
+            this.modalAbierto = false;
+            this.categoriaEditando = null;
+            this.form = {
+                nombre: '',
+                descripcion: '',
+                orden: 0,
+                activa: true
+            };
+            this.errores = {};
+        },
+        
+        validarFormulario() {
+            this.errores = {};
+            
+            if (!this.form.nombre || this.form.nombre.trim().length < 2) {
+                this.errores.nombre = 'El nombre es requerido (mínimo 2 caracteres)';
+            }
+            
+            return Object.keys(this.errores).length === 0;
+        },
+        
+        async guardarCategoria() {
+            if (!this.validarFormulario()) {
+                return;
+            }
+            
+            this.guardando = true;
+            
+            try {
+                const url = this.categoriaEditando 
+                    ? `/api/categorias/${this.categoriaEditando.id}/` 
+                    : '/api/categorias/';
+                
+                const method = this.categoriaEditando ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCsrfToken()
+                    },
+                    body: JSON.stringify(this.form)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify(
+                        this.categoriaEditando ? 'Categoría actualizada' : 'Categoría creada',
+                        'success'
+                    );
+                    this.cerrarModal();
+                    await this.cargarCategorias();
+                } else {
+                    gestionHelpers.notify(data.message || 'Error al guardar categoría', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                gestionHelpers.notify('Error al guardar categoría', 'error');
+            } finally {
+                this.guardando = false;
+            }
+        },
+        
+        async toggleEstado(categoria) {
+            const accion = categoria.activa ? 'desactivar' : 'activar';
+            const confirmado = await gestionHelpers.confirm(
+                `¿Estás seguro de ${accion} la categoría "${categoria.nombre}"?`,
+                `${accion.charAt(0).toUpperCase() + accion.slice(1)} Categoría`
+            );
+            
+            if (confirmado) {
+                try {
+                    const response = await fetch(`/api/categorias/${categoria.id}/toggle-estado/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.getCsrfToken()
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        gestionHelpers.notify(`Categoría ${accion}da`, 'success');
+                        await this.cargarCategorias();
+                    } else {
+                        gestionHelpers.notify(data.message || 'Error al cambiar estado', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    gestionHelpers.notify('Error al cambiar estado', 'error');
+                }
+            }
+        },
+        
+        async eliminarCategoria(categoria) {
+            if (categoria.total_productos > 0) {
+                gestionHelpers.notify('No se puede eliminar una categoría con productos asignados', 'warning');
+                return;
+            }
+            
+            const confirmado = await gestionHelpers.confirm(
+                `¿Estás seguro de eliminar la categoría "${categoria.nombre}"?`,
+                'Eliminar Categoría'
+            );
+            
+            if (confirmado) {
+                try {
+                    const response = await fetch(`/api/categorias/${categoria.id}/`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRFToken': this.getCsrfToken()
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        gestionHelpers.notify('Categoría eliminada', 'success');
+                        await this.cargarCategorias();
+                    } else {
+                        gestionHelpers.notify(data.message || 'Error al eliminar categoría', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    gestionHelpers.notify('Error al eliminar categoría', 'error');
+                }
+            }
+        },
+        
+        getCsrfToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        }
+    }
+}
+</script>
+{% endblock %}

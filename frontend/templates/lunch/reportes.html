@@ -1,0 +1,260 @@
+{% extends "base_pos.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Reportes de Almuerzos - MetrePay{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .chart-container {
+        @apply bg-white rounded-xl shadow-lg p-6;
+    }
+    
+    .metric-card {
+        @apply bg-gradient-to-br rounded-xl shadow-lg p-6 text-white transition-all duration-300 hover:scale-105;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 space-y-8">
+    
+    <!-- Header -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-4xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent flex items-center gap-3">
+                    <i class="fas fa-chart-pie text-green-600"></i>
+                    Reportes de Almuerzos
+                </h1>
+                <p class="text-gray-600 mt-2">Análisis detallado del sistema de almuerzos</p>
+            </div>
+            <div class="flex gap-2">
+                <a href="{% url 'pos:almuerzos_dashboard_view' %}" class="btn btn-outline gap-2">
+                    <i class="fas fa-arrow-left"></i>
+                    Volver
+                </a>
+                <button class="btn btn-error gap-2">
+                    <i class="fas fa-file-pdf"></i>
+                    Exportar PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros de Período -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+        <h2 class="text-2xl font-bold mb-6">Período de Análisis</h2>
+        
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Desde</span>
+                </label>
+                <input type="date" name="fecha_desde" value="{{ fecha_desde }}" class="input input-bordered">
+            </div>
+
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Hasta</span>
+                </label>
+                <input type="date" name="fecha_hasta" value="{{ fecha_hasta }}" class="input input-bordered">
+            </div>
+
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">&nbsp;</span>
+                </label>
+                <button type="submit" class="btn btn-primary w-full">
+                    <i class="fas fa-search mr-2"></i>
+                    Generar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Métricas Principales -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="metric-card from-green-500 to-green-600">
+            <p class="text-sm opacity-90 mb-1">Consumos Totales</p>
+            <p class="text-4xl font-bold">{{ consumos_reales|default:0 }}</p>
+            <p class="text-sm opacity-80 mt-2">almuerzos servidos</p>
+        </div>
+
+        <div class="metric-card from-blue-500 to-blue-600">
+            <p class="text-sm opacity-90 mb-1">Suscripciones Activas</p>
+            <p class="text-4xl font-bold">{{ suscripciones_activas|default:0 }}</p>
+            <p class="text-sm opacity-80 mt-2">estudiantes suscritos</p>
+        </div>
+
+        <div class="metric-card from-purple-500 to-purple-600">
+            <p class="text-sm opacity-90 mb-1">Ingresos Totales</p>
+            <p class="text-3xl font-bold">{{ total_pagado|floatformat:0|intcomma }} ₲</p>
+            <p class="text-sm opacity-80 mt-2">en el período</p>
+        </div>
+
+        <div class="metric-card from-orange-500 to-orange-600">
+            <p class="text-sm opacity-90 mb-1">Asistencia</p>
+            <p class="text-4xl font-bold">{{ tasa_asistencia|floatformat:1 }}%</p>
+            <p class="text-sm opacity-80 mt-2">tasa promedio</p>
+        </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Consumos por Día -->
+        <div class="chart-container">
+            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fas fa-chart-line text-green-600"></i>
+                Consumos Diarios
+            </h3>
+            
+            <div class="space-y-3">
+                {% for dia in consumos_por_dia %}
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm font-semibold">{{ dia.fecha_consumo|date:"d/m/Y" }}</span>
+                            <span class="badge badge-primary">{{ dia.total }}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-4">
+                            <div class="bg-gradient-to-r from-green-500 to-teal-500 h-4 rounded-full transition-all"
+                                 style="width: {% if consumos_por_dia %}{% widthratio dia.total consumos_por_dia.0.total 100 %}%{% else %}0%{% endif %}"></div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="text-center text-gray-500 py-8">No hay datos de consumo en este período</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Suscripciones por Plan -->
+        <div class="chart-container">
+            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fas fa-clipboard-list text-orange-600"></i>
+                Distribución por Plan
+            </h3>
+            
+            <div class="space-y-4">
+                {% for plan in ingresos_por_plan %}
+                    <div class="p-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg border border-orange-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-bold text-gray-800">{{ plan.id_plan_almuerzo__nombre_plan }}</span>
+                            <span class="badge badge-lg badge-primary">{{ plan.cantidad }}</span>
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            Ingresos: <span class="font-bold text-orange-600">{{ plan.total_ingresos|floatformat:0|intcomma }} ₲</span>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="text-center text-gray-500 py-8">No hay suscripciones en este período</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Consumidores -->
+    {% if top_consumidores %}
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <h3 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <i class="fas fa-trophy text-yellow-500"></i>
+                Top 10 Consumidores
+            </h3>
+
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr>
+                            <th>Posición</th>
+                            <th>Estudiante</th>
+                            <th>Total Consumos</th>
+                            <th>Asistencia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for estudiante in top_consumidores %}
+                            <tr>
+                                <td>
+                                    {% if forloop.counter == 1 %}
+                                        <span class="text-3xl">🥇</span>
+                                    {% elif forloop.counter == 2 %}
+                                        <span class="text-3xl">🥈</span>
+                                    {% elif forloop.counter == 3 %}
+                                        <span class="text-3xl">🥉</span>
+                                    {% else %}
+                                        <span class="font-bold text-gray-600">#{{ forloop.counter }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-3">
+                                        <div class="avatar placeholder">
+                                            <div class="bg-primary text-white rounded-full w-10">
+                                                <span class="text-sm">{{ estudiante.id_hijo__nombre|first }}{{ estudiante.id_hijo__apellido|first }}</span>
+                                            </div>
+                                        </div>
+                                        <span class="font-semibold">{{ estudiante.id_hijo__nombre }} {{ estudiante.id_hijo__apellido }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge badge-lg badge-success">{{ estudiante.total_consumos }}</span>
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-32 bg-gray-200 rounded-full h-3">
+                                            <div class="bg-green-500 h-3 rounded-full" 
+                                                 style="width: {{ estudiante.porcentaje_asistencia|default:0 }}%"></div>
+                                        </div>
+                                        <span class="text-sm font-semibold">{{ estudiante.porcentaje_asistencia|default:0|floatformat:0 }}%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Análisis de Ingresos -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+        <h3 class="text-2xl font-bold mb-6 flex items-center gap-3">
+            <i class="fas fa-money-bill-wave text-green-600"></i>
+            Análisis de Ingresos
+        </h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="border-2 border-green-200 rounded-lg p-6 bg-green-50">
+                <p class="text-sm text-gray-600 mb-2">Ingresos Realizados</p>
+                <p class="text-3xl font-bold text-green-700">{{ total_pagado|floatformat:0|intcomma }} ₲</p>
+            </div>
+
+            <div class="border-2 border-blue-200 rounded-lg p-6 bg-blue-50">
+                <p class="text-sm text-gray-600 mb-2">Ingresos Proyectados</p>
+                <p class="text-3xl font-bold text-blue-700">
+                    {% widthratio total_pagado 1 1.2 as proyectado %}
+                    {{ proyectado|floatformat:0|intcomma }} ₲
+                </p>
+            </div>
+
+            <div class="border-2 border-purple-200 rounded-lg p-6 bg-purple-50">
+                <p class="text-sm text-gray-600 mb-2">Promedio por Día</p>
+                <p class="text-3xl font-bold text-purple-700">
+                    {% if dias_periodo %}
+                        {% widthratio total_pagado dias_periodo 1 as promedio_dia %}
+                        {{ promedio_dia|floatformat:0|intcomma }} ₲
+                    {% else %}
+                        0 ₲
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+    // Código para gráficos si se desea agregar Chart.js
+    console.log('Reportes de almuerzos cargados');
+</script>
+{% endblock %}

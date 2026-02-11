@@ -1,0 +1,713 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Empleados - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="listaEmpleados()" x-init="cargarEmpleados()" class="container mx-auto px-4 py-8">
+    
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-users mr-3 text-secondary"></i>
+                Gestión de Empleados
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Administra el personal de la cantina
+            </p>
+        </div>
+        
+        <button @click="abrirModalCrear()" 
+                class="btn btn-secondary text-white gap-2">
+            <i class="fas fa-user-plus"></i>
+            Nuevo Empleado
+        </button>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-users text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Total Empleados</p>
+            <p class="text-3xl font-bold" x-text="stats.total || 0"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-user-check text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Activos</p>
+            <p class="text-3xl font-bold" x-text="stats.activos || 0"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-user-tie text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Administradores</p>
+            <p class="text-3xl font-bold" x-text="stats.administradores || 0"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-cash-register text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Cajeros</p>
+            <p class="text-3xl font-bold" x-text="stats.cajeros || 0"></p>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="form-control md:col-span-2">
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-search mr-2"></i>Buscar
+                    </span>
+                </label>
+                <input type="text" 
+                       x-model="filtros.busqueda" 
+                       @input.debounce.300ms="buscarEmpleados()"
+                       placeholder="Buscar por nombre, cédula o email..."
+                       class="input input-bordered w-full">
+            </div>
+            
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-user-tag mr-2"></i>Rol
+                    </span>
+                </label>
+                <select x-model="filtros.rol" 
+                        @change="buscarEmpleados()"
+                        class="select select-bordered">
+                    <option value="">Todos los roles</option>
+                    <option value="admin">Administrador</option>
+                    <option value="cajero">Cajero</option>
+                    <option value="supervisor">Supervisor</option>
+                    <option value="gerente">Gerente</option>
+                </select>
+            </div>
+            
+            <div class="form-control">
+                <label class="label cursor-pointer justify-start gap-3">
+                    <input type="checkbox" 
+                           x-model="filtros.solo_activos" 
+                           @change="buscarEmpleados()"
+                           class="checkbox checkbox-secondary">
+                    <span class="label-text">
+                        <i class="fas fa-filter mr-2"></i>Solo activos
+                    </span>
+                </label>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tabla de Empleados -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="table table-zebra w-full">
+                <thead>
+                    <tr class="bg-gray-100 dark:bg-gray-700">
+                        <th class="w-12">#</th>
+                        <th>Empleado</th>
+                        <th class="hidden lg:table-cell">Contacto</th>
+                        <th>Rol</th>
+                        <th class="hidden md:table-cell text-center">Ventas Hoy</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-if="empleados.length === 0 && !cargando">
+                        <tr>
+                            <td colspan="7" class="text-center py-12">
+                                <div class="flex flex-col items-center gap-4">
+                                    <i class="fas fa-users-slash text-6xl text-gray-300"></i>
+                                    <p class="text-gray-500 text-lg">No se encontraron empleados</p>
+                                    <button @click="abrirModalCrear()" 
+                                            class="btn btn-secondary btn-sm">
+                                        <i class="fas fa-user-plus mr-2"></i>
+                                        Crear Primer Empleado
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    
+                    <template x-if="cargando">
+                        <tr>
+                            <td colspan="7" class="text-center py-12">
+                                <span class="loading loading-spinner loading-lg text-secondary"></span>
+                                <p class="text-gray-500 mt-4">Cargando empleados...</p>
+                            </td>
+                        </tr>
+                    </template>
+                    
+                    <template x-for="(empleado, index) in empleados" :key="empleado.id">
+                        <tr class="hover">
+                            <td x-text="index + 1"></td>
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <div class="avatar">
+                                        <div class="w-12 h-12 rounded-full ring ring-secondary ring-offset-2">
+                                            <template x-if="empleado.foto">
+                                                <img :src="empleado.foto" :alt="empleado.nombre_completo">
+                                            </template>
+                                            <template x-if="!empleado.foto">
+                                                <div class="w-full h-full bg-gradient-to-br from-secondary to-teal-600 flex items-center justify-center text-white font-bold text-lg">
+                                                    <span x-text="empleado.nombre_completo.charAt(0)"></span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold" x-text="empleado.nombre_completo"></p>
+                                        <p class="text-xs text-gray-500" x-text="'CI: ' + (empleado.cedula || '-')"></p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="hidden lg:table-cell">
+                                <div class="text-sm">
+                                    <p class="flex items-center gap-2">
+                                        <i class="fas fa-envelope text-gray-400"></i>
+                                        <span x-text="empleado.email || '-'"></span>
+                                    </p>
+                                    <p class="flex items-center gap-2 mt-1">
+                                        <i class="fas fa-phone text-gray-400"></i>
+                                        <span x-text="empleado.telefono || '-'"></span>
+                                    </p>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="badge badge-lg" 
+                                     :class="{
+                                         'badge-primary': empleado.rol === 'admin',
+                                         'badge-secondary': empleado.rol === 'cajero',
+                                         'badge-accent': empleado.rol === 'supervisor',
+                                         'badge-info': empleado.rol === 'gerente'
+                                     }">
+                                    <i class="fas mr-1" 
+                                       :class="{
+                                           'fa-user-shield': empleado.rol === 'admin',
+                                           'fa-cash-register': empleado.rol === 'cajero',
+                                           'fa-user-tie': empleado.rol === 'supervisor',
+                                           'fa-briefcase': empleado.rol === 'gerente'
+                                       }"></i>
+                                    <span x-text="empleado.rol_display || empleado.rol"></span>
+                                </div>
+                            </td>
+                            <td class="hidden md:table-cell text-center">
+                                <div class="tooltip" :data-tip="`${empleado.ventas_hoy_monto || 0} Gs`">
+                                    <div class="badge badge-success badge-lg">
+                                        <i class="fas fa-receipt mr-1"></i>
+                                        <span x-text="empleado.ventas_hoy_cantidad || 0"></span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <div class="badge" 
+                                     :class="empleado.activo ? 'badge-success' : 'badge-error'">
+                                    <i class="fas mr-1" :class="empleado.activo ? 'fa-check-circle' : 'fa-times-circle'"></i>
+                                    <span x-text="empleado.activo ? 'Activo' : 'Inactivo'"></span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="flex justify-end gap-2">
+                                    <button @click="verPerfil(empleado)" 
+                                            class="btn btn-ghost btn-sm"
+                                            title="Ver perfil">
+                                        <i class="fas fa-user"></i>
+                                    </button>
+                                    <button @click="editarEmpleado(empleado)" 
+                                            class="btn btn-ghost btn-sm text-secondary"
+                                            title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button @click="toggleEstado(empleado)" 
+                                            class="btn btn-ghost btn-sm"
+                                            :class="empleado.activo ? 'text-warning' : 'text-success'"
+                                            :title="empleado.activo ? 'Desactivar' : 'Activar'">
+                                        <i class="fas" :class="empleado.activo ? 'fa-ban' : 'fa-check'"></i>
+                                    </button>
+                                    <button @click="resetearPassword(empleado)" 
+                                            class="btn btn-ghost btn-sm text-info"
+                                            title="Resetear contraseña">
+                                        <i class="fas fa-key"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginación -->
+        <template x-if="totalPaginas > 1">
+            <div class="flex justify-center items-center gap-2 p-4 border-t">
+                <button @click="cambiarPagina(paginaActual - 1)" 
+                        :disabled="paginaActual === 1"
+                        class="btn btn-sm">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                
+                <span class="text-sm text-gray-600">
+                    Página <span x-text="paginaActual"></span> de <span x-text="totalPaginas"></span>
+                </span>
+                
+                <button @click="cambiarPagina(paginaActual + 1)" 
+                        :disabled="paginaActual === totalPaginas"
+                        class="btn btn-sm">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Modal Crear/Editar -->
+    <div x-show="modalAbierto" 
+         x-transition
+         class="modal" 
+         :class="{'modal-open': modalAbierto}">
+        <div class="modal-box max-w-3xl">
+            <h3 class="font-bold text-lg mb-4">
+                <i class="fas mr-2" :class="modoEdicion ? 'fa-edit text-secondary' : 'fa-user-plus text-success'"></i>
+                <span x-text="modoEdicion ? 'Editar Empleado' : 'Nuevo Empleado'"></span>
+            </h3>
+            
+            <form @submit.prevent="guardarEmpleado()">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <!-- Nombres -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Nombres *</span>
+                        </label>
+                        <input type="text" 
+                               x-model="formEmpleado.nombres" 
+                               placeholder="Juan Carlos"
+                               class="input input-bordered"
+                               required
+                               minlength="2"
+                               maxlength="100">
+                    </div>
+                    
+                    <!-- Apellidos -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Apellidos *</span>
+                        </label>
+                        <input type="text" 
+                               x-model="formEmpleado.apellidos" 
+                               placeholder="González López"
+                               class="input input-bordered"
+                               required
+                               minlength="2"
+                               maxlength="100">
+                    </div>
+                    
+                    <!-- Cédula -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Cédula *</span>
+                        </label>
+                        <input type="text" 
+                               x-model="formEmpleado.cedula" 
+                               placeholder="1234567"
+                               class="input input-bordered font-mono"
+                               required
+                               pattern="[0-9]{6,8}"
+                               maxlength="8">
+                    </div>
+                    
+                    <!-- Fecha de Nacimiento -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Fecha de Nacimiento</span>
+                        </label>
+                        <input type="date" 
+                               x-model="formEmpleado.fecha_nacimiento" 
+                               class="input input-bordered">
+                    </div>
+                    
+                    <!-- Email -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Email *</span>
+                        </label>
+                        <input type="email" 
+                               x-model="formEmpleado.email" 
+                               placeholder="empleado@cantina.com"
+                               class="input input-bordered"
+                               required>
+                    </div>
+                    
+                    <!-- Teléfono -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Teléfono</span>
+                        </label>
+                        <input type="tel" 
+                               x-model="formEmpleado.telefono" 
+                               placeholder="0981123456"
+                               class="input input-bordered"
+                               pattern="[0-9]{10}"
+                               maxlength="10">
+                    </div>
+                    
+                    <!-- Rol -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Rol *</span>
+                        </label>
+                        <select x-model="formEmpleado.rol" 
+                                class="select select-bordered"
+                                required>
+                            <option value="">Seleccionar rol...</option>
+                            <option value="admin">Administrador</option>
+                            <option value="cajero">Cajero</option>
+                            <option value="supervisor">Supervisor</option>
+                            <option value="gerente">Gerente</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Dirección -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Dirección</span>
+                        </label>
+                        <input type="text" 
+                               x-model="formEmpleado.direccion" 
+                               placeholder="Calle Principal 123"
+                               class="input input-bordered"
+                               maxlength="200">
+                    </div>
+                    
+                    <!-- Salario -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Salario Mensual (Gs)</span>
+                        </label>
+                        <input type="number" 
+                               x-model="formEmpleado.salario" 
+                               placeholder="2500000"
+                               class="input input-bordered"
+                               min="0"
+                               step="10000">
+                    </div>
+                    
+                    <!-- Fecha de Ingreso -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Fecha de Ingreso</span>
+                        </label>
+                        <input type="date" 
+                               x-model="formEmpleado.fecha_ingreso" 
+                               class="input input-bordered">
+                    </div>
+                    
+                    <!-- Usuario (solo creación) -->
+                    <template x-if="!modoEdicion">
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Usuario (Login) *</span>
+                            </label>
+                            <input type="text" 
+                                   x-model="formEmpleado.username" 
+                                   placeholder="jgonzalez"
+                                   class="input input-bordered"
+                                   required
+                                   minlength="4"
+                                   maxlength="30">
+                        </div>
+                    </template>
+                    
+                    <!-- Contraseña (solo creación) -->
+                    <template x-if="!modoEdicion">
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Contraseña *</span>
+                            </label>
+                            <input type="password" 
+                                   x-model="formEmpleado.password" 
+                                   placeholder="••••••••"
+                                   class="input input-bordered"
+                                   required
+                                   minlength="8">
+                            <label class="label">
+                                <span class="label-text-alt text-gray-500">Mínimo 8 caracteres</span>
+                            </label>
+                        </div>
+                    </template>
+                    
+                    <!-- Notas -->
+                    <div class="form-control md:col-span-2">
+                        <label class="label">
+                            <span class="label-text">Notas / Observaciones</span>
+                        </label>
+                        <textarea x-model="formEmpleado.notas" 
+                                  placeholder="Información adicional sobre el empleado..."
+                                  class="textarea textarea-bordered h-20"
+                                  maxlength="500"></textarea>
+                    </div>
+                    
+                    <!-- Activo -->
+                    <div class="form-control md:col-span-2">
+                        <label class="label cursor-pointer justify-start gap-3">
+                            <input type="checkbox" 
+                                   x-model="formEmpleado.activo" 
+                                   class="checkbox checkbox-secondary">
+                            <span class="label-text">
+                                <i class="fas fa-check-circle mr-2"></i>
+                                Empleado activo (puede iniciar sesión)
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="modal-action">
+                    <button type="button" 
+                            @click="cerrarModal()" 
+                            class="btn btn-ghost">
+                        <i class="fas fa-times mr-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="submit" 
+                            class="btn btn-secondary text-white"
+                            :class="{'loading': guardando}"
+                            :disabled="guardando">
+                        <i class="fas fa-save mr-2" x-show="!guardando"></i>
+                        <span x-text="guardando ? 'Guardando...' : 'Guardar'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="modal-backdrop" @click="cerrarModal()"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function listaEmpleados() {
+    return {
+        empleados: [],
+        stats: {},
+        filtros: {
+            busqueda: '',
+            rol: '',
+            solo_activos: false
+        },
+        paginaActual: 1,
+        totalPaginas: 1,
+        cargando: false,
+        guardando: false,
+        modalAbierto: false,
+        modoEdicion: false,
+        formEmpleado: {
+            nombres: '',
+            apellidos: '',
+            cedula: '',
+            email: '',
+            telefono: '',
+            direccion: '',
+            fecha_nacimiento: '',
+            fecha_ingreso: '',
+            rol: '',
+            salario: null,
+            username: '',
+            password: '',
+            notas: '',
+            activo: true
+        },
+        
+        async cargarEmpleados() {
+            this.cargando = true;
+            try {
+                const params = new URLSearchParams({
+                    page: this.paginaActual,
+                    per_page: 20
+                });
+                
+                if (this.filtros.busqueda) params.append('q', this.filtros.busqueda);
+                if (this.filtros.rol) params.append('rol', this.filtros.rol);
+                if (this.filtros.solo_activos) params.append('solo_activos', 'true');
+                
+                const response = await fetch(`/api/empleados/?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.empleados = data.empleados;
+                    this.stats = data.stats || {};
+                    this.totalPaginas = data.total_pages || 1;
+                }
+            } catch (error) {
+                console.error('Error al cargar empleados:', error);
+                gestionHelpers.notify('Error al cargar empleados', 'error');
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        buscarEmpleados() {
+            this.paginaActual = 1;
+            this.cargarEmpleados();
+        },
+        
+        cambiarPagina(pagina) {
+            if (pagina >= 1 && pagina <= this.totalPaginas) {
+                this.paginaActual = pagina;
+                this.cargarEmpleados();
+            }
+        },
+        
+        abrirModalCrear() {
+            this.modoEdicion = false;
+            this.formEmpleado = {
+                nombres: '',
+                apellidos: '',
+                cedula: '',
+                email: '',
+                telefono: '',
+                direccion: '',
+                fecha_nacimiento: '',
+                fecha_ingreso: new Date().toISOString().split('T')[0],
+                rol: '',
+                salario: null,
+                username: '',
+                password: '',
+                notas: '',
+                activo: true
+            };
+            this.modalAbierto = true;
+        },
+        
+        editarEmpleado(empleado) {
+            this.modoEdicion = true;
+            this.formEmpleado = { ...empleado };
+            this.modalAbierto = true;
+        },
+        
+        verPerfil(empleado) {
+            window.location.href = `/gestion/empleados/${empleado.id}/perfil/`;
+        },
+        
+        async guardarEmpleado() {
+            this.guardando = true;
+            try {
+                const url = this.modoEdicion 
+                    ? `/api/empleados/${this.formEmpleado.id}/`
+                    : '/api/empleados/';
+                
+                const response = await fetch(url, {
+                    method: this.modoEdicion ? 'PUT' : 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(this.formEmpleado)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify(
+                        this.modoEdicion ? 'Empleado actualizado' : 'Empleado creado',
+                        'success'
+                    );
+                    this.cerrarModal();
+                    this.cargarEmpleados();
+                } else {
+                    gestionHelpers.notify(data.message || 'Error al guardar', 'error');
+                }
+            } catch (error) {
+                console.error('Error al guardar:', error);
+                gestionHelpers.notify('Error al guardar empleado', 'error');
+            } finally {
+                this.guardando = false;
+            }
+        },
+        
+        async toggleEstado(empleado) {
+            const accion = empleado.activo ? 'desactivar' : 'activar';
+            
+            if (!await gestionHelpers.confirm(
+                `¿${accion.charAt(0).toUpperCase() + accion.slice(1)} empleado?`,
+                `${empleado.nombre_completo} será ${accion}do`
+            )) return;
+            
+            try {
+                const response = await fetch(`/api/empleados/${empleado.id}/toggle-estado/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify(`Empleado ${accion}do`, 'success');
+                    this.cargarEmpleados();
+                }
+            } catch (error) {
+                console.error('Error al cambiar estado:', error);
+                gestionHelpers.notify('Error al cambiar estado', 'error');
+            }
+        },
+        
+        async resetearPassword(empleado) {
+            if (!await gestionHelpers.confirm(
+                '¿Resetear contraseña?',
+                `Se enviará una nueva contraseña a ${empleado.email}`
+            )) return;
+            
+            try {
+                const response = await fetch(`/api/empleados/${empleado.id}/resetear-password/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify('Contraseña reseteada y enviada por email', 'success');
+                } else {
+                    gestionHelpers.notify(data.message || 'Error al resetear contraseña', 'error');
+                }
+            } catch (error) {
+                console.error('Error al resetear contraseña:', error);
+                gestionHelpers.notify('Error al resetear contraseña', 'error');
+            }
+        },
+        
+        cerrarModal() {
+            this.modalAbierto = false;
+            this.modoEdicion = false;
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    }
+}
+</script>
+{% endblock %}

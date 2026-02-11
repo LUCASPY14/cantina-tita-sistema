@@ -1,0 +1,398 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Detalle Cliente - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="detalleCliente()" x-init="init()" class="space-y-6">
+    
+    <!-- Header con acciones -->
+    <div class="flex items-center justify-between">
+        <div>
+            <a href="{% url 'gestion:clientes_lista' %}" class="btn btn-ghost btn-sm mb-2">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Volver a Clientes
+            </a>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-user mr-3 text-secondary"></i>
+                Detalle del Cliente
+            </h1>
+        </div>
+        
+        <div class="flex gap-2">
+            <a :href="`/gestion/clientes/${clienteId}/editar/`" class="btn btn-secondary">
+                <i class="fas fa-edit mr-2"></i>
+                Editar
+            </a>
+            <a :href="`/gestion/recargas/procesar/?cliente=${clienteId}`" class="btn btn-primary">
+                <i class="fas fa-wallet mr-2"></i>
+                Recargar
+            </a>
+        </div>
+    </div>
+    
+    <template x-if="cargando">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-1">
+                <div class="skeleton h-96 w-full"></div>
+            </div>
+            <div class="lg:col-span-2 space-y-6">
+                <div class="skeleton h-64 w-full"></div>
+                <div class="skeleton h-64 w-full"></div>
+            </div>
+        </div>
+    </template>
+    
+    <template x-if="!cargando && cliente">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Columna Izquierda: Info del Cliente -->
+            <div class="lg:col-span-1 space-y-6">
+                
+                <!-- Card de Cliente -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    
+                    <!-- Foto -->
+                    <div class="flex justify-center mb-4">
+                        <div class="avatar">
+                            <div class="w-32 h-32 rounded-full ring ring-secondary ring-offset-2">
+                                <template x-if="cliente.foto">
+                                    <img :src="cliente.foto" :alt="cliente.nombre">
+                                </template>
+                                <template x-if="!cliente.foto">
+                                    <div class="bg-gradient-to-br from-secondary to-teal-600 flex items-center justify-center text-white text-5xl font-bold">
+                                        <span x-text="cliente.nombre.charAt(0)"></span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Nombre -->
+                    <h2 class="text-2xl font-bold text-center mb-2" x-text="cliente.nombre"></h2>
+                    
+                    <!-- Badges -->
+                    <div class="flex justify-center gap-2 mb-4">
+                        <span class="badge badge-secondary badge-lg" x-text="cliente.grado + ' ' + cliente.seccion"></span>
+                        <span class="badge badge-lg" 
+                              :class="cliente.tarjeta_activa ? 'badge-success' : 'badge-error'">
+                            <span x-text="cliente.tarjeta_activa ? 'Activa' : 'Bloqueada'"></span>
+                        </span>
+                    </div>
+                    
+                    <!-- Datos Personales -->
+                    <div class="space-y-3 border-t pt-4">
+                        <div>
+                            <p class="text-sm text-gray-500">CI</p>
+                            <p class="font-semibold font-mono" x-text="cliente.ci"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Fecha de Nacimiento</p>
+                            <p class="font-semibold" x-text="cliente.fecha_nacimiento || 'No especificada'"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Turno</p>
+                            <p class="font-semibold capitalize" x-text="cliente.turno"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Card de Tarjeta -->
+                <div class="bg-gradient-to-br from-secondary to-teal-600 text-white rounded-xl shadow-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <p class="text-sm opacity-80">Tarjeta</p>
+                            <p class="text-xl font-mono font-bold" x-text="cliente.numero_tarjeta"></p>
+                        </div>
+                        <i class="fas fa-id-card text-4xl opacity-20"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm opacity-80 mb-1">Saldo Actual</p>
+                        <p class="text-4xl font-bold" x-text="formatearPrecio(cliente.saldo)"></p>
+                    </div>
+                </div>
+                
+                <!-- Card de Padre/Tutor -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h3 class="font-bold text-lg mb-4 flex items-center">
+                        <i class="fas fa-users mr-2 text-secondary"></i>
+                        Padre/Tutor
+                    </h3>
+                    <template x-if="cliente.tutor">
+                        <div class="space-y-3">
+                            <div>
+                                <p class="text-sm text-gray-500">Nombre</p>
+                                <p class="font-semibold" x-text="cliente.tutor.nombre"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Relación</p>
+                                <p class="font-semibold capitalize" x-text="cliente.tutor.relacion"></p>
+                            </div>
+                            <template x-if="cliente.tutor.telefono">
+                                <div>
+                                    <p class="text-sm text-gray-500">Teléfono</p>
+                                    <p class="font-semibold font-mono" x-text="cliente.tutor.telefono"></p>
+                                </div>
+                            </template>
+                            <template x-if="cliente.tutor.email">
+                                <div>
+                                    <p class="text-sm text-gray-500">Email</p>
+                                    <p class="font-semibold text-sm" x-text="cliente.tutor.email"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <template x-if="!cliente.tutor">
+                        <p class="text-gray-500 text-center py-4">Sin información del tutor</p>
+                    </template>
+                </div>
+            </div>
+            
+            <!-- Columna Derecha: Estadísticas y Actividad -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- Cards de Estadísticas -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    
+                    <!-- Total Compras -->
+                    <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-shopping-cart text-3xl opacity-80"></i>
+                        </div>
+                        <p class="text-sm opacity-90 mb-1">Total Compras</p>
+                        <p class="text-3xl font-bold" x-text="stats.total_compras"></p>
+                    </div>
+                    
+                    <!-- Consumo Total -->
+                    <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-dollar-sign text-3xl opacity-80"></i>
+                        </div>
+                        <p class="text-sm opacity-90 mb-1">Consumo Total</p>
+                        <p class="text-3xl font-bold" x-text="formatearPrecio(stats.consumo_total)"></p>
+                    </div>
+                    
+                    <!-- Total Recargas -->
+                    <div class="stat-card bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-wallet text-3xl opacity-80"></i>
+                        </div>
+                        <p class="text-sm opacity-90 mb-1">Total Recargas</p>
+                        <p class="text-3xl font-bold" x-text="formatearPrecio(stats.total_recargas)"></p>
+                    </div>
+                </div>
+                
+                <!-- Tabs -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+                    <div class="tabs tabs-bordered bg-gray-50 dark:bg-gray-700">
+                        <a class="tab tab-lg" 
+                           :class="{'tab-active': tabActivo === 'compras'}"
+                           @click="tabActivo = 'compras'">
+                            <i class="fas fa-shopping-bag mr-2"></i>
+                            Compras
+                        </a>
+                        <a class="tab tab-lg" 
+                           :class="{'tab-active': tabActivo === 'recargas'}"
+                           @click="tabActivo = 'recargas'">
+                            <i class="fas fa-wallet mr-2"></i>
+                            Recargas
+                        </a>
+                        <a class="tab tab-lg" 
+                           :class="{'tab-active': tabActivo === 'productos'}"
+                           @click="tabActivo = 'productos'">
+                            <i class="fas fa-chart-bar mr-2"></i>
+                            Top Productos
+                        </a>
+                    </div>
+                    
+                    <div class="p-6">
+                        
+                        <!-- Tab: Compras -->
+                        <div x-show="tabActivo === 'compras'" x-transition>
+                            <div class="overflow-x-auto">
+                                <table class="table table-zebra w-full">
+                                    <thead>
+                                        <tr>
+                                            <th>Fecha/Hora</th>
+                                            <th>Productos</th>
+                                            <th class="text-right">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="compra in compras" :key="compra.id">
+                                            <tr class="hover">
+                                                <td class="font-mono text-sm" x-text="compra.fecha_hora"></td>
+                                                <td>
+                                                    <div class="space-y-1">
+                                                        <template x-for="item in compra.items" :key="item.id">
+                                                            <div class="flex items-center gap-2 text-sm">
+                                                                <span class="badge badge-sm badge-secondary" x-text="item.cantidad"></span>
+                                                                <span x-text="item.producto"></span>
+                                                                <span class="text-gray-500" x-text="'(' + formatearPrecio(item.subtotal) + ')'"></span>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                </td>
+                                                <td class="text-right font-bold text-primary" x-text="formatearPrecio(compra.total)"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                                
+                                <template x-if="compras.length === 0">
+                                    <div class="text-center py-8 text-gray-500">
+                                        <i class="fas fa-shopping-bag text-4xl mb-2"></i>
+                                        <p>No hay compras registradas</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                        
+                        <!-- Tab: Recargas -->
+                        <div x-show="tabActivo === 'recargas'" x-transition>
+                            <div class="overflow-x-auto">
+                                <table class="table table-zebra w-full">
+                                    <thead>
+                                        <tr>
+                                            <th>Fecha/Hora</th>
+                                            <th>Método</th>
+                                            <th class="text-right">Monto</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="recarga in recargas" :key="recarga.id">
+                                            <tr class="hover">
+                                                <td class="font-mono text-sm" x-text="recarga.fecha_hora"></td>
+                                                <td>
+                                                    <span class="badge badge-sm capitalize" 
+                                                          :class="{
+                                                              'badge-primary': recarga.metodo === 'transferencia',
+                                                              'badge-secondary': recarga.metodo === 'tarjeta',
+                                                              'badge-success': recarga.metodo === 'efectivo'
+                                                          }">
+                                                        <span x-text="recarga.metodo"></span>
+                                                    </span>
+                                                </td>
+                                                <td class="text-right font-bold text-success" x-text="formatearPrecio(recarga.monto)"></td>
+                                                <td>
+                                                    <span class="badge badge-sm" 
+                                                          :class="{
+                                                              'badge-success': recarga.estado === 'confirmada',
+                                                              'badge-warning': recarga.estado === 'pendiente',
+                                                              'badge-error': recarga.estado === 'rechazada'
+                                                          }">
+                                                        <span class="capitalize" x-text="recarga.estado"></span>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                                
+                                <template x-if="recargas.length === 0">
+                                    <div class="text-center py-8 text-gray-500">
+                                        <i class="fas fa-wallet text-4xl mb-2"></i>
+                                        <p>No hay recargas registradas</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                        
+                        <!-- Tab: Top Productos -->
+                        <div x-show="tabActivo === 'productos'" x-transition>
+                            <div class="space-y-3">
+                                <template x-for="(producto, index) in topProductos" :key="producto.id">
+                                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-2xl font-bold" 
+                                                  :class="{
+                                                      'text-yellow-500': index === 0,
+                                                      'text-gray-400': index === 1,
+                                                      'text-orange-600': index === 2
+                                                  }"
+                                                  x-text="index + 1"></span>
+                                            <template x-if="producto.imagen">
+                                                <img :src="producto.imagen" class="w-12 h-12 rounded object-cover">
+                                            </template>
+                                            <div>
+                                                <p class="font-semibold" x-text="producto.nombre"></p>
+                                                <p class="text-sm text-gray-500">
+                                                    <span x-text="producto.cantidad"></span> compras | 
+                                                    <span x-text="formatearPrecio(producto.total)"></span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="text-sm text-gray-500">Promedio</p>
+                                            <p class="font-bold text-primary" x-text="formatearPrecio(producto.promedio)"></p>
+                                        </div>
+                                    </div>
+                                </template>
+                                
+                                <template x-if="topProductos.length === 0">
+                                    <div class="text-center py-8 text-gray-500">
+                                        <i class="fas fa-chart-bar text-4xl mb-2"></i>
+                                        <p>No hay productos consumidos</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function detalleCliente() {
+    return {
+        cargando: true,
+        clienteId: {{ cliente_id|default:"null" }},
+        tabActivo: 'compras',
+        cliente: null,
+        stats: {
+            total_compras: 0,
+            consumo_total: 0,
+            total_recargas: 0
+        },
+        compras: [],
+        recargas: [],
+        topProductos: [],
+        
+        async init() {
+            await this.cargarDatos();
+        },
+        
+        async cargarDatos() {
+            this.cargando = true;
+            
+            try {
+                const response = await fetch(`/api/clientes/${this.clienteId}/detalle/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.cliente = data.cliente;
+                    this.stats = data.stats;
+                    this.compras = data.compras || [];
+                    this.recargas = data.recargas || [];
+                    this.topProductos = data.top_productos || [];
+                }
+            } catch (error) {
+                console.error('Error al cargar datos:', error);
+                gestionHelpers.notify('Error al cargar datos del cliente', 'error');
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        formatearPrecio(monto) {
+            return gestionHelpers.formatPrice(monto);
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Iniciar Sesión - Cantina Tita{% endblock %}
+
+{% block body_class %}login-page{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .login-page {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 1rem;
+    }
+    
+    .login-container {
+        background: white;
+        border-radius: 2rem;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+        max-width: 1000px;
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 0;
+        backdrop-filter: blur(10px);
+    }
+    
+    @media (max-width: 768px) {
+        .login-container {
+            grid-template-columns: 1fr;
+        }
+        .login-banner {
+            display: none !important;
+        }
+    }
+    
+    .login-banner {
+        background: linear-gradient(135deg, #FF6B35 0%, #FFB199 35%, #4ECDC4 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 3rem;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .login-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        animation: gentle-float 6s ease-in-out infinite;
+    }
+    
+    @keyframes gentle-float {
+        0%, 100% { transform: rotate(0deg) translate(-20px, -20px); }
+        50% { transform: rotate(180deg) translate(20px, 20px); }
+    }
+    
+    .login-form-container {
+        padding: 4rem 3rem;
+        background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    }
+    
+    .brand-title {
+        background: linear-gradient(135deg, #FF6B35 0%, #4ECDC4 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 800;
+        font-size: 2.5rem;
+        text-align: center;
+        margin-bottom: 1rem;
+        position: relative;
+        z-index: 2;
+    }
+    
+    .features-list {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-top: 2rem;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .feature-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        transition: all 0.3s ease;
+        border-radius: 0.5rem;
+        margin: 0.25rem 0;
+    }
+    
+    .feature-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateX(5px);
+    }
+    
+    .feature-icon {
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 1.1rem;
+    }
+    
+    .logo-large {
+        width: 180px;
+        height: 180px;
+        object-fit: contain;
+        margin-bottom: 2rem;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.15);
+        padding: 1.5rem;
+        backdrop-filter: blur(10px);
+        border: 3px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+        z-index: 2;
+        position: relative;
+    }
+    
+    .logo-large:hover {
+        transform: scale(1.05);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        background: rgba(255, 255, 255, 0.25);
+    }
+</style>
+{% endblock %}
+
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="login-container animate-fade-in">
+    <!-- Banner lateral -->
+    <div class="login-banner">
+        <img src="{% static 'images/tita_logotipo.png' %}" alt="Cantina Tita" class="logo-large">
+        <h2 class="brand-title">Cantina Tita</h2>
+        <p class="text-xl text-center opacity-95 font-medium mb-4">Sistema de Gestión POS</p>
+        <p class="text-center opacity-80 text-sm max-w-xs leading-relaxed">
+            Gestiona tu negocio de manera eficiente con nuestro sistema integral
+        </p>
+        
+        <div class="features-list">
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <i class="fas fa-utensils"></i>
+                </div>
+                <div>
+                    <p class="font-semibold text-sm">Gestión de Ventas</p>
+                    <p class="text-xs opacity-75">Control total de transacciones</p>
+                </div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <i class="fas fa-credit-card"></i>
+                </div>
+                <div>
+                    <p class="font-semibold text-sm">Control de Recargas</p>
+                    <p class="text-xs opacity-75">Pagos seguros y rápidos</p>
+                </div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div>
+                    <p class="font-semibold text-sm">Reportes en Tiempo Real</p>
+                    <p class="text-xs opacity-75">Análisis y estadísticas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Formulario de login -->
+    <div class="login-form-container">
+        <div class="mb-10 text-center">
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-orange-500 to-teal-500 bg-clip-text text-transparent mb-3">
+                Bienvenido
+            </h1>
+            <p class="text-gray-600 text-lg">Ingrese sus credenciales para continuar</p>
+            <div class="w-24 h-1 bg-gradient-to-r from-orange-500 to-teal-500 mx-auto mt-3 rounded-full"></div>
+        </div>
+        
+        <!-- Formulario con validación Alpine.js -->
+        <form method="post" 
+              action="{% url 'login' %}"
+              x-data="{
+                  loading: false,
+                  showPassword: false,
+                  fields: {
+                      username: { value: '', error: '' },
+                      password: { value: '', error: '' }
+                  },
+                  get isValid() {
+                      return this.fields.username.value.length >= 3 && 
+                             this.fields.password.value.length >= 4;
+                  },
+                  validateField(fieldName) {
+                      if (fieldName === 'username') {
+                          if (!this.fields.username.value) {
+                              this.fields.username.error = 'El usuario es requerido';
+                          } else if (this.fields.username.value.length < 3) {
+                              this.fields.username.error = 'Mínimo 3 caracteres';
+                          } else {
+                              this.fields.username.error = '';
+                          }
+                      }
+                      if (fieldName === 'password') {
+                          if (!this.fields.password.value) {
+                              this.fields.password.error = 'La contraseña es requerida';
+                          } else if (this.fields.password.value.length < 4) {
+                              this.fields.password.error = 'Mínimo 4 caracteres';
+                          } else {
+                              this.fields.password.error = '';
+                          }
+                      }
+                  },
+                  handleSubmit() {
+                      this.validateField('username');
+                      this.validateField('password');
+                      if (this.isValid) {
+                          this.loading = true;
+                          $el.submit();
+                      }
+                  }
+              }"
+              @submit.prevent="handleSubmit"
+              novalidate>
+            
+            {% csrf_token %}
+            
+            <!-- Campo Usuario -->
+            <div class="form-group">
+                <label for="username" class="form-label">
+                    <i class="fas fa-user mr-2"></i>Usuario
+                </label>
+                <input 
+                    type="text" 
+                    id="username"
+                    name="username"
+                    x-model="fields.username.value"
+                    @blur="validateField('username')"
+                    @input="validateField('username')"
+                    :class="{ 'input-error': fields.username.error }"
+                    class="input input-bordered w-full"
+                    placeholder="Ingrese su usuario"
+                    autocomplete="username"
+                    autofocus
+                    required>
+                
+                <!-- Mensaje de error -->
+                <label class="label" x-show="fields.username.error">
+                    <span class="label-text-alt text-error" x-text="fields.username.error"></span>
+                </label>
+                
+                <!-- Validación visual -->
+                <label class="label" x-show="fields.username.value && !fields.username.error">
+                    <span class="label-text-alt text-success">
+                        <i class="fas fa-check-circle mr-1"></i>Usuario válido
+                    </span>
+                </label>
+            </div>
+            
+            <!-- Campo Contraseña -->
+            <div class="form-group">
+                <label for="password" class="form-label">
+                    <i class="fas fa-lock mr-2"></i>Contraseña
+                </label>
+                <div class="relative">
+                    <input 
+                        :type="showPassword ? 'text' : 'password'"
+                        id="password"
+                        name="password"
+                        x-model="fields.password.value"
+                        @blur="validateField('password')"
+                        @input="validateField('password')"
+                        :class="{ 'input-error': fields.password.error }"
+                        class="input input-bordered w-full pr-12"
+                        placeholder="Ingrese su contraseña"
+                        autocomplete="current-password"
+                        required>
+                    
+                    <!-- Toggle mostrar/ocultar contraseña -->
+                    <button 
+                        type="button"
+                        @click="showPassword = !showPassword"
+                        class="absolute right-3 top-1/2 transform -translate-y-1/2 btn btn-ghost btn-sm btn-circle"
+                        aria-label="Mostrar/Ocultar contraseña">
+                        <i class="fas" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                    </button>
+                </div>
+                
+                <!-- Mensaje de error -->
+                <label class="label" x-show="fields.password.error">
+                    <span class="label-text-alt text-error" x-text="fields.password.error"></span>
+                </label>
+            </div>
+            
+            <!-- Recordarme -->
+            <div class="form-control mb-4">
+                <label class="label cursor-pointer justify-start gap-3">
+                    <input type="checkbox" name="remember" class="checkbox checkbox-primary" />
+                    <span class="label-text">Recordar sesión</span>
+                </label>
+            </div>
+            
+            <!-- Errores del servidor -->
+            {% if form.non_field_errors %}
+            <div class="alert alert-error mb-4 animate-slide-in">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>{{ form.non_field_errors.0 }}</span>
+            </div>
+            {% endif %}
+            
+            <!-- Botón de submit con loading state -->
+            <button 
+                type="submit"
+                :disabled="loading || !isValid"
+                class="btn btn-primary btn-block btn-lg gap-2 relative overflow-hidden">
+                
+                <!-- Texto normal -->
+                <span :class="{ 'invisible': loading }">
+                    <i class="fas fa-sign-in-alt mr-2"></i>
+                    Iniciar Sesión
+                </span>
+                
+                <!-- Loading spinner -->
+                <div x-show="loading" 
+                     class="absolute inset-0 flex items-center justify-center">
+                    <div class="spinner"></div>
+                    <span class="ml-2">Iniciando...</span>
+                </div>
+            </button>
+            
+            <!-- Enlaces adicionales -->
+            <div class="mt-6 text-center space-y-2">
+                <p class="text-sm text-gray-500">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Para recuperar contraseña, contacte al administrador
+                </p>
+                
+                <div class="divider text-xs text-gray-500">O</div>
+                
+                <a href="/clientes/login/" 
+                   class="btn btn-outline btn-block gap-2">
+                    <i class="fas fa-user-circle"></i>
+                    Portal de Padres
+                </a>
+            </div>
+        </form>
+        
+        <!-- Información adicional -->
+        <div class="mt-8 p-4 bg-blue-50 rounded-lg text-sm text-gray-600">
+            <p class="font-semibold mb-2">
+                <i class="fas fa-info-circle mr-2 text-blue-500"></i>
+                Información de acceso
+            </p>
+            <ul class="space-y-1 text-xs">
+                <li>• Empleados: Usar credenciales del sistema</li>
+                <li>• Padres: Registrarse para acceder al portal</li>
+                <li>• Soporte: Contactar al administrador</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+    // Auto-focus en el primer campo
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('🔐 Página de login cargada');
+        
+        const firstInput = document.getElementById('username');
+        if (firstInput) {
+            firstInput.focus();
+        }
+    });
+</script>
+{% endblock %}

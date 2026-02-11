@@ -1,0 +1,477 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Actividad de {{ empleado.nombre_completo }} - Gestión{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div x-data="actividadEmpleado({{ empleado.id }})" x-init="cargarActividad()" class="container mx-auto px-4 py-8">
+    
+    <!-- Header -->
+    <div class="mb-8">
+        <a href="{% url 'gestion:empleados_perfil' empleado.id %}" class="btn btn-ghost mb-4">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Volver al Perfil
+        </a>
+        
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                    <i class="fas fa-chart-line mr-3 text-secondary"></i>
+                    Reporte de Actividad
+                </h1>
+                <p class="text-gray-600 dark:text-gray-400 mt-1">
+                    Empleado: <span class="font-semibold">{{ empleado.nombre_completo }}</span>
+                </p>
+            </div>
+            
+            <button @click="exportarPDF()" class="btn btn-ghost gap-2">
+                <i class="fas fa-file-pdf"></i>
+                Exportar PDF
+            </button>
+        </div>
+    </div>
+    
+    <!-- Selector de Período -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="md:col-span-2">
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-calendar-alt mr-2"></i>Período de Análisis
+                    </span>
+                </label>
+                <div class="btn-group w-full">
+                    <button @click="setPeriodo('hoy')" 
+                            class="btn btn-sm flex-1"
+                            :class="{'btn-active': periodo === 'hoy'}">
+                        Hoy
+                    </button>
+                    <button @click="setPeriodo('semana')" 
+                            class="btn btn-sm flex-1"
+                            :class="{'btn-active': periodo === 'semana'}">
+                        Semana
+                    </button>
+                    <button @click="setPeriodo('mes')" 
+                            class="btn btn-sm flex-1"
+                            :class="{'btn-active': periodo === 'mes'}">
+                        Mes
+                    </button>
+                    <button @click="setPeriodo('personalizado')" 
+                            class="btn btn-sm flex-1"
+                            :class="{'btn-active': periodo === 'personalizado'}">
+                        Personalizado
+                    </button>
+                </div>
+            </div>
+            
+            <template x-if="periodo === 'personalizado'">
+                <div class="flex gap-2 md:col-span-2">
+                    <input type="date" 
+                           x-model="fechaInicio"
+                           @change="cargarActividad()"
+                           class="input input-bordered input-sm flex-1">
+                    <input type="date" 
+                           x-model="fechaFin"
+                           @change="cargarActividad()"
+                           class="input input-bordered input-sm flex-1">
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-receipt text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Total Ventas</p>
+            <p class="text-3xl font-bold" x-text="stats.total_ventas || 0"></p>
+            <p class="text-sm opacity-80" x-text="gestionHelpers.formatPrice(stats.total_monto || 0)"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-money-bill-wave text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Total Recargas</p>
+            <p class="text-3xl font-bold" x-text="stats.total_recargas || 0"></p>
+            <p class="text-sm opacity-80" x-text="gestionHelpers.formatPrice(stats.total_recargado || 0)"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-calculator text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Promedio Venta</p>
+            <p class="text-2xl font-bold" x-text="gestionHelpers.formatPrice(stats.promedio_venta || 0)"></p>
+        </div>
+        
+        <div class="stat-card bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+            <div class="flex items-center justify-between mb-2">
+                <i class="fas fa-clock text-3xl opacity-80"></i>
+            </div>
+            <p class="text-sm opacity-90 mb-1">Horas Trabajadas</p>
+            <p class="text-3xl font-bold" x-text="stats.horas_trabajadas || 0"></p>
+        </div>
+    </div>
+    
+    <!-- Gráficos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        
+        <!-- Ventas por Día -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-bold mb-4 flex items-center">
+                <i class="fas fa-chart-bar mr-2 text-primary"></i>
+                Ventas por Día
+            </h3>
+            <canvas id="chartVentasDia"></canvas>
+        </div>
+        
+        <!-- Ventas por Hora -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-bold mb-4 flex items-center">
+                <i class="fas fa-chart-line mr-2 text-secondary"></i>
+                Distribución por Hora
+            </h3>
+            <canvas id="chartVentasHora"></canvas>
+        </div>
+    </div>
+    
+    <!-- Top 10 Productos Vendidos -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+        <h3 class="text-lg font-bold mb-4 flex items-center">
+            <i class="fas fa-star mr-2 text-warning"></i>
+            Top 10 Productos Vendidos
+        </h3>
+        
+        <template x-if="topProductos.length > 0">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <template x-for="(producto, index) in topProductos" :key="producto.id">
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="text-2xl font-bold"
+                             :class="{
+                                 'text-yellow-500': index === 0,
+                                 'text-gray-400': index === 1,
+                                 'text-orange-600': index === 2,
+                                 'text-gray-600': index > 2
+                             }">
+                            <template x-if="index === 0">
+                                <i class="fas fa-trophy"></i>
+                            </template>
+                            <template x-if="index === 1">
+                                <i class="fas fa-medal"></i>
+                            </template>
+                            <template x-if="index === 2">
+                                <i class="fas fa-award"></i>
+                            </template>
+                            <template x-if="index > 2">
+                                <span x-text="index + 1"></span>
+                            </template>
+                        </div>
+                        
+                        <div class="flex-1">
+                            <p class="font-semibold" x-text="producto.nombre"></p>
+                            <p class="text-sm text-gray-500">
+                                <span x-text="producto.cantidad"></span> unidades - 
+                                <span x-text="gestionHelpers.formatPrice(producto.total)"></span>
+                            </p>
+                        </div>
+                        
+                        <div class="w-20">
+                            <progress class="progress progress-primary w-full" 
+                                      :value="producto.porcentaje" 
+                                      max="100"></progress>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+        
+        <template x-if="topProductos.length === 0">
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-inbox text-4xl mb-2"></i>
+                <p>No hay productos vendidos en este período</p>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Tabla de Transacciones -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="p-6 border-b">
+            <h3 class="text-lg font-bold flex items-center">
+                <i class="fas fa-list mr-2 text-info"></i>
+                Detalle de Transacciones
+            </h3>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="table table-zebra w-full">
+                <thead>
+                    <tr class="bg-gray-100 dark:bg-gray-700">
+                        <th>Fecha/Hora</th>
+                        <th>Tipo</th>
+                        <th>Cliente</th>
+                        <th class="text-center">Items</th>
+                        <th class="text-right">Monto</th>
+                        <th class="text-center">Método</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-if="transacciones.length === 0 && !cargando">
+                        <tr>
+                            <td colspan="6" class="text-center py-12">
+                                <div class="flex flex-col items-center gap-4">
+                                    <i class="fas fa-inbox text-6xl text-gray-300"></i>
+                                    <p class="text-gray-500 text-lg">No hay transacciones en este período</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    
+                    <template x-if="cargando">
+                        <tr>
+                            <td colspan="6" class="text-center py-12">
+                                <span class="loading loading-spinner loading-lg text-secondary"></span>
+                                <p class="text-gray-500 mt-4">Cargando transacciones...</p>
+                            </td>
+                        </tr>
+                    </template>
+                    
+                    <template x-for="transaccion in transacciones" :key="transaccion.id">
+                        <tr class="hover">
+                            <td class="font-mono text-xs" x-text="gestionHelpers.formatDateTime(transaccion.fecha_hora)"></td>
+                            <td>
+                                <div class="badge" 
+                                     :class="{
+                                         'badge-success': transaccion.tipo === 'venta',
+                                         'badge-primary': transaccion.tipo === 'recarga'
+                                     }">
+                                    <i class="fas mr-1" 
+                                       :class="{
+                                           'fa-receipt': transaccion.tipo === 'venta',
+                                           'fa-money-bill-wave': transaccion.tipo === 'recarga'
+                                       }"></i>
+                                    <span x-text="transaccion.tipo === 'venta' ? 'Venta' : 'Recarga'"></span>
+                                </div>
+                            </td>
+                            <td x-text="transaccion.cliente_nombre || '-'"></td>
+                            <td class="text-center">
+                                <div class="badge badge-secondary badge-sm" x-text="transaccion.items || '-'"></div>
+                            </td>
+                            <td class="text-right font-semibold text-success" x-text="gestionHelpers.formatPrice(transaccion.monto)"></td>
+                            <td class="text-center">
+                                <div class="badge badge-sm" 
+                                     :class="{
+                                         'badge-secondary': transaccion.metodo === 'tarjeta',
+                                         'badge-accent': transaccion.metodo === 'efectivo'
+                                     }">
+                                    <span x-text="transaccion.metodo || '-'"></span>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginación -->
+        <template x-if="totalPaginas > 1">
+            <div class="flex justify-center items-center gap-2 p-4 border-t">
+                <button @click="cambiarPagina(paginaActual - 1)" 
+                        :disabled="paginaActual === 1"
+                        class="btn btn-sm">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                
+                <span class="text-sm text-gray-600">
+                    Página <span x-text="paginaActual"></span> de <span x-text="totalPaginas"></span>
+                </span>
+                
+                <button @click="cambiarPagina(paginaActual + 1)" 
+                        :disabled="paginaActual === totalPaginas"
+                        class="btn btn-sm">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </template>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function actividadEmpleado(empleadoId) {
+    return {
+        empleadoId: empleadoId,
+        periodo: 'mes',
+        fechaInicio: '',
+        fechaFin: '',
+        stats: {},
+        topProductos: [],
+        transacciones: [],
+        paginaActual: 1,
+        totalPaginas: 1,
+        cargando: false,
+        chartVentasDia: null,
+        chartVentasHora: null,
+        
+        setPeriodo(periodo) {
+            this.periodo = periodo;
+            
+            const hoy = new Date();
+            this.fechaFin = this.formatearFecha(hoy);
+            
+            let inicio = new Date();
+            switch(periodo) {
+                case 'hoy':
+                    inicio = new Date(hoy);
+                    break;
+                case 'semana':
+                    inicio.setDate(inicio.getDate() - 7);
+                    break;
+                case 'mes':
+                    inicio.setMonth(inicio.getMonth() - 1);
+                    break;
+            }
+            
+            this.fechaInicio = this.formatearFecha(inicio);
+            
+            if (periodo !== 'personalizado') {
+                this.cargarActividad();
+            }
+        },
+        
+        async cargarActividad() {
+            this.cargando = true;
+            try {
+                const params = new URLSearchParams({
+                    fecha_inicio: this.fechaInicio,
+                    fecha_fin: this.fechaFin,
+                    page: this.paginaActual,
+                    per_page: 50
+                });
+                
+                const response = await fetch(`/api/empleados/${this.empleadoId}/actividad/?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.stats = data.stats || {};
+                    this.topProductos = data.top_productos || [];
+                    this.transacciones = data.transacciones || [];
+                    this.totalPaginas = data.total_pages || 1;
+                    
+                    this.$nextTick(() => {
+                        this.renderChartVentasDia(data.ventas_por_dia || []);
+                        this.renderChartVentasHora(data.ventas_por_hora || []);
+                    });
+                }
+            } catch (error) {
+                console.error('Error al cargar actividad:', error);
+                gestionHelpers.notify('Error al cargar actividad', 'error');
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        renderChartVentasDia(datos) {
+            const ctx = document.getElementById('chartVentasDia');
+            
+            if (this.chartVentasDia) {
+                this.chartVentasDia.destroy();
+            }
+            
+            this.chartVentasDia = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: datos.map(d => d.fecha),
+                    datasets: [{
+                        label: 'Ventas (Gs)',
+                        data: datos.map(d => d.monto),
+                        backgroundColor: 'rgba(255, 107, 53, 0.8)',
+                        borderColor: '#FF6B35',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: (value) => gestionHelpers.formatPrice(value)
+                            }
+                        }
+                    }
+                }
+            });
+        },
+        
+        renderChartVentasHora(datos) {
+            const ctx = document.getElementById('chartVentasHora');
+            
+            if (this.chartVentasHora) {
+                this.chartVentasHora.destroy();
+            }
+            
+            this.chartVentasHora = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: datos.map(d => d.hora + ':00'),
+                    datasets: [{
+                        label: 'Cantidad de Ventas',
+                        data: datos.map(d => d.cantidad),
+                        borderColor: '#4ECDC4',
+                        backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        },
+        
+        cambiarPagina(pagina) {
+            if (pagina >= 1 && pagina <= this.totalPaginas) {
+                this.paginaActual = pagina;
+                this.cargarActividad();
+            }
+        },
+        
+        formatearFecha(fecha) {
+            return fecha.toISOString().split('T')[0];
+        },
+        
+        exportarPDF() {
+            window.print();
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,426 @@
+{% extends "base_pos.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Registro de Consumo - MetrePay{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .scan-area {
+        @apply border-4 border-dashed border-blue-400 rounded-2xl p-8 bg-blue-50 transition-all duration-300;
+    }
+    
+    .scan-area.scanning {
+        @apply border-green-500 bg-green-50 animate-pulse;
+    }
+    
+    .student-card {
+        @apply bg-white rounded-xl shadow-lg p-6 border-2 border-transparent transition-all duration-300;
+    }
+    
+    .student-card.success {
+        @apply border-green-500 bg-green-50;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateY(-20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+    
+    .slide-in {
+        animation: slideIn 0.3s ease-out;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-6xl"
+     x-data="registroConsumo()"
+     x-init="init()">
+    
+    <!-- Header -->
+    <div class="bg-white rounded-2xl shadow-lg p-6 mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-4xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent flex items-center gap-3">
+                    <i class="fas fa-qrcode text-green-600"></i>
+                    Registro de Consumo
+                </h1>
+                <p class="text-gray-600 mt-2" x-text="fechaActual"></p>
+            </div>
+            <div class="text-right">
+                <p class="text-sm text-gray-500">Almuerzos Hoy</p>
+                <p class="text-4xl font-bold text-green-600" x-text="consumosHoy"></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <!-- Panel de Escaneo -->
+        <div class="space-y-6">
+            
+            <!-- Área de Escaneo -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                    <i class="fas fa-scanner text-blue-600"></i>
+                    Escanear Tarjeta
+                </h2>
+
+                <div class="scan-area mb-6" :class="{'scanning': escaneando}">
+                    <div class="text-center">
+                        <i class="fas fa-qrcode text-8xl mb-6" 
+                           :class="escaneando ? 'text-green-600' : 'text-blue-600'"></i>
+                        <h3 class="text-2xl font-bold mb-2" x-text="escaneando ? 'Escaneando...' : 'Esperando Tarjeta'"></h3>
+                        <p class="text-gray-600" x-text="escaneando ? 'Procesando código de barras' : 'Pase la tarjeta por el lector'"></p>
+                    </div>
+                </div>
+
+                <!-- Input de Código Manual -->
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text font-semibold">O ingrese código manualmente</span>
+                    </label>
+                    <div class="join w-full">
+                        <input type="text" 
+                               x-model="codigoManual"
+                               @keyup.enter="buscarTarjeta"
+                               placeholder="Código de tarjeta o NFC"
+                               class="input input-bordered join-item flex-1"
+                               autofocus>
+                        <button @click="buscarTarjeta" class="btn btn-primary join-item">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Búsqueda Rápida por Nombre -->
+                <div class="divider">O buscar por nombre</div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Nombre del estudiante</span>
+                    </label>
+                    <input type="text" 
+                           x-model="nombreBusqueda"
+                           @input="buscarPorNombre"
+                           placeholder="Escribir nombre o apellido..."
+                           class="input input-bordered w-full">
+                    
+                    <!-- Resultados de Búsqueda -->
+                    <div x-show="resultadosBusqueda.length > 0" 
+                         class="mt-2 max-h-64 overflow-y-auto bg-base-100 border rounded-lg shadow-lg">
+                        <template x-for="estudiante in resultadosBusqueda" :key="estudiante.id">
+                            <div @click="seleccionarEstudiante(estudiante)"
+                                 class="p-4 hover:bg-base-200 cursor-pointer border-b last:border-b-0 transition-colors">
+                                <div class="flex items-center gap-3">
+                                    <div class="avatar placeholder">
+                                        <div class="bg-primary text-white rounded-full w-10">
+                                            <span x-text="estudiante.iniciales"></span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold" x-text="estudiante.nombre"></p>
+                                        <p class="text-sm text-gray-500" x-text="estudiante.grado"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estadísticas Rápidas -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl shadow-lg p-6">
+                    <p class="text-sm opacity-90">Esta Hora</p>
+                    <p class="text-4xl font-bold mt-2" x-text="consumosUltimaHora"></p>
+                    <p class="text-xs opacity-80 mt-2">
+                        <i class="fas fa-clock mr-1"></i>
+                        <span x-text="horaActual"></span>
+                    </p>
+                </div>
+
+                <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl shadow-lg p-6">
+                    <p class="text-sm opacity-90">Promedio/Hora</p>
+                    <p class="text-4xl font-bold mt-2" x-text="promedioHora"></p>
+                    <p class="text-xs opacity-80 mt-2">
+                        <i class="fas fa-chart-line mr-1"></i>
+                        Eficiencia
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Información del Estudiante -->
+        <div>
+            <div class="student-card" :class="{'success': registroExitoso}">
+                <template x-if="!estudianteActual">
+                    <div class="text-center py-16">
+                        <i class="fas fa-user-slash text-8xl text-gray-300 mb-6"></i>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">Sin Estudiante Seleccionado</h3>
+                        <p class="text-gray-600">Escanee una tarjeta o busque por nombre</p>
+                    </div>
+                </template>
+
+                <template x-if="estudianteActual">
+                    <div class="slide-in">
+                        <!-- Avatar y Nombre -->
+                        <div class="flex items-start gap-6 mb-6">
+                            <div class="avatar placeholder">
+                                <div class="bg-primary text-white rounded-full w-24">
+                                    <span class="text-4xl" x-text="estudianteActual.iniciales"></span>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <h2 class="text-3xl font-bold text-gray-800 mb-1" x-text="estudianteActual.nombre"></h2>
+                                <p class="text-lg text-gray-600 mb-2" x-text="estudianteActual.grado"></p>
+                                <div class="flex gap-2">
+                                    <span class="badge badge-primary" x-text="estudianteActual.tarjeta"></span>
+                                    <span class="badge" 
+                                          :class="estudianteActual.suscripcionActiva ? 'badge-success' : 'badge-error'"
+                                          x-text="estudianteActual.suscripcionActiva ? 'Suscripción Activa' : 'Sin Suscripción'">
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Información del Plan -->
+                        <div x-show="estudianteActual.suscripcionActiva" 
+                             class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 mb-6">
+                            <p class="text-sm text-purple-600 font-semibold mb-2">Plan Activo</p>
+                            <p class="text-xl font-bold text-purple-900" x-text="estudianteActual.plan"></p>
+                            <div class="flex items-center justify-between mt-3">
+                                <span class="text-sm text-gray-600">
+                                    <i class="fas fa-calendar-alt mr-1"></i>
+                                    Válido hasta: <span x-text="estudianteActual.fechaFin"></span>
+                                </span>
+                                <span class="badge badge-info" x-text="estudianteActual.diasRestantes + ' días'"></span>
+                            </div>
+                        </div>
+
+                        <!-- Consumo Hoy -->
+                        <div class="alert mb-6" :class="estudianteActual.consumioHoy ? 'alert-warning' : 'alert-success'">
+                            <i :class="estudianteActual.consumioHoy ? 'fas fa-exclamation-triangle' : 'fas fa-check-circle'" class="text-2xl"></i>
+                            <div>
+                                <h3 class="font-bold" x-text="estudianteActual.consumioHoy ? '⚠️ Ya consumió hoy' : '✅ Listo para consumir'"></h3>
+                                <p class="text-sm" x-text="estudianteActual.consumioHoy ? 'Último registro: ' + estudianteActual.horaConsumo : 'No ha consumido el almuerzo de hoy'"></p>
+                            </div>
+                        </div>
+
+                        <!-- Estadísticas del Estudiante -->
+                        <div class="grid grid-cols-3 gap-4 mb-6">
+                            <div class="text-center p-3 bg-gray-50 rounded-lg">
+                                <p class="text-2xl font-bold text-green-600" x-text="estudianteActual.consumosMes"></p>
+                                <p class="text-xs text-gray-600">Este Mes</p>
+                            </div>
+                            <div class="text-center p-3 bg-gray-50 rounded-lg">
+                                <p class="text-2xl font-bold text-blue-600" x-text="estudianteActual.asistencia + '%'"></p>
+                                <p class="text-xs text-gray-600">Asistencia</p>
+                            </div>
+                            <div class="text-center p-3 bg-gray-50 rounded-lg">
+                                <p class="text-2xl font-bold text-purple-600" x-text="estudianteActual.consumosTotal"></p>
+                                <p class="text-xs text-gray-600">Total</p>
+                            </div>
+                        </div>
+
+                        <!-- Botón de Acción -->
+                        <button @click="registrarConsumo" 
+                                :disabled="!estudianteActual.suscripcionActiva || estudianteActual.consumioHoy"
+                                class="btn btn-success btn-lg w-full gap-3"
+                                :class="{'btn-disabled': !estudianteActual.suscripcionActiva || estudianteActual.consumioHoy}">
+                            <i class="fas fa-check-circle text-2xl"></i>
+                            <span x-text="estudianteActual.consumioHoy ? 'Ya Registrado Hoy' : 'Registrar Consumo'"></span>
+                        </button>
+
+                        <template x-if="!estudianteActual.suscripcionActiva">
+                            <div class="alert alert-error mt-4">
+                                <i class="fas fa-ban"></i>
+                                <span>Este estudiante no tiene suscripción activa. Por favor, contacte a administración.</span>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Últimos Registros -->
+    <div class="bg-white rounded-2xl shadow-lg p-6 mt-8">
+        <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+            <i class="fas fa-history text-orange-600"></i>
+            Últimos Registros
+        </h2>
+
+        <div class="overflow-x-auto">
+            <table class="table table-zebra w-full">
+                <thead>
+                    <tr>
+                        <th>Hora</th>
+                        <th>Estudiante</th>
+                        <th>Plan</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="registro in ultimosRegistros" :key="registro.id">
+                        <tr class="hover">
+                            <td class="font-mono" x-text="registro.hora"></td>
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <div class="avatar placeholder">
+                                        <div class="bg-neutral text-neutral-content rounded-full w-8">
+                                            <span class="text-xs" x-text="registro.iniciales"></span>
+                                        </div>
+                                    </div>
+                                    <span class="font-semibold" x-text="registro.nombre"></span>
+                                </div>
+                            </td>
+                            <td x-text="registro.plan"></td>
+                            <td>
+                                <span class="badge badge-success gap-2">
+                                    <i class="fas fa-check"></i>
+                                    Registrado
+                                </span>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function registroConsumo() {
+    return {
+        codigoManual: '',
+        nombreBusqueda: '',
+        resultadosBusqueda: [],
+        escaneando: false,
+        estudianteActual: null,
+        registroExitoso: false,
+        consumosHoy: 0,
+        consumosUltimaHora: 0,
+        promedioHora: 0,
+        fechaActual: '',
+        horaActual: '',
+        ultimosRegistros: [],
+
+        init() {
+            this.actualizarFechaHora();
+            this.cargarEstadisticas();
+            setInterval(() => this.actualizarFechaHora(), 1000);
+            
+            // Listener para escáner de código de barras
+            document.addEventListener('keypress', this.handleBarcodeScan.bind(this));
+        },
+
+        actualizarFechaHora() {
+            const ahora = new Date();
+            this.fechaActual = ahora.toLocaleDateString('es-PY', { 
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+            });
+            this.horaActual = ahora.toLocaleTimeString('es-PY', { 
+                hour: '2-digit', minute: '2-digit'
+            });
+        },
+
+        async cargarEstadisticas() {
+            // Simular datos - reemplazar con llamada real
+            this.consumosHoy = 45;
+            this.consumosUltimaHora = 12;
+            this.promedioHora = 8;
+        },
+
+        handleBarcodeScan(e) {
+            // Implementar lógica de escaneo automático
+            console.log('Tecla presionada:', e.key);
+        },
+
+        async buscarTarjeta() {
+            if (!this.codigoManual) return;
+            
+            this.escaneando = true;
+            
+            // Simular búsqueda - reemplazar con llamada real
+            setTimeout(() => {
+                this.estudianteActual = {
+                    nombre: 'Juan Pérez García',
+                    iniciales: 'JP',
+                    grado: '5to Grado - Sección A',
+                    tarjeta: this.codigoManual,
+                    suscripcionActiva: true,
+                    plan: 'Plan Completo Semanal',
+                    fechaFin: '28/02/2026',
+                    diasRestantes: 19,
+                    consumioHoy: false,
+                    horaConsumo: null,
+                    consumosMes: 18,
+                    asistencia: 90,
+                    consumosTotal: 142
+                };
+                this.escaneando = false;
+                this.codigoManual = '';
+            }, 800);
+        },
+
+        async buscarPorNombre() {
+            if (this.nombreBusqueda.length < 3) {
+                this.resultadosBusqueda = [];
+                return;
+            }
+
+            // Simular búsqueda - reemplazar con llamada real
+            this.resultadosBusqueda = [
+                { id: 1, nombre: 'María González López', iniciales: 'MG', grado: '4to - A' },
+                { id: 2, nombre: 'Carlos García Rodríguez', iniciales: 'CG', grado: '5to - B' }
+            ];
+        },
+
+        seleccionarEstudiante(estudiante) {
+            this.nombreBusqueda = '';
+            this.resultadosBusqueda = [];
+            // Cargar datos completos del estudiante
+            this.codigoManual = '001' + estudiante.id;
+            this.buscarTarjeta();
+        },
+
+        async registrarConsumo() {
+            if (!this.estudianteActual || this.estudianteActual.consumioHoy) return;
+
+            // Implementar registro real
+            console.log('Registrando consumo para:', this.estudianteActual.nombre);
+            
+            this.registroExitoso = true;
+            this.estudianteActual.consumioHoy = true;
+            this.estudianteActual.horaConsumo = this.horaActual;
+            this.consumosHoy++;
+
+            // Agregar a últimos registros
+            this.ultimosRegistros.unshift({
+                id: Date.now(),
+                hora: this.horaActual,
+                nombre: this.estudianteActual.nombre,
+                iniciales: this.estudianteActual.iniciales,
+                plan: this.estudianteActual.plan
+            });
+
+            // Resetear después de 3 segundos
+            setTimeout(() => {
+                this.registroExitoso = false;
+                this.estudianteActual = null;
+            }, 3000);
+        }
+    }
+}
+</script>
+{% endblock %}

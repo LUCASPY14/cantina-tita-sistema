@@ -1,0 +1,524 @@
+/* 
+ * POS Enhanced Styles
+ * Estilos mejorados para el sistema POS con animaciones y feedback visual
+ */
+
+/* ============================================================================
+   VARIABLES CSS PERSONALIZADAS
+   ============================================================================ */
+:root {
+    --pos-primary: #FF6B35;
+    --pos-secondary: #4ECDC4;
+    --pos-success: #2ECC71;
+    --pos-warning: #F39C12;
+    --pos-error: #E74C3C;
+    --pos-info: #3498DB;
+    
+    /* Sombras */
+    --pos-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --pos-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.15);
+    --pos-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.2);
+    --pos-shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.25);
+    
+    /* Transiciones */
+    --pos-transition-fast: 0.15s ease-out;
+    --pos-transition-normal: 0.25s ease-out;
+    --pos-transition-slow: 0.4s ease-out;
+    
+    /* Gradientes */
+    --pos-gradient-primary: linear-gradient(135deg, var(--pos-primary), #FF8C61);
+    --pos-gradient-success: linear-gradient(135deg, var(--pos-success), #27AE60);
+    --pos-gradient-card: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
+}
+
+/* Dark mode variables */
+.dark {
+    --pos-gradient-card: linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(31, 41, 55, 0.85));
+}
+
+/* ============================================================================
+   SCROLLBAR PERSONALIZADO
+   ============================================================================ */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--pos-gradient-primary);
+    border-radius: 4px;
+    transition: background var(--pos-transition-normal);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #FF8C61, var(--pos-primary));
+}
+
+/* ============================================================================
+   ANIMACIONES AVANZADAS
+   ============================================================================ */
+
+@keyframes float-gentle {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    25% { transform: translateY(-2px) rotate(0.5deg); }
+    50% { transform: translateY(-4px) rotate(0deg); }
+    75% { transform: translateY(-2px) rotate(-0.5deg); }
+}
+
+@keyframes glow-pulse {
+    0%, 100% { 
+        box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+    }
+    50% { 
+        box-shadow: 0 0 30px rgba(255, 107, 53, 0.6), 0 0 40px rgba(255, 107, 53, 0.2);
+    }
+}
+
+@keyframes shake-gentle {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+}
+
+@keyframes bounce-in {
+    0% { 
+        opacity: 0;
+        transform: scale(0.3) translateY(20px);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.05) translateY(-10px);
+    }
+    70% {
+        transform: scale(0.9) translateY(5px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes slide-in-up {
+    0% {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-3deg); }
+    75% { transform: rotate(3deg); }
+}
+
+/* ============================================================================
+   EFECTOS DE HOVER Y ESTADOS
+   ============================================================================ */
+
+.hover-lift {
+    transition: all var(--pos-transition-normal);
+}
+
+.hover-lift:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: var(--pos-shadow-lg);
+}
+
+.hover-glow:hover {
+    animation: glow-pulse 2s infinite;
+}
+
+.interactive-card {
+    position: relative;
+    overflow: hidden;
+    transition: all var(--pos-transition-normal);
+}
+
+.interactive-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        transparent, 
+        rgba(255, 255, 255, 0.2), 
+        transparent
+    );
+    transition: left 0.5s;
+}
+
+.interactive-card:hover::before {
+    left: 100%;
+}
+
+/* ============================================================================
+   BOTONES MEJORADOS
+   ============================================================================ */
+
+.btn-pos-enhanced {
+    position: relative;
+    overflow: hidden;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+    transition: all var(--pos-transition-normal);
+    border: 2px solid transparent;
+}
+
+.btn-pos-enhanced::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn-pos-enhanced:active::after {
+    width: 300px;
+    height: 300px;
+}
+
+.btn-pos-enhanced.loading {
+    color: transparent;
+    pointer-events: none;
+}
+
+.btn-pos-enhanced.loading::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* ============================================================================
+   TARJETAS DE PRODUCTOS AVANZADAS
+   ============================================================================ */
+
+.product-card-enhanced {
+    background: var(--pos-gradient-card);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all var(--pos-transition-slow);
+    position: relative;
+}
+
+.product-card-enhanced:hover {
+    transform: translateY(-6px) scale(1.03);
+    box-shadow: var(--pos-shadow-xl);
+}
+
+.product-card-enhanced.pulse-gentle {
+    animation: float-gentle 3s ease-in-out infinite;
+}
+
+.product-card-enhanced.selected {
+    border-color: var(--pos-primary);
+    box-shadow: 
+        var(--pos-shadow-lg),
+        0 0 0 3px rgba(255, 107, 53, 0.2);
+}
+
+.product-card-enhanced .product-image {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+.product-card-enhanced .product-image::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        45deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.3) 50%,
+        transparent 70%
+    );
+    transform: translateX(-100%);
+    transition: transform 0.6s;
+}
+
+.product-card-enhanced:hover .product-image::after {
+    transform: translateX(100%);
+}
+
+/* ============================================================================
+   FEEDBACK VISUAL
+   ============================================================================ */
+
+.feedback-success {
+    animation: bounce-in 0.5s ease-out;
+    border-color: var(--pos-success) !important;
+    box-shadow: 0 0 20px rgba(46, 204, 113, 0.4);
+}
+
+.feedback-error {
+    animation: shake-gentle 0.5s ease-in-out;
+    border-color: var(--pos-error) !important;
+    box-shadow: 0 0 20px rgba(231, 76, 60, 0.4);
+}
+
+.feedback-warning {
+    animation: wiggle 0.5s ease-in-out;
+    border-color: var(--pos-warning) !important;
+    box-shadow: 0 0 20px rgba(243, 156, 18, 0.4);
+}
+
+/* ============================================================================
+   LOADING STATES
+   ============================================================================ */
+
+.loading-shimmer {
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.3) 50%,
+        rgba(255, 255, 255, 0.1) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.loading-dots::after {
+    content: '';
+    animation: loading-dots 1.5s infinite;
+}
+
+@keyframes loading-dots {
+    0% { content: ''; }
+    25% { content: '.'; }
+    50% { content: '..'; }
+    75% { content: '...'; }
+    100% { content: ''; }
+}
+
+/* ============================================================================
+   NOTIFICACIONES TOAST MEJORADAS
+   ============================================================================ */
+
+.toast-enhanced {
+    backdrop-filter: blur(20px);
+    border-left: 4px solid currentColor;
+    box-shadow: var(--pos-shadow-lg);
+    transition: all var(--pos-transition-normal);
+}
+
+.toast-enhanced:hover {
+    transform: translateX(-4px);
+    box-shadow: var(--pos-shadow-xl);
+}
+
+.toast-enhanced.toast-success {
+    background: linear-gradient(135deg, 
+        rgba(46, 204, 113, 0.95), 
+        rgba(39, 174, 96, 0.85)
+    );
+    color: white;
+}
+
+.toast-enhanced.toast-error {
+    background: linear-gradient(135deg, 
+        rgba(231, 76, 60, 0.95), 
+        rgba(192, 57, 43, 0.85)
+    );
+    color: white;
+}
+
+.toast-enhanced.toast-warning {
+    background: linear-gradient(135deg, 
+        rgba(243, 156, 18, 0.95), 
+        rgba(230, 126, 34, 0.85)
+    );
+    color: white;
+}
+
+.toast-enhanced.toast-info {
+    background: linear-gradient(135deg, 
+        rgba(52, 152, 219, 0.95), 
+        rgba(41, 128, 185, 0.85)
+    );
+    color: white;
+}
+
+/* ============================================================================
+   EFECTOS DE SONIDO VISUAL
+   ============================================================================ */
+
+.sound-wave-effect {
+    position: relative;
+}
+
+.sound-wave-effect.active::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    border: 2px solid var(--pos-primary);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: sound-ripple 0.6s ease-out;
+}
+
+@keyframes sound-ripple {
+    0% {
+        width: 10px;
+        height: 10px;
+        opacity: 1;
+    }
+    100% {
+        width: 60px;
+        height: 60px;
+        opacity: 0;
+    }
+}
+
+/* ============================================================================
+   MEJORAS DE ACCESIBILIDAD
+   ============================================================================ */
+
+.focus-enhanced:focus-visible {
+    outline: 3px solid var(--pos-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+    box-shadow: 0 0 0 1px rgba(255, 107, 53, 0.2);
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ============================================================================
+   RESPONSIVE ENHANCEMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .mobile-optimized {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    .mobile-large-touch {
+        min-height: 48px;
+        min-width: 48px;
+    }
+    
+    .mobile-spacing {
+        padding: 1rem;
+        margin: 0.5rem 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ============================================================================
+   UTILIDADES DE LAYOUT
+   ============================================================================ */
+
+.pos-grid-responsive {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+@media (max-width: 640px) {
+    .pos-grid-responsive {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 0.75rem;
+    }
+}
+
+.pos-flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pos-aspect-square {
+    aspect-ratio: 1;
+}
+
+/* ============================================================================
+   DEBUG Y DESARROLLO
+   ============================================================================ */
+
+.debug-grid {
+    background-image: 
+        linear-gradient(rgba(255, 107, 53, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 107, 53, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+.debug-outline * {
+    outline: 1px solid rgba(255, 107, 53, 0.3);
+}
+
+/* Mostrar solo en desarrollo */
+.dev-only {
+    display: none;
+}
+
+[data-debug="true"] .dev-only {
+    display: block;
+}
+
+/* ============================================================================
+   PRINT STYLES
+   ============================================================================ */
+
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .print-friendly {
+        color: black !important;
+        background: white !important;
+        box-shadow: none !important;
+    }
+}

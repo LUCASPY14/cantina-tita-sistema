@@ -1,0 +1,78 @@
+
+/* PORTAL CSS - Estilos específicos del portal de padres */
+.portal-header {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 2rem 0;
+}
+
+.portal-nav {
+    background-color: #047857;
+    padding: 1rem 0;
+}
+
+.portal-nav .nav-link {
+    color: #d1fae5;
+}
+
+.portal-nav .nav-link:hover {
+    color: white;
+    background-color: rgba(255,255,255,0.1);
+}
+
+.portal-dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.dashboard-card {
+    background: white;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-left: 4px solid #10b981;
+}
+
+.dashboard-card h3 {
+    color: #047857;
+    margin-top: 0;
+}
+
+.saldo-card {
+    text-align: center;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+}
+
+.saldo-amount {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin: 1rem 0;
+}
+
+.hijo-card {
+    border-left-color: #f59e0b;
+}
+
+.movimientos-table {
+    margin-top: 1rem;
+}
+
+.movimiento-ingreso {
+    color: #10b981;
+    font-weight: bold;
+}
+
+.movimiento-egreso {
+    color: #ef4444;
+    font-weight: bold;
+}
+
+.recarga-form {
+    background: #f0fdf4;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    border: 1px solid #bbf7d0;
+}

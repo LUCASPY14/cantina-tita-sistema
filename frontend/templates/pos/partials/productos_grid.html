@@ -1,0 +1,98 @@
+{% load static %}
+
+{# Partial HTMX para grid de productos filtrable #}
+{# Se recarga vía HTMX cuando cambian filtros (categoría, búsqueda, etc) #}
+
+<div class="product-grid">
+    {% if productos %}
+        {% for producto in productos %}
+        <div class="product-card group cursor-pointer transform transition-all duration-200 hover:scale-105"
+             hx-get="{% url 'pos:agregar_producto' producto.id %}"
+             hx-target="#carrito-container"
+             hx-swap="innerHTML"
+             hx-trigger="click"
+             @click="posHelpers.playSound('beep')">
+            
+            <!-- Imagen del producto -->
+            <div class="w-full h-32 bg-gradient-to-br from-primary to-secondary rounded-t-xl flex items-center justify-center overflow-hidden">
+                {% if producto.imagen %}
+                    <img src="{{ producto.imagen.url }}" 
+                         alt="{{ producto.descripcion }}"
+                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
+                {% else %}
+                    <i class="fas fa-box-open text-4xl text-white opacity-80"></i>
+                {% endif %}
+            </div>
+            
+            <!-- Info del producto -->
+            <div class="p-4">
+                <!-- Nombre -->
+                <h3 class="font-bold text-sm text-gray-800 dark:text-gray-100 line-clamp-2 mb-2 min-h-[2.5rem]">
+                    {{ producto.descripcion }}
+                </h3>
+                
+                <!-- Categoría badge -->
+                {% if producto.categoria %}
+                <span class="badge badge-sm badge-secondary mb-2">
+                    {{ producto.categoria.nombre }}
+                </span>
+                {% endif %}
+                
+                <!-- Precio -->
+                <div class="flex items-center justify-between mt-2">
+                    <span class="text-lg font-bold text-primary">
+                        {{ producto.precio_venta|floatformat:0 }} Gs.
+                    </span>
+                    
+                    <!-- Badge de stock -->
+                    <span class="badge badge-sm" 
+                          class:list={[
+                              producto.stock > 10 ? 'badge-success' : 'badge-warning'
+                          ]}>
+                        <i class="fas fa-box mr-1"></i>
+                        {{ producto.stock }}
+                    </span>
+                </div>
+                
+                <!-- Código de barras (opcional, visible en hover) -->
+                {% if producto.codigo_barra %}
+                <p class="text-xs text-gray-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <i class="fas fa-barcode mr-1"></i>{{ producto.codigo_barra }}
+                </p>
+                {% endif %}
+            </div>
+            
+            <!-- Indicador de "sin stock" -->
+            {% if producto.stock == 0 %}
+            <div class="absolute inset-0 bg-gray-900 bg-opacity-75 rounded-xl flex items-center justify-center">
+                <div class="text-center text-white">
+                    <i class="fas fa-ban text-3xl mb-2"></i>
+                    <p class="font-bold">Sin Stock</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+        {# Sin productos #}
+        <div class="col-span-full text-center py-16">
+            <div class="inline-flex flex-col items-center">
+                <i class="fas fa-search text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
+                <p class="text-xl font-semibold text-gray-500 dark:text-gray-400">
+                    No se encontraron productos
+                </p>
+                <p class="text-sm text-gray-400 mt-2">
+                    Intenta cambiar los filtros o la búsqueda
+                </p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+{# Loading indicator (se muestra mientras HTMX carga) #}
+<div class="htmx-indicator absolute inset-0 bg-white dark:bg-gray-800 bg-opacity-90 flex items-center justify-center rounded-xl">
+    <div class="text-center">
+        <div class="loading loading-spinner loading-lg text-primary"></div>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">Cargando productos...</p>
+    </div>
+</div>

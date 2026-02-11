@@ -1,6 +1,109 @@
-# Sistema de Gestión de Cantina - Django 🇵🇾
+# Sistema de Gestión de Cantina 🇵🇾
 
-Sistema de gestión completo para administrar una cantina escolar desarrollado con Python/Django y MySQL, configurado para Paraguay.
+[![Python](https://img.shields.io/badge/Python-3.13.9-blue.svg)](https://www.python.org/)
+[![Django](https://img.shields.io/badge/Django-5.2.8-green.svg)](https://www.djangoproject.com/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0-orange.svg)](https://www.mysql.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
+[![Alpine.js](https://img.shields.io/badge/Alpine.js-3.13-8BC34A.svg)](https://alpinejs.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC.svg)](https://tailwindcss.com/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
+[![Tests](https://img.shields.io/badge/Tests-Ready-success.svg)](https://github.com/tu-usuario/cantina/actions)
+[![Status](https://img.shields.io/badge/Status-Production_Ready-brightgreen.svg)](SISTEMA_POS_COMPLETADO.md)
+
+> **🚀 ACTUALIZACIÓN FEBRERO 2026**: Sistema POS completamente integrado y funcional. MySQL 8.0, Django API REST, y frontend TypeScript/Alpine.js en producción. Ver [SISTEMA POS COMPLETADO](SISTEMA_POS_COMPLETADO.md) para detalles.
+
+Sistema completo de gestión para cantina escolar con **Sistema POS Avanzado**, facturación electrónica SIFEN, portal de padres, y más. Desarrollado con Django 5.2, MySQL 8.0, TypeScript, Alpine.js y Tailwind CSS.
+
+---
+
+## 📋 Tabla de Contenidos
+
+- [Quick Start](#-quick-start)
+- [Características](#-características)
+- [Stack Tecnológico](#%EF%B8%8F-stack-tecnológico)
+- [Arquitectura](#%EF%B8%8F-arquitectura)
+- [Instalación](#-instalación)
+- [Uso](#-uso)
+- [Testing](#-testing)
+- [Documentación](#-documentación)
+- [Contribuir](#-contribuir)
+- [Licencia](#-licencia)
+
+---
+
+## 🎯 Sistema POS Integrado
+
+**¡NUEVO!** Sistema de Punto de Venta completamente funcional con integración tiempo real:
+
+### 🌟 Características Destacadas
+- **⚡ Interfaz Reactiva**: TypeScript + Alpine.js con actualizaciones en tiempo real  
+- **🔍 Búsqueda Inteligente**: Por código de barras, nombre, o categoría
+- **🛒 Carrito Dinámico**: Agregar/quitar productos con cálculos automáticos
+- **📊 Dashboard**: Estadísticas de ventas y stock en vivo
+- **⌨️ Shortcuts**: Teclas F1-F12 para operaciones rápidas
+- **📱 Responsive**: Funciona en desktop, tablet y móvil
+
+### 🚀 Inicio Rápido POS
+```bash
+# Iniciar sistema completo (Windows)
+.\iniciar_desarrollo.ps1
+
+# Iniciar sistema completo (Linux/Mac)  
+chmod +x iniciar_desarrollo.sh && ./iniciar_desarrollo.sh
+
+# Acceder al POS
+# 🌐 http://localhost:5173/pos-completo.html
+```
+
+### 🔗 URLs del Sistema
+| Servicio | URL | Descripción |
+|----------|-----|-------------|
+| **🎯 POS Sistema** | http://localhost:5173/pos-completo.html | **Sistema Principal** |
+| **🧪 Test Conexión** | http://localhost:5173/test-conexion-completa.html | Verificar APIs |
+| **🗄️ Backend** | http://localhost:8000 | Django Admin |
+| **🔌 API REST** | http://localhost:8000/api/pos/ | Endpoints JSON |
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# Con Docker (Recomendado)
+make docker-up        # Inicia todos los servicios
+# Django: http://localhost:8000
+
+# Sin Docker
+make setup            # Setup completo
+make dev              # Django + Vite
+```
+
+Ver [QUICKSTART.md](QUICKSTART.md) para guía completa.
+
+## 🏗️ Arquitectura Backend/Frontend
+
+```
+├── backend/          # Django API Backend
+│   ├── cantina_project/   # Configuración Django
+│   ├── gestion/          # App de gestión (101 modelos)
+│   ├── pos/             # App punto de venta
+│   └── requirements.txt  # 22 dependencias Python
+├── frontend/         # Frontend Moderno (Vite + TypeScript)
+│   ├── templates/       # 50 templates HTML (WCAG AA)
+│   ├── src/            # TypeScript source
+│   ├── static/         # CSS, JS, imágenes
+│   └── package.json    # 24 dependencias Node
+├── scripts/          # Scripts organizados
+│   ├── setup/
+│   ├── database/
+│   ├── maintenance/
+│   ├── audit/
+│   └── dev/
+├── docker/           # Docker configs
+├── Dockerfile        # Python 3.12
+├── docker-compose.yml # 6 servicios
+├── Makefile          # 40+ comandos
+└── docs/            # 74+ documentos
+```
 
 ## 🇵🇾 Configuración Regional
 
@@ -37,25 +140,168 @@ El proyecto incluye **Diagramas Entidad-Relación** completos y organizados por 
 - **Local**: Abre [diagramas_der_modulos/index_modulos.html](diagramas_der_modulos/index_modulos.html)
 - **Online**: https://raw.githack.com/LUCASPY14/cantina-tita-sistema/main/diagramas_der_modulos/index_modulos.html
 
-Ver [README_DER.md](README_DER.md) y [RESUMEN_DER_MODULOS.md](RESUMEN_DER_MODULOS.md) para más detalles.
+## ✨ Características
 
-## Características
+### 🎯 Módulos Principales
 
-### Sistema Existente (101 Tablas)
-- **Sistema de Tarjetas**: Tarjetas recargables para estudiantes
-- **Planes de Almuerzo**: Suscripciones mensuales con control de asistencia
-- **Facturación Electrónica**: Integración con SIFEN (Paraguay)
-- **Cuenta Corriente**: Control de crédito para clientes
-- **Gestión de Comisiones**: Cálculo automático por medios de pago
-- **Control de Cajas**: Múltiples cajas con cierres diarios
-- **Auditoría Completa**: Logs de todas las operaciones
-- **Sistema Multi-Lista de Precios**: Diferentes precios por tipo de cliente
-- **Seguridad 2FA**: Autenticación de dos factores
-- **Notificaciones**: Sistema de alertas y notificaciones
-- **Gestión de Stock**: Control de inventario con alertas
-- **Promociones**: Sistema de descuentos y ofertas
+- **🛒 POS (Punto de Venta)**
+  - Interfaz táctil optimizada
+  - Búsqueda rápida de productos
+  - Múltiples métodos de pago
+  - Facturación electrónica SIFEN
+  - Control de caja en tiempo real
 
-### Funcionalidades Django Integradas
+- **💳 Sistema de Tarjetas**
+  - Tarjetas prepago recargables
+  - Saldos en tiempo real
+  - Autorización de saldo insuficiente
+  - Historial de consumos
+  - Alertas de saldo bajo
+
+- **👨‍👩‍👧 Portal de Padres**
+  - Consulta de saldos
+  - Solicitud de recargas online
+  - Historial de consumos
+  - Restricciones alimentarias
+  - Notificaciones WhatsApp
+
+- **🏫 Gestión de Almuerzos**
+  - Planes mensuales
+  - Control de asistencia
+  - Programación de menús
+  - Reportes de consumo
+
+- **💰 Cuenta Corriente**
+  - Control de crédito por cliente
+  - Pagos parciales
+  - Estados de cuenta
+  - Notas de crédito
+
+- **📊 Reportes Gerenciales**
+  - Ventas por período
+  - Productos más vendidos
+  - Cierre de cajas
+  - Estado de stock
+  - Exportación a Excel
+
+### 🔒 Seguridad
+
+- ✅ Autenticación JWT
+- ✅ Permisos granulares por rol
+- ✅ Rate limiting en API
+- ✅ CSRF protection
+- ✅ HTTPS configurado
+- ✅ Headers de seguridad (CSP, HSTS)
+- ✅ 2FA opcional
+
+### 🌐 Configuración Regional (Paraguay)
+
+- **Idioma:** Español (es-PY)
+- **Zona horaria:** America/Asuncion
+- **Moneda:** Guaraníes (₲)
+- **Formato fecha:** DD/MM/AAAA
+- **IVA:** 10% (general) / 5% (reducido)
+
+---
+
+## 🏗️ Arquitectura
+
+### Frontend Moderno:
+- **🎨 Tailwind CSS 3.4** - Framework CSS utility-first
+- **⚡ Vite 5.1** - Build tool ultrarrápido con HMR
+- **📝 TypeScript 5.3** - Tipado estático para JavaScript
+- **🎭 Alpine.js 3.13** - Framework reactivo ligero
+- **🔄 HTMX 1.9** - HTML dinámico sin complejidad
+- **📦 PostCSS** - Procesador CSS con autoprefixer
+
+### Backend API-First:
+- **🐍 Django 5.2.8** - Framework web robusto
+- **🔌 Django REST Framework** - API REST completa
+- **🔐 JWT Authentication** - Autenticación segura
+- **📊 OpenAPI/Swagger** - Documentación automática
+- **🗃️ MySQL 8.0** - Base de datos existente (101 tablas)
+
+### DevOps & Tooling:
+- **🏗️ GitHub Actions** - CI/CD automatizado
+- **📋 ESLint + TypeScript** - Code quality
+- **🔄 Hot Module Replacement** - Desarrollo sin recargas
+- **📱 PWA Ready** - Progressive Web App
+
+## � Docker Setup (Nuevo!)
+
+El proyecto ahora incluye Docker completo para desarrollo y producción:
+
+```bash
+# Iniciar todos los servicios
+make docker-up
+
+# Servicios incluidos:
+# - MySQL 8.0
+# - Redis 7
+# - Django + Gunicorn
+# - Nginx
+# - Celery Worker
+# - Celery Beat
+```
+
+Ver [docker-compose.yml](docker-compose.yml) y [SPRINT3_COMPLETADO.md](SPRINT3_COMPLETADO.md).
+
+## 🛠️ Comandos Make (Automatización)
+
+```bash
+# Setup
+make setup              # Setup completo (<30 min)
+make setup-env          # Crear .env
+
+# Desarrollo
+make dev                # Django + Vite
+make shell              # Django shell
+make dbshell            # MySQL shell
+
+# Testing
+make test               # Ejecutar tests
+make test-coverage      # Tests + coverage
+make lint               # Linters
+
+# Docker
+make docker-build       # Construir imágenes
+make docker-up          # Iniciar servicios
+make docker-logs        # Ver logs
+
+# Utilidades
+make clean              # Limpiar cache
+make backup-db          # Backup BD
+make help               # Ver todos los comandos
+```
+
+Ver [Makefile](Makefile) para 40+ comandos disponibles.
+
+## �🛠️ Desarrollo Integrado
+
+### Scripts de desarrollo:
+```bash
+# Servidor integrado (Django + Vite)
+python dev_server.py
+# o alternativamente:
+./dev.bat     # Windows  
+./dev.sh      # Linux/Mac
+
+# Solo backend
+cd backend && python manage.py runserver
+
+# Solo frontend
+cd frontend && npm run dev
+
+# Build producción
+cd frontend && npm run build
+```
+
+### URLs de desarrollo:
+- 🐍 **Django:** http://localhost:8000
+- ⚡ **Vite:** http://localhost:3000  
+- 📚 **Admin:** http://localhost:8000/admin/
+- 🔗 **API:** http://localhost:8000/api/
+- 📖 **Docs:** http://localhost:8000/api/docs/
 
 ## Requisitos
 

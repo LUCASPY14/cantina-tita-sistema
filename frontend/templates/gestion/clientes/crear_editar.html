@@ -1,0 +1,660 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}{{ modo_edicion|yesno:"Editar,Crear" }} Cliente - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="clienteForm()" x-init="init()" class="max-w-5xl mx-auto space-y-6">
+    
+    <!-- Header -->
+    <div>
+        <a href="{% url 'gestion:clientes_lista' %}" class="btn btn-ghost btn-sm mb-2">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Volver a Clientes
+        </a>
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+            <i class="fas fa-user-edit mr-3 text-secondary"></i>
+            <span x-text="modoEdicion ? 'Editar Cliente' : 'Nuevo Cliente'"></span>
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-1">
+            Complete los datos del estudiante y su tarjeta
+        </p>
+    </div>
+    
+    <!-- Formulario con Tabs -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        
+        <!-- Tabs -->
+        <div class="tabs tabs-bordered bg-gray-50 dark:bg-gray-700">
+            <a class="tab tab-lg" 
+               :class="{'tab-active': tabActivo === 'personal'}"
+               @click="tabActivo = 'personal'">
+                <i class="fas fa-user mr-2"></i>
+                Datos Personales
+            </a>
+            <a class="tab tab-lg" 
+               :class="{'tab-active': tabActivo === 'tarjeta'}"
+               @click="tabActivo = 'tarjeta'">
+                <i class="fas fa-id-card mr-2"></i>
+                Tarjeta
+            </a>
+            <a class="tab tab-lg" 
+               :class="{'tab-active': tabActivo === 'tutor'}"
+               @click="tabActivo = 'tutor'">
+                <i class="fas fa-users mr-2"></i>
+                Padre/Tutor
+            </a>
+            <a class="tab tab-lg" 
+               :class="{'tab-active': tabActivo === 'foto'}"
+               @click="tabActivo = 'foto'">
+                <i class="fas fa-camera mr-2"></i>
+                Foto
+            </a>
+        </div>
+        
+        <!-- Contenido de Tabs -->
+        <div class="p-6">
+            
+            <!-- Tab: Datos Personales -->
+            <div x-show="tabActivo === 'personal'" x-transition class="space-y-4">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <!-- Nombre Completo -->
+                    <div class="md:col-span-2">
+                        <label class="label">
+                            <span class="label-text font-semibold">
+                                Nombre Completo <span class="text-error">*</span>
+                            </span>
+                        </label>
+                        <input type="text" 
+                               x-model="cliente.nombre_completo"
+                               placeholder="Ej: Juan Carlos Pérez González"
+                               class="input input-bordered w-full"
+                               :class="{'input-error': errores.nombre_completo}">
+                        <template x-if="errores.nombre_completo">
+                            <p class="text-error text-sm mt-1" x-text="errores.nombre_completo"></p>
+                        </template>
+                    </div>
+                    
+                    <!-- Cédula de Identidad -->
+                    <div>
+                        <label class="label">
+                            <span class="label-text font-semibold">
+                                Cédula de Identidad <span class="text-error">*</span>
+                            </span>
+                        </label>
+                        <input type="text" 
+                               x-model="cliente.cedula"
+                               placeholder="Ej: 5123456"
+                               class="input input-bordered w-full font-mono"
+                               :class="{'input-error': errores.cedula}">
+                        <template x-if="errores.cedula">
+                            <p class="text-error text-sm mt-1" x-text="errores.cedula"></p>
+                        </template>
+                    </div>
+                    
+                    <!-- Fecha de Nacimiento -->
+                    <div>
+                        <label class="label">
+                            <span class="label-text font-semibold">
+                                Fecha de Nacimiento
+                            </span>
+                        </label>
+                        <input type="date" 
+                               x-model="cliente.fecha_nacimiento"
+                               class="input input-bordered w-full">
+                    </div>
+                    
+                    <!-- Grado -->
+                    <div>
+                        <label class="label">
+                            <span class="label-text font-semibold">
+                                Grado <span class="text-error">*</span>
+                            </span>
+                        </label>
+                        <select x-model="cliente.grado" 
+                                class="select select-bordered w-full"
+                                :class="{'select-error': errores.grado}">
+                            <option value="">Seleccione...</option>
+                            <template x-for="grado in grados" :key="grado">
+                                <option :value="grado" x-text="grado"></option>
+                            </template>
+                        </select>
+                        <template x-if="errores.grado">
+                            <p class="text-error text-sm mt-1" x-text="errores.grado"></p>
+                        </template>
+                    </div>
+                    
+                    <!-- Sección -->
+                    <div>
+                        <label class="label">
+                            <span class="label-text font-semibold">
+                                Sección <span class="text-error">*</span>
+                            </span>
+                        </label>
+                        <select x-model="cliente.seccion" 
+                                class="select select-bordered w-full"
+                                :class="{'select-error': errores.seccion}">
+                            <option value="">Seleccione...</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                        </select>
+                        <template x-if="errores.seccion">
+                            <p class="text-error text-sm mt-1" x-text="errores.seccion"></p>
+                        </template>
+                    </div>
+                    
+                    <!-- Turno -->
+                    <div class="md:col-span-2">
+                        <label class="label">
+                            <span class="label-text font-semibold">Turno</span>
+                        </label>
+                        <div class="flex gap-4">
+                            <label class="label cursor-pointer">
+                                <input type="radio" 
+                                       x-model="cliente.turno" 
+                                       value="mañana" 
+                                       class="radio radio-secondary mr-2">
+                                <span class="label-text">Mañana</span>
+                            </label>
+                            <label class="label cursor-pointer">
+                                <input type="radio" 
+                                       x-model="cliente.turno" 
+                                       value="tarde" 
+                                       class="radio radio-secondary mr-2">
+                                <span class="label-text">Tarde</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Navegación -->
+                <div class="flex justify-end pt-4">
+                    <button @click="tabActivo = 'tarjeta'" class="btn btn-primary">
+                        Siguiente: Tarjeta
+                        <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Tab: Tarjeta -->
+            <div x-show="tabActivo === 'tarjeta'" x-transition class="space-y-4">
+                
+                <!-- Vista de Tarjeta -->
+                <div class="bg-gradient-to-br from-secondary to-teal-600 text-white rounded-xl p-6 shadow-xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <p class="text-sm opacity-80">Tarjeta Cantina Tita</p>
+                            <p class="text-2xl font-bold" x-text="cliente.numero_tarjeta || '0000-0000-0000'"></p>
+                        </div>
+                        <i class="fas fa-id-card text-5xl opacity-20"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm opacity-80">Titular</p>
+                        <p class="font-semibold" x-text="cliente.nombre_completo || 'Nombre del Estudiante'"></p>
+                    </div>
+                    <div class="mt-3">
+                        <p class="text-sm opacity-80">Grado y Sección</p>
+                        <p class="font-semibold" x-text="(cliente.grado && cliente.seccion) ? cliente.grado + ' - ' + cliente.seccion : 'Sin asignar'"></p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <!-- Número de Tarjeta -->
+                    <div>
+                        <label class="label">
+                            <span class="label-text font-semibold">
+                                Número de Tarjeta <span class="text-error">*</span>
+                            </span>
+                        </label>
+                        <input type="text" 
+                               x-model="cliente.numero_tarjeta"
+                               @input="validarNumeroTarjeta()"
+                               placeholder="Ej: 1234-5678-9012"
+                               maxlength="14"
+                               class="input input-bordered w-full font-mono"
+                               :class="{'input-error': errores.numero_tarjeta, 'input-success': tarjetaValida}">
+                        <template x-if="errores.numero_tarjeta">
+                            <p class="text-error text-sm mt-1" x-text="errores.numero_tarjeta"></p>
+                        </template>
+                        <template x-if="tarjetaValida && !errores.numero_tarjeta">
+                            <p class="text-success text-sm mt-1">
+                                <i class="fas fa-check-circle mr-1"></i>
+                                Número de tarjeta válido
+                            </p>
+                        </template>
+                    </div>
+                    
+                    <!-- Saldo Inicial -->
+                    <div>
+                        <label class="label">
+                            <span class="label-text font-semibold">
+                                Saldo Inicial
+                            </span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" 
+                                   x-model="cliente.saldo_inicial"
+                                   :disabled="modoEdicion"
+                                   placeholder="0"
+                                   step="1000"
+                                   min="0"
+                                   class="input input-bordered w-full pr-16">
+                            <span class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                Gs.
+                            </span>
+                        </div>
+                        <template x-if="modoEdicion">
+                            <p class="text-info text-sm mt-1">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                El saldo se modifica desde recargas
+                            </p>
+                        </template>
+                    </div>
+                    
+                    <!-- Estado de Tarjeta -->
+                    <div class="md:col-span-2">
+                        <label class="label cursor-pointer justify-start gap-3">
+                            <input type="checkbox" 
+                                   x-model="cliente.tarjeta_activa" 
+                                   class="checkbox checkbox-secondary">
+                            <div>
+                                <span class="label-text font-semibold">Tarjeta Activa</span>
+                                <p class="text-sm text-gray-500">
+                                    Si está desactivada, el estudiante no podrá realizar compras
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Navegación -->
+                <div class="flex justify-between pt-4">
+                    <button @click="tabActivo = 'personal'" class="btn btn-ghost">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Anterior
+                    </button>
+                    <button @click="tabActivo = 'tutor'" class="btn btn-primary">
+                        Siguiente: Padre/Tutor
+                        <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Tab: Padre/Tutor -->
+            <div x-show="tabActivo === 'tutor'" x-transition class="space-y-4">
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Datos del padre, madre o tutor responsable del estudiante</span>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <!-- Nombre del Tutor -->
+                    <div class="md:col-span-2">
+                        <label class="label">
+                            <span class="label-text font-semibold">
+                                Nombre del Padre/Tutor
+                            </span>
+                        </label>
+                        <input type="text" 
+                               x-model="cliente.nombre_tutor"
+                               placeholder="Ej: María González de Pérez"
+                               class="input input-bordered w-full">
+                    </div>
+                    
+                    <!-- Relación -->
+                    <div>
+                        <label class="label">
+                            <span class="label-text font-semibold">
+                                Relación
+                            </span>
+                        </label>
+                        <select x-model="cliente.relacion_tutor" 
+                                class="select select-bordered w-full">
+                            <option value="">Seleccione...</option>
+                            <option value="padre">Padre</option>
+                            <option value="madre">Madre</option>
+                            <option value="tutor">Tutor Legal</option>
+                            <option value="otro">Otro</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Teléfono -->
+                    <div>
+                        <label class="label">
+                            <span class="label-text font-semibold">
+                                Teléfono
+                            </span>
+                        </label>
+                        <input type="tel" 
+                               x-model="cliente.telefono_tutor"
+                               placeholder="Ej: 0981234567"
+                               class="input input-bordered w-full font-mono">
+                    </div>
+                    
+                    <!-- Email -->
+                    <div class="md:col-span-2">
+                        <label class="label">
+                            <span class="label-text font-semibold">
+                                Email
+                            </span>
+                        </label>
+                        <input type="email" 
+                               x-model="cliente.email_tutor"
+                               placeholder="Ej: maria.gonzalez@email.com"
+                               class="input input-bordered w-full">
+                        <p class="text-sm text-gray-500 mt-1">
+                            Se usará para notificaciones y acceso al portal de padres
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Navegación -->
+                <div class="flex justify-between pt-4">
+                    <button @click="tabActivo = 'tarjeta'" class="btn btn-ghost">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Anterior
+                    </button>
+                    <button @click="tabActivo = 'foto'" class="btn btn-primary">
+                        Siguiente: Foto
+                        <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Tab: Foto -->
+            <div x-show="tabActivo === 'foto'" x-transition class="space-y-4">
+                
+                <!-- Preview de Foto -->
+                <div class="flex justify-center">
+                    <div class="relative">
+                        <template x-if="fotoPreview || cliente.foto">
+                            <img :src="fotoPreview || cliente.foto" 
+                                 class="w-48 h-48 rounded-full object-cover border-4 border-secondary shadow-xl">
+                        </template>
+                        <template x-if="!fotoPreview && !cliente.foto">
+                            <div class="w-48 h-48 rounded-full bg-gradient-to-br from-secondary to-teal-600 flex items-center justify-center border-4 border-secondary shadow-xl">
+                                <i class="fas fa-user text-6xl text-white"></i>
+                            </div>
+                        </template>
+                        
+                        <!-- Botón Eliminar (solo si hay foto) -->
+                        <template x-if="fotoPreview || cliente.foto">
+                            <button @click="eliminarFoto()" 
+                                    class="btn btn-circle btn-error btn-sm absolute -top-2 -right-2">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+                
+                <!-- Upload de Foto -->
+                <div>
+                    <label class="label">
+                        <span class="label-text font-semibold">Subir Foto</span>
+                    </label>
+                    <input type="file" 
+                           @change="handleFotoChange($event)"
+                           accept="image/*"
+                           class="file-input file-input-bordered file-input-secondary w-full">
+                    <p class="text-sm text-gray-500 mt-1">
+                        Formatos: JPG, PNG, GIF. Tamaño máximo: 2MB
+                    </p>
+                    <template x-if="errores.foto">
+                        <p class="text-error text-sm mt-1" x-text="errores.foto"></p>
+                    </template>
+                </div>
+                
+                <!-- Navegación -->
+                <div class="flex justify-between pt-4">
+                    <button @click="tabActivo = 'tutor'" class="btn btn-ghost">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Anterior
+                    </button>
+                    <button @click="guardarCliente()" 
+                            :disabled="guardando"
+                            class="btn btn-success btn-lg">
+                        <template x-if="!guardando">
+                            <span>
+                                <i class="fas fa-save mr-2"></i>
+                                <span x-text="modoEdicion ? 'Guardar Cambios' : 'Crear Cliente'"></span>
+                            </span>
+                        </template>
+                        <template x-if="guardando">
+                            <span class="loading loading-spinner"></span>
+                        </template>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function clienteForm() {
+    return {
+        modoEdicion: {{ modo_edicion|yesno:"true,false" }},
+        tabActivo: 'personal',
+        guardando: false,
+        tarjetaValida: false,
+        grados: ['1°', '2°', '3°', '4°', '5°', '6°', '7°', '8°', '9°'],
+        cliente: {
+            nombre_completo: '',
+            cedula: '',
+            fecha_nacimiento: '',
+            grado: '',
+            seccion: '',
+            turno: 'mañana',
+            numero_tarjeta: '',
+            saldo_inicial: 0,
+            tarjeta_activa: true,
+            nombre_tutor: '',
+            relacion_tutor: '',
+            telefono_tutor: '',
+            email_tutor: '',
+            foto: null
+        },
+        fotoPreview: null,
+        fotoFile: null,
+        errores: {},
+        
+        async init() {
+            if (this.modoEdicion) {
+                await this.cargarCliente();
+            }
+        },
+        
+        async cargarCliente() {
+            try {
+                const clienteId = {{ cliente.id|default:"null" }};
+                const response = await fetch(`/api/clientes/${clienteId}/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.cliente = data.cliente;
+                    this.tarjetaValida = true;
+                }
+            } catch (error) {
+                console.error('Error al cargar cliente:', error);
+                gestionHelpers.notify('Error al cargar datos del cliente', 'error');
+            }
+        },
+        
+        async validarNumeroTarjeta() {
+            this.errores.numero_tarjeta = null;
+            
+            if (!this.cliente.numero_tarjeta) {
+                this.tarjetaValida = false;
+                return;
+            }
+            
+            // Validar formato básico (12 dígitos con guiones opcionales)
+            const tarjetaLimpia = this.cliente.numero_tarjeta.replace(/-/g, '');
+            
+            if (tarjetaLimpia.length < 10) {
+                this.tarjetaValida = false;
+                return;
+            }
+            
+            // Verificar si ya existe (solo en modo creación)
+            if (!this.modoEdicion) {
+                try {
+                    const response = await fetch(`/api/tarjetas/verificar/?numero=${this.cliente.numero_tarjeta}`);
+                    const data = await response.json();
+                    
+                    if (!data.disponible) {
+                        this.errores.numero_tarjeta = 'Este número de tarjeta ya está en uso';
+                        this.tarjetaValida = false;
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Error al verificar tarjeta:', error);
+                }
+            }
+            
+            this.tarjetaValida = true;
+        },
+        
+        handleFotoChange(event) {
+            const file = event.target.files[0];
+            
+            if (!file) return;
+            
+            // Validar tamaño (2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                this.errores.foto = 'La foto no debe superar los 2MB';
+                event.target.value = '';
+                return;
+            }
+            
+            // Validar tipo
+            if (!file.type.startsWith('image/')) {
+                this.errores.foto = 'El archivo debe ser una imagen';
+                event.target.value = '';
+                return;
+            }
+            
+            this.errores.foto = null;
+            this.fotoFile = file;
+            
+            // Crear preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.fotoPreview = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        },
+        
+        eliminarFoto() {
+            this.fotoPreview = null;
+            this.fotoFile = null;
+            this.cliente.foto = null;
+            
+            // Limpiar input file
+            const fileInput = document.querySelector('input[type="file"]');
+            if (fileInput) fileInput.value = '';
+        },
+        
+        validarFormulario() {
+            this.errores = {};
+            
+            if (!this.cliente.nombre_completo || this.cliente.nombre_completo.length < 3) {
+                this.errores.nombre_completo = 'El nombre completo es requerido (mínimo 3 caracteres)';
+            }
+            
+            if (!this.cliente.cedula) {
+                this.errores.cedula = 'La cédula de identidad es requerida';
+            }
+            
+            if (!this.cliente.grado) {
+                this.errores.grado = 'Debe seleccionar un grado';
+            }
+            
+            if (!this.cliente.seccion) {
+                this.errores.seccion = 'Debe seleccionar una sección';
+            }
+            
+            if (!this.cliente.numero_tarjeta) {
+                this.errores.numero_tarjeta = 'El número de tarjeta es requerido';
+            } else if (!this.tarjetaValida) {
+                this.errores.numero_tarjeta = 'Número de tarjeta inválido';
+            }
+            
+            return Object.keys(this.errores).length === 0;
+        },
+        
+        async guardarCliente() {
+            if (!this.validarFormulario()) {
+                gestionHelpers.notify('Por favor complete todos los campos requeridos', 'warning');
+                this.tabActivo = 'personal'; // Ir al primer tab con errores
+                return;
+            }
+            
+            this.guardando = true;
+            
+            try {
+                const formData = new FormData();
+                
+                // Agregar todos los campos del cliente
+                Object.keys(this.cliente).forEach(key => {
+                    if (this.cliente[key] !== null && key !== 'foto') {
+                        formData.append(key, this.cliente[key]);
+                    }
+                });
+                
+                // Agregar foto si hay
+                if (this.fotoFile) {
+                    formData.append('foto', this.fotoFile);
+                }
+                
+                const url = this.modoEdicion 
+                    ? `/api/clientes/{{ cliente.id|default:"" }}/` 
+                    : '/api/clientes/';
+                
+                const method = this.modoEdicion ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'X-CSRFToken': this.getCsrfToken()
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify(
+                        this.modoEdicion ? 'Cliente actualizado exitosamente' : 'Cliente creado exitosamente',
+                        'success'
+                    );
+                    
+                    setTimeout(() => {
+                        window.location.href = '/gestion/clientes/';
+                    }, 1500);
+                } else {
+                    gestionHelpers.notify(data.message || 'Error al guardar cliente', 'error');
+                    this.guardando = false;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                gestionHelpers.notify('Error al guardar cliente', 'error');
+                this.guardando = false;
+            }
+        },
+        
+        getCsrfToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        }
+    }
+}
+</script>
+{% endblock %}

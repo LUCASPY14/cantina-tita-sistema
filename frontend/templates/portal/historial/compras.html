@@ -1,0 +1,500 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Historial de Compras - Portal Padres{% endblock %}
+
+{% block content %}
+<div x-data="historialCompras()" x-init="init()" class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-8">
+    <div class="container mx-auto px-4">
+        
+        <!-- Header -->
+        <div class="mb-8">
+            <a href="{% url 'portal:dashboard' %}" class="btn btn-ghost mb-4">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Volver al Dashboard
+            </a>
+            
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-shopping-basket mr-3 text-primary"></i>
+                Historial de Compras
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Consulta todas las compras de <span class="font-semibold" x-text="hijo.nombre"></span>
+            </p>
+        </div>
+        
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            
+            <!-- Total Compras -->
+            <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+                <template x-if="cargando">
+                    <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+                </template>
+                <template x-if="!cargando">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-shopping-cart text-3xl opacity-80"></i>
+                        </div>
+                        <p class="text-sm opacity-90 mb-1">Total Compras</p>
+                        <p class="text-3xl font-bold" x-text="stats.cantidad_compras"></p>
+                        <p class="text-sm opacity-80" x-text="'En ' + stats.dias_periodo + ' días'"></p>
+                    </div>
+                </template>
+            </div>
+            
+            <!-- Monto Total -->
+            <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+                <template x-if="cargando">
+                    <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+                </template>
+                <template x-if="!cargando">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-money-bill-wave text-3xl opacity-80"></i>
+                        </div>
+                        <p class="text-sm opacity-90 mb-1">Monto Total</p>
+                        <p class="text-2xl font-bold" x-text="formatearPrecio(stats.monto_total)"></p>
+                    </div>
+                </template>
+            </div>
+            
+            <!-- Promedio por Compra -->
+            <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+                <template x-if="cargando">
+                    <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+                </template>
+                <template x-if="!cargando">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-calculator text-3xl opacity-80"></i>
+                        </div>
+                        <p class="text-sm opacity-90 mb-1">Promedio</p>
+                        <p class="text-2xl font-bold" x-text="formatearPrecio(stats.promedio_compra)"></p>
+                        <p class="text-xs opacity-80">por compra</p>
+                    </div>
+                </template>
+            </div>
+            
+            <!-- Items Comprados -->
+            <div class="stat-card bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+                <template x-if="cargando">
+                    <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+                </template>
+                <template x-if="!cargando">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-box text-3xl opacity-80"></i>
+                        </div>
+                        <p class="text-sm opacity-90 mb-1">Productos</p>
+                        <p class="text-3xl font-bold" x-text="stats.total_items"></p>
+                        <p class="text-xs opacity-80">unidades</p>
+                    </div>
+                </template>
+            </div>
+        </div>
+        
+        <!-- Filtros -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                
+                <!-- Búsqueda -->
+                <div class="md:col-span-2">
+                    <label class="label">
+                        <span class="label-text">
+                            <i class="fas fa-search mr-2"></i>Buscar producto
+                        </span>
+                    </label>
+                    <input type="text" 
+                           x-model="filtros.busqueda"
+                           @input.debounce.300ms="buscarCompras()"
+                           placeholder="Nombre del producto..."
+                           class="input input-bordered w-full">
+                </div>
+                
+                <!-- Fecha Desde -->
+                <div>
+                    <label class="label">
+                        <span class="label-text">
+                            <i class="fas fa-calendar mr-2"></i>Desde
+                        </span>
+                    </label>
+                    <input type="date" 
+                           x-model="filtros.fecha_desde"
+                           @change="buscarCompras()"
+                           class="input input-bordered w-full">
+                </div>
+                
+                <!-- Fecha Hasta -->
+                <div>
+                    <label class="label">
+                        <span class="label-text">
+                            <i class="fas fa-calendar mr-2"></i>Hasta
+                        </span>
+                    </label>
+                    <input type="date" 
+                           x-model="filtros.fecha_hasta"
+                           @change="buscarCompras()"
+                           class="input input-bordered w-full">
+                </div>
+            </div>
+            
+            <!-- Botón Exportar -->
+            <div class="flex justify-end mt-4">
+                <button @click="exportarExcel()" class="btn btn-success btn-sm">
+                    <i class="fas fa-file-excel mr-2"></i>
+                    Exportar Excel
+                </button>
+            </div>
+        </div>
+        
+        <!-- Tabla de Compras -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+            
+            <!-- Loading -->
+            <template x-if="cargando">
+                <div class="overflow-x-auto">
+                    <table class="table w-full">
+                        <thead>
+                            <tr>
+                                <th>Fecha/Hora</th>
+                                <th>Productos</th>
+                                <th>Método</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="i in 10" :key="i">
+                                <tr>
+                                    <td><div class="skeleton h-4 w-32"></div></td>
+                                    <td><div class="skeleton h-4 w-64"></div></td>
+                                    <td><div class="skeleton h-4 w-20"></div></td>
+                                    <td><div class="skeleton h-4 w-24"></div></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </template>
+            
+            <!-- Tabla con Datos -->
+            <template x-if="!cargando && compras.length > 0">
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra w-full" id="tabla-compras">
+                        <thead>
+                            <tr>
+                                <th>Fecha/Hora</th>
+                                <th>Productos</th>
+                                <th class="text-center">Cantidad</th>
+                                <th class="text-center">Método</th>
+                                <th class="text-right">Total</th>
+                                <th class="text-center">Detalles</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="compra in compras" :key="compra.id">
+                                <tr class="hover">
+                                    <td class="font-mono text-sm" x-text="compra.fecha_hora"></td>
+                                    <td>
+                                        <div class="space-y-1">
+                                            <template x-for="(item, idx) in compra.items.slice(0, 3)" :key="idx">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="badge badge-sm badge-ghost" x-text="item.cantidad + 'x'"></span>
+                                                    <span class="text-sm" x-text="item.producto"></span>
+                                                </div>
+                                            </template>
+                                            <template x-if="compra.items.length > 3">
+                                                <p class="text-xs text-gray-500">+ <span x-text="compra.items.length - 3"></span> más</p>
+                                            </template>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge badge-secondary" x-text="compra.cantidad_items + ' items'"></span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge badge-sm capitalize"
+                                              :class="compra.metodo_pago === 'tarjeta' ? 'badge-secondary' : 'badge-success'">
+                                            <i class="fas mr-1" 
+                                               :class="compra.metodo_pago === 'tarjeta' ? 'fa-credit-card' : 'fa-money-bill-wave'"></i>
+                                            <span x-text="compra.metodo_pago"></span>
+                                        </span>
+                                    </td>
+                                    <td class="text-right font-bold text-primary" x-text="formatearPrecio(compra.total)"></td>
+                                    <td class="text-center">
+                                        <button @click="verDetalle(compra)" class="btn btn-ghost btn-xs">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                        <tfoot>
+                            <tr class="font-bold">
+                                <td colspan="4" class="text-right">TOTAL:</td>
+                                <td class="text-right text-primary text-lg" x-text="formatearPrecio(stats.monto_total)"></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </template>
+            
+            <!-- Empty State -->
+            <template x-if="!cargando && compras.length === 0">
+                <div class="text-center py-16">
+                    <i class="fas fa-shopping-basket text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
+                    <p class="text-xl text-gray-500 dark:text-gray-400 mb-2">No se encontraron compras</p>
+                    <p class="text-gray-400 dark:text-gray-500">Intenta ajustar los filtros de búsqueda</p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Paginación -->
+        <template x-if="!cargando && totalPaginas > 1">
+            <div class="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 mt-6">
+                <div class="text-sm text-gray-600 dark:text-gray-400">
+                    Mostrando 
+                    <span class="font-semibold" x-text="(paginaActual - 1) * itemsPorPagina + 1"></span>
+                    -
+                    <span class="font-semibold" x-text="Math.min(paginaActual * itemsPorPagina, totalCompras)"></span>
+                    de
+                    <span class="font-semibold" x-text="totalCompras"></span>
+                    compras
+                </div>
+                
+                <div class="btn-group">
+                    <button @click="cambiarPagina(paginaActual - 1)" 
+                            :disabled="paginaActual === 1"
+                            class="btn btn-sm">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    
+                    <template x-for="pagina in paginasVisibles()" :key="pagina">
+                        <button @click="cambiarPagina(pagina)" 
+                                class="btn btn-sm"
+                                :class="{'btn-active': pagina === paginaActual}"
+                                x-text="pagina"></button>
+                    </template>
+                    
+                    <button @click="cambiarPagina(paginaActual + 1)" 
+                            :disabled="paginaActual === totalPaginas"
+                            class="btn btn-sm">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Modal Detalle -->
+    <template x-if="compraSeleccionada">
+        <div class="modal modal-open">
+            <div class="modal-box max-w-2xl">
+                <h3 class="font-bold text-lg mb-4">
+                    <i class="fas fa-receipt mr-2 text-primary"></i>
+                    Detalle de la Compra
+                </h3>
+                
+                <!-- Info de la Compra -->
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Fecha y Hora</p>
+                            <p class="font-semibold" x-text="compraSeleccionada.fecha_hora"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Método de Pago</p>
+                            <span class="badge capitalize" 
+                                  :class="compraSeleccionada.metodo_pago === 'tarjeta' ? 'badge-secondary' : 'badge-success'">
+                                <span x-text="compraSeleccionada.metodo_pago"></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Items -->
+                <div class="mb-4">
+                    <h4 class="font-bold mb-2">Productos Comprados</h4>
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra w-full table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th class="text-right">Precio</th>
+                                    <th class="text-right">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="item in compraSeleccionada.items" :key="item.id">
+                                    <tr>
+                                        <td>
+                                            <div class="flex items-center gap-2">
+                                                <template x-if="item.imagen">
+                                                    <div class="avatar">
+                                                        <div class="w-8 h-8 rounded">
+                                                            <img :src="item.imagen" :alt="item.producto">
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                                <span x-text="item.producto"></span>
+                                            </div>
+                                        </td>
+                                        <td class="text-center" x-text="item.cantidad"></td>
+                                        <td class="text-right" x-text="formatearPrecio(item.precio)"></td>
+                                        <td class="text-right font-semibold" x-text="formatearPrecio(item.subtotal)"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                            <tfoot>
+                                <tr class="font-bold">
+                                    <td colspan="3" class="text-right">TOTAL:</td>
+                                    <td class="text-right text-primary text-lg" x-text="formatearPrecio(compraSeleccionada.total)"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="modal-action">
+                    <button @click="compraSeleccionada = null" class="btn">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function historialCompras() {
+    return {
+        cargando: true,
+        compras: [],
+        compraSeleccionada: null,
+        hijo: {},
+        filtros: {
+            busqueda: '',
+            fecha_desde: '',
+            fecha_hasta: ''
+        },
+        stats: {
+            cantidad_compras: 0,
+            monto_total: 0,
+            promedio_compra: 0,
+            total_items: 0,
+            dias_periodo: 0
+        },
+        paginaActual: 1,
+        totalPaginas: 1,
+        totalCompras: 0,
+        itemsPorPagina: 20,
+        
+        async init() {
+            // Establecer fechas por defecto (últimos 30 días)
+            const hoy = new Date();
+            const hace30Dias = new Date();
+            hace30Dias.setDate(hace30Dias.getDate() - 30);
+            
+            this.filtros.fecha_desde = this.formatearFecha(hace30Dias);
+            this.filtros.fecha_hasta = this.formatearFecha(hoy);
+            
+            await this.buscarCompras();
+        },
+        
+        async buscarCompras() {
+            this.cargando = true;
+            
+            try {
+                const params = new URLSearchParams({
+                    q: this.filtros.busqueda,
+                    fecha_desde: this.filtros.fecha_desde,
+                    fecha_hasta: this.filtros.fecha_hasta,
+                    page: this.paginaActual,
+                    per_page: this.itemsPorPagina
+                });
+                
+                const response = await fetch(`/api/portal/compras/?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.compras = data.compras || [];
+                    this.stats = data.stats || this.stats;
+                    this.hijo = data.hijo || {};
+                    this.totalCompras = data.total || 0;
+                    this.totalPaginas = Math.ceil(this.totalCompras / this.itemsPorPagina);
+                }
+            } catch (error) {
+                console.error('Error al cargar compras:', error);
+                this.notificar('Error al cargar historial', 'error');
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        cambiarPagina(pagina) {
+            if (pagina >= 1 && pagina <= this.totalPaginas) {
+                this.paginaActual = pagina;
+                this.buscarCompras();
+            }
+        },
+        
+        paginasVisibles() {
+            const paginas = [];
+            const rango = 2;
+            const inicio = Math.max(1, this.paginaActual - rango);
+            const fin = Math.min(this.totalPaginas, this.paginaActual + rango);
+            
+            for (let i = inicio; i <= fin; i++) {
+                paginas.push(i);
+            }
+            return paginas;
+        },
+        
+        verDetalle(compra) {
+            this.compraSeleccionada = compra;
+        },
+        
+        exportarExcel() {
+            // Simular export (en producción usaría una librería como xlsx)
+            const tabla = document.getElementById('tabla-compras');
+            if (!tabla) return;
+            
+            let csv = 'Fecha/Hora,Productos,Cantidad,Método,Total\n';
+            
+            this.compras.forEach(compra => {
+                const productos = compra.items.map(i => `${i.cantidad}x ${i.producto}`).join('; ');
+                csv += `"${compra.fecha_hora}","${productos}",${compra.cantidad_items},${compra.metodo_pago},${compra.total}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `compras_${this.filtros.fecha_desde}_${this.filtros.fecha_hasta}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        },
+        
+        formatearFecha(fecha) {
+            return fecha.toISOString().split('T')[0];
+        },
+        
+        formatearPrecio(monto) {
+            return new Intl.NumberFormat('es-PY', {
+                style: 'currency',
+                currency: 'PYG',
+                minimumFractionDigits: 0
+            }).format(monto);
+        },
+        
+        notificar(mensaje, tipo = 'info') {
+            const event = new CustomEvent('notify', {
+                detail: { message: mensaje, type: tipo }
+            });
+            window.dispatchEvent(event);
+        }
+    }
+}
+</script>
+{% endblock %}

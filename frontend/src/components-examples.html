@@ -1,0 +1,411 @@
+<!-- 
+🎨 COMPONENTES TAILWIND CSS REUTILIZABLES
+Sistema de componentes UI para Cantina Tita
+-->
+
+<!-- ========================================================================
+     1. SISTEMA DE NOTIFICACIONES TOAST
+     ======================================================================== -->
+
+<!-- Template: Contenedor de Notificaciones -->
+<div x-data="notifications" 
+     class="fixed top-4 right-4 z-50 space-y-2 max-w-sm pointer-events-none">
+  
+  <template x-for="notification in items" :key="notification.id">
+    <div 
+      x-show="true"
+      x-transition:enter="transform ease-out duration-300 transition"
+      x-transition:enter-start="translate-x-full opacity-0"
+      x-transition:enter-end="translate-x-0 opacity-100"
+      x-transition:leave="transition ease-in duration-200"
+      x-transition:leave-start="translate-x-0 opacity-100"
+      x-transition:leave-end="translate-x-full opacity-0"
+      class="pointer-events-auto relative overflow-hidden rounded-lg shadow-2xl"
+      :class="{
+        'bg-green-500': notification.type === 'success',
+        'bg-red-500': notification.type === 'error',
+        'bg-blue-500': notification.type === 'info',
+        'bg-yellow-500': notification.type === 'warning'
+      }">
+      
+      <!-- Barra de progreso -->
+      <div class="absolute bottom-0 left-0 h-1 bg-white bg-opacity-30"
+           :style="`width: ${notification.progress}%`"></div>
+      
+      <!-- Contenido -->
+      <div class="flex items-start gap-3 p-4 text-white">
+        <!-- Icono -->
+        <div class="flex-shrink-0 mt-0.5">
+          <template x-if="notification.type === 'success'">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </template>
+          <template x-if="notification.type === 'error'">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </template>
+          <template x-if="notification.type === 'warning'">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+          </template>
+          <template x-if="notification.type === 'info'">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </template>
+        </div>
+        
+        <!-- Mensaje -->
+        <p x-text="notification.message" class="flex-1 text-sm font-medium leading-relaxed"></p>
+        
+        <!-- Botón cerrar -->
+        <button 
+          @click="remove(notification.id)" 
+          class="flex-shrink-0 hover:bg-white hover:bg-opacity-20 rounded-full p-1 transition-colors">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </template>
+</div>
+
+
+<!-- ========================================================================
+     2. BOTONES CON LOADING STATES
+     ======================================================================== -->
+
+<!-- Botón Primario con Loading -->
+<button
+  x-data="{ loading: false }"
+  @click="loading = true; /* tu código */ setTimeout(() => loading = false, 2000)"
+  :disabled="loading"
+  :class="{ 'opacity-50 cursor-wait': loading }"
+  class="relative inline-flex items-center justify-center px-6 py-3 
+         bg-primary-500 hover:bg-primary-600 
+         text-white font-semibold rounded-lg
+         transform transition-all duration-200
+         hover:scale-105 hover:shadow-xl
+         active:scale-95
+         disabled:hover:scale-100 disabled:hover:shadow-none
+         focus:outline-none focus:ring-4 focus:ring-primary-300">
+  
+  <!-- Texto (invisible cuando loading) -->
+  <span :class="{ 'invisible': loading }">
+    Procesar Venta
+  </span>
+  
+  <!-- Spinner (visible cuando loading) -->
+  <div x-show="loading" 
+       class="absolute inset-0 flex items-center justify-center">
+    <svg class="animate-spin h-5 w-5 text-white" 
+         xmlns="http://www.w3.org/2000/svg" fill="none" 
+         viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" 
+              stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" 
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+  </div>
+</button>
+
+
+<!-- ========================================================================
+     3. SKELETON LOADERS
+     ======================================================================== -->
+
+<!-- Skeleton Card -->
+<div class="animate-pulse bg-white rounded-xl p-6 shadow-lg">
+  <div class="flex items-center space-x-4 mb-4">
+    <div class="rounded-full bg-gray-300 h-12 w-12"></div>
+    <div class="flex-1 space-y-2">
+      <div class="h-4 bg-gray-300 rounded w-3/4"></div>
+      <div class="h-3 bg-gray-300 rounded w-1/2"></div>
+    </div>
+  </div>
+  <div class="space-y-3">
+    <div class="h-3 bg-gray-300 rounded"></div>
+    <div class="h-3 bg-gray-300 rounded w-5/6"></div>
+    <div class="h-3 bg-gray-300 rounded w-4/6"></div>
+  </div>
+</div>
+
+<!-- Skeleton List -->
+<div class="space-y-4">
+  <div class="animate-pulse flex items-center space-x-4" x-show="loading">
+    <div class="rounded-md bg-gray-300 h-16 w-16"></div>
+    <div class="flex-1 space-y-2">
+      <div class="h-4 bg-gray-300 rounded w-3/4"></div>
+      <div class="h-3 bg-gray-300 rounded w-1/2"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========================================================================
+     4. MODALS/DIALOGS
+     ======================================================================== -->
+
+<div x-data="modal">
+  <!-- Trigger Button -->
+  <button @click="show()" 
+          class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+    Abrir Modal
+  </button>
+  
+  <!-- Modal Overlay -->
+  <div x-show="open" 
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       @click="hide()"
+       class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+    
+    <!-- Modal Content -->
+    <div @click.stop 
+         x-transition:enter="transition ease-out duration-300 transform"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-200 transform"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-95"
+         class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+          Título del Modal
+        </h3>
+        <button @click="hide()" 
+                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      
+      <!-- Body -->
+      <div class="p-6">
+        <p class="text-gray-600 dark:text-gray-300">
+          Contenido del modal aquí...
+        </p>
+      </div>
+      
+      <!-- Footer -->
+      <div class="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+        <button @click="hide()" 
+                class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          Cancelar
+        </button>
+        <button class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600">
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========================================================================
+     5. FORMULARIO CON VALIDACIÓN
+     ======================================================================== -->
+
+<div x-data="formValidation({
+  email: {
+    value: '',
+    rules: [
+      ValidationRules.required(),
+      ValidationRules.email()
+    ]
+  },
+  phone: {
+    value: '',
+    rules: [
+      ValidationRules.required('El teléfono es requerido'),
+      ValidationRules.phone()
+    ]
+  }
+})">
+  
+  <form @submit.prevent="validateAll() && handleSubmit()">
+    
+    <!-- Campo Email -->
+    <div class="mb-6">
+      <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+        Email <span class="text-red-500">*</span>
+      </label>
+      <input 
+        id="email"
+        type="email"
+        x-model="fields.email.value"
+        @blur="validateField('email')"
+        :class="{
+          'border-red-500 focus:ring-red-500': fields.email.error && fields.email.touched,
+          'border-green-500 focus:ring-green-500': fields.email.valid && fields.email.touched,
+          'border-gray-300': !fields.email.touched
+        }"
+        class="w-full px-4 py-3 rounded-lg border-2 transition-all duration-200
+               focus:outline-none focus:ring-4 focus:ring-opacity-20"
+        placeholder="ejemplo@correo.com"
+      />
+      
+      <!-- Error Message -->
+      <p x-show="fields.email.error && (fields.email.touched || submitted)" 
+         x-text="fields.email.error"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 -translate-y-1"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         class="mt-2 text-sm text-red-600 flex items-center gap-1">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+        </svg>
+      </p>
+      
+      <!-- Success Indicator -->
+      <p x-show="fields.email.valid && fields.email.touched"
+         x-transition
+         class="mt-2 text-sm text-green-600 flex items-center gap-1">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+        </svg>
+        Email válido
+      </p>
+    </div>
+    
+    <!-- Submit Button -->
+    <button 
+      type="submit"
+      :disabled="!isFormValid()"
+      :class="{ 'opacity-50 cursor-not-allowed': !isFormValid() }"
+      class="w-full px-6 py-3 bg-primary-500 hover:bg-primary-600 disabled:hover:bg-primary-500
+             text-white font-semibold rounded-lg
+             transform transition-all duration-200
+             hover:scale-105 hover:shadow-xl
+             disabled:hover:scale-100 disabled:hover:shadow-none
+             focus:outline-none focus:ring-4 focus:ring-primary-300">
+      Enviar Formulario
+    </button>
+  </form>
+</div>
+
+
+<!-- ========================================================================
+     6. BÚSQUEDA CON DEBOUNCE
+     ======================================================================== -->
+
+<div x-data="searchWithDebounce({ endpoint: '/api/productos/search', minChars: 2 })">
+  <div class="relative">
+    <!-- Input de Búsqueda -->
+    <div class="relative">
+      <input 
+        x-model="query"
+        @input="search()"
+        type="text"
+        placeholder="Buscar productos..."
+        class="w-full pl-12 pr-10 py-3 rounded-lg border-2 border-gray-300
+               focus:border-primary-500 focus:ring-4 focus:ring-primary-200
+               transition-all duration-200"
+      />
+      
+      <!-- Icono de búsqueda -->
+      <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" 
+           fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+      
+      <!-- Loading spinner -->
+      <div x-show="loading" class="absolute right-4 top-1/2 -translate-y-1/2">
+        <svg class="animate-spin h-5 w-5 text-primary-500" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      </div>
+      
+      <!-- Clear button -->
+      <button 
+        x-show="query.length > 0"
+        @click="clear()"
+        class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+    </div>
+    
+    <!-- Resultados -->
+    <div x-show="results.length > 0"
+         x-transition
+         class="absolute z-10 mt-2 w-full bg-white rounded-lg shadow-xl border border-gray-200 max-h-96 overflow-y-auto">
+      
+      <template x-for="result in results" :key="result.id">
+        <a :href="`/productos/${result.id}`"
+           class="flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors">
+          <img :src="result.image" :alt="result.name" class="w-12 h-12 rounded object-cover"/>
+          <div class="flex-1">
+            <p class="font-medium text-gray-900" x-text="result.name"></p>
+            <p class="text-sm text-gray-500" x-text="`₲ ${result.price.toLocaleString()}`"></p>
+          </div>
+        </a>
+      </template>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========================================================================
+     7. DARK MODE TOGGLE
+     ======================================================================== -->
+
+<button 
+  @click="$store.darkMode.toggle()"
+  class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+  
+  <!-- Icono Sol (light mode) -->
+  <svg x-show="!$store.darkMode.on" 
+       class="w-6 h-6 text-yellow-500" 
+       fill="currentColor" viewBox="0 0 20 20">
+    <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"/>
+  </svg>
+  
+  <!-- Icono Luna (dark mode) -->
+  <svg x-show="$store.darkMode.on" 
+       class="w-6 h-6 text-gray-300" 
+       fill="currentColor" viewBox="0 0 20 20">
+    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+  </svg>
+</button>
+
+
+<!-- ========================================================================
+     8. COPY TO CLIPBOARD
+     ======================================================================== -->
+
+<div x-data="clipboard" class="flex items-center gap-2">
+  <input 
+    type="text" 
+    value="https://cantina.tita.com/comprobante/123456"
+    readonly
+    class="flex-1 px-4 py-2 bg-gray-100 rounded-lg"
+  />
+  
+  <button 
+    @click="copy($el.previousElementSibling.value)"
+    :class="{ 'bg-green-500 text-white': copied, 'bg-gray-200 text-gray-700': !copied }"
+    class="px-4 py-2 rounded-lg transition-colors">
+    
+    <span x-show="!copied">Copiar</span>
+    <span x-show="copied" class="flex items-center gap-1">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+      </svg>
+      Copiado
+    </span>
+  </button>
+</div>

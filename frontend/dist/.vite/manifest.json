@@ -1,0 +1,43 @@
+{
+  "src/admin.ts": {
+    "file": "js/admin-fstjsXh6.js",
+    "name": "admin",
+    "src": "src/admin.ts",
+    "isEntry": true,
+    "css": [
+      "css/styles-OHUUJnqZ.css"
+    ]
+  },
+  "src/main.ts": {
+    "file": "js/main-Dm4j2HJH.js",
+    "name": "main",
+    "src": "src/main.ts",
+    "isEntry": true,
+    "css": [
+      "css/styles-OHUUJnqZ.css"
+    ]
+  },
+  "src/portal.ts": {
+    "file": "js/portal-DGNaoxZK.js",
+    "name": "portal",
+    "src": "src/portal.ts",
+    "isEntry": true,
+    "css": [
+      "css/styles-OHUUJnqZ.css"
+    ]
+  },
+  "src/pos.ts": {
+    "file": "js/pos-DBDKGhqt.js",
+    "name": "pos",
+    "src": "src/pos.ts",
+    "isEntry": true,
+    "css": [
+      "css/styles-OHUUJnqZ.css"
+    ]
+  },
+  "src/styles/main.css": {
+    "file": "css/styles-OHUUJnqZ.css",
+    "src": "src/styles/main.css",
+    "isEntry": true
+  }
+}

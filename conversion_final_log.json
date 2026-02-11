@@ -1,0 +1,2368 @@
+[
+  {
+    "file": "base.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 33,
+      "dependency_removals": 0,
+      "css_removals": 4,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 37
+    },
+    "modified": true
+  },
+  {
+    "file": "base_improved.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 45,
+      "dependency_removals": 6,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 51
+    },
+    "modified": true
+  },
+  {
+    "file": "base_modern.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 22,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 22
+    },
+    "modified": true
+  },
+  {
+    "file": "base_portal.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 13,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 13
+    },
+    "modified": true
+  },
+  {
+    "file": "gestion_base.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 33,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 33
+    },
+    "modified": true
+  },
+  {
+    "file": "portal_base.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 0,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 1,
+      "asset_additions": 1,
+      "total_changes": 2
+    },
+    "modified": true
+  },
+  {
+    "file": "pos_base.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 4,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 1,
+      "asset_additions": 1,
+      "total_changes": 6
+    },
+    "modified": true
+  },
+  {
+    "file": "pos_base_pos.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 13,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 14
+    },
+    "modified": true
+  },
+  {
+    "file": "stock_detalle.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 8,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 8
+    },
+    "modified": true
+  },
+  {
+    "file": "unificado.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 146,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 146
+    },
+    "modified": true
+  },
+  {
+    "file": "ventas_detalle.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 39,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 39
+    },
+    "modified": true
+  },
+  {
+    "file": "recordatorio_deuda_amable.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 5,
+      "dependency_removals": 0,
+      "css_removals": 1,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 6
+    },
+    "modified": true
+  },
+  {
+    "file": "recordatorio_deuda_critico.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 5,
+      "dependency_removals": 0,
+      "css_removals": 10,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 15
+    },
+    "modified": true
+  },
+  {
+    "file": "recordatorio_deuda_urgente.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 5,
+      "dependency_removals": 0,
+      "css_removals": 3,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 8
+    },
+    "modified": true
+  },
+  {
+    "file": "tarjeta_bloqueada.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 5,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 5
+    },
+    "modified": true
+  },
+  {
+    "file": "base_portal.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 13,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 13
+    },
+    "modified": true
+  },
+  {
+    "file": "cambiar_password.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 37,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 37
+    },
+    "modified": true
+  },
+  {
+    "file": "cargar_saldo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 54,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 54
+    },
+    "modified": true
+  },
+  {
+    "file": "configurar_2fa.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 54,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 56
+    },
+    "modified": true
+  },
+  {
+    "file": "consumos_hijo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 77,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 79
+    },
+    "modified": true
+  },
+  {
+    "file": "dashboard.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 129,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 129
+    },
+    "modified": true
+  },
+  {
+    "file": "estado_recarga.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 86,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 88
+    },
+    "modified": true
+  },
+  {
+    "file": "login.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 25,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 25
+    },
+    "modified": true
+  },
+  {
+    "file": "mis_hijos.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 51,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 53
+    },
+    "modified": true
+  },
+  {
+    "file": "notificaciones_saldo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 120,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 121
+    },
+    "modified": true
+  },
+  {
+    "file": "pagos.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 83,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 83
+    },
+    "modified": true
+  },
+  {
+    "file": "pago_cancelado.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 27,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 29
+    },
+    "modified": true
+  },
+  {
+    "file": "pago_exitoso.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 28,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 30
+    },
+    "modified": true
+  },
+  {
+    "file": "perfil.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 31,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 33
+    },
+    "modified": true
+  },
+  {
+    "file": "recargar_tarjeta.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 71,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 73
+    },
+    "modified": true
+  },
+  {
+    "file": "recargas.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 36,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 38
+    },
+    "modified": true
+  },
+  {
+    "file": "recuperar_password.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 27,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 29
+    },
+    "modified": true
+  },
+  {
+    "file": "registro.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 23,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 23
+    },
+    "modified": true
+  },
+  {
+    "file": "reset_password.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 31,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 33
+    },
+    "modified": true
+  },
+  {
+    "file": "restablecer_password.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 32,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 34
+    },
+    "modified": true
+  },
+  {
+    "file": "restricciones_hijo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 73,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 73
+    },
+    "modified": true
+  },
+  {
+    "file": "terminos_saldo_negativo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 105,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 107
+    },
+    "modified": true
+  },
+  {
+    "file": "verificar_2fa.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 41,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 43
+    },
+    "modified": true
+  },
+  {
+    "file": "footer.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 10,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 10
+    },
+    "modified": true
+  },
+  {
+    "file": "messages.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 9,
+      "dependency_removals": 1,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 10
+    },
+    "modified": true
+  },
+  {
+    "file": "navigation.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 15,
+      "dependency_removals": 3,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 19
+    },
+    "modified": true
+  },
+  {
+    "file": "pagination.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 9,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 9
+    },
+    "modified": true
+  },
+  {
+    "file": "productos_grid.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 28,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 28
+    },
+    "modified": true
+  },
+  {
+    "file": "tarjeta_info.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 41,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 41
+    },
+    "modified": true
+  },
+  {
+    "file": "cuenta_pendiente.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 17,
+      "dependency_removals": 0,
+      "css_removals": 2,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 19
+    },
+    "modified": true
+  },
+  {
+    "file": "recarga_exitosa.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 1,
+      "dependency_removals": 0,
+      "css_removals": 2,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 3
+    },
+    "modified": true
+  },
+  {
+    "file": "recordatorio_deuda_amable.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 5,
+      "dependency_removals": 0,
+      "css_removals": 1,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 6
+    },
+    "modified": true
+  },
+  {
+    "file": "recordatorio_deuda_critico.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 5,
+      "dependency_removals": 0,
+      "css_removals": 10,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 15
+    },
+    "modified": true
+  },
+  {
+    "file": "recordatorio_deuda_urgente.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 5,
+      "dependency_removals": 0,
+      "css_removals": 3,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 8
+    },
+    "modified": true
+  },
+  {
+    "file": "saldo_bajo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 19,
+      "dependency_removals": 0,
+      "css_removals": 7,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 26
+    },
+    "modified": true
+  },
+  {
+    "file": "tarjeta_bloqueada.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 5,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 5
+    },
+    "modified": true
+  },
+  {
+    "file": "autorizar_saldo_negativo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 117,
+      "dependency_removals": 4,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 121
+    },
+    "modified": true
+  },
+  {
+    "file": "notificaciones_saldo_widget.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 46,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 46
+    },
+    "modified": true
+  },
+  {
+    "file": "dashboard.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 175,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 177
+    },
+    "modified": true
+  },
+  {
+    "file": "stock_detalle.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 8,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 8
+    },
+    "modified": true
+  },
+  {
+    "file": "unificado.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 146,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 146
+    },
+    "modified": true
+  },
+  {
+    "file": "ventas_detalle.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 6,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 6
+    },
+    "modified": true
+  },
+  {
+    "file": "intentos_login.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 37,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 39
+    },
+    "modified": true
+  },
+  {
+    "file": "login.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 20,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 20
+    },
+    "modified": true
+  },
+  {
+    "file": "logs_auditoria.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 41,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 43
+    },
+    "modified": true
+  },
+  {
+    "file": "almuerzos_dashboard.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 143,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 144
+    },
+    "modified": true
+  },
+  {
+    "file": "categorias_lista.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 57,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 57
+    },
+    "modified": true
+  },
+  {
+    "file": "categoria_form.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 17,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 18
+    },
+    "modified": true
+  },
+  {
+    "file": "dashboard.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 0,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 2
+    },
+    "modified": true
+  },
+  {
+    "file": "facturacion_dashboard.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 63,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 64
+    },
+    "modified": true
+  },
+  {
+    "file": "facturacion_listado.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 58,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 59
+    },
+    "modified": true
+  },
+  {
+    "file": "facturacion_mensual_almuerzos.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 78,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 79
+    },
+    "modified": true
+  },
+  {
+    "file": "index.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 0,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 2
+    },
+    "modified": true
+  },
+  {
+    "file": "lista_cargas_pendientes.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 70,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 72
+    },
+    "modified": true
+  },
+  {
+    "file": "lista_pagos_pendientes.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 71,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 73
+    },
+    "modified": true
+  },
+  {
+    "file": "menu_diario.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 117,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 118
+    },
+    "modified": true
+  },
+  {
+    "file": "planes_almuerzo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 54,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 55
+    },
+    "modified": true
+  },
+  {
+    "file": "registro_consumo_almuerzo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 69,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 70
+    },
+    "modified": true
+  },
+  {
+    "file": "suscripciones_almuerzo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 77,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 78
+    },
+    "modified": true
+  },
+  {
+    "file": "validar_carga.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 38,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 40
+    },
+    "modified": true
+  },
+  {
+    "file": "validar_pago.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 49,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 51
+    },
+    "modified": true
+  },
+  {
+    "file": "validar_pagos.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 57,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 57
+    },
+    "modified": true
+  },
+  {
+    "file": "ventas_lista.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 87,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 89
+    },
+    "modified": true
+  },
+  {
+    "file": "configurar_2fa.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 54,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 56
+    },
+    "modified": true
+  },
+  {
+    "file": "consumos_hijo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 77,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 79
+    },
+    "modified": true
+  },
+  {
+    "file": "mis_hijos.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 51,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 53
+    },
+    "modified": true
+  },
+  {
+    "file": "registro.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 23,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 23
+    },
+    "modified": true
+  },
+  {
+    "file": "restricciones_hijo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 73,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 73
+    },
+    "modified": true
+  },
+  {
+    "file": "verificar_2fa.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 41,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 43
+    },
+    "modified": true
+  },
+  {
+    "file": "alertas_sistema.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 81,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 81
+    },
+    "modified": true
+  },
+  {
+    "file": "alertas_tarjetas_saldo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 68,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 69
+    },
+    "modified": true
+  },
+  {
+    "file": "base_pos.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 11,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 12
+    },
+    "modified": true
+  },
+  {
+    "file": "cc_detalle.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 63,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 63
+    },
+    "modified": true
+  },
+  {
+    "file": "cc_estado_cuenta.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 32,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 32
+    },
+    "modified": true
+  },
+  {
+    "file": "comisiones_dashboard.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 43,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 45
+    },
+    "modified": true
+  },
+  {
+    "file": "compras_dashboard.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 28,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 30
+    },
+    "modified": true
+  },
+  {
+    "file": "conciliacion_pagos.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 18,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 20
+    },
+    "modified": true
+  },
+  {
+    "file": "configurar_tarifas.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 77,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 79
+    },
+    "modified": true
+  },
+  {
+    "file": "crear_cliente.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 40,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 41
+    },
+    "modified": true
+  },
+  {
+    "file": "cuenta_corriente.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 84,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 85
+    },
+    "modified": true
+  },
+  {
+    "file": "cuenta_corriente_unificada.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 151,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 151
+    },
+    "modified": true
+  },
+  {
+    "file": "dashboard.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 225,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 225
+    },
+    "modified": true
+  },
+  {
+    "file": "dashboard_saldos_tiempo_real.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 131,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 131
+    },
+    "modified": true
+  },
+  {
+    "file": "deuda_proveedores.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 26,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 28
+    },
+    "modified": true
+  },
+  {
+    "file": "gestionar_clientes.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 66,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 67
+    },
+    "modified": true
+  },
+  {
+    "file": "gestionar_fotos.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 63,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 63
+    },
+    "modified": true
+  },
+  {
+    "file": "gestionar_grados.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 73,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 74
+    },
+    "modified": true
+  },
+  {
+    "file": "historial.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 58,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 60
+    },
+    "modified": true
+  },
+  {
+    "file": "historial_grados.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 53,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 54
+    },
+    "modified": true
+  },
+  {
+    "file": "historial_recargas.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 62,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 64
+    },
+    "modified": true
+  },
+  {
+    "file": "logs_autorizaciones.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 70,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 72
+    },
+    "modified": true
+  },
+  {
+    "file": "nueva_compra.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 36,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 38
+    },
+    "modified": true
+  },
+  {
+    "file": "pos_bootstrap.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 37,
+      "dependency_removals": 1,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 38
+    },
+    "modified": true
+  },
+  {
+    "file": "proveedores.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 88,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 89
+    },
+    "modified": true
+  },
+  {
+    "file": "proveedor_detalle.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 52,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 53
+    },
+    "modified": true
+  },
+  {
+    "file": "recargas.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 122,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 124
+    },
+    "modified": true
+  },
+  {
+    "file": "recepcion_mercaderia.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 35,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 37
+    },
+    "modified": true
+  },
+  {
+    "file": "reporte_comisiones.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 45,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 47
+    },
+    "modified": true
+  },
+  {
+    "file": "venta.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 245,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 247
+    },
+    "modified": true
+  },
+  {
+    "file": "venta_modern.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 46,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 46
+    },
+    "modified": true
+  },
+  {
+    "file": "admin_autorizaciones.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 96,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 98
+    },
+    "modified": true
+  },
+  {
+    "file": "configurar_limites_masivo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 79,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 79
+    },
+    "modified": true
+  },
+  {
+    "file": "almuerzo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 75,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 75
+    },
+    "modified": true
+  },
+  {
+    "file": "almuerzo_cuentas_mensuales.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 51,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 52
+    },
+    "modified": true
+  },
+  {
+    "file": "almuerzo_generar_cuentas.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 49,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 50
+    },
+    "modified": true
+  },
+  {
+    "file": "almuerzo_pagar.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 48,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 49
+    },
+    "modified": true
+  },
+  {
+    "file": "almuerzo_reportes.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 139,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 140
+    },
+    "modified": true
+  },
+  {
+    "file": "almuerzo_reporte_diario.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 52,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 53
+    },
+    "modified": true
+  },
+  {
+    "file": "almuerzo_reporte_estudiante.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 85,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 86
+    },
+    "modified": true
+  },
+  {
+    "file": "almuerzo_reporte_mensual.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 34,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 35
+    },
+    "modified": true
+  },
+  {
+    "file": "configurar_precio.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 76,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 77
+    },
+    "modified": true
+  },
+  {
+    "file": "ticket_almuerzo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 4,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 4
+    },
+    "modified": true
+  },
+  {
+    "file": "apertura_caja.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 36,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 38
+    },
+    "modified": true
+  },
+  {
+    "file": "arqueo_caja.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 32,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 34
+    },
+    "modified": true
+  },
+  {
+    "file": "cajas_dashboard.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 66,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 68
+    },
+    "modified": true
+  },
+  {
+    "file": "cierre_caja.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 61,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 63
+    },
+    "modified": true
+  },
+  {
+    "file": "ajuste_inventario.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 41,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 42
+    },
+    "modified": true
+  },
+  {
+    "file": "alertas_inventario.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 97,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 98
+    },
+    "modified": true
+  },
+  {
+    "file": "inventario_productos.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 66,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 67
+    },
+    "modified": true
+  },
+  {
+    "file": "kardex_producto.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 57,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 58
+    },
+    "modified": true
+  },
+  {
+    "file": "autorizaciones_saldo_negativo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 134,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 134
+    },
+    "modified": true
+  },
+  {
+    "file": "reportes.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 64,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 66
+    },
+    "modified": true
+  },
+  {
+    "file": "reporte_comisiones.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 45,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 47
+    },
+    "modified": true
+  },
+  {
+    "file": "ajuste_inventario.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 41,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 42
+    },
+    "modified": true
+  },
+  {
+    "file": "alertas_inventario.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 97,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 98
+    },
+    "modified": true
+  },
+  {
+    "file": "comisiones_dashboard.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 43,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 45
+    },
+    "modified": true
+  },
+  {
+    "file": "compras_dashboard.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 28,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 30
+    },
+    "modified": true
+  },
+  {
+    "file": "comprobante_recarga.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 14,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 14
+    },
+    "modified": true
+  },
+  {
+    "file": "dashboard.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 225,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 226
+    },
+    "modified": true
+  },
+  {
+    "file": "dashboard_saldos_tiempo_real.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 72,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 72
+    },
+    "modified": true
+  },
+  {
+    "file": "dashboard_ventas.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 129,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 130
+    },
+    "modified": true
+  },
+  {
+    "file": "dashboard_ventas_mejorado.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 162,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 163
+    },
+    "modified": true
+  },
+  {
+    "file": "inventario_dashboard.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 123,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 123
+    },
+    "modified": true
+  },
+  {
+    "file": "inventario_productos.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 66,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 67
+    },
+    "modified": true
+  },
+  {
+    "file": "ticket.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 4,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 4
+    },
+    "modified": true
+  },
+  {
+    "file": "venta.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 245,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 247
+    },
+    "modified": true
+  },
+  {
+    "file": "cambiar_password.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 37,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 37
+    },
+    "modified": true
+  },
+  {
+    "file": "login.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 25,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 25
+    },
+    "modified": true
+  },
+  {
+    "file": "recuperar_password.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 27,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 29
+    },
+    "modified": true
+  },
+  {
+    "file": "reset_password.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 31,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 33
+    },
+    "modified": true
+  },
+  {
+    "file": "restablecer_password.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 32,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 34
+    },
+    "modified": true
+  },
+  {
+    "file": "dashboard.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 129,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 129
+    },
+    "modified": true
+  },
+  {
+    "file": "cargar_saldo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 54,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 54
+    },
+    "modified": true
+  },
+  {
+    "file": "estado_recarga.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 86,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 88
+    },
+    "modified": true
+  },
+  {
+    "file": "notificaciones_saldo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 120,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 121
+    },
+    "modified": true
+  },
+  {
+    "file": "notificaciones_saldo_widget.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 50,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 50
+    },
+    "modified": true
+  },
+  {
+    "file": "pagos.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 83,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 83
+    },
+    "modified": true
+  },
+  {
+    "file": "pago_cancelado.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 27,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 29
+    },
+    "modified": true
+  },
+  {
+    "file": "pago_exitoso.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 28,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 30
+    },
+    "modified": true
+  },
+  {
+    "file": "recargar_tarjeta.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 71,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 73
+    },
+    "modified": true
+  },
+  {
+    "file": "recargas.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 36,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 38
+    },
+    "modified": true
+  },
+  {
+    "file": "terminos_saldo_negativo.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 56,
+      "dependency_removals": 4,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 62
+    },
+    "modified": true
+  },
+  {
+    "file": "perfil.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 31,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 33
+    },
+    "modified": true
+  },
+  {
+    "file": "dashboard.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 65,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 67
+    },
+    "modified": true
+  },
+  {
+    "file": "clientes_lista.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 68,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 70
+    },
+    "modified": true
+  },
+  {
+    "file": "clientes_list_paginado.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 62,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 64
+    },
+    "modified": true
+  },
+  {
+    "file": "crear_cliente.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 23,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 25
+    },
+    "modified": true
+  },
+  {
+    "file": "cambiar_contrasena_empleado.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 30,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 32
+    },
+    "modified": true
+  },
+  {
+    "file": "gestionar_empleados.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 117,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 118
+    },
+    "modified": true
+  },
+  {
+    "file": "perfil_empleado.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 55,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 56
+    },
+    "modified": true
+  },
+  {
+    "file": "productos_importar.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 40,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 41
+    },
+    "modified": true
+  },
+  {
+    "file": "productos_importar_preview.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 27,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 28
+    },
+    "modified": true
+  },
+  {
+    "file": "productos_lista.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 65,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 67
+    },
+    "modified": true
+  },
+  {
+    "file": "productos_list_paginado.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 70,
+      "dependency_removals": 1,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 2,
+      "total_changes": 73
+    },
+    "modified": true
+  },
+  {
+    "file": "producto_form.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 19,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 0,
+      "total_changes": 19
+    },
+    "modified": true
+  },
+  {
+    "file": "facturacion_reporte_cumplimiento.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 84,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 85
+    },
+    "modified": true
+  },
+  {
+    "file": "reportes_almuerzos.html",
+    "success": true,
+    "changes": {
+      "bootstrap_conversions": 146,
+      "dependency_removals": 0,
+      "css_removals": 0,
+      "inheritance_updates": 0,
+      "asset_additions": 1,
+      "total_changes": 147
+    },
+    "modified": true
+  }
+]

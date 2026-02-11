@@ -1,0 +1,433 @@
+{% extends "base_pos.html" %}
+{% load static %}
+
+{% block title %}Dashboard - POS{% endblock %}
+
+{% block content %}
+<div x-data="dashboardPOS()" x-init="init()" class="space-y-6">
+    
+    <!-- Header con fecha y usuario -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6" role="banner">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                    <i class="fas fa-chart-line mr-3 text-primary" aria-hidden="true"></i>Dashboard POS
+                </h1>
+                <p class="text-gray-600 dark:text-gray-400 mt-1" x-text="fechaActual" aria-live="polite"></p>
+            </div>
+            <div class="text-right">
+                <p class="text-sm text-gray-600 dark:text-gray-400">Cajero</p>
+                <p class="font-semibold text-lg">{{ user.get_full_name|default:user.username }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Cards de Estadísticas -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" role="region" aria-label="Estadísticas del día">
+        
+        <!-- Ventas del Día -->
+        <div class="stat-card relative overflow-hidden" role="article" aria-label="Ventas del día">
+            <template x-if="cargando">
+                <div class="space-y-3" role="status" aria-live="polite">
+                    <div class="skeleton h-4 w-20"></div>
+                    <div class="skeleton h-8 w-32"></div>
+                    <span class="sr-only">Cargando estadísticas...</span>
+                </div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <p class="stat-title">Ventas del Día</p>
+                    <p class="stat-value text-success" x-text="stats.ventasHoy" aria-label="Total de ventas realizadas hoy"></p>
+                    <p class="text-sm text-gray-500 mt-2">
+                        <i class="fas fa-arrow-up text-success mr-1" aria-hidden="true"></i>
+                        <span x-text="stats.porcentajeVentas"></span>% vs ayer
+                    </p>
+                    <i class="fas fa-cash-register stat-icon text-success" aria-hidden="true"></i>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Total Recaudado -->
+        <div class="stat-card relative overflow-hidden" role="article" aria-label="Total recaudado del día">
+            <template x-if="cargando">
+                <div class="space-y-3" role="status" aria-live="polite">
+                    <div class="skeleton h-4 w-20"></div>
+                    <div class="skeleton h-8 w-32"></div>
+                    <span class="sr-only">Cargando estadísticas...</span>
+                </div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <p class="stat-title">Total Recaudado</p>
+                    <p class="stat-value text-primary" x-text="formatearPrecio(stats.totalRecaudado)" aria-label="Monto total recaudado hoy"></p>
+                    <p class="text-sm text-gray-500 mt-2">
+                        Promedio: <span x-text="formatearPrecio(stats.promedioVenta)"></span>
+                    </p>
+                    <i class="fas fa-money-bill-wave stat-icon text-primary" aria-hidden="true"></i>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Productos Vendidos -->
+        <div class="stat-card relative overflow-hidden">
+            <template x-if="cargando">
+                <div class="space-y-3">
+                    <div class="skeleton h-4 w-20"></div>
+                    <div class="skeleton h-8 w-32"></div>
+                </div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <p class="stat-title">Productos Vendidos</p>
+                    <p class="stat-value text-secondary" x-text="stats.productosVendidos"></p>
+                    <p class="text-sm text-gray-500 mt-2">
+                        <span x-text="stats.productosUnicos"></span> productos únicos
+                    </p>
+                    <i class="fas fa-box stat-icon text-secondary"></i>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Recargas -->
+        <div class="stat-card relative overflow-hidden">
+            <template x-if="cargando">
+                <div class="space-y-3">
+                    <div class="skeleton h-4 w-20"></div>
+                    <div class="skeleton h-8 w-32"></div>
+                </div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <p class="stat-title">Recargas Hoy</p>
+                    <p class="stat-value text-warning" x-text="stats.recargasHoy"></p>
+                    <p class="text-sm text-gray-500 mt-2">
+                        Total: <span x-text="formatearPrecio(stats.montoRecargas)"></span>
+                    </p>
+                    <i class="fas fa-credit-card stat-icon text-warning"></i>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Accesos Rápidos -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6" role="navigation" aria-label="Accesos rápidos">
+        <h2 class="text-xl font-bold mb-4">
+            <i class="fas fa-bolt mr-2 text-warning" aria-hidden="true"></i>Accesos Rápidos
+        </h2>
+        
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <a href="{% url 'pos:venta' %}" 
+               class="btn-pos-primary"
+               aria-label="Ir a Nueva Venta">
+                <i class="fas fa-cash-register text-2xl mb-2" aria-hidden="true"></i>
+                <span class="block text-sm">Nueva Venta</span>
+            </a>
+            
+            <a href="{% url 'pos:recargas' %}" 
+               class="btn btn-lg bg-warning hover:bg-yellow-600 text-white flex flex-col items-center justify-center"
+               aria-label="Ir a Recargas">
+                <i class="fas fa-credit-card text-2xl mb-2" aria-hidden="true"></i>
+                <span class="block text-sm">Recargas</span>
+            </a>
+            
+            <a href="{% url 'pos:historial' %}" 
+               class="btn btn-lg bg-secondary hover:bg-teal-600 text-white flex flex-col items-center justify-center"
+               aria-label="Ver Historial de ventas">
+                <i class="fas fa-history text-2xl mb-2" aria-hidden="true"></i>
+                <span class="block text-sm">Historial</span>
+            </a>
+            
+            <a href="{% url 'pos:reportes' %}" 
+               class="btn btn-lg bg-gray-600 hover:bg-gray-700 text-white flex flex-col items-center justify-center"
+               aria-label="Ver Reportes">
+                <i class="fas fa-chart-bar text-2xl mb-2" aria-hidden="true"></i>
+                <span class="block text-sm">Reportes</span>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Dos columnas: Últimas Ventas y Productos Más Vendidos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Últimas Ventas -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4 flex items-center justify-between">
+                <span>
+                    <i class="fas fa-receipt mr-2 text-primary"></i>Últimas Ventas
+                </span>
+                <a href="{% url 'pos:historial' %}" class="text-sm text-primary hover:underline">
+                    Ver todas
+                </a>
+            </h2>
+            
+            <!-- Loading skeleton -->
+            <template x-if="cargando">
+                <div class="space-y-3">
+                    <template x-for="i in 5" :key="i">
+                        <div class="flex items-center gap-4">
+                            <div class="skeleton h-12 w-12 rounded-full"></div>
+                            <div class="flex-1 space-y-2">
+                                <div class="skeleton h-4 w-full"></div>
+                                <div class="skeleton h-3 w-2/3"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+            
+            <!-- Lista de ventas -->
+            <template x-if="!cargando">
+                <div class="space-y-3 max-h-96 overflow-y-auto">
+                    <template x-for="venta in ultimasVentas" :key="venta.id">
+                        <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                            <div class="w-12 h-12 bg-primary bg-opacity-10 rounded-full flex items-center justify-center">
+                                <i class="fas fa-shopping-bag text-primary text-xl"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-semibold truncate" x-text="venta.cliente"></p>
+                                <p class="text-sm text-gray-500">
+                                    <span x-text="venta.hora"></span> • 
+                                    <span x-text="venta.items"></span> items
+                                </p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-primary" x-text="formatearPrecio(venta.total)"></p>
+                                <p class="text-xs text-gray-500" x-text="venta.metodo_pago"></p>
+                            </div>
+                        </div>
+                    </template>
+                    
+                    <template x-if="ultimasVentas.length === 0">
+                        <div class="text-center py-8 text-gray-400">
+                            <i class="fas fa-inbox text-4xl mb-2"></i>
+                            <p>No hay ventas registradas hoy</p>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Productos Más Vendidos -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-fire mr-2 text-danger"></i>Productos Más Vendidos
+            </h2>
+            
+            <!-- Loading skeleton -->
+            <template x-if="cargando">
+                <div class="space-y-3">
+                    <template x-for="i in 5" :key="i">
+                        <div class="space-y-2">
+                            <div class="skeleton h-4 w-full"></div>
+                            <div class="skeleton h-6 w-3/4"></div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+            
+            <!-- Ranking de productos -->
+            <template x-if="!cargando">
+                <div class="space-y-4 max-h-96 overflow-y-auto">
+                    <template x-for="(producto, index) in productosMasVendidos" :key="producto.id">
+                        <div class="flex items-center gap-4">
+                            <!-- Ranking number -->
+                            <div class="w-8 h-8 flex items-center justify-center rounded-full font-bold text-white"
+                                 :class="{
+                                     'bg-yellow-500': index === 0,
+                                     'bg-gray-400': index === 1,
+                                     'bg-orange-600': index === 2,
+                                     'bg-gray-300 text-gray-700': index > 2
+                                 }">
+                                <span x-text="index + 1"></span>
+                            </div>
+                            
+                            <!-- Producto info -->
+                            <div class="flex-1 min-w-0">
+                                <p class="font-semibold truncate" x-text="producto.nombre"></p>
+                                <p class="text-sm text-gray-500">
+                                    <span x-text="producto.cantidad"></span> unidades • 
+                                    <span x-text="formatearPrecio(producto.total)"></span>
+                                </p>
+                            </div>
+                            
+                            <!-- Barra de progreso -->
+                            <div class="w-24">
+                                <div class="h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                                    <div class="h-full bg-primary transition-all duration-500"
+                                         :style="`width: ${(producto.cantidad / productosMasVendidos[0].cantidad * 100)}%`"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    
+                    <template x-if="productosMasVendidos.length === 0">
+                        <div class="text-center py-8 text-gray-400">
+                            <i class="fas fa-box-open text-4xl mb-2"></i>
+                            <p>No hay datos de productos</p>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Alertas y Notificaciones -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6" role="alert" aria-live="polite">
+        <h2 class="text-xl font-bold mb-4">
+            <i class="fas fa-bell mr-2 text-warning" aria-hidden="true"></i>Alertas
+        </h2>
+        
+        <div class="space-y-3">
+            <!-- Stock Bajo -->
+            <template x-if="stats.productosStockBajo > 0">
+                <div class="alert alert-warning shadow-lg" role="alert">
+                    <i class="fas fa-exclamation-triangle text-xl" aria-hidden="true"></i>
+                    <div class="flex-1">
+                        <h3 class="font-bold">Stock Bajo</h3>
+                        <p class="text-sm">
+                            <span x-text="stats.productosStockBajo"></span> productos con stock bajo. 
+                            <a href="{% url 'gestion:productos' %}" class="link" aria-label="Ver detalles de productos con stock bajo">Ver detalles</a>
+                        </p>
+                    </div>
+                </div>
+            </template>
+            
+            <!-- Sin alertas -->
+            <template x-if="!cargando && stats.productosStockBajo === 0">
+                <div class="alert alert-success shadow-lg" role="status">
+                    <i class="fas fa-check-circle text-xl" aria-hidden="true"></i>
+                    <span>Todo en orden. No hay alertas pendientes.</span>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function dashboardPOS() {
+    return {
+        cargando: true,
+        fechaActual: '',
+        stats: {
+            ventasHoy: 0,
+            totalRecaudado: 0,
+            promedioVenta: 0,
+            porcentajeVentas: 0,
+            productosVendidos: 0,
+            productosUnicos: 0,
+            recargasHoy: 0,
+            montoRecargas: 0,
+            productosStockBajo: 0
+        },
+        ultimasVentas: [],
+        productosMasVendidos: [],
+        
+        async init() {
+            this.actualizarFecha();
+            await this.cargarDatos();
+            this.cargando = false;
+            
+            // Auto-refresh cada 30 segundos
+            setInterval(() => this.cargarDatos(), 30000);
+        },
+        
+        actualizarFecha() {
+            const ahora = new Date();
+            const opciones = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            this.fechaActual = ahora.toLocaleDateString('es-PY', opciones);
+        },
+        
+{% block page_scripts %}
+<script>
+function dashboardPOS() {
+    return {
+        fechaActual: '',
+        cargando: false,
+        stats: {
+            ventasHoy: {{ stats.ventas_hoy }},
+            totalHoy: '{{ stats.total_hoy }}',
+            ventasMes: {{ stats.ventas_mes }},
+            totalMes: '{{ stats.total_mes }}',
+            itemsVendidos: {{ stats.items_vendidos }},
+            promedio: '{{ stats.promedio }}',
+            porcentajeVentas: {% if stats.ventas_ayer > 0 %}{{ stats.ventas_hoy|sub:stats.ventas_ayer|div:stats.ventas_ayer|mul:100|floatformat:1 }}{% else %}0{% endif %},
+            recargasHoy: 0, // TODO: Implementar
+            montoRecargas: 0, // TODO: Implementar
+            productosStockBajo: {{ stock_bajo|length }}
+        },
+        ultimasVentas: [
+            {% for venta in ultimas_ventas %}
+            {
+                id: {{ venta.id_venta }},
+                cliente: "{{ venta.id_cliente.nombres|default:'Cliente General' }}",
+                hora: "{{ venta.fecha|time:'H:i' }}",
+                items: {{ venta.items_count|default:1 }},
+                total: {{ venta.monto_total }},
+                metodo_pago: "{{ venta.metodo_pago|default:'EFECTIVO' }}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        productosMasVendidos: [],
+        
+        async init() {
+            this.actualizarFecha();
+            await this.cargarProductosMasVendidos();
+            this.cargando = false;
+            
+            // Auto-refresh datos cada 2 minutos
+            setInterval(() => this.cargarDatosTimeReal(), 120000);
+        },
+        
+        actualizarFecha() {
+            const ahora = new Date();
+            const opciones = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            this.fechaActual = ahora.toLocaleDateString('es-PY', opciones);
+        },
+        
+        async cargarProductosMasVendidos() {
+            // Usar datos del contexto Django
+            const topProductosData = {{ top_productos|safe }};
+            this.productosMasVendidos = topProductosData.labels.map((label, index) => ({
+                id: index + 1,
+                nombre: label,
+                cantidad: topProductosData.data[index],
+                total: topProductosData.data[index] * 5000 // Estimación - TODO: mejorar con datos reales
+            }));
+        },
+        
+        async cargarDatosTimeReal() {
+            try {
+                // En el futuro, hacer petición AJAX para datos en tiempo real
+                // Por ahora, solo actualizamos la fecha
+                this.actualizarFecha();
+            } catch (error) {
+                console.error('Error al cargar datos en tiempo real:', error);
+            }
+        },
+        
+        formatearPrecio(monto) {
+            if (typeof monto === 'string') {
+                monto = parseFloat(monto);
+            }
+            return new Intl.NumberFormat('es-PY', {
+                style: 'currency',
+                currency: 'PYG',
+                minimumFractionDigits: 0
+            }).format(monto);
+        }
+    }
+}
+</script>
+{% endblock %}

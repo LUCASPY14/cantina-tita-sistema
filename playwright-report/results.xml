@@ -1,0 +1,622 @@
+<testsuites id="" name="" tests="145" failures="0" skipped="145" errors="0" time="0.221818">
+<testsuite name="auth.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="chromium" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="Autenticación › Login exitoso con credenciales válidas" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Login falla con credenciales inválidas" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Campos vacíos muestran validación" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Logout funciona correctamente" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Sesión persiste después de refresh" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Redirige a login si no está autenticado" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Permisos y Roles › Admin puede acceder a todas las secciones" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Permisos y Roles › Usuario limitado no accede a admin" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="pos-flujo-completo.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="chromium" tests="3" failures="0" skipped="3" time="0" errors="0">
+<testcase name="POS - Flujo Completo de Venta › Flujo completo: Login → Buscar → Venta → Pago → Recibo" classname="pos-flujo-completo.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="POS - Flujo Completo de Venta › Flujo alternativo: Cancelar venta en proceso" classname="pos-flujo-completo.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="POS - Flujo Completo de Venta › Validaciones: No se puede procesar venta sin productos" classname="pos-flujo-completo.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="pwa-offline.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="chromium" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="PWA - Modo Offline › Service Worker se registra correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Aplicación funciona en modo offline" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Cache almacena recursos estáticos correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Manifest está configurado correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Aplicación responde a eventos online/offline" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Service Worker se actualiza correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Página offline fallback funciona" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Rendimiento › Métricas de rendimiento cumplen estándares PWA" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="smoke.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="chromium" tests="10" failures="0" skipped="10" time="0" errors="0">
+<testcase name="Smoke Tests - Sistema de Cantina › Homepage carga correctamente" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Login page está accesible" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › API health check responde" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Recursos estáticos se cargan" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Navegación básica funciona" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Sistema responde en tiempo razonable" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - POS › POS dashboard carga" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - POS › Puede buscar productos" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Portal Padres › Portal padres es accesible" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Portal Padres › Puede ver información de recargas" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="auth.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="firefox" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="Autenticación › Login exitoso con credenciales válidas" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Login falla con credenciales inválidas" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Campos vacíos muestran validación" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Logout funciona correctamente" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Sesión persiste después de refresh" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Redirige a login si no está autenticado" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Permisos y Roles › Admin puede acceder a todas las secciones" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Permisos y Roles › Usuario limitado no accede a admin" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="pos-flujo-completo.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="firefox" tests="3" failures="0" skipped="3" time="0" errors="0">
+<testcase name="POS - Flujo Completo de Venta › Flujo completo: Login → Buscar → Venta → Pago → Recibo" classname="pos-flujo-completo.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="POS - Flujo Completo de Venta › Flujo alternativo: Cancelar venta en proceso" classname="pos-flujo-completo.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="POS - Flujo Completo de Venta › Validaciones: No se puede procesar venta sin productos" classname="pos-flujo-completo.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="pwa-offline.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="firefox" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="PWA - Modo Offline › Service Worker se registra correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Aplicación funciona en modo offline" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Cache almacena recursos estáticos correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Manifest está configurado correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Aplicación responde a eventos online/offline" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Service Worker se actualiza correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Página offline fallback funciona" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Rendimiento › Métricas de rendimiento cumplen estándares PWA" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="smoke.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="firefox" tests="10" failures="0" skipped="10" time="0" errors="0">
+<testcase name="Smoke Tests - Sistema de Cantina › Homepage carga correctamente" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Login page está accesible" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › API health check responde" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Recursos estáticos se cargan" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Navegación básica funciona" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Sistema responde en tiempo razonable" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - POS › POS dashboard carga" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - POS › Puede buscar productos" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Portal Padres › Portal padres es accesible" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Portal Padres › Puede ver información de recargas" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="auth.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="webkit" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="Autenticación › Login exitoso con credenciales válidas" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Login falla con credenciales inválidas" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Campos vacíos muestran validación" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Logout funciona correctamente" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Sesión persiste después de refresh" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Redirige a login si no está autenticado" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Permisos y Roles › Admin puede acceder a todas las secciones" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Permisos y Roles › Usuario limitado no accede a admin" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="pos-flujo-completo.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="webkit" tests="3" failures="0" skipped="3" time="0" errors="0">
+<testcase name="POS - Flujo Completo de Venta › Flujo completo: Login → Buscar → Venta → Pago → Recibo" classname="pos-flujo-completo.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="POS - Flujo Completo de Venta › Flujo alternativo: Cancelar venta en proceso" classname="pos-flujo-completo.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="POS - Flujo Completo de Venta › Validaciones: No se puede procesar venta sin productos" classname="pos-flujo-completo.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="pwa-offline.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="webkit" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="PWA - Modo Offline › Service Worker se registra correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Aplicación funciona en modo offline" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Cache almacena recursos estáticos correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Manifest está configurado correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Aplicación responde a eventos online/offline" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Service Worker se actualiza correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Página offline fallback funciona" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Rendimiento › Métricas de rendimiento cumplen estándares PWA" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="smoke.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="webkit" tests="10" failures="0" skipped="10" time="0" errors="0">
+<testcase name="Smoke Tests - Sistema de Cantina › Homepage carga correctamente" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Login page está accesible" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › API health check responde" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Recursos estáticos se cargan" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Navegación básica funciona" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Sistema responde en tiempo razonable" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - POS › POS dashboard carga" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - POS › Puede buscar productos" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Portal Padres › Portal padres es accesible" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Portal Padres › Puede ver información de recargas" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="auth.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="Mobile Chrome" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="Autenticación › Login exitoso con credenciales válidas" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Login falla con credenciales inválidas" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Campos vacíos muestran validación" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Logout funciona correctamente" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Sesión persiste después de refresh" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Redirige a login si no está autenticado" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Permisos y Roles › Admin puede acceder a todas las secciones" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Permisos y Roles › Usuario limitado no accede a admin" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="pos-flujo-completo.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="Mobile Chrome" tests="3" failures="0" skipped="3" time="0" errors="0">
+<testcase name="POS - Flujo Completo de Venta › Flujo completo: Login → Buscar → Venta → Pago → Recibo" classname="pos-flujo-completo.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="POS - Flujo Completo de Venta › Flujo alternativo: Cancelar venta en proceso" classname="pos-flujo-completo.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="POS - Flujo Completo de Venta › Validaciones: No se puede procesar venta sin productos" classname="pos-flujo-completo.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="pwa-offline.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="Mobile Chrome" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="PWA - Modo Offline › Service Worker se registra correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Aplicación funciona en modo offline" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Cache almacena recursos estáticos correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Manifest está configurado correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Aplicación responde a eventos online/offline" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Service Worker se actualiza correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Página offline fallback funciona" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Rendimiento › Métricas de rendimiento cumplen estándares PWA" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="smoke.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="Mobile Chrome" tests="10" failures="0" skipped="10" time="0" errors="0">
+<testcase name="Smoke Tests - Sistema de Cantina › Homepage carga correctamente" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Login page está accesible" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › API health check responde" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Recursos estáticos se cargan" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Navegación básica funciona" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Sistema responde en tiempo razonable" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - POS › POS dashboard carga" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - POS › Puede buscar productos" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Portal Padres › Portal padres es accesible" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Portal Padres › Puede ver información de recargas" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="auth.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="Mobile Safari" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="Autenticación › Login exitoso con credenciales válidas" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Login falla con credenciales inválidas" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Campos vacíos muestran validación" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Logout funciona correctamente" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Sesión persiste después de refresh" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Autenticación › Redirige a login si no está autenticado" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Permisos y Roles › Admin puede acceder a todas las secciones" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Permisos y Roles › Usuario limitado no accede a admin" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="pos-flujo-completo.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="Mobile Safari" tests="3" failures="0" skipped="3" time="0" errors="0">
+<testcase name="POS - Flujo Completo de Venta › Flujo completo: Login → Buscar → Venta → Pago → Recibo" classname="pos-flujo-completo.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="POS - Flujo Completo de Venta › Flujo alternativo: Cancelar venta en proceso" classname="pos-flujo-completo.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="POS - Flujo Completo de Venta › Validaciones: No se puede procesar venta sin productos" classname="pos-flujo-completo.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="pwa-offline.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="Mobile Safari" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="PWA - Modo Offline › Service Worker se registra correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Aplicación funciona en modo offline" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Cache almacena recursos estáticos correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Manifest está configurado correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Aplicación responde a eventos online/offline" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Service Worker se actualiza correctamente" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Modo Offline › Página offline fallback funciona" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="PWA - Rendimiento › Métricas de rendimiento cumplen estándares PWA" classname="pwa-offline.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="smoke.spec.ts" timestamp="2026-02-05T00:08:30.090Z" hostname="Mobile Safari" tests="10" failures="0" skipped="10" time="0" errors="0">
+<testcase name="Smoke Tests - Sistema de Cantina › Homepage carga correctamente" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Login page está accesible" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › API health check responde" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Recursos estáticos se cargan" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Navegación básica funciona" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Sistema de Cantina › Sistema responde en tiempo razonable" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - POS › POS dashboard carga" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - POS › Puede buscar productos" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Portal Padres › Portal padres es accesible" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests - Portal Padres › Puede ver información de recargas" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+</testsuites>

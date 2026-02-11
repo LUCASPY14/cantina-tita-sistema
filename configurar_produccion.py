@@ -1,204 +1,274 @@
+#!/usr/bin/env python3
 """
-Script para configurar el sistema para producción
-Genera SECRET_KEY segura y actualiza settings.py
+Asistente Interactivo para Configurar .env.production
+======================================================
+
+Este script te guiará paso a paso para completar todas las variables
+necesarias para producción.
 """
-import secrets
+
 import os
+import sys
 from pathlib import Path
 
-print("=" * 80)
-print("🔐 CONFIGURACIÓN DE SEGURIDAD PARA PRODUCCIÓN")
-print("=" * 80)
-print()
+# Colores
+GREEN = '\033[92m'
+YELLOW = '\033[93m'
+BLUE = '\033[94m'
+BOLD = '\033[1m'
+END = '\033[0m'
 
-# 1. Generar nueva SECRET_KEY
-print("1️⃣  Generando nueva SECRET_KEY segura...")
-nueva_secret_key = secrets.token_urlsafe(50)
-print(f"   ✅ SECRET_KEY generada: {nueva_secret_key[:20]}... ({len(nueva_secret_key)} caracteres)")
-print()
+def print_header(text):
+    print(f"\n{BOLD}{BLUE}{'='*70}{END}")
+    print(f"{BOLD}{BLUE}{text:^70}{END}")
+    print(f"{BOLD}{BLUE}{'='*70}{END}\n")
 
-# 2. Leer settings.py actual
-settings_path = Path('cantina_project/settings.py')
-with open(settings_path, 'r', encoding='utf-8') as f:
-    contenido = f.read()
+def print_step(num, text):
+    print(f"\n{BOLD}{GREEN}[PASO {num}] {text}{END}")
+    print("-" * 70)
 
-# 3. Preparar cambios
-cambios = []
+def ask_question(prompt, default=""):
+    if default:
+        user_input = input(f"{YELLOW}{prompt} [{default}]: {END}").strip()
+        return user_input if user_input else default
+    else:
+        while True:
+            user_input = input(f"{YELLOW}{prompt}: {END}").strip()
+            if user_input:
+                return user_input
+            print(f"{YELLOW}⚠️  Este campo es obligatorio. Por favor ingresa un valor.{END}")
 
-# Cambiar DEBUG
-if "DEBUG = True" in contenido:
-    print("2️⃣  Configurando DEBUG = False...")
-    contenido_nuevo = contenido.replace("DEBUG = True", "DEBUG = False")
-    cambios.append("DEBUG = False")
-else:
-    print("2️⃣  DEBUG ya está en False ✅")
-    contenido_nuevo = contenido
+def ask_yes_no(prompt, default="s"):
+    while True:
+        response = input(f"{YELLOW}{prompt} (s/n) [{default}]: {END}").strip().lower()
+        if not response:
+            response = default
+        if response in ['s', 'n', 'si', 'no']:
+            return response in ['s', 'si']
+        print(f"{YELLOW}Por favor responde 's' o 'n'{END}")
 
-# Cambiar SECRET_KEY
-print("3️⃣  Actualizando SECRET_KEY...")
-import re
-# Buscar la línea de SECRET_KEY
-patron = r"SECRET_KEY = ['\"].*?['\"]"
-if re.search(patron, contenido_nuevo):
-    contenido_nuevo = re.sub(patron, f'SECRET_KEY = "{nueva_secret_key}"', contenido_nuevo)
-    cambios.append("SECRET_KEY actualizada")
-else:
-    print("   ⚠️  No se encontró SECRET_KEY en settings.py")
+def main():
+    print_header("CONFIGURACIÓN DE .env.production")
+    
+    print(f"{BOLD}Este asistente te ayudará a configurar todas las variables necesarias")
+    print(f"para desplegar tu sistema a producción.{END}\n")
+    
+    config = {}
+    
+    # =========================================================================
+    # PASO 1: ALLOWED_HOSTS
+    # =========================================================================
+    print_step(1, "Configurar ALLOWED_HOSTS")
+    print("¿Qué tipo de hosting usarás?")
+    print("1. Railway")
+    print("2. Render")
+    print("3. VPS con dominio propio")
+    print("4. Servidor local con IP")
+    
+    hosting_choice = ask_question("Selecciona opción (1-4)", "1")
+    
+    if hosting_choice == "1":
+        config['ALLOWED_HOSTS'] = ".railway.app"
+        domain = input(f"{YELLOW}¿Tienes dominio personalizado? (déjalo vacío si no): {END}").strip()
+        if domain:
+            config['ALLOWED_HOSTS'] = f".railway.app,{domain},www.{domain}"
+    elif hosting_choice == "2":
+        config['ALLOWED_HOSTS'] = ".onrender.com"
+        domain = input(f"{YELLOW}¿Tienes dominio personalizado? (déjalo vacío si no): {END}").strip()
+        if domain:
+            config['ALLOWED_HOSTS'] = f".onrender.com,{domain},www.{domain}"
+    elif hosting_choice == "3":
+        domain = ask_question("Ingresa tu dominio (ej: cantitatita.com)")
+        ip = ask_question("Ingresa la IP de tu servidor", "")
+        config['ALLOWED_HOSTS'] = f"{domain},www.{domain},{ip}" if ip else f"{domain},www.{domain}"
+    else:
+        ip = ask_question("Ingresa la IP local de tu servidor (ej: 192.168.1.100)")
+        config['ALLOWED_HOSTS'] = f"{ip},localhost,127.0.0.1"
+    
+    print(f"{GREEN}✓ ALLOWED_HOSTS configurado: {config['ALLOWED_HOSTS']}{END}")
+    
+    # =========================================================================
+    # PASO 2: BASE DE DATOS
+    # =========================================================================
+    print_step(2, "Configurar Base de Datos MySQL")
+    
+    if hosting_choice in ["1", "2"]:
+        print(f"{BLUE}ℹ️  Railway/Render crean la base de datos automáticamente.{END}")
+        print(f"{BLUE}   Usa las credenciales que te proporcionan en su Dashboard.{END}\n")
+        
+        config['DB_NAME'] = ask_question("DB_NAME", "railway" if hosting_choice == "1" else "render")
+        config['DB_USER'] = ask_question("DB_USER", "root")
+        config['DB_PASSWORD'] = ask_question("DB_PASSWORD (proporcionado por Railway/Render)")
+        config['DB_HOST'] = ask_question("DB_HOST (proporcionado por Railway/Render)")
+        config['DB_PORT'] = ask_question("DB_PORT", "3306")
+    else:
+        config['DB_NAME'] = ask_question("DB_NAME", "cantitatitadb")
+        config['DB_USER'] = ask_question("DB_USER", "cantina_user")
+        
+        print(f"\n{YELLOW}⚠️  IMPORTANTE: Usa un password seguro (20+ caracteres){END}")
+        print(f"{YELLOW}   Combina: mayúsculas + minúsculas + números + símbolos{END}")
+        config['DB_PASSWORD'] = ask_question("DB_PASSWORD")
+        
+        config['DB_HOST'] = ask_question("DB_HOST", "localhost")
+        config['DB_PORT'] = ask_question("DB_PORT", "3306")
+    
+    print(f"{GREEN}✓ Base de datos configurada{END}")
+    
+    # =========================================================================
+    # PASO 3: EMAIL (SMTP)
+    # =========================================================================
+    print_step(3, "Configurar Email (SMTP)")
+    
+    print("¿Qué servicio de email usarás?")
+    print("1. Gmail (recomendado)")
+    print("2. SendGrid")
+    print("3. Otro")
+    
+    email_choice = ask_question("Selecciona opción (1-3)", "1")
+    
+    if email_choice == "1":
+        config['EMAIL_HOST'] = "smtp.gmail.com"
+        config['EMAIL_PORT'] = "587"
+        config['EMAIL_USE_TLS'] = "True"
+        config['EMAIL_HOST_USER'] = ask_question("Email de Gmail")
+        
+        print(f"\n{BLUE}📋 Para obtener App Password:{END}")
+        print(f"{BLUE}1. Ve a: https://myaccount.google.com/apppasswords{END}")
+        print(f"{BLUE}2. Crea 'App Password' con nombre 'Cantina Tita'{END}")
+        print(f"{BLUE}3. Copia la contraseña de 16 caracteres (sin espacios){END}\n")
+        
+        config['EMAIL_HOST_PASSWORD'] = ask_question("App Password de Gmail (16 caracteres)")
+    elif email_choice == "2":
+        config['EMAIL_HOST'] = "smtp.sendgrid.net"
+        config['EMAIL_PORT'] = "587"
+        config['EMAIL_USE_TLS'] = "True"
+        config['EMAIL_HOST_USER'] = "apikey"
+        
+        print(f"\n{BLUE}📋 Para obtener SendGrid API Key:{END}")
+        print(f"{BLUE}1. Regístrate en: https://sendgrid.com{END}")
+        print(f"{BLUE}2. Ve a Settings > API Keys{END}")
+        print(f"{BLUE}3. Crea nueva API Key (Full Access){END}\n")
+        
+        config['EMAIL_HOST_PASSWORD'] = ask_question("SendGrid API Key (empieza con SG.)")
+    else:
+        config['EMAIL_HOST'] = ask_question("SMTP Host")
+        config['EMAIL_PORT'] = ask_question("SMTP Port", "587")
+        config['EMAIL_USE_TLS'] = "True" if ask_yes_no("¿Usar TLS?") else "False"
+        config['EMAIL_HOST_USER'] = ask_question("Email usuario")
+        config['EMAIL_HOST_PASSWORD'] = ask_question("Email password")
+    
+    print(f"{GREEN}✓ Email configurado{END}")
+    
+    # =========================================================================
+    # PASO 4: reCAPTCHA
+    # =========================================================================
+    print_step(4, "Configurar Google reCAPTCHA")
+    
+    if ask_yes_no("¿Ya tienes claves de reCAPTCHA?", "n"):
+        config['RECAPTCHA_PUBLIC_KEY'] = ask_question("reCAPTCHA Site Key (pública)")
+        config['RECAPTCHA_PRIVATE_KEY'] = ask_question("reCAPTCHA Secret Key (privada)")
+    else:
+        print(f"\n{BLUE}📋 Para obtener claves de reCAPTCHA:{END}")
+        print(f"{BLUE}1. Ve a: https://www.google.com/recaptcha/admin/create{END}")
+        print(f"{BLUE}2. Tipo: reCAPTCHA v2 > 'No soy un robot'{END}")
+        print(f"{BLUE}3. Dominio: {config.get('ALLOWED_HOSTS', 'tu-dominio.com').split(',')[0]}{END}")
+        print(f"{BLUE}4. Copia ambas claves{END}\n")
+        
+        if ask_yes_no("¿Abrir el link en el navegador ahora?"):
+            import webbrowser
+            webbrowser.open("https://www.google.com/recaptcha/admin/create")
+        
+        print(f"\n{YELLOW}Presiona Enter cuando hayas obtenido las claves...{END}")
+        input()
+        
+        config['RECAPTCHA_PUBLIC_KEY'] = ask_question("reCAPTCHA Site Key")
+        config['RECAPTCHA_PRIVATE_KEY'] = ask_question("reCAPTCHA Secret Key")
+    
+    print(f"{GREEN}✓ reCAPTCHA configurado{END}")
+    
+    # =========================================================================
+    # PASO 5: SSL/HTTPS
+    # =========================================================================
+    print_step(5, "Configurar SSL/HTTPS")
+    
+    if hosting_choice in ["1", "2"]:
+        print(f"{BLUE}ℹ️  Railway/Render configuran SSL automáticamente.{END}")
+        config['SECURE_SSL_REDIRECT'] = "True"
+        config['SESSION_COOKIE_SECURE'] = "True"
+        config['CSRF_COOKIE_SECURE'] = "True"
+        config['SECURE_HSTS_SECONDS'] = "31536000"
+        print(f"{GREEN}✓ SSL configurado (automático){END}")
+    else:
+        if ask_yes_no("¿Ya tienes certificado SSL instalado?", "n"):
+            config['SECURE_SSL_REDIRECT'] = "True"
+            config['SESSION_COOKIE_SECURE'] = "True"
+            config['CSRF_COOKIE_SECURE'] = "True"
+            config['SECURE_HSTS_SECONDS'] = "31536000"
+            print(f"{GREEN}✓ SSL activado{END}")
+        else:
+            config['SECURE_SSL_REDIRECT'] = "False"
+            config['SESSION_COOKIE_SECURE'] = "False"
+            config['CSRF_COOKIE_SECURE'] = "False"
+            config['SECURE_HSTS_SECONDS'] = "0"
+            print(f"{YELLOW}⚠️  SSL desactivado (activar después de instalar certificado){END}")
+            print(f"{YELLOW}   Ver: docs/SSL_SETUP.md para instrucciones{END}")
+    
+    # =========================================================================
+    # GENERAR ARCHIVO
+    # =========================================================================
+    print_step(6, "Generar archivo .env.production")
+    
+    env_path = Path(__file__).parent / 'entorno' / '.env.production'
+    
+    print(f"\n{BOLD}Resumen de configuración:{END}")
+    print("-" * 70)
+    for key, value in config.items():
+        # Ocultar passwords
+        if 'PASSWORD' in key or 'SECRET' in key or 'KEY' in key:
+            display_value = value[:4] + '*' * (len(value) - 4) if len(value) > 4 else '****'
+        else:
+            display_value = value
+        print(f"{key:30} = {display_value}")
+    print("-" * 70)
+    
+    if ask_yes_no("\n¿Guardar esta configuración?"):
+        # Leer archivo actual
+        if env_path.exists():
+            with open(env_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            # Actualizar valores
+            new_lines = []
+            for line in lines:
+                written = False
+                for key, value in config.items():
+                    if line.strip().startswith(f"{key}="):
+                        new_lines.append(f"{key}={value}\n")
+                        written = True
+                        break
+                if not written:
+                    new_lines.append(line)
+            
+            # Escribir archivo
+            with open(env_path, 'w', encoding='utf-8') as f:
+                f.writelines(new_lines)
+            
+            print(f"\n{GREEN}✅ Archivo .env.production actualizado exitosamente!{END}")
+            print(f"{GREEN}   Ubicación: {env_path}{END}")
+            
+            # Verificar
+            print(f"\n{BOLD}Próximo paso:{END}")
+            print(f"python verificar_produccion.py")
+        else:
+            print(f"{YELLOW}⚠️  Archivo .env.production no encontrado en: {env_path}{END}")
+    else:
+        print(f"\n{YELLOW}Configuración no guardada. Copia estos valores manualmente:{END}\n")
+        for key, value in config.items():
+            print(f"{key}={value}")
 
-# 4. Configurar ALLOWED_HOSTS si está vacío
-print("4️⃣  Configurando ALLOWED_HOSTS...")
-if "ALLOWED_HOSTS = []" in contenido_nuevo:
-    # Agregar hosts comunes
-    contenido_nuevo = contenido_nuevo.replace(
-        "ALLOWED_HOSTS = []",
-        "ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'cantina-tita.edu.py', 'www.cantina-tita.edu.py']"
-    )
-    cambios.append("ALLOWED_HOSTS configurado")
-    print("   ✅ ALLOWED_HOSTS configurado")
-else:
-    print("   ℹ️  ALLOWED_HOSTS ya tiene valores")
-
-# 5. Habilitar configuraciones de HTTPS (comentadas por ahora)
-print("5️⃣  Configurando opciones de HTTPS...")
-configuraciones_https = """
-# Configuración de seguridad HTTPS
-# DESCOMENTAR cuando se configure SSL/HTTPS en producción
-# SECURE_SSL_REDIRECT = True
-# SESSION_COOKIE_SECURE = True
-# CSRF_COOKIE_SECURE = True
-# SECURE_HSTS_SECONDS = 31536000  # 1 año
-# SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-# SECURE_BROWSER_XSS_FILTER = True
-# SECURE_CONTENT_TYPE_NOSNIFF = True  # Ya está activado
-# X_FRAME_OPTIONS = 'DENY'  # Ya está configurado
-"""
-
-# Agregar al final si no existe
-if "SECURE_SSL_REDIRECT" not in contenido_nuevo:
-    contenido_nuevo += "\n" + configuraciones_https
-    cambios.append("Configuraciones HTTPS agregadas (comentadas)")
-    print("   ✅ Configuraciones HTTPS agregadas (comentadas)")
-else:
-    print("   ℹ️  Configuraciones HTTPS ya existen")
-
-# 6. Configurar STATIC_ROOT si no existe
-print("6️⃣  Configurando STATIC_ROOT...")
-if "STATIC_ROOT" not in contenido_nuevo or "STATIC_ROOT = None" in contenido_nuevo:
-    static_config = """
-# Archivos estáticos para producción
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-"""
-    contenido_nuevo += "\n" + static_config
-    cambios.append("STATIC_ROOT configurado")
-    print("   ✅ STATIC_ROOT configurado")
-else:
-    print("   ℹ️  STATIC_ROOT ya está configurado")
-
-# 7. Crear backup del settings.py actual
-print()
-print("7️⃣  Creando backup de configuración actual...")
-backup_path = Path('cantina_project/settings.py.backup_antes_produccion')
-with open(backup_path, 'w', encoding='utf-8') as f:
-    f.write(contenido)
-print(f"   ✅ Backup guardado: {backup_path}")
-
-# 8. Guardar nuevo settings.py
-print()
-print("8️⃣  Guardando nueva configuración...")
-with open(settings_path, 'w', encoding='utf-8') as f:
-    f.write(contenido_nuevo)
-print(f"   ✅ Archivo actualizado: {settings_path}")
-
-# 9. Crear archivo .env de ejemplo con la SECRET_KEY
-print()
-print("9️⃣  Creando archivo .env.example...")
-env_content = f"""# Archivo de configuración de entorno para producción
-# Copiar este archivo a .env y completar los valores
-
-# Django
-SECRET_KEY={nueva_secret_key}
-DEBUG=False
-ALLOWED_HOSTS=localhost,127.0.0.1,cantina-tita.edu.py
-
-# Base de datos
-DB_NAME=cantinatitadb
-DB_USER=root
-DB_PASSWORD=tu_password_aqui
-DB_HOST=localhost
-DB_PORT=3306
-
-# Email (SMTP)
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_HOST_USER=cantina.tita@gmail.com
-EMAIL_HOST_PASSWORD=tu_app_password_aqui
-EMAIL_USE_TLS=True
-
-# Ekuatia (Facturación Electrónica)
-EKUATIA_API_KEY=tu_api_key_aqui
-EKUATIA_MODO=testing  # cambiar a 'production' cuando esté listo
-
-# Configuración HTTPS (descomentar cuando SSL esté configurado)
-# SECURE_SSL_REDIRECT=True
-# SESSION_COOKIE_SECURE=True
-# CSRF_COOKIE_SECURE=True
-"""
-
-with open('.env.example', 'w', encoding='utf-8') as f:
-    f.write(env_content)
-print("   ✅ Archivo .env.example creado")
-
-# 10. Resumen
-print()
-print("=" * 80)
-print("📊 RESUMEN DE CAMBIOS")
-print("=" * 80)
-for i, cambio in enumerate(cambios, 1):
-    print(f"{i}. ✅ {cambio}")
-
-print()
-print("=" * 80)
-print("🎯 CONFIGURACIÓN PARA PRODUCCIÓN LISTA")
-print("=" * 80)
-print()
-print("📋 PRÓXIMOS PASOS MANUALES:")
-print()
-print("1. 🔐 SEGURIDAD:")
-print("   • Verificar que DEBUG=False en settings.py")
-print("   • Guardar SECRET_KEY en lugar seguro (gestor de contraseñas)")
-print("   • NO subir SECRET_KEY a repositorio Git")
-print()
-print("2. 🌐 HTTPS:")
-print("   • Configurar certificado SSL")
-print("   • Descomentar líneas de SECURE_* en settings.py")
-print("   • Probar que redirige HTTP → HTTPS")
-print()
-print("3. 📧 EMAIL:")
-print("   • Ejecutar: python configurar_smtp.py")
-print("   • Probar envío de email de prueba")
-print()
-print("4. 🗂️ ARCHIVOS ESTÁTICOS:")
-print("   • Ejecutar: python manage.py collectstatic")
-print("   • Configurar nginx/Apache para servir /static/")
-print()
-print("5. 🔄 BACKUP:")
-print("   • Ejecutar: python configurar_backup_tareas.py")
-print("   • Verificar tarea programada en Windows")
-print()
-print("6. 🧪 TESTING:")
-print("   • Ejecutar: python auditoria_seguridad.py")
-print("   • Verificar que no haya problemas críticos")
-print()
-print("7. 📝 DOCUMENTACIÓN:")
-print("   • Leer: MANUAL_ADMINISTRADORES.md")
-print("   • Leer: GUIA_DESPLIEGUE_PRODUCCION.md")
-print()
-print("=" * 80)
-print()
-print("⚠️  IMPORTANTE:")
-print("   • Hacer backup completo antes de desplegar")
-print("   • Probar en entorno de staging primero")
-print("   • Monitorear logs después del despliegue")
-print()
-print("✅ Configuración completada exitosamente")
-print("=" * 80)
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print(f"\n\n{YELLOW}Configuración cancelada{END}")
+        sys.exit(0)

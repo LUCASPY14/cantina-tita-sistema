@@ -1,0 +1,116 @@
+{% load static %}
+{% load custom_filters %}
+
+{% comment %}
+Dropdown de notificaciones
+Se carga con HTMX cuando se hace click en el ícono
+{% endcomment %}
+
+<div class="w-96 max-h-[500px] overflow-y-auto">
+    <!-- Header -->
+    <div class="sticky top-0 bg-base-200 p-4 border-b border-base-300 flex items-center justify-between z-10">
+        <h3 class="font-bold text-lg">
+            <i class="fas fa-bell mr-2"></i>
+            Notificaciones
+            {% if count_no_leidas > 0 %}
+                <span class="badge badge-error badge-sm ml-2">{{ count_no_leidas }}</span>
+            {% endif %}
+        </h3>
+        
+        {% if count_no_leidas > 0 %}
+            <button class="btn btn-ghost btn-xs"
+                    hx-post="{% url 'notificaciones:marcar_todas_leidas' %}"
+                    hx-trigger="click"
+                    hx-swap="none"
+                    hx-on::after-request="htmx.trigger('#notif-dropdown', 'refresh-notif')">
+                <i class="fas fa-check-double mr-1"></i>
+                Marcar todas
+            </button>
+        {% endif %}
+    </div>
+    
+    <!-- Lista de notificaciones -->
+    {% if notificaciones %}
+        <ul class="menu p-2">
+            {% for notif in notificaciones %}
+                <li class="hover-bordered mb-2">
+                    <a href="{{ notif.url|default:'#' }}"
+                       class="flex flex-col items-start gap-2 p-3 rounded-lg transition-all {% if not notif.leida %}bg-blue-50 dark:bg-blue-900/20{% endif %}"
+                       hx-post="{% url 'notificaciones:marcar_leida' notif.id %}"
+                       hx-trigger="click"
+                       hx-swap="none">
+                        
+                        <div class="flex items-start gap-3 w-full">
+                            <!-- Ícono -->
+                            <div class="flex-shrink-0">
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center
+                                    {% if notif.tipo == 'error' or notif.prioridad == 'critica' %}bg-red-100 text-red-600
+                                    {% elif notif.tipo == 'warning' %}bg-yellow-100 text-yellow-600
+                                    {% elif notif.tipo == 'success' %}bg-green-100 text-green-600
+                                    {% elif notif.tipo == 'venta' %}bg-blue-100 text-blue-600
+                                    {% elif notif.tipo == 'recarga' %}bg-purple-100 text-purple-600
+                                    {% elif notif.tipo == 'stock' %}bg-orange-100 text-orange-600
+                                    {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                    <i class="fas {{ notif.icono|default:'fa-bell' }}"></i>
+                                </div>
+                            </div>
+                            
+                            <!-- Contenido -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between gap-2">
+                                    <p class="font-semibold text-sm text-gray-800 dark:text-gray-200">
+                                        {{ notif.titulo }}
+                                    </p>
+                                    {% if not notif.leida %}
+                                        <span class="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></span>
+                                    {% endif %}
+                                </div>
+                                
+                                <p class="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                                    {{ notif.mensaje }}
+                                </p>
+                                
+                                <div class="flex items-center gap-2 mt-2">
+                                    <span class="text-xs text-gray-500">
+                                        <i class="fas fa-clock mr-1"></i>
+                                        {{ notif.creada_en|timesince }} atrás
+                                    </span>
+                                    
+                                    {% if notif.prioridad == 'alta' or notif.prioridad == 'critica' %}
+                                        <span class="badge badge-xs badge-error">
+                                            {{ notif.get_prioridad_display }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+        
+        <!-- Ver todas -->
+        <div class="p-3 border-t border-base-300 bg-base-200">
+            <a href="{% url 'notificaciones:panel' %}" 
+               class="btn btn-block btn-sm btn-ghost">
+                <i class="fas fa-list mr-2"></i>
+                Ver todas las notificaciones
+            </a>
+        </div>
+    {% else %}
+        <!-- No hay notificaciones -->
+        <div class="p-8 text-center">
+            <i class="fas fa-bell-slash text-4xl text-gray-300 mb-3"></i>
+            <p class="text-gray-500 text-sm">No tienes notificaciones</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+</style>

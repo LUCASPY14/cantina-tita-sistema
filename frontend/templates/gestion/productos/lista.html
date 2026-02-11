@@ -1,0 +1,603 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Productos - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="listaProductos()" x-init="init()" class="space-y-6">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-box mr-3 text-primary"></i>
+                Gestión de Productos
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Administra el inventario de productos de la cantina
+            </p>
+        </div>
+        
+        <a href="{% url 'gestion:productos_crear' %}" class="btn btn-primary btn-lg">
+            <i class="fas fa-plus-circle mr-2"></i>
+            Nuevo Producto
+        </a>
+    </div>
+    
+    <!-- Filtros y Búsqueda -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            
+            <!-- Búsqueda -->
+            <div class="md:col-span-2">
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-search mr-2"></i>Buscar producto
+                    </span>
+                </label>
+                <input type="text" 
+                       x-model="filtros.busqueda"
+                       @input.debounce.300ms="buscarProductos()"
+                       placeholder="Nombre, código de barras..."
+                       class="input input-bordered w-full">
+            </div>
+            
+            <!-- Categoría -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-tag mr-2"></i>Categoría
+                    </span>
+                </label>
+                <select x-model="filtros.categoria" 
+                        @change="buscarProductos()"
+                        class="select select-bordered w-full">
+                    <option value="">Todas las categorías</option>
+                    <template x-for="cat in categorias" :key="cat.id">
+                        <option :value="cat.id" x-text="cat.nombre"></option>
+                    </template>
+                </select>
+            </div>
+            
+            <!-- Estado -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-toggle-on mr-2"></i>Estado
+                    </span>
+                </label>
+                <select x-model="filtros.estado" 
+                        @change="buscarProductos()"
+                        class="select select-bordered w-full">
+                    <option value="">Todos</option>
+                    <option value="activo">Activos</option>
+                    <option value="inactivo">Inactivos</option>
+                    <option value="stock_bajo">Stock Bajo</option>
+                    <option value="sin_stock">Sin Stock</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Acciones masivas -->
+        <div class="flex items-center justify-between mt-4 pt-4 border-t dark:border-gray-700">
+            <div class="flex items-center gap-2">
+                <template x-if="productosSeleccionados.length > 0">
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">
+                            <span x-text="productosSeleccionados.length"></span> seleccionados
+                        </span>
+                        <button @click="activarSeleccionados()" class="btn btn-sm btn-success">
+                            <i class="fas fa-check mr-1"></i>Activar
+                        </button>
+                        <button @click="desactivarSeleccionados()" class="btn btn-sm btn-warning">
+                            <i class="fas fa-ban mr-1"></i>Desactivar
+                        </button>
+                        <button @click="eliminarSeleccionados()" class="btn btn-sm btn-error">
+                            <i class="fas fa-trash mr-1"></i>Eliminar
+                        </button>
+                    </div>
+                </template>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button @click="exportarCSV()" class="btn btn-sm btn-outline">
+                    <i class="fas fa-file-csv mr-1"></i>Exportar CSV
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tabla de Productos -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        
+        <!-- Loading skeleton -->
+        <template x-if="cargando">
+            <div class="p-6 space-y-4">
+                <template x-for="i in 10" :key="i">
+                    <div class="flex items-center gap-4">
+                        <div class="skeleton h-16 w-16 rounded"></div>
+                        <div class="flex-1 space-y-2">
+                            <div class="skeleton h-4 w-full"></div>
+                            <div class="skeleton h-3 w-2/3"></div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+        
+        <!-- Tabla -->
+        <template x-if="!cargando">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr>
+                            <th>
+                                <input type="checkbox" 
+                                       @change="toggleTodos($event.target.checked)"
+                                       class="checkbox checkbox-sm">
+                            </th>
+                            <th>Producto</th>
+                            <th>Categoría</th>
+                            <th>Precio Compra</th>
+                            <th>Precio Venta</th>
+                            <th>Stock</th>
+                            <th>Estado</th>
+                            <th class="text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="producto in productos" :key="producto.id">
+                            <tr class="hover">
+                                <!-- Checkbox -->
+                                <td>
+                                    <input type="checkbox" 
+                                           :checked="productosSeleccionados.includes(producto.id)"
+                                           @change="toggleSeleccion(producto.id)"
+                                           class="checkbox checkbox-sm">
+                                </td>
+                                
+                                <!-- Producto -->
+                                <td>
+                                    <div class="flex items-center gap-3">
+                                        <div class="avatar">
+                                            <div class="w-12 h-12 rounded">
+                                                <template x-if="producto.imagen">
+                                                    <img :src="producto.imagen" :alt="producto.descripcion">
+                                                </template>
+                                                <template x-if="!producto.imagen">
+                                                    <div class="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                                        <i class="fas fa-box text-gray-400"></i>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold" x-text="producto.descripcion"></p>
+                                            <p class="text-sm text-gray-500 font-mono" x-text="producto.codigo_barra"></p>
+                                        </div>
+                                    </div>
+                                </td>
+                                
+                                <!-- Categoría -->
+                                <td>
+                                    <span class="badge badge-secondary badge-sm" x-text="producto.categoria_nombre"></span>
+                                </td>
+                                
+                                <!-- Precio Compra -->
+                                <td class="font-mono" x-text="formatearPrecio(producto.precio_compra)"></td>
+                                
+                                <!-- Precio Venta -->
+                                <td class="font-mono font-semibold text-primary" x-text="formatearPrecio(producto.precio_venta)"></td>
+                                
+                                <!-- Stock -->
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-bold" 
+                                              :class="{
+                                                  'text-success': producto.stock > 10,
+                                                  'text-warning': producto.stock > 0 && producto.stock <= 10,
+                                                  'text-error': producto.stock === 0
+                                              }"
+                                              x-text="producto.stock"></span>
+                                        <template x-if="producto.stock === 0">
+                                            <i class="fas fa-exclamation-triangle text-error" title="Sin stock"></i>
+                                        </template>
+                                    </div>
+                                </td>
+                                
+                                <!-- Estado -->
+                                <td>
+                                    <span class="badge badge-sm" 
+                                          :class="producto.activo ? 'badge-success' : 'badge-error'">
+                                        <span x-text="producto.activo ? 'Activo' : 'Inactivo'"></span>
+                                    </span>
+                                </td>
+                                
+                                <!-- Acciones -->
+                                <td class="text-right">
+                                    <div class="flex gap-2 justify-end">
+                                        <a :href="`{% url 'gestion:productos_editar' 0 %}`.replace('0', producto.id)" 
+                                           class="btn btn-sm btn-ghost"
+                                           title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        
+                                        <button @click="ajustarStock(producto)" 
+                                                class="btn btn-sm btn-primary"
+                                                title="Ajustar stock">
+                                            <i class="fas fa-boxes"></i>
+                                        </button>
+                                        
+                                        <button @click="eliminarProducto(producto)" 
+                                                class="btn btn-sm btn-error"
+                                                title="Eliminar">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+                
+                <!-- Sin resultados -->
+                <template x-if="productos.length === 0">
+                    <div class="text-center py-12">
+                        <i class="fas fa-box-open text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
+                        <p class="text-xl font-semibold text-gray-500 dark:text-gray-400">
+                            No se encontraron productos
+                        </p>
+                        <p class="text-sm text-gray-400 mt-2">
+                            Intenta cambiar los filtros o crea un nuevo producto
+                        </p>
+                    </div>
+                </template>
+            </div>
+        </template>
+        
+        <!-- Paginación -->
+        <div class="border-t dark:border-gray-700 p-4 flex items-center justify-between">
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                Mostrando <span x-text="(paginaActual - 1) * itemsPorPagina + 1"></span> 
+                a <span x-text="Math.min(paginaActual * itemsPorPagina, totalProductos)"></span> 
+                de <span x-text="totalProductos"></span> productos
+            </div>
+            
+            <div class="btn-group" x-show="totalPaginas > 1">
+                <button class="btn btn-sm" 
+                        :disabled="paginaActual === 1"
+                        @click="cambiarPagina(paginaActual - 1)">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                
+                <template x-for="pagina in paginasVisibles()" :key="pagina">
+                    <button class="btn btn-sm" 
+                            :class="{ 'btn-active': pagina === paginaActual }"
+                            @click="cambiarPagina(pagina)"
+                            x-text="pagina"></button>
+                </template>
+                
+                <button class="btn btn-sm" 
+                        :disabled="paginaActual === totalPaginas"
+                        @click="cambiarPagina(paginaActual + 1)">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Ajustar Stock -->
+    <div x-show="modalStockAbierto" 
+         @click.self="cerrarModalStock()"
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         x-transition>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4">
+            <div class="bg-gradient-to-r from-secondary to-primary text-white p-6 flex items-center justify-between">
+                <h2 class="text-xl font-bold">
+                    <i class="fas fa-boxes mr-2"></i>
+                    Ajustar Stock
+                </h2>
+                <button @click="cerrarModalStock()" class="btn btn-sm btn-ghost text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form @submit.prevent="guardarAjusteStock()" class="p-6 space-y-4">
+                <template x-if="productoSeleccionado">
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Producto:</p>
+                        <p class="font-bold text-lg" x-text="productoSeleccionado.descripcion"></p>
+                        <p class="text-sm">
+                            Stock actual: 
+                            <span class="font-bold text-primary" x-text="productoSeleccionado.stock"></span>
+                        </p>
+                    </div>
+                </template>
+                
+                <div>
+                    <label class="label">
+                        <span class="label-text">Tipo de Ajuste</span>
+                    </label>
+                    <select x-model="ajusteStock.tipo" 
+                            required
+                            class="select select-bordered w-full">
+                        <option value="suma">Agregar (+)</option>
+                        <option value="resta">Quitar (-)</option>
+                        <option value="establecer">Establecer cantidad exacta</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="label">
+                        <span class="label-text">Cantidad</span>
+                    </label>
+                    <input type="number" 
+                           x-model.number="ajusteStock.cantidad"
+                           min="0"
+                           required
+                           class="input input-bordered w-full"
+                           placeholder="0">
+                </div>
+                
+                <div>
+                    <label class="label">
+                        <span class="label-text">Motivo (opcional)</span>
+                    </label>
+                    <textarea x-model="ajusteStock.motivo"
+                              class="textarea textarea-bordered w-full"
+                              rows="2"
+                              placeholder="Ej: Compra, devolución, inventario..."></textarea>
+                </div>
+                
+                <!-- Nuevo stock calculado -->
+                <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Nuevo stock:</p>
+                    <p class="text-2xl font-bold text-success" x-text="calcularNuevoStock()"></p>
+                </div>
+                
+                <div class="flex gap-3 pt-4">
+                    <button type="button" 
+                            @click="cerrarModalStock()" 
+                            class="btn btn-ghost flex-1">
+                        Cancelar
+                    </button>
+                    
+                    <button type="submit" 
+                            class="btn btn-primary flex-1"
+                            :disabled="guardandoStock">
+                        <template x-if="!guardandoStock">
+                            <span>
+                                <i class="fas fa-check mr-2"></i>
+                                Confirmar
+                            </span>
+                        </template>
+                        <template x-if="guardandoStock">
+                            <span>
+                                <span class="loading loading-spinner loading-sm mr-2"></span>
+                                Guardando...
+                            </span>
+                        </template>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function listaProductos() {
+    return {
+        cargando: true,
+        productos: [],
+        categorias: [],
+        productosSeleccionados: [],
+        filtros: {
+            busqueda: '',
+            categoria: '',
+            estado: ''
+        },
+        paginaActual: 1,
+        totalPaginas: 1,
+        totalProductos: 0,
+        itemsPorPagina: 20,
+        modalStockAbierto: false,
+        productoSeleccionado: null,
+        guardandoStock: false,
+        ajusteStock: {
+            tipo: 'suma',
+            cantidad: 0,
+            motivo: ''
+        },
+        
+        async init() {
+            await this.cargarCategorias();
+            await this.buscarProductos();
+            this.cargando = false;
+        },
+        
+        async cargarCategorias() {
+            try {
+                const response = await fetch('/api/categorias/');
+                const data = await response.json();
+                if (data.success) {
+                    this.categorias = data.categorias || [];
+                }
+            } catch (error) {
+                console.error('Error al cargar categorías:', error);
+            }
+        },
+        
+        async buscarProductos() {
+            try {
+                const params = new URLSearchParams({
+                    q: this.filtros.busqueda,
+                    categoria: this.filtros.categoria,
+                    estado: this.filtros.estado,
+                    page: this.paginaActual,
+                    per_page: this.itemsPorPagina
+                });
+                
+                const response = await fetch(`/api/productos/?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.productos = data.productos || [];
+                    this.totalProductos = data.total || 0;
+                    this.totalPaginas = Math.ceil(this.totalProductos / this.itemsPorPagina);
+                }
+            } catch (error) {
+                console.error('Error al buscar productos:', error);
+            }
+        },
+        
+        cambiarPagina(pagina) {
+            this.paginaActual = pagina;
+            this.buscarProductos();
+        },
+        
+        paginasVisibles() {
+            const paginas = [];
+            const inicio = Math.max(1, this.paginaActual - 2);
+            const fin = Math.min(this.totalPaginas, this.paginaActual + 2);
+            
+            for (let i = inicio; i <= fin; i++) {
+                paginas.push(i);
+            }
+            return paginas;
+        },
+        
+        toggleSeleccion(id) {
+            const index = this.productosSeleccionados.indexOf(id);
+            if (index > -1) {
+                this.productosSeleccionados.splice(index, 1);
+            } else {
+                this.productosSeleccionados.push(id);
+            }
+        },
+        
+        toggleTodos(checked) {
+            if (checked) {
+                this.productosSeleccionados = this.productos.map(p => p.id);
+            } else {
+                this.productosSeleccionados = [];
+            }
+        },
+        
+        ajustarStock(producto) {
+            this.productoSeleccionado = producto;
+            this.ajusteStock = {
+                tipo: 'suma',
+                cantidad: 0,
+                motivo: ''
+            };
+            this.modalStockAbierto = true;
+        },
+        
+        cerrarModalStock() {
+            this.modalStockAbierto = false;
+            this.productoSeleccionado = null;
+        },
+        
+        calcularNuevoStock() {
+            if (!this.productoSeleccionado) return 0;
+            
+            const stockActual = this.productoSeleccionado.stock;
+            const cantidad = this.ajusteStock.cantidad || 0;
+            
+            switch(this.ajusteStock.tipo) {
+                case 'suma':
+                    return stockActual + cantidad;
+                case 'resta':
+                    return Math.max(0, stockActual - cantidad);
+                case 'establecer':
+                    return cantidad;
+                default:
+                    return stockActual;
+            }
+        },
+        
+        async guardarAjusteStock() {
+            this.guardandoStock = true;
+            
+            try {
+                const response = await fetch(`/api/productos/${this.productoSeleccionado.id}/ajustar-stock/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(this.ajusteStock)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify('Stock actualizado', 'success');
+                    this.cerrarModalStock();
+                    await this.buscarProductos();
+                } else {
+                    gestionHelpers.notify(data.error || 'Error al actualizar stock', 'error');
+                }
+            } catch (error) {
+                console.error('Error al guardar ajuste:', error);
+                gestionHelpers.notify('Error al actualizar stock', 'error');
+            } finally {
+                this.guardandoStock = false;
+            }
+        },
+        
+        async eliminarProducto(producto) {
+            const confirmado = await gestionHelpers.confirmDelete(producto.descripcion);
+            if (!confirmado) return;
+            
+            try {
+                const response = await fetch(`/api/productos/${producto.id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify('Producto eliminado', 'success');
+                    await this.buscarProductos();
+                } else {
+                    gestionHelpers.notify(data.error || 'Error al eliminar', 'error');
+                }
+            } catch (error) {
+                console.error('Error al eliminar:', error);
+                gestionHelpers.notify('Error al eliminar producto', 'error');
+            }
+        },
+        
+        exportarCSV() {
+            gestionHelpers.exportTableToCSV('tabla-productos', 'productos.csv');
+        },
+        
+        formatearPrecio(monto) {
+            return gestionHelpers.formatPrice(monto);
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    }
+}
+</script>
+{% endblock %}

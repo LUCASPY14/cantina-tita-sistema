@@ -1,0 +1,443 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Análisis de Consumo - Portal Padres{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div x-data="analisisConsumo()" x-init="init()" class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-8">
+    <div class="container mx-auto px-4">
+        
+        <!-- Header -->
+        <div class="mb-8">
+            <a href="{% url 'portal:dashboard' %}" class="btn btn-ghost mb-4">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Volver al Dashboard
+            </a>
+            
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-chart-pie mr-3 text-primary"></i>
+                Análisis de Consumo
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Patrones y tendencias de consumo de <span class="font-semibold" x-text="hijo.nombre"></span>
+            </p>
+        </div>
+        
+        <!-- Selector de Período -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="md:col-span-2">
+                    <label class="label">
+                        <span class="label-text">
+                            <i class="fas fa-calendar-alt mr-2"></i>Período de Análisis
+                        </span>
+                    </label>
+                    <div class="btn-group w-full">
+                        <button @click="setPeriodo('semana')" 
+                                class="btn btn-sm flex-1"
+                                :class="{'btn-active': periodo === 'semana'}">
+                            Semana
+                        </button>
+                        <button @click="setPeriodo('mes')" 
+                                class="btn btn-sm flex-1"
+                                :class="{'btn-active': periodo === 'mes'}">
+                            Mes
+                        </button>
+                        <button @click="setPeriodo('trimestre')" 
+                                class="btn btn-sm flex-1"
+                                :class="{'btn-active': periodo === 'trimestre'}">
+                            Trimestre
+                        </button>
+                        <button @click="setPeriodo('personalizado')" 
+                                class="btn btn-sm flex-1"
+                                :class="{'btn-active': periodo === 'personalizado'}">
+                            Personalizado
+                        </button>
+                    </div>
+                </div>
+                
+                <template x-if="periodo === 'personalizado'">
+                    <div class="flex gap-2">
+                        <input type="date" 
+                               x-model="fechaInicio"
+                               @change="cargarDatos()"
+                               class="input input-bordered input-sm flex-1">
+                        <input type="date" 
+                               x-model="fechaFin"
+                               @change="cargarDatos()"
+                               class="input input-bordered input-sm flex-1">
+                    </div>
+                </template>
+            </div>
+        </div>
+        
+        <!-- Resumen General -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            
+            <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+                <div class="flex items-center justify-between mb-2">
+                    <i class="fas fa-shopping-cart text-3xl opacity-80"></i>
+                </div>
+                <p class="text-sm opacity-90 mb-1">Total Compras</p>
+                <p class="text-3xl font-bold" x-text="resumen.total_compras || 0"></p>
+                <p class="text-xs opacity-80">en el período</p>
+            </div>
+            
+            <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+                <div class="flex items-center justify-between mb-2">
+                    <i class="fas fa-money-bill-wave text-3xl opacity-80"></i>
+                </div>
+                <p class="text-sm opacity-90 mb-1">Total Gastado</p>
+                <p class="text-2xl font-bold" x-text="formatearPrecio(resumen.total_gastado || 0)"></p>
+            </div>
+            
+            <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+                <div class="flex items-center justify-between mb-2">
+                    <i class="fas fa-calculator text-3xl opacity-80"></i>
+                </div>
+                <p class="text-sm opacity-90 mb-1">Promedio Diario</p>
+                <p class="text-2xl font-bold" x-text="formatearPrecio(resumen.promedio_diario || 0)"></p>
+            </div>
+            
+            <div class="stat-card bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+                <div class="flex items-center justify-between mb-2">
+                    <i class="fas fa-box text-3xl opacity-80"></i>
+                </div>
+                <p class="text-sm opacity-90 mb-1">Productos Únicos</p>
+                <p class="text-3xl font-bold" x-text="resumen.productos_unicos || 0"></p>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            
+            <!-- Gráfico de Tendencia -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-bold mb-4 flex items-center">
+                    <i class="fas fa-chart-line mr-2 text-primary"></i>
+                    Tendencia de Consumo
+                </h3>
+                <canvas id="chartTendencia"></canvas>
+            </div>
+            
+            <!-- Gráfico por Categoría -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-bold mb-4 flex items-center">
+                    <i class="fas fa-chart-pie mr-2 text-secondary"></i>
+                    Consumo por Categoría
+                </h3>
+                <canvas id="chartCategorias"></canvas>
+            </div>
+        </div>
+        
+        <!-- Productos Favoritos -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+            <h3 class="text-lg font-bold mb-4 flex items-center">
+                <i class="fas fa-star mr-2 text-warning"></i>
+                Top 10 Productos Favoritos
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <template x-for="(producto, index) in topProductos.slice(0, 10)" :key="producto.id">
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:shadow-md transition-shadow">
+                        
+                        <!-- Posición -->
+                        <div class="text-center min-w-[3rem]">
+                            <div class="text-2xl font-bold"
+                                 :class="{
+                                     'text-yellow-500': index === 0,
+                                     'text-gray-400': index === 1,
+                                     'text-orange-600': index === 2,
+                                     'text-gray-600': index > 2
+                                 }">
+                                <template x-if="index === 0">
+                                    <i class="fas fa-trophy"></i>
+                                </template>
+                                <template x-if="index === 1">
+                                    <i class="fas fa-medal"></i>
+                                </template>
+                                <template x-if="index === 2">
+                                    <i class="fas fa-award"></i>
+                                </template>
+                                <template x-if="index > 2">
+                                    <span x-text="index + 1"></span>
+                                </template>
+                            </div>
+                        </div>
+                        
+                        <!-- Imagen -->
+                        <div class="avatar">
+                            <div class="w-12 h-12 rounded">
+                                <template x-if="producto.imagen">
+                                    <img :src="producto.imagen" :alt="producto.nombre">
+                                </template>
+                                <template x-if="!producto.imagen">
+                                    <div class="w-full h-full bg-gradient-to-br from-secondary to-teal-600 flex items-center justify-center">
+                                        <i class="fas fa-box text-white"></i>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                        
+                        <!-- Info -->
+                        <div class="flex-1">
+                            <p class="font-semibold" x-text="producto.nombre"></p>
+                            <p class="text-sm text-gray-500">
+                                <span x-text="producto.cantidad"></span> unidades - 
+                                <span x-text="formatearPrecio(producto.total)"></span>
+                            </p>
+                        </div>
+                        
+                        <!-- Barra de progreso -->
+                        <div class="w-20">
+                            <div class="text-xs text-right mb-1" x-text="producto.porcentaje + '%'"></div>
+                            <progress class="progress progress-primary w-full" 
+                                      :value="producto.porcentaje" 
+                                      max="100"></progress>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+        
+        <!-- Análisis por Horario -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+            <h3 class="text-lg font-bold mb-4 flex items-center">
+                <i class="fas fa-clock mr-2 text-info"></i>
+                Patrones de Consumo por Horario
+            </h3>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="text-center p-4 bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-900/30 dark:to-yellow-800/30 rounded-lg">
+                    <i class="fas fa-sun text-3xl text-yellow-600 mb-2"></i>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Mañana (6-12)</p>
+                    <p class="text-2xl font-bold" x-text="horarios.manana || 0"></p>
+                    <p class="text-xs text-gray-500">compras</p>
+                </div>
+                
+                <div class="text-center p-4 bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900/30 dark:to-orange-800/30 rounded-lg">
+                    <i class="fas fa-cloud-sun text-3xl text-orange-600 mb-2"></i>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Mediodía (12-15)</p>
+                    <p class="text-2xl font-bold" x-text="horarios.mediodia || 0"></p>
+                    <p class="text-xs text-gray-500">compras</p>
+                </div>
+                
+                <div class="text-center p-4 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg">
+                    <i class="fas fa-cloud text-3xl text-blue-600 mb-2"></i>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Tarde (15-18)</p>
+                    <p class="text-2xl font-bold" x-text="horarios.tarde || 0"></p>
+                    <p class="text-xs text-gray-500">compras</p>
+                </div>
+                
+                <div class="text-center p-4 bg-gradient-to-br from-indigo-100 to-indigo-200 dark:from-indigo-900/30 dark:to-indigo-800/30 rounded-lg">
+                    <i class="fas fa-moon text-3xl text-indigo-600 mb-2"></i>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Noche (18+)</p>
+                    <p class="text-2xl font-bold" x-text="horarios.noche || 0"></p>
+                    <p class="text-xs text-gray-500">compras</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recomendaciones -->
+        <div class="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-bold mb-4 flex items-center">
+                <i class="fas fa-lightbulb mr-2 text-warning"></i>
+                Recomendaciones
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <template x-for="rec in recomendaciones" :key="rec.id">
+                    <div class="alert" :class="'alert-' + rec.tipo">
+                        <i class="fas" :class="rec.icono"></i>
+                        <div>
+                            <h4 class="font-bold" x-text="rec.titulo"></h4>
+                            <p class="text-sm" x-text="rec.mensaje"></p>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function analisisConsumo() {
+    return {
+        periodo: 'mes',
+        fechaInicio: '',
+        fechaFin: '',
+        hijo: {},
+        resumen: {},
+        topProductos: [],
+        horarios: {},
+        recomendaciones: [],
+        chartTendencia: null,
+        chartCategorias: null,
+        
+        async init() {
+            this.setPeriodo('mes');
+        },
+        
+        setPeriodo(periodo) {
+            this.periodo = periodo;
+            
+            const hoy = new Date();
+            this.fechaFin = this.formatearFecha(hoy);
+            
+            let inicio = new Date();
+            switch(periodo) {
+                case 'semana':
+                    inicio.setDate(inicio.getDate() - 7);
+                    break;
+                case 'mes':
+                    inicio.setMonth(inicio.getMonth() - 1);
+                    break;
+                case 'trimestre':
+                    inicio.setMonth(inicio.getMonth() - 3);
+                    break;
+            }
+            
+            this.fechaInicio = this.formatearFecha(inicio);
+            
+            if (periodo !== 'personalizado') {
+                this.cargarDatos();
+            }
+        },
+        
+        async cargarDatos() {
+            try {
+                const params = new URLSearchParams({
+                    fecha_inicio: this.fechaInicio,
+                    fecha_fin: this.fechaFin
+                });
+                
+                const response = await fetch(`/api/portal/analisis-consumo/?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.hijo = data.hijo;
+                    this.resumen = data.resumen;
+                    this.topProductos = data.top_productos || [];
+                    this.horarios = data.horarios || {};
+                    this.recomendaciones = data.recomendaciones || [];
+                    
+                    this.renderChartTendencia(data.tendencia || []);
+                    this.renderChartCategorias(data.categorias || []);
+                }
+            } catch (error) {
+                console.error('Error al cargar análisis:', error);
+                this.notificar('Error al cargar análisis', 'error');
+            }
+        },
+        
+        renderChartTendencia(datos) {
+            const ctx = document.getElementById('chartTendencia');
+            
+            if (this.chartTendencia) {
+                this.chartTendencia.destroy();
+            }
+            
+            this.chartTendencia = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: datos.map(d => d.fecha),
+                    datasets: [{
+                        label: 'Gasto Diario',
+                        data: datos.map(d => d.monto),
+                        borderColor: '#FF6B35',
+                        backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: (value) => this.formatearPrecio(value)
+                            }
+                        }
+                    }
+                }
+            });
+        },
+        
+        renderChartCategorias(datos) {
+            const ctx = document.getElementById('chartCategorias');
+            
+            if (this.chartCategorias) {
+                this.chartCategorias.destroy();
+            }
+            
+            const colores = [
+                '#FF6B35', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+                '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52BE80'
+            ];
+            
+            this.chartCategorias = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: datos.map(d => d.nombre),
+                    datasets: [{
+                        data: datos.map(d => d.total),
+                        backgroundColor: colores.slice(0, datos.length),
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    const label = context.label || '';
+                                    const value = this.formatearPrecio(context.parsed);
+                                    return `${label}: ${value}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        },
+        
+        formatearFecha(fecha) {
+            return fecha.toISOString().split('T')[0];
+        },
+        
+        formatearPrecio(monto) {
+            return new Intl.NumberFormat('es-PY', {
+                style: 'currency',
+                currency: 'PYG',
+                minimumFractionDigits: 0
+            }).format(monto);
+        },
+        
+        notificar(mensaje, tipo = 'info') {
+            const event = new CustomEvent('notify', {
+                detail: { message: mensaje, type: tipo }
+            });
+            window.dispatchEvent(event);
+        }
+    }
+}
+</script>
+{% endblock %}

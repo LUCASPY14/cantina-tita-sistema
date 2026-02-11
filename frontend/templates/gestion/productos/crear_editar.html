@@ -1,0 +1,450 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}{{ producto.id|yesno:"Editar,Crear" }} Producto - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="productoForm()" x-init="init()" class="max-w-4xl mx-auto">
+    
+    <!-- Header -->
+    <div class="mb-8">
+        <a href="{% url 'gestion:productos' %}" class="btn btn-ghost mb-4">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Volver a Productos
+        </a>
+        
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+            <i class="fas fa-box mr-3 text-primary"></i>
+            <span x-text="modoEdicion ? 'Editar Producto' : 'Crear Producto'"></span>
+        </h1>
+    </div>
+    
+    <!-- Formulario -->
+    <form @submit.prevent="guardarProducto()" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+        
+        <!-- Tabs -->
+        <div class="border-b dark:border-gray-700">
+            <div class="flex">
+                <button type="button"
+                        @click="tabActivo = 'general'"
+                        class="px-6 py-4 font-semibold transition-colors"
+                        :class="tabActivo === 'general' ? 'border-b-2 border-primary text-primary' : 'text-gray-600 dark:text-gray-400'">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Información General
+                </button>
+                
+                <button type="button"
+                        @click="tabActivo = 'precios'"
+                        class="px-6 py-4 font-semibold transition-colors"
+                        :class="tabActivo === 'precios' ? 'border-b-2 border-primary text-primary' : 'text-gray-600 dark:text-gray-400'">
+                    <i class="fas fa-dollar-sign mr-2"></i>
+                    Precios y Stock
+                </button>
+                
+                <button type="button"
+                        @click="tabActivo = 'imagen'"
+                        class="px-6 py-4 font-semibold transition-colors"
+                        :class="tabActivo === 'imagen' ? 'border-b-2 border-primary text-primary' : 'text-gray-600 dark:text-gray-400'">
+                    <i class="fas fa-image mr-2"></i>
+                    Imagen
+                </button>
+            </div>
+        </div>
+        
+        <div class="p-8 space-y-6">
+            
+            <!-- Tab: Información General -->
+            <div x-show="tabActivo === 'general'" class="space-y-6">
+                
+                <!-- Descripción -->
+                <div x-data="formValidation()">
+                    <label class="label">
+                        <span class="label-text">Descripción del Producto *</span>
+                    </label>
+                    <input type="text" 
+                           x-model="producto.descripcion"
+                           @input="validate('descripcion', producto.descripcion, ['required', 'minLength:3'])"
+                           required
+                           class="input input-bordered w-full"
+                           :class="{ 'input-error': errors.descripcion }"
+                           placeholder="Ej: Coca Cola 500ml">
+                    <template x-if="errors.descripcion">
+                        <label class="label">
+                            <span class="label-text-alt text-error">
+                                <i class="fas fa-exclamation-circle mr-1"></i>
+                                <span x-text="errors.descripcion"></span>
+                            </span>
+                        </label>
+                    </template>
+                </div>
+                
+                <!-- Código de Barras -->
+                <div>
+                    <label class="label">
+                        <span class="label-text">Código de Barras</span>
+                    </label>
+                    <input type="text" 
+                           x-model="producto.codigo_barra"
+                           class="input input-bordered w-full font-mono"
+                           placeholder="7891234567890">
+                    <label class="label">
+                        <span class="label-text-alt text-gray-500">
+                            Escanea el código de barras del producto (opcional)
+                        </span>
+                    </label>
+                </div>
+                
+                <!-- Categoría -->
+                <div>
+                    <label class="label">
+                        <span class="label-text">Categoría *</span>
+                    </label>
+                    <select x-model="producto.categoria_id" 
+                            required
+                            class="select select-bordered w-full">
+                        <option value="">Seleccionar categoría...</option>
+                        <template x-for="cat in categorias" :key="cat.id">
+                            <option :value="cat.id" x-text="cat.nombre"></option>
+                        </template>
+                    </select>
+                </div>
+                
+                <!-- Estado -->
+                <div>
+                    <label class="label cursor-pointer justify-start gap-3">
+                        <input type="checkbox" 
+                               x-model="producto.activo"
+                               class="checkbox checkbox-primary">
+                        <span class="label-text">
+                            <i class="fas fa-toggle-on mr-2"></i>
+                            Producto Activo (visible en ventas)
+                        </span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Tab: Precios y Stock -->
+            <div x-show="tabActivo === 'precios'" class="space-y-6">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- Precio de Compra -->
+                    <div>
+                        <label class="label">
+                            <span class="label-text">Precio de Compra *</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" 
+                                   x-model.number="producto.precio_compra"
+                                   min="0"
+                                   step="100"
+                                   required
+                                   class="input input-bordered w-full pr-12"
+                                   placeholder="0">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">Gs.</span>
+                        </div>
+                        <label class="label">
+                            <span class="label-text-alt text-gray-500">
+                                Precio al que compras el producto
+                            </span>
+                        </label>
+                    </div>
+                    
+                    <!-- Precio de Venta -->
+                    <div>
+                        <label class="label">
+                            <span class="label-text">Precio de Venta *</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" 
+                                   x-model.number="producto.precio_venta"
+                                   min="0"
+                                   step="100"
+                                   required
+                                   class="input input-bordered w-full pr-12"
+                                   placeholder="0">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">Gs.</span>
+                        </div>
+                        <label class="label">
+                            <span class="label-text-alt text-gray-500">
+                                Precio al que vendes el producto
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Margen de ganancia (calculado) -->
+                <template x-if="producto.precio_compra > 0 && producto.precio_venta > 0">
+                    <div class="bg-gradient-to-br from-success/10 to-primary/10 p-4 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Margen de Ganancia:</p>
+                                <p class="text-2xl font-bold" 
+                                   :class="calcularMargen() > 0 ? 'text-success' : 'text-error'"
+                                   x-text="calcularMargen() + '%'"></p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Ganancia por Unidad:</p>
+                                <p class="text-xl font-bold text-primary" 
+                                   x-text="formatearPrecio(producto.precio_venta - producto.precio_compra)"></p>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+                
+                <!-- Stock Inicial/Actual -->
+                <div>
+                    <label class="label">
+                        <span class="label-text" x-text="modoEdicion ? 'Stock Actual' : 'Stock Inicial'"></span>
+                    </label>
+                    <input type="number" 
+                           x-model.number="producto.stock"
+                           min="0"
+                           required
+                           class="input input-bordered w-full"
+                           placeholder="0">
+                    <label class="label">
+                        <span class="label-text-alt text-gray-500">
+                            <span x-text="modoEdicion ? 'Usa el botón de ajuste de stock en la lista para cambios de inventario' : 'Cantidad inicial en inventario'"></span>
+                        </span>
+                    </label>
+                </div>
+                
+                <!-- Stock Mínimo -->
+                <div>
+                    <label class="label">
+                        <span class="label-text">Stock Mínimo (alerta)</span>
+                    </label>
+                    <input type="number" 
+                           x-model.number="producto.stock_minimo"
+                           min="0"
+                           class="input input-bordered w-full"
+                           placeholder="10">
+                    <label class="label">
+                        <span class="label-text-alt text-gray-500">
+                            Se mostrará una alerta cuando el stock baje de este nivel
+                        </span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Tab: Imagen -->
+            <div x-show="tabActivo === 'imagen'" class="space-y-6">
+                
+                <!-- Preview de imagen actual -->
+                <div class="flex flex-col items-center">
+                    <div class="w-64 h-64 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden mb-4">
+                        <template x-if="imagenPreview || producto.imagen">
+                            <img :src="imagenPreview || producto.imagen" 
+                                 alt="Preview"
+                                 class="w-full h-full object-cover">
+                        </template>
+                        <template x-if="!imagenPreview && !producto.imagen">
+                            <div class="text-center text-gray-400">
+                                <i class="fas fa-image text-6xl mb-2"></i>
+                                <p class="text-sm">Sin imagen</p>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <!-- Input de archivo -->
+                    <div class="w-full max-w-md">
+                        <input type="file" 
+                               accept="image/*"
+                               @change="handleImagenChange($event)"
+                               class="file-input file-input-bordered w-full">
+                        <label class="label">
+                            <span class="label-text-alt text-gray-500">
+                                JPG, PNG o GIF. Máximo 2MB.
+                            </span>
+                        </label>
+                    </div>
+                    
+                    <!-- Botón eliminar imagen -->
+                    <template x-if="imagenPreview || producto.imagen">
+                        <button type="button" 
+                                @click="eliminarImagen()"
+                                class="btn btn-sm btn-error mt-4">
+                            <i class="fas fa-trash mr-2"></i>
+                            Eliminar Imagen
+                        </button>
+                    </template>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer con botones -->
+        <div class="border-t dark:border-gray-700 p-6 bg-gray-50 dark:bg-gray-900 flex gap-4">
+            <a href="{% url 'gestion:productos' %}" class="btn btn-ghost flex-1">
+                <i class="fas fa-times mr-2"></i>
+                Cancelar
+            </a>
+            
+            <button type="submit" 
+                    class="btn btn-primary flex-1"
+                    :disabled="guardando">
+                <template x-if="!guardando">
+                    <span>
+                        <i class="fas fa-save mr-2"></i>
+                        <span x-text="modoEdicion ? 'Actualizar' : 'Crear'"></span> Producto
+                    </span>
+                </template>
+                <template x-if="guardando">
+                    <span>
+                        <span class="loading loading-spinner loading-sm mr-2"></span>
+                        Guardando...
+                    </span>
+                </template>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function productoForm() {
+    return {
+        modoEdicion: {{ producto.id|yesno:"true,false" }},
+        tabActivo: 'general',
+        guardando: false,
+        categorias: [],
+        imagenPreview: null,
+        imagenFile: null,
+        producto: {
+            id: {{ producto.id|default:"null" }},
+            descripcion: '{{ producto.descripcion|default:"" }}',
+            codigo_barra: '{{ producto.codigo_barra|default:"" }}',
+            categoria_id: {{ producto.categoria.id|default:"''" }},
+            precio_compra: {{ producto.precio_compra|default:0 }},
+            precio_venta: {{ producto.precio_venta|default:0 }},
+            stock: {{ producto.stock|default:0 }},
+            stock_minimo: {{ producto.stock_minimo|default:10 }},
+            activo: {{ producto.activo|yesno:"true,false" }},
+            imagen: '{{ producto.imagen.url|default:"" }}'
+        },
+        
+        async init() {
+            await this.cargarCategorias();
+        },
+        
+        async cargarCategorias() {
+            try {
+                const response = await fetch('/api/categorias/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.categorias = data.categorias || [];
+                }
+            } catch (error) {
+                console.error('Error al cargar categorías:', error);
+            }
+        },
+        
+        handleImagenChange(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Validar tamaño (2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                gestionHelpers.notify('La imagen no debe superar 2MB', 'error');
+                event.target.value = '';
+                return;
+            }
+            
+            // Crear preview
+            this.imagenFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.imagenPreview = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        },
+        
+        eliminarImagen() {
+            this.imagenPreview = null;
+            this.imagenFile = null;
+            this.producto.imagen = '';
+        },
+        
+        calcularMargen() {
+            if (this.producto.precio_compra === 0) return 0;
+            const margen = ((this.producto.precio_venta - this.producto.precio_compra) / this.producto.precio_compra) * 100;
+            return Math.round(margen * 100) / 100;
+        },
+        
+        async guardarProducto() {
+            this.guardando = true;
+            
+            try {
+                // Crear FormData para enviar archivo si existe
+                const formData = new FormData();
+                
+                // Agregar datos del producto
+                Object.keys(this.producto).forEach(key => {
+                    if (key !== 'imagen') {
+                        formData.append(key, this.producto[key]);
+                    }
+                });
+                
+                // Agregar imagen si hay una nueva
+                if (this.imagenFile) {
+                    formData.append('imagen', this.imagenFile);
+                }
+                
+                const url = this.modoEdicion 
+                    ? `/api/productos/${this.producto.id}/`
+                    : '/api/productos/';
+                
+                const response = await fetch(url, {
+                    method: this.modoEdicion ? 'PUT' : 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gestionHelpers.notify(
+                        this.modoEdicion ? 'Producto actualizado' : 'Producto creado',
+                        'success'
+                    );
+                    
+                    setTimeout(() => {
+                        window.location.href = '{% url "gestion:productos" %}';
+                    }, 1500);
+                } else {
+                    gestionHelpers.notify(data.error || 'Error al guardar', 'error');
+                }
+            } catch (error) {
+                console.error('Error al guardar:', error);
+                gestionHelpers.notify('Error al guardar producto', 'error');
+            } finally {
+                this.guardando = false;
+            }
+        },
+        
+        formatearPrecio(monto) {
+            return gestionHelpers.formatPrice(monto);
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    }
+}
+</script>
+{% endblock %}

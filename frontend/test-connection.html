@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba de Conexión Frontend-Backend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔗 Prueba de Conexión Frontend-Backend</h1>
+    
+    <div class="test-section">
+        <h2>🌐 Estado de Servidores</h2>
+        <div id="server-status">
+            <div class="info">Frontend (Vite): http://localhost:3000/ ✅</div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔌 Pruebas de API</h2>
+        <button onclick="testBackendHealth()">Probar Salud Backend</button>
+        <button onclick="testAPIEndpoint()">Probar API v1</button>
+        <button onclick="testDjangoAdmin()">Probar Django Admin</button>
+        <button onclick="testPOSAPI()">Probar API POS</button>
+        <div id="api-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Información del Sistema</h2>
+        <div id="system-info">
+            <div>Frontend: Vite + TypeScript + Alpine.js + HTMX</div>
+            <div>Backend: Django 5.2.8 + MySQL 8.0</div>
+            <div>Proxy configurado: /api → http://localhost:8000</div>
+        </div>
+    </div>
+
+    <script>
+        // Función para mostrar resultados
+        function showResult(message, isSuccess) {
+            const resultsDiv = document.getElementById('api-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${isSuccess ? 'success' : 'error'}`;
+            resultDiv.innerHTML = message;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        // Probar salud del backend
+        async function testBackendHealth() {
+            try {
+                const response = await fetch('/health/');
+                if (response.ok) {
+                    const data = await response.text();
+                    showResult(`✅ Backend Health Check: ${response.status} - ${data}`, true);
+                } else {
+                    showResult(`⚠️ Backend Health Check: ${response.status}`, false);
+                }
+            } catch (error) {
+                showResult(`❌ Error Backend Health: ${error.message}`, false);
+            }
+        }
+
+        // Probar endpoint de API v1
+        async function testAPIEndpoint() {
+            try {
+                const response = await fetch('/api/v1/');
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult(`✅ API v1: ${response.status} - ${JSON.stringify(data).substring(0, 100)}...`, true);
+                } else {
+                    showResult(`⚠️ API v1: ${response.status}`, false);
+                }
+            } catch (error) {
+                showResult(`❌ Error API v1: ${error.message}`, false);
+            }
+        }
+
+        // Probar Django Admin
+        async function testDjangoAdmin() {
+            try {
+                const response = await fetch('/admin/');
+                if (response.ok) {
+                    showResult(`✅ Django Admin: ${response.status} - Accesible`, true);
+                } else {
+                    showResult(`⚠️ Django Admin: ${response.status}`, false);
+                }
+            } catch (error) {
+                showResult(`❌ Error Django Admin: ${error.message}`, false);
+            }
+        }
+
+        // Probar API POS
+        async function testPOSAPI() {
+            try {
+                const response = await fetch('/api/pos/');
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult(`✅ API POS: ${response.status} - ${JSON.stringify(data).substring(0, 100)}...`, true);
+                } else {
+                    showResult(`⚠️ API POS: ${response.status}`, false);
+                }
+            } catch (error) {
+                showResult(`❌ Error API POS: ${error.message}`, false);
+            }
+        }
+
+        // Probar conexión inicial al cargar la página
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Verificar si el frontend está funcionando (obvio que sí si esto se ejecuta)
+            showResult('✅ Frontend (Vite) funcionando correctamente', true);
+            
+            // Probar automáticamente la salud del backend
+            await testBackendHealth();
+        });
+    </script>
+</body>
+</html>

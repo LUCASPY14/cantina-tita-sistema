@@ -1,0 +1,472 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Reporte de Productos - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="reporteProductos()" x-init="init()" class="space-y-6">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-box-open mr-3 text-primary"></i>
+                Reporte de Productos
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Análisis de ventas y rentabilidad por producto
+            </p>
+        </div>
+        
+        <div class="flex gap-2">
+            <button @click="exportarExcel()" class="btn btn-success">
+                <i class="fas fa-file-excel mr-2"></i>
+                Exportar Excel
+            </button>
+            <button @click="exportarPDF()" class="btn btn-error">
+                <i class="fas fa-file-pdf mr-2"></i>
+                Exportar PDF
+            </button>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            
+            <!-- Fecha Desde -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-calendar mr-2"></i>Desde
+                    </span>
+                </label>
+                <input type="date" 
+                       x-model="filtros.fecha_desde"
+                       @change="cargarDatos()"
+                       class="input input-bordered w-full">
+            </div>
+            
+            <!-- Fecha Hasta -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-calendar mr-2"></i>Hasta
+                    </span>
+                </label>
+                <input type="date" 
+                       x-model="filtros.fecha_hasta"
+                       @change="cargarDatos()"
+                       class="input input-bordered w-full">
+            </div>
+            
+            <!-- Categoría -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-tag mr-2"></i>Categoría
+                    </span>
+                </label>
+                <select x-model="filtros.categoria" 
+                        @change="cargarDatos()"
+                        class="select select-bordered w-full">
+                    <option value="">Todas</option>
+                    <template x-for="categoria in categorias" :key="categoria.id">
+                        <option :value="categoria.id" x-text="categoria.nombre"></option>
+                    </template>
+                </select>
+            </div>
+            
+            <!-- Ordenar por -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-sort mr-2"></i>Ordenar por
+                    </span>
+                </label>
+                <select x-model="filtros.ordenar" 
+                        @change="cargarDatos()"
+                        class="select select-bordered w-full">
+                    <option value="cantidad">Cantidad Vendida</option>
+                    <option value="ingresos">Ingresos</option>
+                    <option value="ganancia">Ganancia</option>
+                    <option value="margen">Margen %</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Cards de Resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        
+        <!-- Total Productos -->
+        <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-box text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Productos Vendidos</p>
+                    <p class="text-3xl font-bold" x-text="resumen.productos_diferentes"></p>
+                    <p class="text-sm opacity-80" x-text="resumen.unidades_totales + ' unidades'"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Ingresos Totales -->
+        <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-dollar-sign text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Ingresos Totales</p>
+                    <p class="text-3xl font-bold" x-text="formatearPrecio(resumen.ingresos_totales)"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Ganancia Total -->
+        <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-chart-line text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Ganancia Total</p>
+                    <p class="text-3xl font-bold" x-text="formatearPrecio(resumen.ganancia_total)"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Margen Promedio -->
+        <div class="stat-card bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-percentage text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Margen Promedio</p>
+                    <p class="text-3xl font-bold" x-text="resumen.margen_promedio + '%'"></p>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Gráficos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Top 10 Productos por Cantidad -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-trophy mr-2 text-warning"></i>
+                Top 10 Más Vendidos (Cantidad)
+            </h2>
+            
+            <template x-if="cargando">
+                <div class="skeleton h-64 w-full"></div>
+            </template>
+            
+            <template x-if="!cargando">
+                <div class="space-y-3">
+                    <template x-for="(producto, index) in topCantidad" :key="producto.id">
+                        <div>
+                            <div class="flex items-center justify-between text-sm mb-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-lg w-6" 
+                                          :class="{
+                                              'text-yellow-500': index === 0,
+                                              'text-gray-400': index === 1,
+                                              'text-orange-600': index === 2
+                                          }"
+                                          x-text="index + 1"></span>
+                                    <span class="font-semibold" x-text="producto.nombre"></span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="font-bold text-primary" x-text="producto.cantidad"></span>
+                                    <span class="text-gray-500 text-xs ml-1">unidades</span>
+                                </div>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                                <div class="bg-gradient-to-r from-primary to-secondary h-full transition-all duration-500"
+                                     :style="`width: ${(producto.cantidad / topCantidad[0].cantidad * 100)}%`"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Top 10 Productos por Ganancia -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-star mr-2 text-warning"></i>
+                Top 10 Más Rentables (Ganancia)
+            </h2>
+            
+            <template x-if="cargando">
+                <div class="skeleton h-64 w-full"></div>
+            </template>
+            
+            <template x-if="!cargando">
+                <div class="space-y-3">
+                    <template x-for="(producto, index) in topGanancia" :key="producto.id">
+                        <div>
+                            <div class="flex items-center justify-between text-sm mb-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-lg w-6" 
+                                          :class="{
+                                              'text-yellow-500': index === 0,
+                                              'text-gray-400': index === 1,
+                                              'text-orange-600': index === 2
+                                          }"
+                                          x-text="index + 1"></span>
+                                    <span class="font-semibold" x-text="producto.nombre"></span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="font-bold text-success" x-text="formatearPrecio(producto.ganancia)"></span>
+                                </div>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                                <div class="bg-gradient-to-r from-success to-green-600 h-full transition-all duration-500"
+                                     :style="`width: ${(producto.ganancia / topGanancia[0].ganancia * 100)}%`"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Ventas por Categoría -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold mb-4">
+            <i class="fas fa-tags mr-2 text-secondary"></i>
+            Ventas por Categoría
+        </h2>
+        
+        <template x-if="cargando">
+            <div class="skeleton h-64 w-full"></div>
+        </template>
+        
+        <template x-if="!cargando">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <template x-for="categoria in ventasPorCategoria" :key="categoria.id">
+                    <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+                        <p class="text-sm opacity-90 mb-2" x-text="categoria.nombre"></p>
+                        <p class="text-2xl font-bold mb-1" x-text="categoria.cantidad"></p>
+                        <p class="text-sm opacity-80">
+                            <span x-text="formatearPrecio(categoria.total)"></span>
+                            (<span x-text="categoria.porcentaje"></span>%)
+                        </p>
+                    </div>
+                </template>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Tabla Detallada de Productos -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="p-6 border-b dark:border-gray-700">
+            <h2 class="text-xl font-bold">
+                <i class="fas fa-table mr-2 text-primary"></i>
+                Detalle por Producto
+            </h2>
+        </div>
+        
+        <template x-if="cargando">
+            <div class="p-6">
+                <div class="skeleton h-64 w-full"></div>
+            </div>
+        </template>
+        
+        <template x-if="!cargando">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full" id="tabla-productos">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Producto</th>
+                            <th>Categoría</th>
+                            <th class="text-right">Cantidad</th>
+                            <th class="text-right">Precio Venta</th>
+                            <th class="text-right">Ingresos</th>
+                            <th class="text-right">Costo</th>
+                            <th class="text-right">Ganancia</th>
+                            <th class="text-right">Margen %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="(producto, index) in productos" :key="producto.id">
+                            <tr class="hover">
+                                <td>
+                                    <span class="font-bold" 
+                                          :class="{
+                                              'text-yellow-500': index === 0,
+                                              'text-gray-400': index === 1,
+                                              'text-orange-600': index === 2
+                                          }"
+                                          x-text="index + 1"></span>
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <template x-if="producto.imagen">
+                                            <img :src="producto.imagen" class="w-10 h-10 rounded object-cover">
+                                        </template>
+                                        <div>
+                                            <p class="font-semibold" x-text="producto.nombre"></p>
+                                            <template x-if="producto.codigo_barra">
+                                                <p class="text-xs text-gray-500 font-mono" x-text="producto.codigo_barra"></p>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge badge-sm badge-secondary" x-text="producto.categoria"></span>
+                                </td>
+                                <td class="text-right font-bold" x-text="producto.cantidad"></td>
+                                <td class="text-right" x-text="formatearPrecio(producto.precio_venta)"></td>
+                                <td class="text-right font-bold text-primary" x-text="formatearPrecio(producto.ingresos)"></td>
+                                <td class="text-right" x-text="formatearPrecio(producto.costo_total)"></td>
+                                <td class="text-right font-bold text-success" x-text="formatearPrecio(producto.ganancia)"></td>
+                                <td class="text-right">
+                                    <span class="badge" 
+                                          :class="{
+                                              'badge-success': producto.margen >= 40,
+                                              'badge-warning': producto.margen >= 20 && producto.margen < 40,
+                                              'badge-error': producto.margen < 20
+                                          }">
+                                        <span x-text="producto.margen + '%'"></span>
+                                    </span>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                    <tfoot>
+                        <tr class="font-bold bg-gray-100 dark:bg-gray-700">
+                            <td colspan="3" class="text-right">TOTALES:</td>
+                            <td class="text-right" x-text="resumen.unidades_totales"></td>
+                            <td></td>
+                            <td class="text-right text-primary" x-text="formatearPrecio(resumen.ingresos_totales)"></td>
+                            <td class="text-right" x-text="formatearPrecio(resumen.costo_total)"></td>
+                            <td class="text-right text-success" x-text="formatearPrecio(resumen.ganancia_total)"></td>
+                            <td class="text-right" x-text="resumen.margen_promedio + '%'"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </template>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function reporteProductos() {
+    return {
+        cargando: true,
+        filtros: {
+            fecha_desde: '',
+            fecha_hasta: '',
+            categoria: '',
+            ordenar: 'cantidad'
+        },
+        categorias: [],
+        resumen: {
+            productos_diferentes: 0,
+            unidades_totales: 0,
+            ingresos_totales: 0,
+            costo_total: 0,
+            ganancia_total: 0,
+            margen_promedio: 0
+        },
+        productos: [],
+        topCantidad: [],
+        topGanancia: [],
+        ventasPorCategoria: [],
+        
+        async init() {
+            // Establecer fechas por defecto (este mes)
+            const hoy = new Date();
+            const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            
+            this.filtros.fecha_desde = this.formatearFecha(primerDia);
+            this.filtros.fecha_hasta = this.formatearFecha(hoy);
+            
+            await this.cargarCategorias();
+            await this.cargarDatos();
+        },
+        
+        async cargarCategorias() {
+            try {
+                const response = await fetch('/api/categorias/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.categorias = data.categorias || [];
+                }
+            } catch (error) {
+                console.error('Error al cargar categorías:', error);
+            }
+        },
+        
+        async cargarDatos() {
+            this.cargando = true;
+            
+            try {
+                const params = new URLSearchParams({
+                    fecha_desde: this.filtros.fecha_desde,
+                    fecha_hasta: this.filtros.fecha_hasta,
+                    categoria: this.filtros.categoria,
+                    ordenar: this.filtros.ordenar
+                });
+                
+                const response = await fetch(`/api/reportes/productos/?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.resumen = data.resumen || this.resumen;
+                    this.productos = data.productos || [];
+                    this.topCantidad = data.top_cantidad || [];
+                    this.topGanancia = data.top_ganancia || [];
+                    this.ventasPorCategoria = data.ventas_por_categoria || [];
+                }
+            } catch (error) {
+                console.error('Error al cargar datos:', error);
+                gestionHelpers.notify('Error al cargar reporte', 'error');
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        exportarExcel() {
+            gestionHelpers.exportTableToCSV('tabla-productos', `reporte_productos_${this.filtros.fecha_desde}_${this.filtros.fecha_hasta}.csv`);
+        },
+        
+        exportarPDF() {
+            window.open(`/api/reportes/productos/pdf/?fecha_desde=${this.filtros.fecha_desde}&fecha_hasta=${this.filtros.fecha_hasta}&categoria=${this.filtros.categoria}`, '_blank');
+        },
+        
+        formatearFecha(fecha) {
+            return fecha.toISOString().split('T')[0];
+        },
+        
+        formatearPrecio(monto) {
+            return gestionHelpers.formatPrice(monto);
+        }
+    }
+}
+</script>
+{% endblock %}

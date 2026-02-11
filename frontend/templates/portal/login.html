@@ -1,0 +1,595 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Portal de Padres - Cantina Tita{% endblock %}
+
+{% block extra_styles %}
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        background-attachment: fixed !important;
+    }
+    
+    .login-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        padding: 2rem 1rem;
+    }
+    
+    .login-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border-radius: 2rem;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        padding: 3rem;
+        width: 100%;
+        max-width: 480px;
+        animation: slideInUp 0.6s ease-out;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .logo-portal {
+        width: 120px;
+        height: 120px;
+        object-fit: contain;
+        margin: 0 auto 2rem;
+        border-radius: 50%;
+        background: rgba(103, 126, 234, 0.1);
+        padding: 1.5rem;
+        border: 3px solid rgba(103, 126, 234, 0.2);
+        transition: all 0.3s ease;
+    }
+    
+    .logo-portal:hover {
+        transform: scale(1.05);
+        box-shadow: 0 15px 30px rgba(103, 126, 234, 0.3);
+    }
+    
+    .portal-title {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        text-align: center;
+    }
+    
+    .portal-subtitle {
+        color: #6b7280;
+        text-align: center;
+        margin-bottom: 2rem;
+        font-size: 1.1rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        display: flex;
+        align-items: center;
+        color: #374151;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+    
+    .form-input {
+        width: 100%;
+        padding: 1rem 1.2rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 1rem;
+        background: rgba(255, 255, 255, 0.8);
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        outline: none;
+    }
+    
+    .form-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(103, 126, 234, 0.1);
+        background: white;
+    }
+    
+    .form-input.error {
+        border-color: #ef4444;
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    }
+    
+    .password-toggle {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #6b7280;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+    }
+    
+    .password-toggle:hover {
+        color: #667eea;
+        background: rgba(103, 126, 234, 0.1);
+    }
+    
+    .login-btn {
+        width: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem 2rem;
+        border: none;
+        border-radius: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        margin-top: 1rem;
+    }
+    
+    .login-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 30px rgba(103, 126, 234, 0.4);
+    }
+    
+    .login-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid transparent;
+        border-top: 2px solid currentColor;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 0.5rem;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .error-message {
+        color: #ef4444;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .success-message {
+        color: #10b981;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .divider {
+        display: flex;
+        align-items: center;
+        margin: 2rem 0;
+        text-align: center;
+        color: #9ca3af;
+        font-size: 0.875rem;
+    }
+    
+    .divider::before,
+    .divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: #e5e7eb;
+    }
+    
+    .divider::before {
+        margin-right: 1rem;
+    }
+    
+    .divider::after {
+        margin-left: 1rem;
+    }
+    
+    .register-link {
+        text-align: center;
+        margin-top: 1.5rem;
+    }
+    
+    .register-link a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.2s ease;
+    }
+    
+    .register-link a:hover {
+        color: #764ba2;
+        text-decoration: underline;
+    }
+    
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid rgba(103, 126, 234, 0.2);
+    }
+    
+    .feature-item {
+        text-align: center;
+        padding: 1rem;
+        border-radius: 1rem;
+        background: rgba(103, 126, 234, 0.05);
+        transition: all 0.3s ease;
+    }
+    
+    .feature-item:hover {
+        background: rgba(103, 126, 234, 0.1);
+        transform: translateY(-2px);
+    }
+    
+    .feature-icon {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 0.75rem;
+        font-size: 1.2rem;
+    }
+    
+    .footer-info {
+        text-align: center;
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+    
+    .footer-info a {
+        color: #667eea;
+        text-decoration: none;
+        margin: 0 0.5rem;
+    }
+    
+    .footer-info a:hover {
+        text-decoration: underline;
+    }
+    
+    .checkbox-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 1.5rem 0;
+    }
+    
+    .checkbox-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .checkbox-wrapper input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        border: 2px solid #d1d5db;
+        appearance: none;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.2s ease;
+    }
+    
+    .checkbox-wrapper input[type="checkbox"]:checked {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #667eea;
+    }
+    
+    .checkbox-wrapper input[type="checkbox"]:checked::before {
+        content: '✓';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .forgot-password {
+        color: #667eea;
+        text-decoration: none;
+        font-size: 0.875rem;
+        transition: color 0.2s ease;
+    }
+    
+    .forgot-password:hover {
+        color: #764ba2;
+        text-decoration: underline;
+    }
+
+    @media (max-width: 640px) {
+        .login-card {
+            padding: 2rem 1.5rem;
+            margin: 1rem;
+            border-radius: 1.5rem;
+        }
+        
+        .portal-title {
+            font-size: 2rem;
+        }
+        
+        .logo-portal {
+            width: 100px;
+            height: 100px;
+        }
+        
+        .features-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <!-- Logo y Header -->
+        <div style="text-align: center;">
+            <img src="{% static 'images/tita_logotipo.png' %}" alt="Cantina Tita" class="logo-portal">
+            <h1 class="portal-title">Portal de Padres</h1>
+            <p class="portal-subtitle">Gestiona las tarjetas de alimentación de tus hijos</p>
+        </div>
+
+        <!-- Formulario de Login -->
+        <form method="post" 
+              action="{% url 'clientes:portal_login' %}"
+              x-data="{
+                  loading: false,
+                  showPassword: false,
+                  fields: {
+                      email: { value: '', error: '' },
+                      password: { value: '', error: '' }
+                  },
+                  get isValid() {
+                      return this.fields.email.value.includes('@') && 
+                             this.fields.password.value.length >= 6;
+                  },
+                  validateField(fieldName) {
+                      if (fieldName === 'email') {
+                          if (!this.fields.email.value) {
+                              this.fields.email.error = 'El email es requerido';
+                          } else if (!this.fields.email.value.includes('@')) {
+                              this.fields.email.error = 'Email inválido';
+                          } else {
+                              this.fields.email.error = '';
+                          }
+                      }
+                      if (fieldName === 'password') {
+                          if (!this.fields.password.value) {
+                              this.fields.password.error = 'La contraseña es requerida';
+                          } else if (this.fields.password.value.length < 6) {
+                              this.fields.password.error = 'Mínimo 6 caracteres';
+                          } else {
+                              this.fields.password.error = '';
+                          }
+                      }
+                  },
+                  handleSubmit() {
+                      this.validateField('email');
+                      this.validateField('password');
+                      if (this.isValid) {
+                          this.loading = true;
+                          $el.submit();
+                      }
+                  }
+              }"
+              @submit.prevent="handleSubmit"
+              novalidate>
+            
+            {% csrf_token %}
+            
+            <!-- Campo Email -->
+            <div class="form-group">
+                <label for="email" class="form-label">
+                    <i class="fas fa-envelope mr-2"></i>Correo Electrónico
+                </label>
+                <input type="email" 
+                       id="email"
+                       name="email"
+                       x-model="fields.email.value"
+                       @blur="validateField('email')"
+                       @input="validateField('email')"
+                       :class="{ 'error': fields.email.error }"
+                       class="form-input"
+                       placeholder="ejemplo@correo.com"
+                       autocomplete="email"
+                       autofocus
+                       required>
+                
+                <!-- Mensaje de error -->
+                <div x-show="fields.email.error" class="error-message">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span x-text="fields.email.error"></span>
+                </div>
+                
+                <!-- Validación visual -->
+                <div x-show="fields.email.value && !fields.email.error" class="success-message">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Email válido</span>
+                </div>
+            </div>
+            
+            <!-- Campo Contraseña -->
+            <div class="form-group">
+                <label for="password" class="form-label">
+                    <i class="fas fa-lock mr-2"></i>Contraseña
+                </label>
+                <div style="position: relative;">
+                    <input :type="showPassword ? 'text' : 'password'"
+                           id="password"
+                           name="password"
+                           x-model="fields.password.value"
+                           @blur="validateField('password')"
+                           @input="validateField('password')"
+                           :class="{ 'error': fields.password.error }"
+                           class="form-input"
+                           placeholder="Ingrese su contraseña"
+                           autocomplete="current-password"
+                           required>
+                    
+                    <!-- Toggle mostrar/ocultar contraseña -->
+                    <button type="button"
+                            @click="showPassword = !showPassword"
+                            class="password-toggle">
+                        <i class="fas" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                    </button>
+                </div>
+                
+                <!-- Mensaje de error -->
+                <div x-show="fields.password.error" class="error-message">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span x-text="fields.password.error"></span>
+                </div>
+            </div>
+            
+            <!-- Recordar y Olvidé contraseña -->
+            <div class="checkbox-container">
+                <div class="checkbox-wrapper">
+                    <input type="checkbox" name="remember" id="remember">
+                    <label for="remember">Recordar sesión</label>
+                </div>
+                <a href="{% url 'clientes:portal_recuperar_password' %}" class="forgot-password">¿Olvidaste tu contraseña?</a>
+            </div>
+            
+            <!-- Errores del servidor -->
+            {% if form.non_field_errors %}
+            <div class="error-message" style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: 0.5rem;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>{{ form.non_field_errors.0 }}</span>
+            </div>
+            {% endif %}
+            
+            <!-- Botón de submit -->
+            <button type="submit"
+                    :disabled="loading || !isValid"
+                    class="login-btn">
+                <!-- Texto normal -->
+                <span :class="{ 'invisible': loading }">
+                    <i class="fas fa-sign-in-alt mr-2"></i>
+                    Ingresar al Portal
+                </span>
+                
+                <!-- Loading spinner -->
+                <div x-show="loading" 
+                     style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
+                    <div class="spinner"></div>
+                    <span>Ingresando...</span>
+                </div>
+            </button>
+        </form>
+
+        <!-- Divider -->
+        <div class="divider">¿Nuevo en el sistema?</div>
+        
+        <!-- Link a registro -->
+        <div class="register-link">
+            <p>¿No tienes una cuenta? 
+                <a href="#" onclick="alert('Contacta al administrador para crear tu cuenta')">Regístrate aquí</a>
+            </p>
+        </div>
+
+        <!-- Features del Portal -->
+        <div class="features-grid">
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <i class="fas fa-credit-card"></i>
+                </div>
+                <h3 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem;">Saldo en Tiempo Real</h3>
+                <p style="font-size: 0.8rem; color: #6b7280;">Consulta el saldo disponible</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <i class="fas fa-history"></i>
+                </div>
+                <h3 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem;">Historial de Compras</h3>
+                <p style="font-size: 0.8rem; color: #6b7280;">Revisa todas las transacciones</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <i class="fas fa-mobile-alt"></i>
+                </div>
+                <h3 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem;">Recargas Rápidas</h3>
+                <p style="font-size: 0.8rem; color: #6b7280;">Recarga desde tu móvil</p>
+            </div>
+        </div>
+
+        <!-- Footer info -->
+        <div class="footer-info">
+            <p>© 2026 Cantina Tita. Todos los derechos reservados.</p>
+            <div style="margin-top: 0.5rem;">
+                <a href="#">Términos de Servicio</a>
+                <a href="#">Privacidad</a>
+                <a href="#">Ayuda</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('🔐 Portal de Padres cargado');
+        
+        const firstInput = document.getElementById('email');
+        if (firstInput) {
+            firstInput.focus();
+        }
+        
+        // Mejorar la experiencia de autocompletado
+        const emailInput = document.getElementById('email');
+        if (emailInput) {
+            emailInput.addEventListener('paste', (e) => {
+                setTimeout(() => {
+                    Alpine.store('form').validateField('email');
+                }, 10);
+            });
+        }
+    });
+</script>
+{% endblock %}

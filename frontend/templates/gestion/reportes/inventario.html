@@ -1,0 +1,490 @@
+{% extends "base_gestion.html" %}
+{% load static %}
+
+{% block title %}Reporte de Inventario - Gestión{% endblock %}
+
+{% block content %}
+<div x-data="reporteInventario()" x-init="init()" class="space-y-6">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                <i class="fas fa-warehouse mr-3 text-primary"></i>
+                Reporte de Inventario
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Estado actual del inventario y valorización
+            </p>
+        </div>
+        
+        <div class="flex gap-2">
+            <button @click="exportarExcel()" class="btn btn-success">
+                <i class="fas fa-file-excel mr-2"></i>
+                Exportar Excel
+            </button>
+            <button @click="exportarPDF()" class="btn btn-error">
+                <i class="fas fa-file-pdf mr-2"></i>
+                Exportar PDF
+            </button>
+        </div>
+    </div>
+    
+    <!-- Cards de Resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        
+        <!-- Total Productos -->
+        <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-box text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Total Productos</p>
+                    <p class="text-3xl font-bold" x-text="resumen.total_productos"></p>
+                    <p class="text-sm opacity-80" x-text="resumen.productos_activos + ' activos'"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Unidades en Stock -->
+        <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-cubes text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Unidades en Stock</p>
+                    <p class="text-3xl font-bold" x-text="resumen.unidades_stock"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Valorización (Costo) -->
+        <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-dollar-sign text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Valorización (Costo)</p>
+                    <p class="text-3xl font-bold" x-text="formatearPrecio(resumen.valorizacion_costo)"></p>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Valorización (Venta) -->
+        <div class="stat-card bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+            <template x-if="cargando">
+                <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
+            </template>
+            <template x-if="!cargando">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-chart-line text-3xl opacity-80"></i>
+                    </div>
+                    <p class="text-sm opacity-90 mb-1">Valorización (Venta)</p>
+                    <p class="text-3xl font-bold" x-text="formatearPrecio(resumen.valorizacion_venta)"></p>
+                    <p class="text-sm opacity-80">
+                        Ganancia potencial: <span x-text="formatearPrecio(resumen.ganancia_potencial)"></span>
+                    </p>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <!-- Categoría -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-tag mr-2"></i>Categoría
+                    </span>
+                </label>
+                <select x-model="filtros.categoria" 
+                        @change="cargarDatos()"
+                        class="select select-bordered w-full">
+                    <option value="">Todas</option>
+                    <template x-for="categoria in categorias" :key="categoria.id">
+                        <option :value="categoria.id" x-text="categoria.nombre"></option>
+                    </template>
+                </select>
+            </div>
+            
+            <!-- Estado Stock -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-filter mr-2"></i>Estado
+                    </span>
+                </label>
+                <select x-model="filtros.estado_stock" 
+                        @change="cargarDatos()"
+                        class="select select-bordered w-full">
+                    <option value="">Todos</option>
+                    <option value="normal">Stock Normal</option>
+                    <option value="bajo">Stock Bajo</option>
+                    <option value="agotado">Agotado</option>
+                </select>
+            </div>
+            
+            <!-- Ordenar -->
+            <div>
+                <label class="label">
+                    <span class="label-text">
+                        <i class="fas fa-sort mr-2"></i>Ordenar por
+                    </span>
+                </label>
+                <select x-model="filtros.ordenar" 
+                        @change="cargarDatos()"
+                        class="select select-bordered w-full">
+                    <option value="stock_asc">Stock (menor a mayor)</option>
+                    <option value="stock_desc">Stock (mayor a menor)</option>
+                    <option value="nombre">Nombre</option>
+                    <option value="valor">Valorización</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alertas de Stock -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Productos con Stock Bajo -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold">
+                    <i class="fas fa-exclamation-triangle mr-2 text-warning"></i>
+                    Stock Bajo
+                </h2>
+                <span class="badge badge-warning badge-lg" x-text="alertas.stock_bajo.length"></span>
+            </div>
+            
+            <template x-if="cargando">
+                <div class="space-y-2">
+                    <div class="skeleton h-16 w-full"></div>
+                    <div class="skeleton h-16 w-full"></div>
+                    <div class="skeleton h-16 w-full"></div>
+                </div>
+            </template>
+            
+            <template x-if="!cargando">
+                <div class="space-y-2 max-h-96 overflow-y-auto">
+                    <template x-if="alertas.stock_bajo.length === 0">
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-check-circle text-4xl mb-2 text-success"></i>
+                            <p>No hay productos con stock bajo</p>
+                        </div>
+                    </template>
+                    
+                    <template x-for="producto in alertas.stock_bajo" :key="producto.id">
+                        <div class="flex items-center justify-between p-3 bg-warning bg-opacity-10 border border-warning rounded-lg">
+                            <div class="flex items-center gap-3">
+                                <template x-if="producto.imagen">
+                                    <img :src="producto.imagen" class="w-12 h-12 rounded object-cover">
+                                </template>
+                                <template x-if="!producto.imagen">
+                                    <div class="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
+                                        <i class="fas fa-box text-gray-400"></i>
+                                    </div>
+                                </template>
+                                <div>
+                                    <p class="font-semibold" x-text="producto.nombre"></p>
+                                    <p class="text-xs text-gray-500">
+                                        Stock: <span class="font-bold text-warning" x-text="producto.stock"></span> / 
+                                        Mínimo: <span x-text="producto.stock_minimo"></span>
+                                    </p>
+                                </div>
+                            </div>
+                            <a :href="`/gestion/productos/${producto.id}/editar/`" class="btn btn-warning btn-xs">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Productos Agotados -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold">
+                    <i class="fas fa-times-circle mr-2 text-error"></i>
+                    Productos Agotados
+                </h2>
+                <span class="badge badge-error badge-lg" x-text="alertas.agotados.length"></span>
+            </div>
+            
+            <template x-if="cargando">
+                <div class="space-y-2">
+                    <div class="skeleton h-16 w-full"></div>
+                    <div class="skeleton h-16 w-full"></div>
+                    <div class="skeleton h-16 w-full"></div>
+                </div>
+            </template>
+            
+            <template x-if="!cargando">
+                <div class="space-y-2 max-h-96 overflow-y-auto">
+                    <template x-if="alertas.agotados.length === 0">
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-check-circle text-4xl mb-2 text-success"></i>
+                            <p>No hay productos agotados</p>
+                        </div>
+                    </template>
+                    
+                    <template x-for="producto in alertas.agotados" :key="producto.id">
+                        <div class="flex items-center justify-between p-3 bg-error bg-opacity-10 border border-error rounded-lg">
+                            <div class="flex items-center gap-3">
+                                <template x-if="producto.imagen">
+                                    <img :src="producto.imagen" class="w-12 h-12 rounded object-cover">
+                                </template>
+                                <template x-if="!producto.imagen">
+                                    <div class="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
+                                        <i class="fas fa-box text-gray-400"></i>
+                                    </div>
+                                </template>
+                                <div>
+                                    <p class="font-semibold" x-text="producto.nombre"></p>
+                                    <p class="text-xs text-error font-bold">SIN STOCK</p>
+                                </div>
+                            </div>
+                            <a :href="`/gestion/productos/${producto.id}/editar/`" class="btn btn-error btn-xs">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Valorización por Categoría -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold mb-4">
+            <i class="fas fa-chart-bar mr-2 text-secondary"></i>
+            Valorización por Categoría
+        </h2>
+        
+        <template x-if="cargando">
+            <div class="skeleton h-64 w-full"></div>
+        </template>
+        
+        <template x-if="!cargando">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <template x-for="categoria in valorizacionPorCategoria" :key="categoria.id">
+                    <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+                        <p class="text-sm opacity-90 mb-2" x-text="categoria.nombre"></p>
+                        <p class="text-xs opacity-80 mb-1" x-text="categoria.productos + ' productos | ' + categoria.unidades + ' unidades'"></p>
+                        <p class="text-xl font-bold mb-1">
+                            <i class="fas fa-dollar-sign text-sm mr-1"></i>
+                            <span x-text="formatearPrecio(categoria.valor_costo)"></span>
+                        </p>
+                        <p class="text-sm opacity-80">
+                            Venta: <span x-text="formatearPrecio(categoria.valor_venta)"></span>
+                        </p>
+                    </div>
+                </template>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Tabla Detallada de Inventario -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="p-6 border-b dark:border-gray-700">
+            <h2 class="text-xl font-bold">
+                <i class="fas fa-list mr-2 text-primary"></i>
+                Detalle de Inventario
+            </h2>
+        </div>
+        
+        <template x-if="cargando">
+            <div class="p-6">
+                <div class="skeleton h-64 w-full"></div>
+            </div>
+        </template>
+        
+        <template x-if="!cargando">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full" id="tabla-inventario">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Categoría</th>
+                            <th class="text-right">Stock</th>
+                            <th class="text-right">Stock Mín.</th>
+                            <th class="text-right">P. Compra</th>
+                            <th class="text-right">P. Venta</th>
+                            <th class="text-right">Valor Costo</th>
+                            <th class="text-right">Valor Venta</th>
+                            <th class="text-right">Ganancia</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="producto in productos" :key="producto.id">
+                            <tr class="hover">
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <template x-if="producto.imagen">
+                                            <img :src="producto.imagen" class="w-10 h-10 rounded object-cover">
+                                        </template>
+                                        <template x-if="!producto.imagen">
+                                            <div class="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
+                                                <i class="fas fa-box text-gray-400"></i>
+                                            </div>
+                                        </template>
+                                        <div>
+                                            <p class="font-semibold" x-text="producto.nombre"></p>
+                                            <template x-if="producto.codigo_barra">
+                                                <p class="text-xs text-gray-500 font-mono" x-text="producto.codigo_barra"></p>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge badge-sm badge-secondary" x-text="producto.categoria"></span>
+                                </td>
+                                <td class="text-right font-bold"
+                                    :class="{
+                                        'text-success': producto.stock > producto.stock_minimo,
+                                        'text-warning': producto.stock > 0 && producto.stock <= producto.stock_minimo,
+                                        'text-error': producto.stock === 0
+                                    }"
+                                    x-text="producto.stock"></td>
+                                <td class="text-right text-gray-500" x-text="producto.stock_minimo"></td>
+                                <td class="text-right" x-text="formatearPrecio(producto.precio_compra)"></td>
+                                <td class="text-right" x-text="formatearPrecio(producto.precio_venta)"></td>
+                                <td class="text-right font-bold" x-text="formatearPrecio(producto.valor_costo)"></td>
+                                <td class="text-right font-bold text-primary" x-text="formatearPrecio(producto.valor_venta)"></td>
+                                <td class="text-right font-bold text-success" x-text="formatearPrecio(producto.ganancia_potencial)"></td>
+                                <td>
+                                    <span class="badge badge-sm"
+                                          :class="{
+                                              'badge-success': producto.stock > producto.stock_minimo,
+                                              'badge-warning': producto.stock > 0 && producto.stock <= producto.stock_minimo,
+                                              'badge-error': producto.stock === 0
+                                          }">
+                                        <span x-text="producto.stock === 0 ? 'Agotado' : producto.stock <= producto.stock_minimo ? 'Stock Bajo' : 'Normal'"></span>
+                                    </span>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                    <tfoot>
+                        <tr class="font-bold bg-gray-100 dark:bg-gray-700">
+                            <td colspan="2" class="text-right">TOTALES:</td>
+                            <td class="text-right" x-text="resumen.unidades_stock"></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td class="text-right" x-text="formatearPrecio(resumen.valorizacion_costo)"></td>
+                            <td class="text-right text-primary" x-text="formatearPrecio(resumen.valorizacion_venta)"></td>
+                            <td class="text-right text-success" x-text="formatearPrecio(resumen.ganancia_potencial)"></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </template>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function reporteInventario() {
+    return {
+        cargando: true,
+        filtros: {
+            categoria: '',
+            estado_stock: '',
+            ordenar: 'stock_asc'
+        },
+        categorias: [],
+        resumen: {
+            total_productos: 0,
+            productos_activos: 0,
+            unidades_stock: 0,
+            valorizacion_costo: 0,
+            valorizacion_venta: 0,
+            ganancia_potencial: 0
+        },
+        productos: [],
+        alertas: {
+            stock_bajo: [],
+            agotados: []
+        },
+        valorizacionPorCategoria: [],
+        
+        async init() {
+            await this.cargarCategorias();
+            await this.cargarDatos();
+        },
+        
+        async cargarCategorias() {
+            try {
+                const response = await fetch('/api/categorias/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.categorias = data.categorias || [];
+                }
+            } catch (error) {
+                console.error('Error al cargar categorías:', error);
+            }
+        },
+        
+        async cargarDatos() {
+            this.cargando = true;
+            
+            try {
+                const params = new URLSearchParams({
+                    categoria: this.filtros.categoria,
+                    estado_stock: this.filtros.estado_stock,
+                    ordenar: this.filtros.ordenar
+                });
+                
+                const response = await fetch(`/api/reportes/inventario/?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.resumen = data.resumen || this.resumen;
+                    this.productos = data.productos || [];
+                    this.alertas = data.alertas || this.alertas;
+                    this.valorizacionPorCategoria = data.valorizacion_por_categoria || [];
+                }
+            } catch (error) {
+                console.error('Error al cargar datos:', error);
+                gestionHelpers.notify('Error al cargar reporte', 'error');
+            } finally {
+                this.cargando = false;
+            }
+        },
+        
+        exportarExcel() {
+            gestionHelpers.exportTableToCSV('tabla-inventario', 'reporte_inventario.csv');
+        },
+        
+        exportarPDF() {
+            window.open(`/api/reportes/inventario/pdf/?categoria=${this.filtros.categoria}&estado_stock=${this.filtros.estado_stock}`, '_blank');
+        },
+        
+        formatearPrecio(monto) {
+            return gestionHelpers.formatPrice(monto);
+        }
+    }
+}
+</script>
+{% endblock %}
