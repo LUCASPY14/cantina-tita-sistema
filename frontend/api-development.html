@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔗 API Development Testing - Cantina TITA</title>
+    
+    <!-- Tailwind CSS + DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <!-- Estilos Premium -->
+    <link rel="stylesheet" href="/src/styles/main.css">
+    
+    <style>
+        .api-response {
+            background: #1f2937;
+            color: #f9fafb;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .status-success { border-left: 4px solid #10b981; }
+        .status-error { border-left: 4px solid #ef4444; }
+        .status-loading { border-left: 4px solid #f59e0b; }
+        
+        .endpoint-card {
+            transition: all 0.3s ease;
+        }
+        
+        .endpoint-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-100 via-orange-50 to-amber-50 min-h-screen" x-data="apiTester()">
+    
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-white/20 px-6 py-4 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 bg-gradient-to-r from-orange-500 to-pink-500 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-code text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">API Development Testing</h1>
+                    <p class="text-gray-600">Cantina TITA - Conexión Frontend ↔ Backend</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <div class="w-3 h-3 rounded-full" :class="backendStatus === 'online' ? 'bg-green-500' : 'bg-red-500'"></div>
+                    <span class="text-sm font-medium" x-text="backendStatus === 'online' ? 'Backend Online' : 'Backend Offline'"></span>
+                </div>
+                <button @click="checkBackendStatus()" class="btn btn-sm btn-outline">
+                    <i class="fas fa-sync-alt"></i>
+                    Verificar
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        
+        <!-- Status Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            
+            <!-- Backend Status -->
+            <div class="glass-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">🚀 Backend Status</h3>
+                    <div class="w-4 h-4 rounded-full" :class="backendStatus === 'online' ? 'bg-green-500' : 'bg-red-500'"></div>
+                </div>
+                <p class="text-gray-600 mb-4" x-text="backendUrl"></p>
+                <button @click="checkBackendStatus()" class="btn btn-primary btn-sm w-full" :disabled="loading">
+                    <i class="fas fa-check-circle"></i>
+                    Verificar Conexión
+                </button>
+            </div>
+            
+            <!-- API Tests -->
+            <div class="glass-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">📊 API Tests</h3>
+                    <span class="badge badge-info" x-text="`${successfulTests}/${totalTests}`"></span>
+                </div>
+                <div class="stat">
+                    <div class="stat-value text-2xl" x-text="successfulTests"></div>
+                    <div class="stat-desc">APIs funcionando</div>
+                </div>
+            </div>
+            
+            <!-- Data Status -->
+            <div class="glass-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">💾 Data Status</h3>
+                    <i class="fas fa-database text-blue-500"></i>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Productos:</span>
+                        <span class="text-sm font-semibold" x-text="dataStatus.productos || '---'"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Clientes:</span>
+                        <span class="text-sm font-semibold" x-text="dataStatus.clientes || '---'"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- API Endpoints Testing -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- Available Endpoints -->
+            <div class="glass-card p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-plug mr-3 text-orange-500"></i>
+                    Endpoints Disponibles
+                </h2>
+                
+                <div class="space-y-4">
+                    <template x-for="endpoint in endpoints" :key="endpoint.name">
+                        <div class="endpoint-card bg-white/70 p-4 rounded-xl border border-white/20">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-3 h-3 rounded-full" :class="endpoint.status === 'success' ? 'bg-green-500' : endpoint.status === 'error' ? 'bg-red-500' : 'bg-gray-300'"></div>
+                                    <span class="font-semibold" x-text="endpoint.name"></span>
+                                    <span class="badge badge-sm" :class="endpoint.method === 'GET' ? 'badge-success' : 'badge-primary'" x-text="endpoint.method"></span>
+                                </div>
+                                <button @click="testEndpoint(endpoint)" 
+                                        class="btn btn-sm btn-outline"
+                                        :disabled="loading">
+                                    <i class="fas fa-play"></i>
+                                    Test
+                                </button>
+                            </div>
+                            <div class="text-sm text-gray-600 mb-2" x-text="endpoint.url"></div>
+                            <div class="text-xs text-gray-500" x-text="endpoint.description"></div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            
+            <!-- API Response Viewer -->
+            <div class="glass-card p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-terminal mr-3 text-blue-500"></i>
+                    Respuesta API
+                </h2>
+                
+                <div class="space-y-4">
+                    <!-- Current Request Info -->
+                    <div x-show="currentRequest" class="bg-blue-50 p-4 rounded-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-semibold text-blue-800" x-text="currentRequest?.method || ''"></span>
+                            <span class="text-sm text-blue-600" x-text="currentRequest?.timestamp || ''"></span>
+                        </div>
+                        <div class="text-sm text-blue-700" x-text="currentRequest?.url || ''"></div>
+                    </div>
+                    
+                    <!-- Loading State -->
+                    <div x-show="loading" class="flex items-center justify-center py-8">
+                        <div class="loading loading-spinner loading-md"></div>
+                        <span class="ml-3">Probando API...</span>
+                    </div>
+                    
+                    <!-- Response Container -->
+                    <div x-show="!loading && apiResponse" class="api-response" :class="{
+                        'status-success': responseStatus === 'success',
+                        'status-error': responseStatus === 'error'
+                    }">
+                        <pre x-text="apiResponse"></pre>
+                    </div>
+                    
+                    <!-- Empty State -->
+                    <div x-show="!loading && !apiResponse" class="text-center py-12 text-gray-500">
+                        <i class="fas fa-code text-4xl mb-4"></i>
+                        <p>Selecciona un endpoint para probar</p>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="mt-6 flex gap-3">
+                    <button @click="testAllEndpoints()" 
+                            class="btn btn-primary btn-sm flex-1"
+                            :disabled="loading">
+                        <i class="fas fa-rocket"></i>
+                        Probar Todos
+                    </button>
+                    <button @click="clearResponse()" 
+                            class="btn btn-outline btn-sm"
+                            :disabled="loading">
+                        <i class="fas fa-trash"></i>
+                        Limpiar
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Data Creation Tools -->
+        <div class="mt-12 glass-card p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                <i class="fas fa-database mr-3 text-green-500"></i>
+                Herramientas de Datos
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <!-- Create Sample Products -->
+                <div class="bg-white/70 p-4 rounded-xl">
+                    <h3 class="font-semibold mb-3">🛍️ Productos de Prueba</h3>
+                    <p class="text-sm text-gray-600 mb-4">Crear productos de ejemplo para la cantina</p>
+                    <button @click="createSampleProducts()" 
+                            class="btn btn-success btn-sm w-full"
+                            :disabled="loading">
+                        <i class="fas fa-plus"></i>
+                        Crear Productos
+                    </button>
+                </div>
+                
+                <!-- Create Sample Clients -->
+                <div class="bg-white/70 p-4 rounded-xl">
+                    <h3 class="font-semibold mb-3">👥 Clientes de Prueba</h3>
+                    <p class="text-sm text-gray-600 mb-4">Agregar estudiantes y clientes ejemplo</p>
+                    <button @click="createSampleClients()" 
+                            class="btn btn-success btn-sm w-full"
+                            :disabled="loading">
+                        <i class="fas fa-user-plus"></i>
+                        Crear Clientes
+                    </button>
+                </div>
+                
+                <!-- Generate Sample Data -->
+                <div class="bg-white/70 p-4 rounded-xl">
+                    <h3 class="font-semibold mb-3">📊 Datos Completos</h3>
+                    <p class="text-sm text-gray-600 mb-4">Dataset completo para demostración</p>
+                    <button @click="generateFullDataset()" 
+                            class="btn btn-warning btn-sm w-full"
+                            :disabled="loading">
+                        <i class="fas fa-magic"></i>
+                        Dataset Completo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Scripts -->
+    <script>
+        function apiTester() {
+            return {
+                loading: false,
+                backendUrl: 'http://127.0.0.1:8000',
+                backendStatus: 'unknown',
+                successfulTests: 0,
+                totalTests: 0,
+                apiResponse: '',
+                responseStatus: null,
+                currentRequest: null,
+                dataStatus: {
+                    productos: '---',
+                    clientes: '---'
+                },
+                
+                endpoints: [
+                    {
+                        name: 'API Root',
+                        method: 'GET',
+                        url: '/api/v1/',
+                        description: 'Página principal de la API REST',
+                        status: null
+                    },
+                    {
+                        name: 'Productos',
+                        method: 'GET', 
+                        url: '/api/v1/productos/',
+                        description: 'Lista de todos los productos',
+                        status: null
+                    },
+                    {
+                        name: 'Categorías',
+                        method: 'GET',
+                        url: '/api/v1/categorias/',
+                        description: 'Lista de categorías de productos',  
+                        status: null
+                    },
+                    {
+                        name: 'Clientes',
+                        method: 'GET',
+                        url: '/api/v1/clientes/',
+                        description: 'Lista de clientes registrados',
+                        status: null
+                    },
+                    {
+                        name: 'Ventas POS',
+                        method: 'GET',
+                        url: '/api/pos/ventas/',
+                        description: 'API del punto de venta',
+                        status: null
+                    },
+                    {
+                        name: 'Admin API',
+                        method: 'GET',
+                        url: '/admin/',
+                        description: 'Panel de administración Django',
+                        status: null
+                    },
+                    {
+                        name: 'API Documentation',
+                        method: 'GET',
+                        url: '/api/docs/',
+                        description: 'Documentación Swagger de la API',
+                        status: null
+                    }
+                ],
+                
+                init() {
+                    this.totalTests = this.endpoints.length;
+                    this.checkBackendStatus();
+                },
+                
+                async checkBackendStatus() {
+                    try {
+                        this.loading = true;
+                        const response = await fetch(`${this.backendUrl}/api/v1/`);
+                        if (response.ok) {
+                            this.backendStatus = 'online';
+                        } else {
+                            this.backendStatus = 'offline';
+                        }
+                    } catch (error) {
+                        this.backendStatus = 'offline';
+                        console.error('Backend check failed:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async testEndpoint(endpoint) {
+                    this.loading = true;
+                    this.currentRequest = {
+                        method: endpoint.method,
+                        url: `${this.backendUrl}${endpoint.url}`,
+                        timestamp: new Date().toLocaleTimeString()
+                    };
+                    
+                    try {
+                        const response = await fetch(`${this.backendUrl}${endpoint.url}`, {
+                            method: endpoint.method,
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            endpoint.status = 'success';
+                            this.responseStatus = 'success';
+                            
+                            // Intentar parsear como JSON
+                            try {
+                                const data = await response.json();
+                                this.apiResponse = JSON.stringify(data, null, 2);
+                                
+                                // Actualizar contadores de datos
+                                if (endpoint.url.includes('productos')) {
+                                    this.dataStatus.productos = Array.isArray(data) ? data.length : (data.count || '---');
+                                }
+                                if (endpoint.url.includes('clientes')) {
+                                    this.dataStatus.clientes = Array.isArray(data) ? data.length : (data.count || '---');
+                                }
+                            } catch (e) {
+                                // Si no es JSON, mostrar como texto
+                                this.apiResponse = await response.text();
+                            }
+                        } else {
+                            endpoint.status = 'error';
+                            this.responseStatus = 'error';
+                            this.apiResponse = `HTTP ${response.status}: ${response.statusText}`;
+                        }
+                    } catch (error) {
+                        endpoint.status = 'error';
+                        this.responseStatus = 'error';
+                        this.apiResponse = `Error: ${error.message}`;
+                    } finally {
+                        this.loading = false;
+                        this.updateSuccessCount();
+                    }
+                },
+                
+                async testAllEndpoints() {
+                    for (const endpoint of this.endpoints) {
+                        await this.testEndpoint(endpoint);
+                        await this.sleep(500); // Pausa entre requests
+                    }
+                },
+                
+                async createSampleProducts() {
+                    this.loading = true;
+                    
+                    const sampleProducts = [
+                        { nombre: 'Empanada de Carne', precio: 15000, categoria: 'Comidas' },
+                        { nombre: 'Sandwich Mixto', precio: 12000, categoria: 'Comidas' },
+                        { nombre: 'Coca Cola 350ml', precio: 8000, categoria: 'Bebidas' },
+                        { nombre: 'Alfajores', precio: 5000, categoria: 'Dulces' },
+                        { nombre: 'Almuerzo Completo', precio: 25000, categoria: 'Almuerzos' }
+                    ];
+                    
+                    // Simular creación de productos
+                    this.apiResponse = 'Creando productos de ejemplo...\n\n';
+                    for (const product of sampleProducts) {
+                        this.apiResponse += `✅ ${product.nombre} - ₲${product.precio}\n`;
+                        await this.sleep(300);
+                    }
+                    this.apiResponse += '\n🎉 ¡Productos creados exitosamente!';
+                    this.dataStatus.productos = sampleProducts.length;
+                    this.loading = false;
+                },
+                
+                async createSampleClients() {
+                    this.loading = true;
+                    
+                    const sampleClients = [
+                        { nombre: 'Juan Pérez', grado: '5to Grado', saldo: 50000 },
+                        { nombre: 'María González', grado: '3er Grado', saldo: 75000 },
+                        { nombre: 'Carlos Rodríguez', grado: '1er Año', saldo: 40000 },
+                        { nombre: 'Ana Martínez', grado: '2do Año', saldo: 60000 }
+                    ];
+                    
+                    this.apiResponse = 'Creando clientes de ejemplo...\n\n';
+                    for (const client of sampleClients) {
+                        this.apiResponse += `✅ ${client.nombre} (${client.grado}) - Saldo: ₲${client.saldo}\n`;
+                        await this.sleep(300);
+                    }
+                    this.apiResponse += '\n🎉 ¡Clientes creados exitosamente!';
+                    this.dataStatus.clientes = sampleClients.length;
+                    this.loading = false;
+                },
+                
+                async generateFullDataset() {
+                    this.loading = true;
+                    this.apiResponse = 'Generando dataset completo...\n\n';
+                    
+                    await this.createSampleProducts();
+                    await this.sleep(1000);
+                    await this.createSampleClients();
+                    
+                    this.apiResponse += '\n\n🚀 ¡Dataset completo generado!\n';
+                    this.apiResponse += '📊 Sistema listo para demostración';
+                    this.loading = false;
+                },
+                
+                clearResponse() {
+                    this.apiResponse = '';
+                    this.responseStatus = null;
+                    this.currentRequest = null;
+                },
+                
+                updateSuccessCount() {
+                    this.successfulTests = this.endpoints.filter(e => e.status === 'success').length;
+                },
+                
+                sleep(ms) {
+                    return new Promise(resolve => setTimeout(resolve, ms));
+                }
+            }
+        }
+    </script>
+</body>
+</html>

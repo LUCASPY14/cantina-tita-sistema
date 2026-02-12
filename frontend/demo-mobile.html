@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="es" x-data="{ sidebarOpen: false, currentView: 'dashboard' }">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📱 Mobile Premium - Cantina TITA</title>
+    
+    <!-- Tailwind CSS + DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <!-- Estilos Premium -->
+    <link rel="stylesheet" href="/src/styles/main.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    screens: {
+                        'xs': '475px',
+                    },
+                    colors: {
+                        'primary': {
+                            50: '#fff7ed',
+                            500: '#f97316',
+                            600: '#ea580c',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        .mobile-nav-item {
+            @apply flex flex-col items-center p-2 rounded-xl transition-all duration-300;
+        }
+        
+        .mobile-nav-item.active {
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(251, 146, 60, 0.2) 100%);
+            transform: translateY(-2px);
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            border: 2px solid white;
+        }
+        
+        .status-online { background: #10b981; }
+        .status-busy { background: #f59e0b; }
+        .status-offline { background: #ef4444; }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .progress-ring {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-100 via-orange-50 to-amber-50 min-h-screen" x-data="mobileApp()">
+    
+    <!-- Header Mobile -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-white/20 px-4 py-4 sticky top-0 z-50">
+        <div class="flex items-center justify-between">
+            <button @click="sidebarOpen = !sidebarOpen" class="p-2 rounded-xl hover:bg-orange-100 transition-colors ripple">
+                <i class="fas fa-bars text-xl text-gray-700"></i>
+            </button>
+            
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-pink-500 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-utensils text-white text-sm"></i>
+                </div>
+                <span class="font-bold text-lg text-gray-800">Cantina TITA</span>
+            </div>
+            
+            <div class="relative">
+                <button class="p-2 rounded-xl hover:bg-orange-100 transition-colors position-relative">
+                    <i class="fas fa-bell text-xl text-gray-700"></i>
+                    <div class="status-indicator status-online"></div>
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Sidebar Overlay -->
+    <div x-show="sidebarOpen" 
+         @click="sidebarOpen = false"
+         x-transition:enter="transition-opacity ease-linear duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition-opacity ease-linear duration-300"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 bg-black/50 z-40 lg:hidden"></div>
+    
+    <!-- Sidebar -->
+    <div x-show="sidebarOpen"
+         x-transition:enter="transition ease-in-out duration-300 transform"
+         x-transition:enter-start="-translate-x-full"
+         x-transition:enter-end="translate-x-0"
+         x-transition:leave="transition ease-in-out duration-300 transform"
+         x-transition:leave-start="translate-x-0"
+         x-transition:leave-end="-translate-x-full"
+         class="fixed top-0 left-0 z-50 w-80 h-full bg-white/95 backdrop-blur-md shadow-2xl lg:hidden">
+        
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center space-x-3">
+                <img src="https://via.placeholder.com/64/f97316/ffffff?text=TT" alt="Tita" class="w-16 h-16 rounded-2xl">
+                <div>
+                    <h3 class="font-bold text-lg text-gray-800">Tita González</h3>
+                    <p class="text-sm text-gray-600">Administradora</p>
+                    <div class="flex items-center mt-1">
+                        <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                        <span class="text-xs text-gray-500">En línea</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <nav class="p-4">
+            <div class="space-y-2">
+                <button @click="currentView = 'dashboard'; sidebarOpen = false" 
+                        :class="{ 'bg-orange-100 text-orange-600': currentView === 'dashboard' }"
+                        class="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-home w-5"></i>
+                    <span>Dashboard</span>
+                </button>
+                
+                <button @click="currentView = 'ventas'; sidebarOpen = false"
+                        :class="{ 'bg-orange-100 text-orange-600': currentView === 'ventas' }"
+                        class="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-cash-register w-5"></i>
+                    <span>Ventas</span>
+                </button>
+                
+                <button @click="currentView = 'productos'; sidebarOpen = false"
+                        :class="{ 'bg-orange-100 text-orange-600': currentView === 'productos' }"
+                        class="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-box w-5"></i>
+                    <span>Productos</span>
+                </button>
+                
+                <button @click="currentView = 'clientes'; sidebarOpen = false"
+                        :class="{ 'bg-orange-100 text-orange-600': currentView === 'clientes' }"
+                        class="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-users w-5"></i>
+                    <span>Clientes</span>
+                </button>
+                
+                <button @click="currentView = 'reportes'; sidebarOpen = false"
+                        :class="{ 'bg-orange-100 text-orange-600': currentView === 'reportes' }"
+                        class="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-chart-bar w-5"></i>
+                    <span>Reportes</span>
+                </button>
+            </div>
+        </nav>
+    </div>
+    
+    <!-- Main Content -->
+    <main class="px-4 py-6 pb-20">
+        
+        <!-- Dashboard View -->
+        <div x-show="currentView === 'dashboard'" x-transition class="space-y-6">
+            
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="glass-card p-4 card-hover">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-dollar-sign text-white"></i>
+                        </div>
+                        <span class="text-xs text-green-600 font-semibold">+15%</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800" x-text="formatCurrency(2450000)"></h3>
+                    <p class="text-sm text-gray-600">Ventas Hoy</p>
+                </div>
+                
+                <div class="glass-card p-4 card-hover">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-shopping-cart text-white"></i>
+                        </div>
+                        <span class="text-xs text-orange-600 font-semibold">247</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800">1,247</h3>
+                    <p class="text-sm text-gray-600">Productos</p>
+                </div>
+            </div>
+            
+            <!-- Progress Rings -->
+            <div class="glass-card p-6">
+                <h3 class="text-lg font-bold mb-4 text-gray-800">Meta del Mes</h3>
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="text-center">
+                        <div class="relative w-24 h-24 mx-auto mb-2">
+                            <svg class="w-full h-full" viewBox="0 0 42 42">
+                                <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#e5e7eb" stroke-width="3"/>
+                                <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="url(#gradient1)" stroke-width="3" 
+                                        stroke-dasharray="75 25" stroke-linecap="round" class="progress-ring"/>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span class="text-xl font-bold text-gray-800">75%</span>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-600">Ventas</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="relative w-24 h-24 mx-auto mb-2">
+                            <svg class="w-full h-full" viewBox="0 0 42 42">
+                                <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#e5e7eb" stroke-width="3"/>
+                                <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="url(#gradient2)" stroke-width="3" 
+                                        stroke-dasharray="60 40" stroke-linecap="round" class="progress-ring"/>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span class="text-xl font-bold text-gray-800">60%</span>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-600">Clientes</p>
+                    </div>
+                </div>
+                
+                <svg width="0" height="0">
+                    <defs>
+                        <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#f97316;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#ef4444;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            
+            <!-- Recent Transactions -->
+            <div class="glass-card p-6">
+                <h3 class="text-lg font-bold mb-4 text-gray-800">Transacciones Recientes</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between p-3 bg-white/50 rounded-xl" x-data="{ amount: 85000 }">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-plus text-green-600"></i>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-gray-800">Almuerzo Completo</p>
+                                <p class="text-sm text-gray-600">12:45 PM</p>
+                            </div>
+                        </div>
+                        <span class="font-bold text-green-600" x-text="formatCurrency(amount)"></span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-3 bg-white/50 rounded-xl" x-data="{ amount: 45000 }">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-coffee text-blue-600"></i>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-gray-800">Café + Empanada</p>
+                                <p class="text-sm text-gray-600">11:30 AM</p>
+                            </div>
+                        </div>
+                        <span class="font-bold text-blue-600" x-text="formatCurrency(amount)"></span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-3 bg-white/50 rounded-xl" x-data="{ amount: 120000 }">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-credit-card text-purple-600"></i>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-gray-800">Recarga Tarjeta</p>
+                                <p class="text-sm text-gray-600">10:15 AM</p>
+                            </div>
+                        </div>
+                        <span class="font-bold text-purple-600" x-text="formatCurrency(amount)"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Ventas View -->
+        <div x-show="currentView === 'ventas'" x-transition class="space-y-6">
+            <h2 class="text-2xl font-bold text-gray-800">💰 Punto de Venta</h2>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <button class="btn-premium p-4 rounded-2xl ripple">
+                    <i class="fas fa-plus mb-2 text-2xl"></i>
+                    <p class="font-semibold">Nueva Venta</p>
+                </button>
+                
+                <button class="bg-gradient-to-r from-green-500 to-emerald-600 p-4 rounded-2xl text-white hover-glow">
+                    <i class="fas fa-list mb-2 text-2xl"></i>
+                    <p class="font-semibold">Ver Historial</p>
+                </button>
+            </div>
+            
+            <div class="glass-card p-6">
+                <h3 class="font-bold text-lg mb-4">Productos Más Vendidos</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center p-3 bg-white/50 rounded-xl">
+                        <span>Almuerzo Completo</span>
+                        <span class="font-bold">247 unidades</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-white/50 rounded-xl">
+                        <span>Empanada de Carne</span>
+                        <span class="font-bold">189 unidades</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-white/50 rounded-xl">
+                        <span>Café con Leche</span>
+                        <span class="font-bold">156 unidades</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Productos View -->
+        <div x-show="currentView === 'productos'" x-transition class="space-y-6">
+            <h2 class="text-2xl font-bold text-gray-800">📦 Productos</h2>
+            
+            <div class="input-premium">
+                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <input type="text" class="w-full pl-10" placeholder="Buscar productos...">
+            </div>
+            
+            <div class="grid grid-cols-1 gap-4">
+                <div class="glass-card p-4 flex items-center space-x-4">
+                    <img src="https://via.placeholder.com/60/f97316/ffffff?text=🍽️" alt="Producto" class="w-15 h-15 rounded-xl">
+                    <div class="flex-1">
+                        <h4 class="font-bold text-gray-800">Almuerzo Completo</h4>
+                        <p class="text-sm text-gray-600">Disponible: 45 unidades</p>
+                        <p class="font-bold text-orange-600">₲ 25,000</p>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <button class="btn-sm bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-sm bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Clientes View -->
+        <div x-show="currentView === 'clientes'" x-transition class="space-y-6">
+            <h2 class="text-2xl font-bold text-gray-800">👥 Clientes</h2>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div class="glass-card p-4 text-center">
+                    <div class="text-3xl font-bold text-blue-600 mb-1">342</div>
+                    <div class="text-sm text-gray-600">Total Clientes</div>
+                </div>
+                <div class="glass-card p-4 text-center">
+                    <div class="text-3xl font-bold text-green-600 mb-1">89</div>
+                    <div class="text-sm text-gray-600">Nuevos Este Mes</div>
+                </div>
+            </div>
+            
+            <div class="glass-card p-6">
+                <h3 class="font-bold text-lg mb-4">Clientes Recientes</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center space-x-3 p-3 bg-white/50 rounded-xl">
+                        <img src="https://via.placeholder.com/40/3b82f6/ffffff?text=JD" alt="Cliente" class="w-10 h-10 rounded-full">
+                        <div class="flex-1">
+                            <p class="font-semibold">Juan Díaz</p>
+                            <p class="text-sm text-gray-600">Saldo: ₲ 150,000</p>
+                        </div>
+                        <div class="status-indicator status-online"></div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-3 p-3 bg-white/50 rounded-xl">
+                        <img src="https://via.placeholder.com/40/10b981/ffffff?text=MG" alt="Cliente" class="w-10 h-10 rounded-full">
+                        <div class="flex-1">
+                            <p class="font-semibold">María González</p>
+                            <p class="text-sm text-gray-600">Saldo: ₲ 85,000</p>
+                        </div>
+                        <div class="status-indicator status-busy"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Reportes View -->
+        <div x-show="currentView === 'reportes'" x-transition class="space-y-6">
+            <h2 class="text-2xl font-bold text-gray-800">📊 Reportes</h2>
+            
+            <div class="grid grid-cols-1 gap-4">
+                <button class="glass-card p-6 text-left hover:scale-105 transform transition-all duration-300">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-bold text-lg">Ventas Diarias</h3>
+                        <i class="fas fa-chart-line text-2xl text-blue-500"></i>
+                    </div>
+                    <p class="text-gray-600">Reporte detallado de ventas del día</p>
+                </button>
+                
+                <button class="glass-card p-6 text-left hover:scale-105 transform transition-all duration-300">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-bold text-lg">Inventario</h3>
+                        <i class="fas fa-boxes text-2xl text-green-500"></i>
+                    </div>
+                    <p class="text-gray-600">Estado actual del inventario</p>
+                </button>
+                
+                <button class="glass-card p-6 text-left hover:scale-105 transform transition-all duration-300">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-bold text-lg">Clientes Activos</h3>
+                        <i class="fas fa-users text-2xl text-purple-500"></i>
+                    </div>
+                    <p class="text-gray-600">Análisis de actividad de clientes</p>
+                </button>
+            </div>
+        </div>
+        
+    </main>
+    
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-white/20 px-4 py-2">
+        <div class="flex justify-around items-center max-w-lg mx-auto">
+            
+            <button @click="currentView = 'dashboard'" 
+                    class="mobile-nav-item" 
+                    :class="{ 'active': currentView === 'dashboard' }">
+                <i class="fas fa-home text-xl mb-1"></i>
+                <span class="text-xs">Inicio</span>
+            </button>
+            
+            <button @click="currentView = 'ventas'" 
+                    class="mobile-nav-item" 
+                    :class="{ 'active': currentView === 'ventas' }">
+                <i class="fas fa-cash-register text-xl mb-1"></i>
+                <span class="text-xs">Ventas</span>
+            </button>
+            
+            <button @click="currentView = 'productos'" 
+                    class="mobile-nav-item" 
+                    :class="{ 'active': currentView === 'productos' }">
+                <i class="fas fa-box text-xl mb-1"></i>
+                <span class="text-xs">Productos</span>
+            </button>
+            
+            <button @click="currentView = 'clientes'" 
+                    class="mobile-nav-item" 
+                    :class="{ 'active': currentView === 'clientes' }">
+                <i class="fas fa-users text-xl mb-1"></i>
+                <span class="text-xs">Clientes</span>
+            </button>
+            
+            <button @click="currentView = 'reportes'" 
+                    class="mobile-nav-item" 
+                    :class="{ 'active': currentView === 'reportes' }">
+                <i class="fas fa-chart-bar text-xl mb-1"></i>
+                <span class="text-xs">Reportes</span>
+            </button>
+            
+        </div>
+    </nav>
+    
+    <script>
+        function mobileApp() {
+            return {
+                sidebarOpen: false,
+                currentView: 'dashboard',
+                
+                formatCurrency(amount) {
+                    return new Intl.NumberFormat('es-PY', {
+                        style: 'currency',
+                        currency: 'PYG',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
+                    }).format(amount).replace('PYG', '₲');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

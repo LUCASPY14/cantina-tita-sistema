@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es" x-data="{ darkMode: false }" :class="{ 'dark': darkMode }">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎨 Cantina Tita - Demo Premium UI</title>
+    
+    <!-- Tailwind CSS + DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <!-- Estilos Premium -->
+    <link rel="stylesheet" href="/src/styles/main.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Poppins', 'ui-sans-serif', 'system-ui']
+                    },
+                    animation: {
+                        'bounce-slow': 'bounce 3s infinite',
+                        'pulse-slow': 'pulse 3s infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Fondo animado */
+        .bg-animated {
+            background: linear-gradient(-45deg, #FF6B35, #F7931E, #4ECDC4, #36999F);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+    </style>
+</head>
+
+<body class="bg-animated min-h-screen" x-data="premiumDemo()">
+    
+    <!-- Header Premium -->
+    <header class="glass-card mx-4 mt-4 p-6 animate-slide-in">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <div class="w-16 h-16 bg-gradient-to-r from-orange-500 to-pink-500 rounded-2xl flex items-center justify-center text-white text-2xl hover-glow">
+                    <i class="fas fa-utensils"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold text-white">
+                        🍽️ Cantina <span class="text-gradient">TITA</span>
+                    </h1>
+                    <p class="text-white/80">Sistema Premium de Gestión</p>
+                </div>
+            </div>
+            
+            <!-- Toggle Dark Mode -->
+            <button @click="darkMode = !darkMode" class="btn-premium p-4 rounded-2xl ripple">
+                <i class="fas fa-moon" x-show="!darkMode"></i>
+                <i class="fas fa-sun" x-show="darkMode"></i>
+            </button>
+        </div>
+    </header>
+    
+    <!-- Stats Cards Premium -->
+    <main class="container mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            
+            <!-- Ventas Card -->
+            <div class="stat-card-premium animate-fade-in-scale" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-chart-line text-2xl"></i>
+                        </div>
+                        <span class="text-white/60 text-sm">+12.5%</span>
+                    </div>
+                    <h3 class="text-3xl font-bold mb-1" x-text="stats.ventas">₲ 2,450,000</h3>
+                    <p class="text-white/80">Ventas del Día</p>
+                </div>
+            </div>
+            
+            <!-- Productos Card -->
+            <div class="stat-card-premium animate-fade-in-scale" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); animation-delay: 0.1s;">
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-box text-2xl"></i>
+                        </div>
+                        <span class="text-white/60 text-sm">158</span>
+                    </div>
+                    <h3 class="text-3xl font-bold mb-1" x-text="stats.productos">1,247</h3>
+                    <p class="text-white/80">Productos Vendidos</p>
+                </div>
+            </div>
+            
+            <!-- Clientes Card -->
+            <div class="stat-card-premium animate-fade-in-scale" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); animation-delay: 0.2s;">
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-users text-2xl"></i>
+                        </div>
+                        <span class="text-white/60 text-sm">+8</span>
+                    </div>
+                    <h3 class="text-3xl font-bold mb-1" x-text="stats.clientes">342</h3>
+                    <p class="text-white/80">Clientes Activos</p>
+                </div>
+            </div>
+            
+            <!-- Alertas Card -->
+            <div class="stat-card-premium animate-fade-in-scale pulse-premium" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); animation-delay: 0.3s;">
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-exclamation-triangle text-2xl"></i>
+                        </div>
+                        <span class="text-white/60 text-sm">¡Urgente!</span>
+                    </div>
+                    <h3 class="text-3xl font-bold mb-1" x-text="stats.alertas">5</h3>
+                    <p class="text-white/80">Stock Bajo</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Glass Cards Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+            
+            <!-- Panel de Control -->
+            <div class="glass-card p-8 animate-slide-in">
+                <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+                    <i class="fas fa-tachometer-alt mr-3 text-3xl text-gradient"></i>
+                    Panel de Control
+                </h2>
+                
+                <div class="space-y-4">
+                    <button class="btn-premium w-full py-4 px-6 rounded-2xl text-white font-semibold text-lg ripple" @click="showNotification('Nueva venta procesada', 'success')">
+                        <i class="fas fa-cash-register mr-3"></i>
+                        Nueva Venta
+                    </button>
+                    
+                    <button class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 w-full py-4 px-6 rounded-2xl text-white font-semibold text-lg transform transition-all duration-300 hover:scale-105 ripple" @click="showNotification('Recarga exitosa', 'success')">
+                        <i class="fas fa-credit-card mr-3"></i>
+                        Recargar Tarjeta
+                    </button>
+                    
+                    <button class="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 w-full py-4 px-6 rounded-2xl text-white font-semibold text-lg transform transition-all duration-300 hover:scale-105 ripple" @click="showNotification('Reporte generado', 'info')">
+                        <i class="fas fa-chart-bar mr-3"></i>
+                        Ver Reportes
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Input Premium Section -->
+            <div class="glass-card p-8 animate-slide-in" style="animation-delay: 0.2s;">
+                <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+                    <i class="fas fa-search mr-3 text-3xl text-gradient"></i>
+                    Búsqueda Premium
+                </h2>
+                
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-white/90 font-semibold mb-2">Buscar Producto</label>
+                        <input type="text" class="input-premium" placeholder="Escribe aquí para buscar..." x-model="searchQuery">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-white/90 font-semibold mb-2">Cliente</label>
+                        <input type="text" class="input-premium" placeholder="Nombre del cliente..." x-model="clientQuery">
+                    </div>
+                    
+                    <button class="btn-premium w-full py-4 px-6 rounded-2xl text-white font-semibold text-lg ripple">
+                        <i class="fas fa-search mr-3"></i>
+                        Buscar Ahora
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loader Premium Demo -->
+        <div class="text-center mb-8">
+            <button @click="showLoader = !showLoader" class="btn-premium py-3 px-8 rounded-2xl text-white font-semibold ripple">
+                <i class="fas fa-sync-alt mr-2"></i>
+                Toggle Loader Premium
+            </button>
+            <div x-show="showLoader" x-transition class="flex justify-center mt-4">
+                <div class="loader-premium"></div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Floating Action Button -->
+    <button class="fab hover-glow" @click="showNotification('¡FAB presionado!', 'info')">
+        <i class="fas fa-plus"></i>
+    </button>
+    
+    <!-- Notificaciones Premium -->
+    <div x-show="notification.show" 
+         x-transition:enter="transition ease-out duration-300 transform"
+         x-transition:enter-start="translate-x-full opacity-0"
+         x-transition:enter-end="translate-x-0 opacity-100"
+         x-transition:leave="transition ease-in duration-200 transform"
+         x-transition:leave-start="translate-x-0 opacity-100"
+         x-transition:leave-end="translate-x-full opacity-0"
+         class="notification-premium"
+         :class="'notification-' + notification.type">
+        
+        <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                <i class="fas text-white" 
+                   :class="{
+                       'fa-check': notification.type === 'success',
+                       'fa-times': notification.type === 'error',
+                       'fa-info': notification.type === 'info'
+                   }"></i>
+            </div>
+            <div class="flex-1">
+                <p class="font-semibold text-white" x-text="notification.message"></p>
+                <p class="text-sm text-white/80">Hace un momento</p>
+            </div>
+            <button @click="notification.show = false" class="text-white/60 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        function premiumDemo() {
+            return {
+                showLoader: false,
+                searchQuery: '',
+                clientQuery: '',
+                stats: {
+                    ventas: '₲ 2,450,000',
+                    productos: '1,247',
+                    clientes: '342',
+                    alertas: '5'
+                },
+                notification: {
+                    show: false,
+                    message: '',
+                    type: 'info'
+                },
+                
+                showNotification(message, type = 'info') {
+                    this.notification = {
+                        show: true,
+                        message: message,
+                        type: type
+                    };
+                    
+                    setTimeout(() => {
+                        this.notification.show = false;
+                    }, 4000);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
