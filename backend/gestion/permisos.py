@@ -73,7 +73,8 @@ def requiere_rol(*roles_permitidos):
                 return view_func(request, *args, **kwargs)
             else:
                 messages.error(request, f'⛔ Acceso denegado. Se requiere rol: {", ".join(roles_permitidos)}')
-                return redirect('gestion:dashboard')
+                # Redirigir a POS dashboard para evitar bucle de redirecciones
+                return redirect('pos:dashboard')
         return wrapped_view
     return decorator
 
@@ -94,8 +95,9 @@ def requiere_rol_minimo(rol_minimo):
             rol_usuario = obtener_rol_empleado(request.user)
             
             if not rol_usuario:
-                messages.error(request, '⛔ Usuario sin rol asignado')
-                return redirect('gestion:dashboard')
+                messages.error(request, '⛔ Usuario sin rol asignado. Contacte al administrador.')
+                # Redirigir a POS dashboard (accesible) en lugar de gestión (requiere gerente)
+                return redirect('pos:dashboard')
             
             # Superusuarios siempre tienen acceso
             if request.user.is_superuser:
@@ -109,7 +111,8 @@ def requiere_rol_minimo(rol_minimo):
                 return view_func(request, *args, **kwargs)
             else:
                 messages.error(request, f'⛔ Acceso denegado. Se requiere rol mínimo: {rol_minimo}')
-                return redirect('gestion:dashboard')
+                # Redirigir a POS dashboard en lugar de gestión para evitar bucle
+                return redirect('pos:dashboard')
         return wrapped_view
     return decorator
 

@@ -867,10 +867,13 @@ def procesar_venta(request):
         }, status=500)
 
 
-@acceso_cajero
 @login_required
 def dashboard_view(request):
-    """Vista del dashboard con estadísticas y gráficos - Optimizada con cache"""
+    """Vista del dashboard con estadísticas y gráficos - Optimizada con cache
+    
+    Accesible para cualquier usuario autenticado (sin restricción de rol)
+    para evitar bucles de redirección.
+    """
     from datetime import datetime, timedelta
     from decimal import Decimal
     from django.core.cache import cache
@@ -921,15 +924,23 @@ def dashboard_view(request):
     total_hoy = stats_hoy['total'] or Decimal('0')
     cantidad_hoy = stats_hoy['cantidad'] or 1
     promedio = total_hoy / cantidad_hoy if cantidad_hoy > 0 else Decimal('0')
+    
+    # Calcular porcentaje de cambio vs ayer
+    ventas_hoy_count = stats_hoy['cantidad'] or 0
+    if ventas_ayer > 0:
+        porcentaje_ventas = round(((ventas_hoy_count - ventas_ayer) / ventas_ayer) * 100, 1)
+    else:
+        porcentaje_ventas = 0
 
     stats = {
-        'ventas_hoy': stats_hoy['cantidad'] or 0,
+        'ventas_hoy': ventas_hoy_count,
         'total_hoy': total_hoy,
         'ventas_mes': stats_mes['cantidad'] or 0,
         'total_mes': stats_mes['total'] or Decimal('0'),
         'items_vendidos': items_vendidos,
         'promedio': promedio,
-        'ventas_ayer': ventas_ayer  # Para comparación
+        'ventas_ayer': ventas_ayer,
+        'porcentaje_ventas': porcentaje_ventas  # Porcentaje calculado
     }
     
     # === Ventas por hora (hoy) ===
@@ -1031,12 +1042,12 @@ def dashboard_view(request):
         activo=True,
         stock_minimo__isnull=False
     ).annotate(
-        stock_actual_val=F('stock__stock_actual')
+        stock_actual_val=F('stock__cantidad')
     ).filter(
         stock_actual_val__lt=F('stock_minimo')
     ).select_related('id_categoria', 'stock', 'id_unidad_medida').annotate(
-        stock_actual=F('stock__stock_actual')
-    ).order_by('stock__stock_actual')[:10]
+        stock_actual=F('stock__cantidad')
+    ).order_by('stock__cantidad')[:10]
     
     # === NOTIFICACIONES DE VALIDACIÓN (ADMINISTRADOR) ===
     
@@ -2625,7 +2636,7 @@ def inventario_dashboard(request):
         activo=True,
         stock_minimo__isnull=False
     ).annotate(
-        stock_actual_val=F('stock__stock_actual')
+        stock_actual_val=F('stock__cantidad')
     ).filter(
         stock_actual_val__lt=F('stock_minimo')
     ).select_related('id_categoria', 'stock')[:20]
@@ -2633,14 +2644,14 @@ def inventario_dashboard(request):
     # Productos sin stock
     productos_sin_stock = Producto.objects.filter(
         activo=True,
-        stock__stock_actual__lte=0
+        stock__cantidad__lte=0
     ).select_related('id_categoria', 'stock')[:20]
     
     # Estadísticas generales
     from django.db.models import Count as CountFunc, Avg
     stats = Producto.objects.filter(activo=True).aggregate(
         total_productos=CountFunc('id_producto'),
-        stock_promedio=Avg('stock__stock_actual')
+        stock_promedio=Avg('stock__cantidad')
     )
     
     # Productos más vendidos (últimos 30 días)
@@ -2659,7 +2670,7 @@ def inventario_dashboard(request):
     # Categorías con más productos
     categorias_stock = Categoria.objects.annotate(
         total_productos=CountFunc('productos', filter=Q(productos__activo=True)),
-        stock_total=Sum('productos__stock__stock_actual')
+        stock_total=Sum('productos__stock__cantidad')
     ).filter(total_productos__gt=0).order_by('-stock_total')[:10]
     
     context = {
@@ -2687,7 +2698,7 @@ def inventario_productos(request):
     productos = Producto.objects.filter(activo=True).select_related(
         'id_categoria', 'id_unidad_medida', 'stock'
     ).annotate(
-        stock_actual_val=F('stock__stock_actual')
+        stock_actual_val=F('stock__cantidad')
     )
     
     # Aplicar filtros
@@ -2873,7 +2884,7 @@ def alertas_inventario(request):
         activo=True,
         stock_minimo__isnull=False
     ).annotate(
-        stock_actual_val=F('stock__stock_actual')
+        stock_actual_val=F('stock__cantidad')
     ).filter(
         stock_actual_val__lt=F('stock_minimo')
     ).select_related('id_categoria', 'stock', 'id_unidad_medida')
@@ -2881,7 +2892,7 @@ def alertas_inventario(request):
     # Productos sin stock
     productos_sin_stock = Producto.objects.filter(
         activo=True,
-        stock__stock_actual__lte=0
+        stock__cantidad__lte=0
     ).select_related('id_categoria', 'stock', 'id_unidad_medida')
     
     # Productos críticos (menos del 50% del stock mínimo)
@@ -2889,7 +2900,7 @@ def alertas_inventario(request):
         activo=True,
         stock_minimo__isnull=False
     ).annotate(
-        stock_actual_val=F('stock__stock_actual')
+        stock_actual_val=F('stock__cantidad')
     ).filter(
         stock_actual_val__lt=F('stock_minimo') * 0.5
     ).select_related('id_categoria', 'stock', 'id_unidad_medida')
@@ -2973,7 +2984,7 @@ def alertas_sistema_view(request):
         activo=True,
         stock_minimo__isnull=False
     ).annotate(
-        stock_actual_val=F('stock__stock_actual')
+        stock_actual_val=F('stock__cantidad')
     ).filter(
         stock_actual_val__lt=F('stock_minimo')
     ).select_related('id_categoria', 'stock')[:20]
@@ -2981,7 +2992,7 @@ def alertas_sistema_view(request):
     # 3. ALERTAS DE PRODUCTOS SIN STOCK
     productos_sin_stock = Producto.objects.filter(
         activo=True,
-        stock__stock_actual__lte=0
+        stock__cantidad__lte=0
     ).select_related('id_categoria', 'stock')[:20]
     
     # 4. ALERTAS DE TARJETAS POR VENCER (próximos 30 días)
@@ -3970,10 +3981,12 @@ def calcular_comision_recarga(monto, id_medio_pago):
 
 # ==================== SISTEMA DE ALMUERZOS ====================
 
-@acceso_cajero
 @login_required
 def almuerzos_dashboard_view(request):
-    """Dashboard principal del sistema de almuerzos"""
+    """Dashboard principal del sistema de almuerzos
+    
+    Accesible para cualquier usuario autenticado.
+    """
     from gestion.models import PlanesAlmuerzo, SuscripcionesAlmuerzo, RegistroConsumoAlmuerzo, PagosAlmuerzoMensual
     from django.db.models import Count, Sum, Q
     
@@ -4061,7 +4074,6 @@ def almuerzos_dashboard_view(request):
     return render(request, 'lunch/dashboard.html', context)
 
 
-@acceso_cajero
 @login_required
 def planes_almuerzo_view(request):
     """Gestión de planes de almuerzo"""
@@ -4152,7 +4164,6 @@ def editar_plan_almuerzo(request, plan_id):
         }, status=500)
 
 
-@acceso_cajero
 @login_required
 def suscripciones_almuerzo_view(request):
     """Gestión de suscripciones de almuerzos"""
@@ -4297,7 +4308,6 @@ def crear_suscripcion_almuerzo(request):
         }, status=500)
 
 
-@acceso_cajero
 @login_required
 def registro_consumo_almuerzo_view(request):
     """Registro diario de consumo de almuerzos"""
@@ -4636,7 +4646,6 @@ def generar_facturacion_mensual(request):
         }, status=500)
 
 
-@acceso_cajero
 @login_required
 def reportes_almuerzos_view(request):
     """Reportes del sistema de almuerzos"""

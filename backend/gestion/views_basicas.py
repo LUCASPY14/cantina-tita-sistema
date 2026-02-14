@@ -22,7 +22,7 @@ def index(request):
         'total_clientes': Cliente.objects.filter(activo=True).count(),
         'total_empleados': Empleado.objects.filter(activo=True).count()
     }
-    return render(request, 'apps/gestion/index.html', context)
+    return render(request, 'gestion/dashboard.html', context)
 
 @login_required
 def dashboard(request):
