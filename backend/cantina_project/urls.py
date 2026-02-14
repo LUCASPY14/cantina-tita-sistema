@@ -119,6 +119,9 @@ urlpatterns = [
     # POS (Punto de Venta) - Nueva interfaz
     path('pos/', include('gestion.pos_urls')),
     
+    # Gestión (Panel de Administración)
+    path('gestion/', include('gestion.urls')),
+    
     # URLs de Notificaciones
     path('notificaciones/', include('gestion.urls_notificaciones', namespace='notificaciones')),
     

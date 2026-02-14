@@ -21,4 +21,12 @@ urlpatterns = [
     path('historial/', pos_views_basicas.historial_ventas, name='historial'),
     path('cierre-caja/', pos_views_basicas.cierre_caja, name='cierre_caja'),
     path('clientes/', pos_views_basicas.gestionar_clientes, name='gestionar_clientes'),
+    
+    # Dashboard de Almuerzos/Lunch
+    path('almuerzos/', pos_views.almuerzos_dashboard_view, name='almuerzos_dashboard'),
+    path('almuerzos/planes/', pos_views.planes_almuerzo_view, name='planes_almuerzo_view'),
+    path('almuerzos/planes/crear/', pos_views.crear_plan_almuerzo, name='crear_plan_almuerzo'),
+    path('almuerzos/registro/', pos_views.registro_consumo_almuerzo_view, name='registro_consumo_almuerzo_view'),
+    path('almuerzos/suscripciones/', pos_views.suscripciones_almuerzo_view, name='suscripciones_almuerzo_view'),
+    path('almuerzos/reportes/', pos_views.reportes_almuerzos_view, name='reportes_almuerzos_view'),
 ]
