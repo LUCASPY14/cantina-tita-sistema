@@ -29,6 +29,38 @@
     .attendance-bar {
         @apply h-8 rounded-lg transition-all duration-500;
     }
+    
+    /* Animaciones de entrada */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    .animate-fade-in-up {
+        animation: fadeInUp 0.5s ease-out forwards;
+        opacity: 0;
+    }
+    
+    .animate-fade-in {
+        animation: fadeIn 0.4s ease-out forwards;
+        opacity: 0;
+    }
+    
+    .delay-100 { animation-delay: 0.1s; }
+    .delay-200 { animation-delay: 0.2s; }
+    .delay-300 { animation-delay: 0.3s; }
+    .delay-400 { animation-delay: 0.4s; }
 </style>
 {% endblock %}
 
@@ -38,7 +70,7 @@
      x-init="init()">
     
     <!-- Header -->
-    <div class="bg-white rounded-2xl shadow-lg p-6">
+    <div class="bg-white rounded-2xl shadow-lg p-6 animate-fade-in-up">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
                 <h1 class="text-4xl font-bold bg-gradient-to-r from-green-600 to-orange-600 bg-clip-text text-transparent flex items-center gap-3">
@@ -66,7 +98,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         
         <!-- Almuerzos Hoy -->
-        <div class="stat-card gradient-consumos text-white">
+        <div class="stat-card gradient-consumos text-white animate-fade-in-up delay-100">
             <div class="flex items-center justify-between mb-3">
                 <div>
                     <p class="text-sm opacity-90 font-medium">Almuerzos Hoy</p>
@@ -83,7 +115,7 @@
         </div>
 
         <!-- Suscripciones Activas -->
-        <div class="stat-card gradient-suscripciones text-white">
+        <div class="stat-card gradient-suscripciones text-white animate-fade-in-up delay-200">
             <div class="flex items-center justify-between mb-3">
                 <div>
                     <p class="text-sm opacity-90 font-medium">Suscripciones</p>
@@ -100,7 +132,7 @@
         </div>
 
         <!-- Ingresos del Mes -->
-        <div class="stat-card gradient-ingresos text-white">
+        <div class="stat-card gradient-ingresos text-white animate-fade-in-up delay-300">
             <div class="flex items-center justify-between mb-3">
                 <div>
                     <p class="text-sm opacity-90 font-medium">Ingresos Mes</p>
@@ -117,7 +149,7 @@
         </div>
 
         <!-- Asistencia Semanal -->
-        <div class="stat-card gradient-asistencia text-white">
+        <div class="stat-card gradient-asistencia text-white animate-fade-in-up delay-400">
             <div class="flex items-center justify-between mb-3">
                 <div>
                     <p class="text-sm opacity-90 font-medium">Asistencia</p>
@@ -135,7 +167,7 @@
     </div>
 
     <!-- Gráfico de Consumo Semanal y Planes Activos -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-up delay-500">
         
         <!-- Consumo de la Semana -->
         <div class="bg-white rounded-2xl shadow-lg p-6">

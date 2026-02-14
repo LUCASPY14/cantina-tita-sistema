@@ -7,7 +7,7 @@
 <div x-data="dashboardPOS()" x-init="init()" class="space-y-6">
     
     <!-- Header con fecha y usuario -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6" role="banner">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 animate-fade-in-up" role="banner">
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
@@ -16,7 +16,16 @@
                 <p class="text-gray-600 dark:text-gray-400 mt-1" x-text="fechaActual" aria-live="polite"></p>
             </div>
             <div class="text-right">
-                <p class="text-sm text-gray-600 dark:text-gray-400">Cajero</p>
+                <div class="flex items-center justify-end gap-2 mb-1">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Cajero</p>
+                    <!-- Indicador de actualización -->
+                    <div x-show="actualizando" x-cloak class="flex items-center gap-1">
+                        <svg class="animate-spin h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                </div>
                 <p class="font-semibold text-lg">{{ user.get_full_name|default:user.username }}</p>
             </div>
         </div>
@@ -26,34 +35,38 @@
     <div class="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6" role="region" aria-label="Estadísticas del día">
         
         <!-- Ventas del Día -->
-        <div class="stat-card relative overflow-hidden bg-gradient-to-r from-green-500 to-green-600 text-white min-h-[120px] md:min-h-[140px]" role="article">
-            <div>
-                <p class="text-sm opacity-90 mb-1">Ventas del Día</p>
-                <p class="text-3xl font-bold mb-1" x-text="stats.ventasHoy"></p>
-                <p class="text-sm opacity-80" x-text="formatearPrecio(stats.totalHoy)"></p>
-                <span class="text-xs" x-show="stats.porcentajeVentas != 0">
-                    <i class="fas" :class="stats.porcentajeVentas >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'"></i>
-                    <span x-text="Math.abs(stats.porcentajeVentas)"></span>% vs ayer
-                </span>
+        <div class="stat-card-responsive relative overflow-hidden bg-gradient-to-r from-green-500 to-green-600 text-white min-h-[120px] md:min-h-[140px] animate-fade-in-up delay-100" role="article">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs md:text-sm opacity-90 mb-1">Ventas del Día</p>
+                    <p class="text-2xl md:text-3xl font-bold mb-1" x-text="stats.ventasHoy"></p>
+                    <p class="text-xs md:text-sm opacity-80" x-text="formatearPrecio(stats.totalHoy)"></p>
+                    <span class="text-xs" x-show="stats.porcentajeVentas != 0">
+                        <i class="fas" :class="stats.porcentajeVentas >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'"></i>
+                        <span x-text="Math.abs(stats.porcentajeVentas)"></span>% vs ayer
+                    </span>
+                </div>
+                <i class="fas fa-cash-register text-3xl md:text-4xl opacity-20"></i>
             </div>
-            <i class="fas fa-cash-register absolute top-4 right-4 text-4xl opacity-20"></i>
         </div>
         
         <!-- Total Recaudado -->
-        <div class="stat-card relative overflow-hidden bg-gradient-to-r from-blue-500 to-blue-600 text-white min-h-[120px] md:min-h-[140px]">
-            <div>
-                <p class="text-sm opacity-90 mb-1">Total del Mes</p>
-                <p class="text-3xl font-bold mb-1" x-text="stats.ventasMes"></p>
-                <p class="text-sm opacity-80" x-text="formatearPrecio(stats.totalMes)"></p>
-                <span class="text-xs opacity-75">
-                    <i class="fas fa-calendar"></i> Este mes
-                </span>
+        <div class="stat-card-responsive relative overflow-hidden bg-gradient-to-r from-blue-500 to-blue-600 text-white min-h-[120px] md:min-h-[140px] animate-fade-in-up delay-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs md:text-sm opacity-90 mb-1">Total del Mes</p>
+                    <p class="text-2xl md:text-3xl font-bold mb-1" x-text="stats.ventasMes"></p>
+                    <p class="text-xs md:text-sm opacity-80" x-text="formatearPrecio(stats.totalMes)"></p>
+                    <span class="text-xs opacity-75">
+                        <i class="fas fa-calendar"></i> Este mes
+                    </span>
+                </div>
+                <i class="fas fa-chart-line text-3xl md:text-4xl opacity-20"></i>
             </div>
-            <i class="fas fa-coins absolute top-4 right-4 text-4xl opacity-20"></i>
         </div>
         
         <!-- Items Vendidos -->
-        <div class="stat-card relative overflow-hidden bg-gradient-to-r from-purple-500 to-purple-600 text-white min-h-[120px] md:min-h-[140px]">
+        <div class="stat-card relative overflow-hidden bg-gradient-to-r from-purple-500 to-purple-600 text-white min-h-[120px] md:min-h-[140px] animate-fade-in-up delay-300">
             <div>
                 <p class="text-sm opacity-90 mb-1">Items Vendidos</p>
                 <p class="text-3xl font-bold mb-1" x-text="stats.itemsVendidos"></p>
@@ -63,7 +76,7 @@
         </div>
         
         <!-- Stock Bajo -->
-        <div class="stat-card relative overflow-hidden bg-gradient-to-r from-orange-500 to-red-600 text-white min-h-[120px] md:min-h-[140px]">
+        <div class="stat-card relative overflow-hidden bg-gradient-to-r from-orange-500 to-red-600 text-white min-h-[120px] md:min-h-[140px] animate-fade-in-up delay-400">
             <div>
                 <p class="text-sm opacity-90 mb-1">Alertas Stock</p>
                 <p class="text-3xl font-bold mb-1" x-text="stats.productosStockBajo"></p>
@@ -197,6 +210,17 @@
         </div>
     </div>
     
+    <!-- Gráfico de Ventas Semanal -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 animate-fade-in-up delay-400">
+        <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+            <i class="fas fa-chart-area text-primary"></i>
+            Ventas de la Semana
+        </h2>
+        <div class="h-64">
+            <canvas id="chartVentasSemana"></canvas>
+        </div>
+    </div>
+    
     <!-- Stock Bajo -->
     <template x-if="stats.productosStockBajo > 0">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
@@ -233,14 +257,59 @@
     .btn-pos-primary {
         @apply btn btn-lg bg-primary hover:bg-orange-600 text-white flex flex-col items-center justify-center p-4 rounded-xl transition-all;
     }
+    
+    /* Animaciones de entrada */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes pulse-scale {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+    }
+    
+    .animate-fade-in-up {
+        animation: fadeInUp 0.5s ease-out forwards;
+        opacity: 0;
+    }
+    
+    .animate-fade-in {
+        animation: fadeIn 0.4s ease-out forwards;
+        opacity: 0;
+    }
+    
+    .animate-pulse-scale {
+        animation: pulse-scale 2s ease-in-out infinite;
+    }
+    
+    .delay-100 { animation-delay: 0.1s; }
+    .delay-200 { animation-delay: 0.2s; }
+    .delay-300 { animation-delay: 0.3s; }
+    .delay-400 { animation-delay: 0.4s; }
 </style>
 {% endblock %}
 
 {% block page_scripts %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
 <script>
 function dashboardPOS() {
     return {
         fechaActual: '',
+        actualizando: false,
         stats: {
             ventasHoy: {{ stats.ventas_hoy }},
             totalHoy: {{ stats.total_hoy }},
@@ -248,7 +317,7 @@ function dashboardPOS() {
             totalMes: {{ stats.total_mes }},
             itemsVendidos: {{ stats.items_vendidos }},
             promedio: {{ stats.promedio }},
-            porcentajeVentas: {% if stats.ventas_ayer > 0 %}{{ stats.ventas_hoy|add:0|sub:stats.ventas_ayer|mul:100|div:stats.ventas_ayer|floatformat:1 }}{% else %}0{% endif %},
+            porcentajeVentas: {{ stats.porcentaje_ventas|default:0 }},
             productosStockBajo: {{ stock_bajo|length }}
         },
         ultimasVentas: [
@@ -268,8 +337,22 @@ function dashboardPOS() {
         async init() {
             this.actualizarFecha();
             this.cargarProductosMasVendidos();
-            // Auto-refresh cada 5 minutos
-            setInterval(() => this.actualizarFecha(), 300000);
+            
+            // Auto-refresh cada 2 minutos con indicador visual
+            setInterval(() => {
+                this.refrescarDatos();
+            }, 120000);
+        },
+        
+        async refrescarDatos() {
+            this.actualizando = true;
+            try {
+                // Simular tiempo de carga (en producción hacer fetch a API)
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                this.actualizarFecha();
+            } finally {
+                this.actualizando = false;
+            }
         },
         
         actualizarFecha() {
@@ -320,6 +403,60 @@ function dashboardPOS() {
         }
     }
 }
+
+// Inicializar gráfico de ventas semanal
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('chartVentasSemana');
+    if (ctx) {
+        // Datos de ventas de la semana desde Django
+        const ventasSemanaData = {{ ventas_semana_json|safe|default:'{"labels":["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"],"data":[0,0,0,0,0,0,0]}' }};
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ventasSemanaData.labels,
+                datasets: [{
+                    label: 'Ventas',
+                    data: ventasSemanaData.data,
+                    borderColor: '#f97316',
+                    backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#f97316',
+                    pointBorderColor: '#fff',
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return '₲ ' + context.raw.toLocaleString('es-PY');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '₲ ' + value.toLocaleString('es-PY');
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
 </script>
 
 <!-- Mobile Bottom Navigation -->
