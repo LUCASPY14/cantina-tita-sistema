@@ -60,31 +60,31 @@
                         Resumen de Ventas
                     </h2>
                     
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                        <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                        <div class="stat-card-responsive bg-gradient-to-br from-primary to-orange-600 text-white">
                             <p class="text-sm opacity-90 mb-1">Total Ventas</p>
                             <p class="text-3xl font-bold" x-text="resumen.cantidad_ventas"></p>
                         </div>
                         
-                        <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+                        <div class="stat-card-responsive bg-gradient-to-br from-success to-green-600 text-white">
                             <p class="text-sm opacity-90 mb-1">Efectivo</p>
                             <p class="text-xl font-bold" x-text="formatearPrecio(resumen.efectivo)"></p>
                         </div>
                         
-                        <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+                        <div class="stat-card-responsive bg-gradient-to-br from-secondary to-teal-600 text-white">
                             <p class="text-sm opacity-90 mb-1">Tarjeta</p>
                             <p class="text-xl font-bold" x-text="formatearPrecio(resumen.tarjeta)"></p>
                         </div>
                         
-                        <div class="stat-card bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+                        <div class="stat-card-responsive bg-gradient-to-br from-purple-500 to-pink-600 text-white">
                             <p class="text-sm opacity-90 mb-1">Total</p>
                             <p class="text-xl font-bold" x-text="formatearPrecio(resumen.total)"></p>
                         </div>
                     </div>
                     
                     <!-- Desglose de Métodos de Pago -->
-                    <div class="overflow-x-auto">
-                        <table class="table w-full">
+                    <div class="mobile-table-responsive">
+                        <table class="table table-mobile-stack w-full">
                             <thead>
                                 <tr>
                                     <th>Método</th>
@@ -134,7 +134,7 @@
                         <span>Ingrese la cantidad de billetes y monedas en caja</span>
                     </div>
                     
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
                         <template x-for="denominacion in denominaciones" :key="denominacion.valor">
                             <div class="form-control">
                                 <label class="label">

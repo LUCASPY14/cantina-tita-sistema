@@ -48,6 +48,9 @@
             darkMode: 'class',
             theme: {
                 extend: {
+                    screens: {
+                        'xs': '475px',
+                    },
                     colors: {
                         primary: '#FF6B35',
                         secondary: '#4ECDC4',
@@ -67,7 +70,9 @@
                         'slide-in': 'slideIn 0.3s ease-out',
                         'slide-down': 'slideDown 0.2s ease-out',
                         'pulse-slow': 'pulse 3s infinite',
-                        'spin-slow': 'spin 2s linear infinite'
+                        'spin-slow': 'spin 2s linear infinite',
+                        'bounce-slow': 'bounce 3s infinite',
+                        'gradient': 'gradient 15s ease infinite'
                     },
                     keyframes: {
                         fadeIn: {
@@ -193,6 +198,39 @@
         .skeleton {
             background-color: #d1d5db;
             border-radius: 0.25rem;
+            background: linear-gradient(90deg, #f0f0f0 25%, transparent 37%, #f0f0f0 63%);
+            background-size: 400% 100%;
+            animation: skeleton 1.4s ease-in-out infinite;
+        }
+        
+        @keyframes skeleton {
+            0% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* MEJORAS PREMIUM INTEGRADAS */
+        .glassmorphism-enhanced {
+            background: rgba(255, 255, 255, 0.15);\n            backdrop-filter: blur(15px);\n            border: 1px solid rgba(255, 255, 255, 0.25);\n            box-shadow: 0 12px 40px rgba(31, 38, 135, 0.4);\n        }
+        
+        /* Animación de gradiente premium */\n        @keyframes gradient {\n            0% { background-position: 0% 50%; }\n            50% { background-position: 100% 50%; }\n            100% { background-position: 0% 50%; }\n        }\n        \n        .bg-animated-premium {\n            background: linear-gradient(-45deg, #FF6B35, #F7931E, #4ECDC4, #36999F);\n            background-size: 400% 400%;\n            animation: gradient 15s ease infinite;\n        }
+        
+        /* RESPONSIVE TABLES MEJORADAS */\n        .table-mobile-stack {\n            border: none;\n        }
+        
+        @media (max-width: 768px) {\n            .table-mobile-stack,\n            .table-mobile-stack thead,\n            .table-mobile-stack tbody,\n            .table-mobile-stack th,\n            .table-mobile-stack td,\n            .table-mobile-stack tr {\n                display: block;\n            }
+            
+            .table-mobile-stack thead tr {\n                position: absolute;\n                top: -9999px;\n                left: -9999px;\n            }
+            
+            .table-mobile-stack tr {\n                border: 1px solid #e5e7eb;\n                margin: 0 0 12px 0;\n                padding: 12px;\n                border-radius: 12px;\n                background: white;\n                box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n            }
+            
+            .table-mobile-stack td {\n                border: none;\n                padding-left: 50% !important;\n                position: relative;\n                padding-top: 8px;\n                padding-bottom: 8px;\n            }
+            
+            .table-mobile-stack td:before {\n                content: attr(data-label);\n                position: absolute;\n                left: 12px;\n                width: 45%;\n                padding-right: 10px;\n                white-space: nowrap;\n                font-weight: 600;\n                color: #374151;\n            }\n        }
+        
+        /* MOBILE NAV MEJORADA */\n        .mobile-nav-item {\n            @apply flex flex-col items-center p-3 rounded-xl transition-all duration-300;\n        }\n        \n        .mobile-nav-item.active {\n            background: linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(251, 146, 60, 0.2) 100%);\n            transform: translateY(-3px);\n            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);\n        }
+        
+        /* STATS CARDS RESPONSIVAS */\n        .stat-card-responsive {\n            @apply bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-6 transition-all hover:shadow-2xl hover:scale-105;\n        }
+        
+        /* QUICK ACTIONS GRID */\n        .quick-action-grid {\n            @apply grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4;\n        }
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
         
@@ -233,7 +271,7 @@
         
         <!-- Header -->
         {% block header %}
-        <header class="bg-white dark:bg-gray-800 shadow-lg">
+        <header class="bg-white dark:bg-gray-800 shadow-lg relative z-50">
             <div class="container mx-auto px-4 py-4">
                 <div class="flex items-center justify-between">
                     <!-- Logo y título -->

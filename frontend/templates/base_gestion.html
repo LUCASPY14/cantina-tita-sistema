@@ -18,6 +18,11 @@
         background: linear-gradient(135deg, #4ECDC4 0%, #95E1D3 50%, #F38181 100%);
     }
     
+    /* Z-index alto para dropdowns del navbar */
+    .dropdown-content {
+        z-index: 9999 !important;
+    }
+    
     /* Sidebar de navegación */
     .sidebar {
         @apply bg-white dark:bg-gray-800 shadow-xl rounded-2xl p-4;
@@ -218,9 +223,9 @@
         <i class="fas fa-chevron-down ml-2"></i>
     </label>
     <ul tabindex="0" class="dropdown-content menu p-2 shadow-lg bg-white dark:bg-gray-800 rounded-box w-52 mt-2">
-        <li><a href="{% url 'gestion:productos' %}"><i class="fas fa-box mr-2"></i>Productos</a></li>
-        <li><a href="{% url 'gestion:categorias' %}"><i class="fas fa-tags mr-2"></i>Categorías</a></li>
-        <li><a href="{% url 'gestion:stock' %}"><i class="fas fa-warehouse mr-2"></i>Stock</a></li>
+        <li><a href="{% url 'gestion:productos_lista' %}"><i class="fas fa-box mr-2"></i>Productos</a></li>
+        <li><a href="{% url 'gestion:categorias_lista' %}"><i class="fas fa-tags mr-2"></i>Categorías</a></li>
+        <li><a href="{% url 'gestion:productos_lista' %}"><i class="fas fa-warehouse mr-2"></i>Stock</a></li>
     </ul>
 </div>
 
@@ -231,13 +236,13 @@
         <i class="fas fa-chevron-down ml-2"></i>
     </label>
     <ul tabindex="0" class="dropdown-content menu p-2 shadow-lg bg-white dark:bg-gray-800 rounded-box w-52 mt-2">
-        <li><a href="{% url 'gestion:clientes' %}"><i class="fas fa-user mr-2"></i>Listado</a></li>
-        <li><a href="{% url 'gestion:tarjetas' %}"><i class="fas fa-credit-card mr-2"></i>Tarjetas</a></li>
-        <li><a href="{% url 'gestion:cuenta_corriente' %}"><i class="fas fa-file-invoice-dollar mr-2"></i>Cuenta Corriente</a></li>
+        <li><a href="{% url 'gestion:clientes_lista' %}"><i class="fas fa-user mr-2"></i>Listado</a></li>
+        <li><a href="{% url 'gestion:clientes_lista' %}"><i class="fas fa-credit-card mr-2"></i>Tarjetas</a></li>
+        <li><a href="{% url 'pos:cuenta_corriente' %}"><i class="fas fa-file-invoice-dollar mr-2"></i>Cuenta Corriente</a></li>
     </ul>
 </div>
 
-<a href="{% url 'gestion:reportes' %}" 
+<a href="{% url 'gestion:reporte_mensual_completo' %}" 
    class="btn btn-ghost hover:bg-white hover:bg-opacity-20"
    aria-label="Reportes">
     <i class="fas fa-chart-bar mr-2"></i>
@@ -253,8 +258,8 @@
         <li class="menu-title">
             <span>{{ user.get_full_name|default:user.username }}</span>
         </li>
-        <li><a href="{% url 'gestion:perfil' %}"><i class="fas fa-user-cog mr-2"></i>Mi Perfil</a></li>
-        <li><a href="{% url 'gestion:configuracion' %}"><i class="fas fa-cog mr-2"></i>Configuración</a></li>
+        <li><a href="#"><i class="fas fa-user-cog mr-2"></i>Mi Perfil</a></li>
+        <li><a href="#"><i class="fas fa-cog mr-2"></i>Configuración</a></li>
         <li class="divider"></li>
         <li><a href="{% url 'logout' %}"><i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión</a></li>
     </ul>
@@ -268,26 +273,26 @@
     </a>
     
     <div class="divider">Inventario</div>
-    <a href="{% url 'gestion:productos' %}" class="btn btn-block btn-sm justify-start">
+    <a href="{% url 'gestion:productos_lista' %}" class="btn btn-block btn-sm justify-start">
         <i class="fas fa-box mr-2"></i>Productos
     </a>
-    <a href="{% url 'gestion:categorias' %}" class="btn btn-block btn-sm justify-start">
+    <a href="{% url 'gestion:categorias_lista' %}" class="btn btn-block btn-sm justify-start">
         <i class="fas fa-tags mr-2"></i>Categorías
     </a>
-    <a href="{% url 'gestion:stock' %}" class="btn btn-block btn-sm justify-start">
+    <a href="{% url 'gestion:productos_lista' %}" class="btn btn-block btn-sm justify-start">
         <i class="fas fa-warehouse mr-2"></i>Stock
     </a>
     
     <div class="divider">Clientes</div>
-    <a href="{% url 'gestion:clientes' %}" class="btn btn-block btn-sm justify-start">
+    <a href="{% url 'gestion:clientes_lista' %}" class="btn btn-block btn-sm justify-start">
         <i class="fas fa-user mr-2"></i>Listado
     </a>
-    <a href="{% url 'gestion:tarjetas' %}" class="btn btn-block btn-sm justify-start">
+    <a href="{% url 'gestion:clientes_lista' %}" class="btn btn-block btn-sm justify-start">
         <i class="fas fa-credit-card mr-2"></i>Tarjetas
     </a>
     
     <div class="divider"></div>
-    <a href="{% url 'gestion:reportes' %}" class="btn btn-block justify-start">
+    <a href="{% url 'gestion:reporte_mensual_completo' %}" class="btn btn-block justify-start">
         <i class="fas fa-chart-bar mr-2"></i>Reportes
     </a>
     

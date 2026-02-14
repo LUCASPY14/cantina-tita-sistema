@@ -91,10 +91,10 @@
     </div>
     
     <!-- Cards de Resumen -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         
         <!-- Total Ventas -->
-        <div class="stat-card bg-gradient-to-br from-primary to-orange-600 text-white">
+        <div class="stat-card-responsive bg-gradient-to-br from-primary to-orange-600 text-white">
             <template x-if="cargando">
                 <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
             </template>
@@ -111,7 +111,7 @@
         </div>
         
         <!-- Efectivo -->
-        <div class="stat-card bg-gradient-to-br from-success to-green-600 text-white">
+        <div class="stat-card-responsive bg-gradient-to-br from-success to-green-600 text-white">
             <template x-if="cargando">
                 <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
             </template>
@@ -128,7 +128,7 @@
         </div>
         
         <!-- Tarjeta -->
-        <div class="stat-card bg-gradient-to-br from-secondary to-teal-600 text-white">
+        <div class="stat-card-responsive bg-gradient-to-br from-secondary to-teal-600 text-white">
             <template x-if="cargando">
                 <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
             </template>
@@ -145,7 +145,7 @@
         </div>
         
         <!-- Ticket Promedio -->
-        <div class="stat-card bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+        <div class="stat-card-responsive bg-gradient-to-br from-purple-500 to-pink-600 text-white">
             <template x-if="cargando">
                 <div class="skeleton h-24 w-full bg-white bg-opacity-20"></div>
             </template>
@@ -166,8 +166,8 @@
         
         <!-- Loading -->
         <template x-if="cargando">
-            <div class="overflow-x-auto">
-                <table class="table w-full">
+            <div class="mobile-table-responsive">
+                <table class="table table-mobile-stack w-full">
                     <thead>
                         <tr>
                             <th>Fecha/Hora</th>
@@ -196,8 +196,8 @@
         
         <!-- Tabla con Datos -->
         <template x-if="!cargando && ventas.length > 0">
-            <div class="overflow-x-auto">
-                <table class="table table-zebra w-full" id="tabla-ventas">
+            <div class="mobile-table-responsive">
+                <table class="table table-zebra table-mobile-stack w-full" id="tabla-ventas">
                     <thead>
                         <tr>
                             <th>Fecha/Hora</th>
@@ -254,7 +254,7 @@
     
     <!-- Paginación -->
     <template x-if="!cargando && totalPaginas > 1">
-        <div class="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+        <div class="flex flex-col xs:flex-row items-center justify-between gap-4 xs:gap-0 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
             <div class="text-sm text-gray-600 dark:text-gray-400">
                 Mostrando 
                 <span class="font-semibold" x-text="(paginaActual - 1) * itemsPorPagina + 1"></span>
@@ -265,7 +265,7 @@
                 ventas
             </div>
             
-            <div class="btn-group">
+            <div class="btn-group flex-wrap justify-center">
                 <button @click="cambiarPagina(paginaActual - 1)" 
                         :disabled="paginaActual === 1"
                         class="btn btn-sm">
@@ -326,8 +326,8 @@
                 <!-- Items de la Venta -->
                 <div class="mb-4">
                     <h4 class="font-bold mb-2">Productos</h4>
-                    <div class="overflow-x-auto">
-                        <table class="table table-zebra w-full table-sm">
+                    <div class="mobile-table-responsive">
+                        <table class="table table-zebra table-mobile-stack w-full table-sm">
                             <thead>
                                 <tr>
                                     <th>Producto</th>
